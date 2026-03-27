@@ -55,12 +55,15 @@ Capital structure research studies the same firms over time — a **panel data**
 all_predictors = [
     "profitability", "tangibility", "tax", "log_size", "tax_shield", "dividend",
     "interest", "cash_holdings", "promoter_share", "non_promoters",
+    "int_rate", "market_return", "index_pe",
 ]
 predictor_labels = {
     "profitability": "Profitability", "tangibility": "Tangibility", "tax": "Tax Rate",
     "log_size": "Log Firm Size", "tax_shield": "Tax Shield", "dividend": "Dividend",
     "interest": "Interest", "cash_holdings": "Cash Holdings",
     "promoter_share": "Promoter Share", "non_promoters": "Non-Promoters",
+    "int_rate": "Interest Rate (RBI)", "market_return": "Market Return (BSE)",
+    "index_pe": "Market P/E Ratio",
 }
 
 col_left, col_right = st.columns([1, 3])

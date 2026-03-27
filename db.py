@@ -294,12 +294,16 @@ def get_panel_data(_filters_tuple):
                f.dividend, f.firm_size, f.log_size, f.tax_shield,
                f.borrowings, f.total_liabilities, f.cash_holdings,
                f.ncfo, f.ncfi, f.ncff, f.interest,
+               f.int_rate, f.int_rate_lt,
                f.gfc, f.ibc_2016, f.covid_dummy,
                c.industry_group,
-               o.promoter_share, o.non_promoters
+               o.promoter_share, o.non_promoters,
+               m.index_pe, m.index_pb, m.daily_returns AS market_return,
+               m.index_yield AS market_yield
         FROM financials f
         JOIN companies c ON f.company_code = c.company_code
         LEFT JOIN ownership o ON f.company_code = o.company_code AND f.year = o.year
+        LEFT JOIN market_index m ON f.year = m.year
         WHERE {where}
         ORDER BY f.company_code, f.year
     """
