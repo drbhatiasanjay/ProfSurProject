@@ -26,6 +26,33 @@ ft = db.filters_to_tuple(filters)
 st.markdown("### Econometrics Lab")
 st.caption("Panel regression models replicating the thesis methodology. Auto-suggests the best model via diagnostic tests.")
 
+with st.expander("ℹ️ About these models — what do they mean?"):
+    st.markdown("""
+**Pooled OLS** — Standard regression ignoring panel structure. Baseline comparison.
+- *R-squared*: % of leverage variation explained. Higher = better fit.
+- *Coefficients*: a 1-unit increase in the variable changes leverage by this amount.
+- *p-value < 0.05*: statistically significant (marked with *).
+
+**Fixed Effects (FE)** — Controls for each firm's unique, unchanging characteristics ("firm DNA").
+- Answers: "After removing firm-specific factors, does profitability still drive leverage?"
+- *Within R-squared*: How much within-firm variation is explained.
+
+**Random Effects (RE)** — Assumes firm effects are random draws, not correlated with predictors.
+- More efficient than FE when assumptions hold. Use Hausman test to decide.
+
+**Hausman Test** — Decides between FE and RE.
+- p < 0.05 → Use **Fixed Effects** (firm effects are correlated with predictors).
+- p > 0.05 → Use **Random Effects** (more efficient).
+
+**Breusch-Pagan LM** — Decides between Pooled OLS and RE.
+- p < 0.05 → Panel effects exist, do NOT use simple OLS.
+
+**ANOVA** — Tests if average leverage differs significantly across life stages.
+- F-statistic: higher = larger differences between groups.
+
+**Significance stars:** \\*\\*\\* p<0.001 | \\*\\* p<0.01 | \\* p<0.05 | . p<0.1
+""")
+
 # ── Variable Selection ──
 all_predictors = [
     "profitability", "tangibility", "tax", "log_size", "tax_shield", "dividend",
@@ -211,8 +238,8 @@ with col_right:
         resid = best.get("residuals")
         fitted = best.get("fitted")
         if resid is not None and fitted is not None:
-            resid_vals = resid.values if hasattr(resid, "values") else resid
-            fitted_vals = fitted.values if hasattr(fitted, "values") else fitted
+            resid_vals = np.asarray(resid).flatten()
+            fitted_vals = np.asarray(fitted).flatten()
 
             rd1, rd2 = st.columns(2)
             with rd1:

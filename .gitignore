@@ -20,9 +20,6 @@ test_screenshots/
 test_*.py
 demo_*.py
 
-# Models directory
-models/
-
 # Documentation/planning (not needed for deployment)
 docs/
 *.md

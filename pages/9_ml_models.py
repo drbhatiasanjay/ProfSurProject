@@ -26,6 +26,35 @@ ft = db.filters_to_tuple(filters)
 st.markdown("### ML Models")
 st.caption("Train, compare, and interpret machine learning models for leverage prediction. Panel-aware cross-validation prevents data leakage.")
 
+with st.expander("ℹ️ About these models — parameters & interpretation"):
+    st.markdown("""
+**Random Forest** — Ensemble of 300 decision trees, each trained on a random subset of data.
+- *Max depth = 8*: Trees can't grow too deep (prevents overfitting on 401 firms).
+- *Min samples per leaf = 20*: Each prediction needs 20+ supporting observations.
+- Captures non-linear relationships and interactions (e.g., "profitability effect reverses at high tangibility").
+
+**XGBoost** — Gradient-boosted trees. Sequentially corrects errors from previous trees.
+- *Learning rate = 0.05*: Conservative — each tree contributes a small correction.
+- *Regularization (alpha=1, lambda=2)*: Penalizes complexity to prevent overfitting.
+- Typically the most accurate on structured/tabular financial data.
+
+**LightGBM** — Similar to XGBoost but faster training. Handles categorical features natively.
+- *Num leaves = 31*: Moderate complexity per tree.
+- *Min child samples = 30*: Conservative for small sample.
+- Best when you need fast retraining with updated data.
+
+**How to interpret results:**
+- **R-squared**: % of leverage variation explained (0.60 = 60%). Compare across models.
+- **RMSE**: Average prediction error in percentage points. Lower = better.
+- **Feature Importance**: Which variables matter most. Shown as % contribution.
+- **SHAP Values**: Direction + magnitude of each feature's effect on individual predictions.
+  - Positive SHAP = pushes leverage UP. Negative = pushes leverage DOWN.
+
+**Panel-aware CV**: We split by FIRM (not by row) to prevent data leakage. A firm's data is never in both train and test sets.
+
+**Overfitting warning**: With 401 firms, ML models can memorize firm patterns. If R² is only marginally better than OLS, the simpler model may be more trustworthy.
+""")
+
 # ── Variable selection (shared across tabs) ──
 all_predictors = [
     "profitability", "tangibility", "tax", "log_size", "tax_shield", "dividend",

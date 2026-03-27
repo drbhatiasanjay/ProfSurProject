@@ -1,5 +1,14 @@
 streamlit>=1.30
 pandas
+numpy
 plotly
 openpyxl
 networkx>=3.2
+statsmodels
+scipy
+scikit-learn
+linearmodels
+xgboost
+lightgbm
+lifelines
+torch
