@@ -11,6 +11,7 @@ import db
 from helpers import (
     plotly_layout, format_pvalue, significance_stars,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT,
+    interpret_survival, render_interpretation,
 )
 from models.survival import (
     prepare_transition_data, fit_kaplan_meier, fit_cox_ph,
@@ -42,6 +43,8 @@ with st.expander("ℹ️ About these models"):
 - CFO: "How long will my firm likely stay in the Growth stage?"
 - Analyst: "Does high leverage accelerate the move from Maturity to Decline?"
 - Researcher: "Are stage transition patterns consistent with Pecking Order Theory?"
+
+**In the capital structure context:** When a firm transitions from Growth to Maturity, its optimal capital structure changes — but HOW and HOW FAST? Survival analysis quantifies this. A hazard ratio of 0.7 for profitability means profitable firms "survive" in their current stage 30% longer — their capital structure is more sustainable.
 """)
 
 # Load data
@@ -167,3 +170,8 @@ if not trans_matrix.empty:
     st.plotly_chart(fig_heat, use_container_width=True)
 else:
     st.info("Not enough transitions to build a matrix.")
+
+# Dynamic interpretation
+st.divider()
+sv_insights, sv_actions = interpret_survival(km_summary, hr_df)
+render_interpretation(sv_insights, sv_actions, title="Results Interpretation & Call to Action")

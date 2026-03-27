@@ -12,6 +12,7 @@ import db
 from helpers import (
     format_coef_table, format_pvalue, significance_stars,
     plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT,
+    interpret_econometric, render_interpretation,
 )
 from models.econometric import (
     run_pooled_ols, run_fixed_effects, run_random_effects,
@@ -28,27 +29,24 @@ st.caption("Panel regression models replicating the thesis methodology. Auto-sug
 
 with st.expander("ℹ️ About these models — what do they mean?"):
     st.markdown("""
-**Pooled OLS** — Standard regression ignoring panel structure. Baseline comparison.
-- *R-squared*: % of leverage variation explained. Higher = better fit.
-- *Coefficients*: a 1-unit increase in the variable changes leverage by this amount.
-- *p-value < 0.05*: statistically significant (marked with *).
+**Why Panel Econometrics for Capital Structure?**
 
-**Fixed Effects (FE)** — Controls for each firm's unique, unchanging characteristics ("firm DNA").
-- Answers: "After removing firm-specific factors, does profitability still drive leverage?"
-- *Within R-squared*: How much within-firm variation is explained.
+Capital structure research studies the same firms over time — a **panel data** problem. Simple regression ignores that Tata Steel behaves differently from Infosys even with identical financials. Panel methods account for this.
 
-**Random Effects (RE)** — Assumes firm effects are random draws, not correlated with predictors.
-- More efficient than FE when assumptions hold. Use Hausman test to decide.
+**Models in this lab and what they measure:**
 
-**Hausman Test** — Decides between FE and RE.
-- p < 0.05 → Use **Fixed Effects** (firm effects are correlated with predictors).
-- p > 0.05 → Use **Random Effects** (more efficient).
+| Model | What it measures in capital structure context |
+|-------|----------------------------------------------|
+| **Pooled OLS** | "On average across all firms and years, how do profitability, tangibility, tax etc. affect leverage?" — Baseline, ignores firm identity. |
+| **Fixed Effects** | "After controlling for each firm's unique DNA (brand, management, culture), which determinants still matter?" — The gold standard for causal inference in corporate finance. |
+| **Random Effects** | "If firm-specific effects are random noise rather than systematic, can we get more precise estimates?" — More efficient than FE when assumptions hold. |
+| **Hausman Test** | "Are firm effects correlated with the determinants? If yes → FE. If no → RE." — The referee between FE and RE. |
+| **ANOVA** | "Is average leverage statistically different across Startup, Growth, Maturity, Decline stages?" — Tests the foundational claim of the thesis. |
 
-**Breusch-Pagan LM** — Decides between Pooled OLS and RE.
-- p < 0.05 → Panel effects exist, do NOT use simple OLS.
-
-**ANOVA** — Tests if average leverage differs significantly across life stages.
-- F-statistic: higher = larger differences between groups.
+**What intelligence this provides:**
+- Coefficient signs validate/refute capital structure theories (Pecking Order, Trade-off, Agency Cost)
+- Coefficient magnitudes quantify the economic impact: "A 1% increase in profitability reduces leverage by X percentage points"
+- Diagnostic tests ensure you're using the right model — wrong model = wrong conclusions
 
 **Significance stars:** \\*\\*\\* p<0.001 | \\*\\* p<0.01 | \\* p<0.05 | . p<0.1
 """)
@@ -232,6 +230,12 @@ with col_right:
         fig_coef.add_vline(x=0, line_dash="dash", line_color="#9CA3AF")
         fig_coef.update_layout(**plotly_layout(height=350))
         st.plotly_chart(fig_coef, use_container_width=True)
+
+    # ── Dynamic Interpretation ──
+    st.divider()
+    hausman_data = results.get("hausman") if model_choice == "Auto-Suggest" else None
+    insights, actions = interpret_econometric(best, hausman=hausman_data)
+    render_interpretation(insights, actions, title="Results Interpretation & Call to Action")
 
     # ── Residual diagnostics ──
     with st.expander("Residual Diagnostics"):

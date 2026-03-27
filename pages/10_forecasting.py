@@ -27,29 +27,25 @@ if not HAS_TORCH:
 
 with st.expander("ℹ️ About these models — parameters & interpretation"):
     st.markdown("""
-**LSTM (Long Short-Term Memory)** — A neural network designed for sequential data.
-- Reads a firm's last N years (sequence length) and predicts next year's leverage.
-- *Hidden dim = 32*: Small network to prevent overfitting on 401 firms.
-- *Dropout = 0.3*: Randomly disables 30% of neurons during training for regularization.
-- *Early stopping*: Training halts when validation loss stops improving (patience = 10 epochs).
+**Why Neural Network Forecasting for Capital Structure?**
 
-**GRU (Gated Recurrent Unit)** — Simpler variant of LSTM with fewer parameters.
-- Often performs comparably to LSTM on small datasets.
-- Faster to train.
+Capital structure evolves over time — a firm's leverage this year depends on its trajectory over the past 3-5 years. LSTM/GRU networks are designed to learn these **sequential patterns**: how profitability trends, investment cycles, and debt repayment schedules create momentum in leverage.
 
-**Temporal split** (no data leakage):
-- Train: 2001-2018 | Validate: 2019-2021 | Test: 2022-2024
-- The model never sees future data during training.
+**What these models measure:**
+- **LSTM** reads the last N years of a firm's financials and predicts next year's leverage. It learns patterns like "3 consecutive years of declining profitability typically precede a leverage spike."
+- **GRU** is a lighter variant — often equally accurate for short sequences with small sample sizes.
 
-**How to interpret:**
-- **RMSE**: Average prediction error in leverage percentage points. Compare with naive baseline.
-- **Naive baseline**: Always predicts the training set mean. If the model can't beat this, it adds no value.
-- **Improvement %**: How much better than naive. >10% is meaningful; <5% is marginal.
-- **R²**: % of test variance explained. Values <0.15 → unreliable predictions.
-- **Training curve**: Loss should decrease. Divergence between train and val = overfitting.
+**Parameters and why they're set conservatively:**
+- *Hidden dim = 32*: Small to prevent memorizing 401 firms
+- *Dropout = 0.3*: Forces generalization
+- *Temporal split*: Train ≤2018, test 2022+ — no future leakage
 
-**Firm-level forecast**: Uses the last N years of a firm's data to predict 1-3 years ahead.
-This is an *extrapolation* — treat as directional, not precise.
+**Intelligence this provides:**
+1. **Forward-looking leverage estimates**: "Based on Tata Steel's last 5 years, we predict 38% leverage in 2025"
+2. **Trend detection**: The model learns if a firm is on a deleveraging or leveraging-up trajectory
+3. **Early warning**: Rising predicted leverage signals emerging financial stress before it shows in ratios
+
+**Critical caveat:** With 401 firms, neural networks are data-hungry models in a data-scarce setting. Always compare against the naive baseline (predicting the mean). If improvement is < 5%, the forecast adds minimal value.
 """)
 
 st.warning("**Small sample caveat:** With 401 firms, neural network predictions should be interpreted directionally. Always compare against the naive baseline.", icon="⚠️")

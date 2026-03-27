@@ -12,6 +12,7 @@ import db
 from helpers import (
     plotly_layout, format_pct, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT,
+    interpret_ml_comparison, render_interpretation,
 )
 from models.base import DEFAULT_X_COLS
 from models.ml_predict import (
@@ -28,31 +29,25 @@ st.caption("Train, compare, and interpret machine learning models for leverage p
 
 with st.expander("ℹ️ About these models — parameters & interpretation"):
     st.markdown("""
-**Random Forest** — Ensemble of 300 decision trees, each trained on a random subset of data.
-- *Max depth = 8*: Trees can't grow too deep (prevents overfitting on 401 firms).
-- *Min samples per leaf = 20*: Each prediction needs 20+ supporting observations.
-- Captures non-linear relationships and interactions (e.g., "profitability effect reverses at high tangibility").
+**Why Machine Learning for Capital Structure?**
 
-**XGBoost** — Gradient-boosted trees. Sequentially corrects errors from previous trees.
-- *Learning rate = 0.05*: Conservative — each tree contributes a small correction.
-- *Regularization (alpha=1, lambda=2)*: Penalizes complexity to prevent overfitting.
-- Typically the most accurate on structured/tabular financial data.
+Traditional econometrics (OLS, FE) assumes linear relationships: "profitability always reduces leverage by the same amount." In reality, capital structure decisions are **non-linear** — a firm with 5% profitability behaves very differently from one with 25%, and the effect of tangibility depends on firm size.
 
-**LightGBM** — Similar to XGBoost but faster training. Handles categorical features natively.
-- *Num leaves = 31*: Moderate complexity per tree.
-- *Min child samples = 30*: Conservative for small sample.
-- Best when you need fast retraining with updated data.
+**Models and what they measure:**
 
-**How to interpret results:**
-- **R-squared**: % of leverage variation explained (0.60 = 60%). Compare across models.
-- **RMSE**: Average prediction error in percentage points. Lower = better.
-- **Feature Importance**: Which variables matter most. Shown as % contribution.
-- **SHAP Values**: Direction + magnitude of each feature's effect on individual predictions.
-  - Positive SHAP = pushes leverage UP. Negative = pushes leverage DOWN.
+| Model | What it captures in capital structure context |
+|-------|----------------------------------------------|
+| **Random Forest** | "Which combinations of firm characteristics lead to high/low leverage?" — Captures interaction effects (e.g., profitability matters more for small firms than large ones) |
+| **XGBoost** | "What is the most accurate leverage prediction given all determinants?" — Best for identifying which firms are over/under-leveraged relative to their characteristics |
+| **LightGBM** | "Same as XGBoost but faster" — Ideal for real-time what-if analysis and bulk screening |
 
-**Panel-aware CV**: We split by FIRM (not by row) to prevent data leakage. A firm's data is never in both train and test sets.
+**What intelligence ML provides that econometrics cannot:**
+1. **Non-linear effects:** "The profitability-leverage relationship reverses at tangibility > 60%"
+2. **Feature importance by stage:** "For Growth firms, collateral matters most; for Mature firms, earnings retention dominates"
+3. **Anomaly detection:** "This firm's predicted leverage is 20% but actual is 55% — investigate over-leveraging"
+4. **SHAP explanations:** "For THIS specific firm, profitability reduces predicted leverage by 8pp while tangibility adds 12pp"
 
-**Overfitting warning**: With 401 firms, ML models can memorize firm patterns. If R² is only marginally better than OLS, the simpler model may be more trustworthy.
+**Overfitting guard:** With 401 firms, we use panel-aware cross-validation (split by firm, not row), conservative hyperparameters, and always compare against OLS baseline. If ML isn't meaningfully better, the simpler model wins.
 """)
 
 # ── Variable selection (shared across tabs) ──
@@ -174,6 +169,11 @@ with tab1:
         # Warning for low R²
         if comparison.iloc[0]["R-squared"] < 0.15:
             st.warning("All models explain less than 15% of variance. Use results directionally, not for point predictions.")
+
+        # Dynamic interpretation
+        st.divider()
+        ml_insights, ml_actions = interpret_ml_comparison(comparison)
+        render_interpretation(ml_insights, ml_actions, title="Results Interpretation & Call to Action")
 
     else:
         st.info("Click **Train All Models** to start. Training uses 5-fold cross-validation split by firm.")

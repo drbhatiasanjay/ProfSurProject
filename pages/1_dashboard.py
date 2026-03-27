@@ -10,6 +10,8 @@ from helpers import (
     winsorize, format_pct, format_inr, format_number,
     plotly_layout, event_bands, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    _render_insight_box, interpret_kpi_cards, interpret_leverage_trend,
+    interpret_lifecycle_distribution, interpret_top_leveraged, interpret_event_impact,
 )
 
 filters = st.session_state.filters
@@ -70,6 +72,10 @@ with c7:
 with c8:
     st.metric("Observations", format_number(n_obs))
 
+insights, actions = interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_prof, dominant_stage, n_obs)
+_render_insight_box("KPI Overview — What do these numbers tell us?", insights, actions,
+    "Dynamic summary of the current filtered dataset's capital structure profile.")
+
 st.divider()
 
 # ── Row 2: Trend Line + Lifecycle Donut ──
@@ -91,6 +97,9 @@ with left:
         fig_trend = event_bands(fig_trend)
         fig_trend.update_traces(line_width=2.5)
         st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
+        insights, actions = interpret_leverage_trend(stage_summary)
+        _render_insight_box("Leverage Trends — Pattern Analysis", insights, actions,
+            "Analyzes volatility, trend direction, and event correlation across life stages.")
     else:
         st.info("No trend data available.")
 
@@ -109,6 +118,9 @@ with right:
     fig_pie.update_layout(**plotly_layout(height=420))
     fig_pie.update_traces(textinfo="percent+label", textposition="outside")
     st.plotly_chart(fig_pie, use_container_width=True, config=PLOTLY_CONFIG)
+    insights, actions = interpret_lifecycle_distribution(df)
+    _render_insight_box("Lifecycle Distribution — Sample Composition", insights, actions,
+        "Assesses sample balance and flags under-represented stages.")
 
 st.divider()
 
@@ -131,6 +143,9 @@ with left2:
         )
         fig_bar.update_layout(**plotly_layout(height=400))
         st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CONFIG)
+        insights, actions = interpret_top_leveraged(top10, avg_lev)
+        _render_insight_box("Top Leveraged Firms — Risk Assessment", insights, actions,
+            "Identifies potential over-leveraging and cross-references with life stage patterns.")
     else:
         st.info("No data.")
 
@@ -189,3 +204,6 @@ with right2:
         fig_event.update_layout(**plotly_layout(height=280))
         fig_event.update_layout(showlegend=False)
         st.plotly_chart(fig_event, use_container_width=True, config=PLOTLY_CONFIG)
+        insights, actions = interpret_event_impact(overall_avg, gfc_avg, ibc_avg, covid_avg)
+        _render_insight_box("Event Period Impact — Macro Analysis", insights, actions,
+            "Compares leverage during GFC, IBC, and COVID against the baseline.")

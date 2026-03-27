@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import db
-from helpers import plotly_layout, format_pct, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG
+from helpers import plotly_layout, format_pct, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box
 
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
@@ -149,6 +149,31 @@ with res_right:
     ))
     fig_wf.update_layout(**plotly_layout("Determinant Contributions to Leverage", height=420))
     st.plotly_chart(fig_wf, use_container_width=True, config=PLOTLY_CONFIG)
+
+    # Dynamic scenario interpretation
+    insights = []
+    if predicted > 40:
+        insights.append(f"Predicted leverage of **{predicted:.1f}%** is **high** — indicates elevated financial risk at these parameter settings.")
+    elif predicted < 10:
+        insights.append(f"Predicted leverage of **{predicted:.1f}%** is **very low** — the firm may have untapped debt capacity for growth financing.")
+    else:
+        insights.append(f"Predicted leverage of **{predicted:.1f}%** is within normal range for Indian corporates.")
+
+    # Identify which factor contributes most
+    contrib_abs = {k: abs(v) for k, v in contributions.items() if k != "Intercept"}
+    top_factor = max(contrib_abs, key=contrib_abs.get)
+    top_val = contributions[top_factor]
+    insights.append(f"**{top_factor}** is the dominant driver ({top_val:+.1f}pp) — {'pushing leverage up' if top_val > 0 else 'pulling leverage down'}.")
+
+    actions = []
+    if top_factor == "Profitability" and top_val < -5:
+        actions.append("High profitability is suppressing leverage. This firm can self-fund — avoid unnecessary debt.")
+    elif top_factor == "Tangibility" and top_val > 5:
+        actions.append("Tangible assets are driving leverage up via collateral availability. Ensure debt is productively deployed.")
+    actions.append("Adjust sliders to simulate scenarios: 'What if profitability drops 5%?' or 'What if the firm doubles in size?'")
+
+    _render_insight_box("Scenario Interpretation", insights, actions,
+        "Dynamic analysis of the current slider settings and their leverage implications.")
 
 st.divider()
 

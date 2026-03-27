@@ -7,7 +7,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import db
-from helpers import plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT
+from helpers import plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, interpret_clustering, render_interpretation
 from models.clustering import (
     prepare_firm_features, find_optimal_k, run_kmeans,
     compare_with_dickinson, get_cluster_summary,
@@ -33,6 +33,8 @@ with st.expander("ℹ️ About this model"):
 - Clusters represent **natural groupings** that may differ from Dickinson's cash-flow-based stages
 - **Adjusted Rand Index (ARI):** Measures agreement between clusters and Dickinson. ARI=1 means perfect match, ARI=0 means random
 - A low ARI suggests our data reveals structure that Dickinson's framework doesn't capture
+
+**In the capital structure context:** Dickinson (2011) classifies firms by cash flow signs alone. But two firms with identical cash flow signs can have vastly different leverage, profitability, and size profiles. Clustering reveals these hidden subgroups — potentially identifying a "high-growth-high-debt" cluster that Dickinson would simply label "Growth."
 """)
 
 panel_df = db.get_panel_data(ft)
@@ -116,3 +118,8 @@ with ac1:
 
 with ac2:
     st.dataframe(crosstab, use_container_width=True)
+
+# Dynamic interpretation
+st.divider()
+cl_insights, cl_actions = interpret_clustering(ari, k, summary)
+render_interpretation(cl_insights, cl_actions, title="Results Interpretation & Call to Action")
