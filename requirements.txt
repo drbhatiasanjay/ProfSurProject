@@ -11,4 +11,5 @@ linearmodels>=6.0
 xgboost>=2.0
 lightgbm>=4.0
 lifelines>=0.29
+torch>=2.0
 pytest>=8.0
