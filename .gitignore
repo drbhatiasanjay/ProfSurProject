@@ -1,0 +1,33 @@
+# Large data files (not needed at runtime)
+sp401nf24y_furtherEd_oldCLS.dta
+sqlite-src-3510300/
+sqlite-src-3510300.zip
+*.docx
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
+.cache/
+
+# Claude/dev tooling
+.claude/
+.memsearch/
+
+# Demo & test artifacts
+demo/
+test_screenshots/
+test_*.py
+demo_*.py
+
+# Models directory
+models/
+
+# Documentation/planning (not needed for deployment)
+docs/
+*.md
+!requirements.txt
+
+# Misc
+*.log
+.DS_Store

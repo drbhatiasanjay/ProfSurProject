@@ -1,0 +1,63 @@
+/* LifeCycle Leverage Dashboard — Custom Styles */
+
+/* KPI metric cards */
+div[data-testid="stMetric"] {
+    background: #FFFFFF;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+div[data-testid="stMetric"] label {
+    color: #6B7280 !important;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+}
+
+div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+    font-size: 1.8rem !important;
+    font-weight: 700 !important;
+    color: #0D9488 !important;
+}
+
+/* Sidebar styling */
+section[data-testid="stSidebar"] {
+    background: #F8FAFC;
+    border-right: 1px solid #E5E7EB;
+}
+
+section[data-testid="stSidebar"] h1 {
+    color: #0D9488;
+    font-size: 1.3rem;
+    font-weight: 700;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #0D9488;
+    margin-bottom: 1rem;
+}
+
+/* Tab styling */
+button[data-baseweb="tab"] {
+    font-weight: 600 !important;
+}
+
+/* Dark mode overrides */
+.dark-mode {
+    --bg: #1F2937;
+    --card-bg: #374151;
+    --text: #F3F4F6;
+    --border: #4B5563;
+}
+
+/* Download buttons */
+div.stDownloadButton > button {
+    background: #0D9488 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+
+div.stDownloadButton > button:hover {
+    background: #0F766E !important;
+}
