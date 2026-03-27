@@ -236,7 +236,79 @@ _render_insight_box("Determinant Decomposition — What Drives Leverage?", _f3, 
 st.divider()
 
 # ═══════════════════════════════════════════════
-# CHANGE 5: Event x Stage Interaction
+# Interest Rate & Market Context
+# ═══════════════════════════════════════════════
+st.markdown("### Macro Context: Interest Rates & Market Returns vs Leverage")
+
+macro_df = db.get_market_index(yr_min, yr_max)
+int_rate_yearly = df.groupby("year")["int_rate"].mean().reset_index() if "int_rate" in df.columns else None
+
+macro_left, macro_right = st.columns(2)
+
+with macro_left:
+    # Leverage vs Interest Rate dual-axis
+    fig_ir = go.Figure()
+    fig_ir.add_trace(go.Scatter(
+        x=overall_yearly["year"], y=overall_yearly["mean_leverage"],
+        mode="lines+markers", name="Avg Leverage (%)",
+        line=dict(color=PRIMARY, width=2.5), marker=dict(size=5),
+    ))
+    if int_rate_yearly is not None and not int_rate_yearly.empty:
+        fig_ir.add_trace(go.Scatter(
+            x=int_rate_yearly["year"], y=int_rate_yearly["int_rate"],
+            mode="lines+markers", name="Interest Rate (%)",
+            line=dict(color=ACCENT, width=2, dash="dash"), marker=dict(size=4),
+            yaxis="y2",
+        ))
+    fig_ir.update_layout(
+        **plotly_layout("Leverage vs Interest Rate Over Time", height=380),
+        yaxis2=dict(title="Interest Rate (%)", overlaying="y", side="right", showgrid=False),
+    )
+    fig_ir = event_bands(fig_ir)
+    st.plotly_chart(fig_ir, use_container_width=True, config=PLOTLY_CONFIG)
+
+with macro_right:
+    # Leverage vs Market P/E
+    if not macro_df.empty and "index_pe" in macro_df.columns:
+        fig_pe = go.Figure()
+        fig_pe.add_trace(go.Scatter(
+            x=overall_yearly["year"], y=overall_yearly["mean_leverage"],
+            mode="lines+markers", name="Avg Leverage (%)",
+            line=dict(color=PRIMARY, width=2.5), marker=dict(size=5),
+        ))
+        fig_pe.add_trace(go.Scatter(
+            x=macro_df["year"], y=macro_df["index_pe"],
+            mode="lines+markers", name="BSE P/E Ratio",
+            line=dict(color=SECONDARY, width=2, dash="dash"), marker=dict(size=4),
+            yaxis="y2",
+        ))
+        fig_pe.update_layout(
+            **plotly_layout("Leverage vs Market P/E Ratio", height=380),
+            yaxis2=dict(title="P/E Ratio", overlaying="y", side="right", showgrid=False),
+        )
+        fig_pe = event_bands(fig_pe)
+        st.plotly_chart(fig_pe, use_container_width=True, config=PLOTLY_CONFIG)
+
+# Interpretation
+_fm, _am = [], []
+if int_rate_yearly is not None and not int_rate_yearly.empty:
+    corr_ir = overall_yearly.merge(int_rate_yearly, on="year", how="inner")
+    if len(corr_ir) > 5:
+        r = corr_ir["mean_leverage"].corr(corr_ir["int_rate"])
+        _fm.append(f"Correlation between leverage and interest rate: **r = {r:.2f}**. {'Positive — higher rates coincide with higher leverage (firms locked into debt).' if r > 0.1 else 'Negative — higher rates discourage borrowing.' if r < -0.1 else 'Weak — interest rates alone do not drive leverage trends.'}")
+if not macro_df.empty and "index_pe" in macro_df.columns:
+    corr_pe = overall_yearly.merge(macro_df[["year", "index_pe"]].dropna(), on="year", how="inner")
+    if len(corr_pe) > 5:
+        r2 = corr_pe["mean_leverage"].corr(corr_pe["index_pe"])
+        _fm.append(f"Correlation between leverage and market P/E: **r = {r2:.2f}**. {'High market valuations coincide with lower leverage — firms issue equity instead of debt (market timing).' if r2 < -0.1 else 'Weak relationship — market conditions do not directly drive leverage.'}")
+_am.append("Include interest rate and market P/E as controls in regression models (available in Econometrics Lab) to isolate firm-level determinant effects from macro trends.")
+_render_insight_box("Macro Context — Interest Rates & Market Conditions", _fm, _am,
+    "Shows how macro-level factors (RBI rates, BSE valuations) co-move with aggregate leverage.")
+
+st.divider()
+
+# ═══════════════════════════════════════════════
+# Event x Stage Interaction
 # ═══════════════════════════════════════════════
 st.markdown("### How Did Events Affect Leverage Differently by Stage?")
 

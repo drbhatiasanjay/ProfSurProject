@@ -261,3 +261,76 @@ with col_right:
                 fig_hist.update_layout(**plotly_layout("Residual Distribution", height=300))
                 fig_hist.update_traces(marker_color=PRIMARY)
                 st.plotly_chart(fig_hist, use_container_width=True)
+
+    # ── Stage-Specific Regression Comparison ──
+    st.divider()
+    st.markdown("#### Stage-Specific Regression: How Do Determinants Differ by Life Stage?")
+    st.caption("Runs the same regression separately for each stage — reveals which factors matter WHERE in the lifecycle.")
+
+    if model_choice != "ANOVA":
+        with st.spinner("Running stage-specific regressions..."):
+            stage_coefs = []
+            stages_available = [s for s in STAGE_ORDER if s in panel_df["life_stage"].unique()]
+            for stage in stages_available:
+                stage_df = panel_df[panel_df["life_stage"] == stage]
+                if len(stage_df.dropna(subset=["leverage"] + selected_x)) < 30:
+                    continue
+                try:
+                    sr = run_pooled_ols(stage_df, x_cols=selected_x)
+                    for _, row in sr["coef_table"].iterrows():
+                        if row["Variable"] != "const":
+                            stage_coefs.append({
+                                "Stage": stage,
+                                "Variable": row["Variable"],
+                                "Coefficient": row["Coefficient"],
+                                "p-value": row["p-value"],
+                                "Significant": "Yes" if row["p-value"] < 0.05 else "No",
+                            })
+                except Exception:
+                    pass
+
+        if stage_coefs:
+            sc_df = pd.DataFrame(stage_coefs)
+
+            # Heatmap of coefficients by stage
+            pivot = sc_df.pivot(index="Variable", columns="Stage", values="Coefficient")
+            stage_cols = [s for s in STAGE_ORDER if s in pivot.columns]
+            pivot = pivot[stage_cols]
+
+            fig_sc = px.imshow(
+                pivot.values,
+                x=pivot.columns.tolist(),
+                y=pivot.index.tolist(),
+                color_continuous_scale=["#EF4444", "#F8FAFC", PRIMARY],
+                color_continuous_midpoint=0,
+                aspect="auto",
+                text_auto=".2f",
+                labels={"color": "Coefficient"},
+            )
+            fig_sc.update_layout(**plotly_layout("Coefficient Comparison Across Life Stages", height=400))
+            st.plotly_chart(fig_sc, use_container_width=True)
+
+            # Interpretation
+            _sf, _sa = [], []
+            _sf.append("Each cell shows the OLS coefficient for that determinant in that life stage. **Red = negative effect, Teal = positive effect** on leverage.")
+            for var in pivot.index:
+                row = pivot.loc[var].dropna()
+                if len(row) >= 2:
+                    max_stage = row.idxmax()
+                    min_stage = row.idxmin()
+                    spread = row.max() - row.min()
+                    if spread > 5:
+                        _sf.append(f"**{var}**: Effect varies significantly — strongest in **{max_stage}** ({row.max():.1f}), weakest in **{min_stage}** ({row.min():.1f}). Spread = {spread:.1f}pp.")
+
+            sig_counts = sc_df.groupby("Variable")["Significant"].apply(lambda x: (x == "Yes").sum())
+            always_sig = sig_counts[sig_counts == len(stage_cols)]
+            if len(always_sig) > 0:
+                _sf.append(f"**Always significant** across all stages: {', '.join(always_sig.index)}.")
+            never_sig = sig_counts[sig_counts == 0]
+            if len(never_sig) > 0:
+                _sf.append(f"**Never significant** in any stage: {', '.join(never_sig.index)} — these may not drive capital structure decisions.")
+
+            _sa.append("Use stage-specific coefficients for targeted advice: e.g., tangibility matters for Growth firms' borrowing, but not for Mature firms.")
+            _sa.append("Variables that change sign across stages reveal lifecycle-dependent capital structure dynamics — a key thesis contribution.")
+            _render_insight_box("Stage-Specific Coefficients — Lifecycle Dynamics", _sf, _sa,
+                "Reveals how the same determinant has different effects depending on where a firm is in its lifecycle.")
