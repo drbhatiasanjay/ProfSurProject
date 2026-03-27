@@ -11,4 +11,3 @@ linearmodels
 xgboost
 lightgbm
 lifelines
-torch

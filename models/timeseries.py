@@ -5,10 +5,16 @@ Uses PyTorch for lightweight neural network forecasting.
 
 import numpy as np
 import pandas as pd
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
 from .base import compute_metrics
+
+try:
+    import torch
+    import torch.nn as nn
+    from torch.utils.data import Dataset, DataLoader
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+    Dataset = object
 
 
 class FirmSequenceDataset(Dataset):

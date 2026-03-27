@@ -9,13 +9,21 @@ import pandas as pd
 import numpy as np
 import db
 from helpers import plotly_layout, format_pct, PRIMARY, SECONDARY, ACCENT
-from models.timeseries import run_full_forecast, forecast_firm
+try:
+    from models.timeseries import run_full_forecast, forecast_firm
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
 
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 
 st.markdown("### Leverage Forecasting")
 st.caption("LSTM/GRU neural networks trained on 5-year firm sequences. Temporal split: train ≤2018, validate 2019-2021, test 2022+.")
+
+if not HAS_TORCH:
+    st.warning("PyTorch is not installed. Forecasting requires `pip install torch` to run LSTM/GRU models.")
+    st.stop()
 
 with st.expander("ℹ️ About these models — parameters & interpretation"):
     st.markdown("""
