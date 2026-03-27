@@ -17,6 +17,33 @@ ft = db.filters_to_tuple(filters)
 st.markdown("### Leverage Forecasting")
 st.caption("LSTM/GRU neural networks trained on 5-year firm sequences. Temporal split: train ≤2018, validate 2019-2021, test 2022+.")
 
+with st.expander("ℹ️ About these models — parameters & interpretation"):
+    st.markdown("""
+**LSTM (Long Short-Term Memory)** — A neural network designed for sequential data.
+- Reads a firm's last N years (sequence length) and predicts next year's leverage.
+- *Hidden dim = 32*: Small network to prevent overfitting on 401 firms.
+- *Dropout = 0.3*: Randomly disables 30% of neurons during training for regularization.
+- *Early stopping*: Training halts when validation loss stops improving (patience = 10 epochs).
+
+**GRU (Gated Recurrent Unit)** — Simpler variant of LSTM with fewer parameters.
+- Often performs comparably to LSTM on small datasets.
+- Faster to train.
+
+**Temporal split** (no data leakage):
+- Train: 2001-2018 | Validate: 2019-2021 | Test: 2022-2024
+- The model never sees future data during training.
+
+**How to interpret:**
+- **RMSE**: Average prediction error in leverage percentage points. Compare with naive baseline.
+- **Naive baseline**: Always predicts the training set mean. If the model can't beat this, it adds no value.
+- **Improvement %**: How much better than naive. >10% is meaningful; <5% is marginal.
+- **R²**: % of test variance explained. Values <0.15 → unreliable predictions.
+- **Training curve**: Loss should decrease. Divergence between train and val = overfitting.
+
+**Firm-level forecast**: Uses the last N years of a firm's data to predict 1-3 years ahead.
+This is an *extrapolation* — treat as directional, not precise.
+""")
+
 st.warning("**Small sample caveat:** With 401 firms, neural network predictions should be interpreted directionally. Always compare against the naive baseline.", icon="⚠️")
 
 # Settings
