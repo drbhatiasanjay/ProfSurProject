@@ -90,6 +90,27 @@ with tab1:
         st.session_state.ml_results = None
         st.session_state.ml_comparison = None
 
+    # Pre-training guidance
+    if st.session_state.ml_results is None:
+        st.markdown("""
+**How this works:**
+
+1. Click **Train All Models** below to train 3 ML models (Random Forest, XGBoost, LightGBM) on the current dataset
+2. Each model is cross-validated using 5-fold panel-aware splits (firms are never in both train and test)
+3. After training (~15-20 seconds), you'll see:
+   - **Comparison table** — RMSE, R-squared, and training time for each model
+   - **Best model highlighted** with recommendation
+   - **Actual vs Predicted scatter** — how well predictions match reality
+   - **Dynamic interpretation** — what the results mean for capital structure decisions
+
+Then explore the other tabs:
+- **Feature Importance** — which determinants drive leverage for each life stage
+- **Predict** — adjust sliders to get multi-model leverage predictions for any firm profile
+""")
+
+        st.markdown(f"**Current features:** {', '.join(selected_x)}")
+        st.caption("Change features in the sidebar under 'ML Features'")
+
     col_btn, col_info = st.columns([1, 3])
     with col_btn:
         train_clicked = st.button("Train All Models", type="primary", use_container_width=True)
@@ -176,7 +197,8 @@ with tab1:
         render_interpretation(ml_insights, ml_actions, title="Results Interpretation & Call to Action")
 
     else:
-        st.info("Click **Train All Models** to start. Training uses 5-fold cross-validation split by firm.")
+        if st.session_state.ml_results is None:
+            pass  # Guidance already shown above the button
 
 # ═══════════════════════════════════════════════
 # TAB 2: Feature Importance

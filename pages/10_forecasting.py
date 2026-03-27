@@ -65,6 +65,20 @@ if panel_df.empty:
 if "forecast_result" not in st.session_state:
     st.session_state.forecast_result = None
 
+if st.session_state.forecast_result is None:
+    st.markdown(f"""
+**How this works:**
+
+1. The model reads each firm's **last {seq_len} years** of financials (profitability, tangibility, size, tax shield, leverage)
+2. It learns sequential patterns: "3 years of declining profitability usually precedes a leverage spike"
+3. **Temporal split**: Train on 2001-2018, validate 2019-2021, test 2022+ (no future data leakage)
+4. After training (~30-60 seconds), you'll see:
+   - **RMSE comparison** vs naive baseline (predicting the mean)
+   - **Training curve** — did the model learn or overfit?
+   - **Actual vs Predicted** scatter on the test set
+   - **Firm-level forecast** — select any company to see 1-3 year leverage projections
+""")
+
 if st.button("Train Forecast Model", type="primary"):
     progress = st.progress(0, "Starting...")
     result = run_full_forecast(
@@ -76,7 +90,6 @@ if st.button("Train Forecast Model", type="primary"):
 
 result = st.session_state.forecast_result
 if result is None:
-    st.info("Click **Train Forecast Model** to start. Training takes ~30-60 seconds.")
     st.stop()
 
 if "error" in result:
