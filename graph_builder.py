@@ -4,6 +4,7 @@ Builds a networkx graph with typed nodes and relationship edges.
 """
 
 import networkx as nx
+import numpy as np
 import pandas as pd
 
 
@@ -482,6 +483,118 @@ def find_event_triggered_transitions(G, event_name):
         })
 
     return results
+
+
+def compute_event_impact_matrix(G, fin_df):
+    """
+    Build Stage × Event matrices showing:
+    1. Avg leverage during each event vs normal, by stage
+    2. Transition rate (% of firms changing stage) during event vs normal, per stage
+    3. Deterioration rate per stage per event
+
+    Returns dict of DataFrames.
+    """
+    from helpers import STAGE_ORDER, STAGE_RANK
+    from collections import defaultdict
+
+    events = ["GFC", "IBC", "COVID"]
+
+    # --- Leverage impact matrix ---
+    lev_rows = []
+    for stage in STAGE_ORDER:
+        row = {"Stage": stage}
+        stage_data = fin_df[fin_df["life_stage"] == stage]
+        row["Normal Avg Lev"] = stage_data["leverage"].mean()
+        for evt in events:
+            col = EVENT_PERIODS[evt]["col"]
+            evt_data = stage_data[stage_data[col] == 1]
+            row[f"{evt} Avg Lev"] = evt_data["leverage"].mean() if not evt_data.empty else None
+            normal_lev = stage_data[stage_data[col] != 1]["leverage"].mean()
+            row[f"{evt} Δ"] = (row[f"{evt} Avg Lev"] - normal_lev) if row[f"{evt} Avg Lev"] is not None and pd.notna(normal_lev) else None
+        lev_rows.append(row)
+    lev_df = pd.DataFrame(lev_rows).set_index("Stage")
+
+    # --- Transition rate matrix: % of firms that changed stage during event year ---
+    trans_rate_rows = []
+    for stage in STAGE_ORDER:
+        row = {"Stage": stage}
+        # Normal transition rate for this stage
+        all_trans_from = sum(1 for _, _, d in G.edges(data=True)
+                            if d.get("relation") == "TRANSITION" and d.get("from_stage") == stage)
+        # Total firm-years at this stage
+        total_at_stage = len(fin_df[fin_df["life_stage"] == stage])
+        row["Normal Trans Rate"] = all_trans_from / max(total_at_stage, 1) * 100
+
+        for evt in events:
+            col = EVENT_PERIODS[evt]["col"]
+            evt_at_stage = fin_df[(fin_df["life_stage"] == stage) & (fin_df[col] == 1)]
+            evt_total = len(evt_at_stage)
+
+            # Count transitions from this stage during event years
+            evt_years = set(evt_at_stage["year"].unique())
+            evt_trans = sum(1 for _, _, d in G.edges(data=True)
+                           if d.get("relation") == "TRANSITION"
+                           and d.get("from_stage") == stage
+                           and d.get("year") in evt_years)
+            row[f"{evt} Trans Rate"] = evt_trans / max(evt_total, 1) * 100
+        trans_rate_rows.append(row)
+    trans_rate_df = pd.DataFrame(trans_rate_rows).set_index("Stage")
+
+    # --- Deterioration matrix: of those who transitioned, % that moved to worse stage ---
+    det_rows = []
+    for stage in STAGE_ORDER:
+        row = {"Stage": stage}
+        stage_rank = STAGE_RANK.get(stage, 0)
+
+        for evt in events:
+            col = EVENT_PERIODS[evt]["col"]
+            evt_at_stage = fin_df[(fin_df["life_stage"] == stage) & (fin_df[col] == 1)]
+            evt_years = set(evt_at_stage["year"].unique())
+
+            trans_during = [(d.get("to_stage"), d.get("year")) for _, _, d in G.edges(data=True)
+                           if d.get("relation") == "TRANSITION"
+                           and d.get("from_stage") == stage
+                           and d.get("year") in evt_years]
+            n_trans = len(trans_during)
+            n_worse = sum(1 for to_s, _ in trans_during if STAGE_RANK.get(to_s, 0) > stage_rank)
+            row[f"{evt} Deterioration %"] = n_worse / max(n_trans, 1) * 100 if n_trans > 0 else None
+        det_rows.append(row)
+    det_df = pd.DataFrame(det_rows).set_index("Stage")
+
+    return {"leverage": lev_df, "transition_rate": trans_rate_df, "deterioration": det_df}
+
+
+def compute_stage_metric_matrix(G):
+    """
+    Build Stage × Metric matrix: average of each financial metric by life stage.
+    Returns DataFrame indexed by stage, columns = metrics.
+    """
+    from helpers import STAGE_ORDER
+    from collections import defaultdict
+
+    metrics = ["leverage", "profitability", "tangibility", "tax", "firm_size", "borrowings"]
+    accum = defaultdict(lambda: defaultdict(list))
+
+    for n, d in G.nodes(data=True):
+        if d.get("type") != "observation":
+            continue
+        stage = _get_obs_stage(G, n)
+        if not stage:
+            continue
+        for m in metrics:
+            val = d.get(m)
+            if val is not None and not pd.isna(val):
+                accum[stage][m].append(val)
+
+    rows = []
+    for stage in STAGE_ORDER:
+        row = {"Stage": stage}
+        for m in metrics:
+            vals = accum[stage].get(m, [])
+            row[m.replace("_", " ").title()] = np.mean(vals) if vals else None
+        rows.append(row)
+
+    return pd.DataFrame(rows).set_index("Stage")
 
 
 def extract_transition_sequences(G, min_length=2, max_length=4):
