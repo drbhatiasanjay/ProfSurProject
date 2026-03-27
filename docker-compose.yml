@@ -1,0 +1,27 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./capital_structure.db:/app/capital_structure.db:ro
+    environment:
+      - STREAMLIT_SERVER_HEADLESS=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  test:
+    build: .
+    entrypoint: ["python", "-m", "pytest", "tests/", "-v", "--tb=short"]
+    volumes:
+      - ./capital_structure.db:/app/capital_structure.db:ro
+      - ./tests:/app/tests:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    profiles:
+      - test

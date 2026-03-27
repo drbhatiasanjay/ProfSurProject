@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+.git
+.cache
+.memsearch
+test_screenshots
+demo
+*.dta
+test_*.py
+demo_*.py
+.python-version
+runtime.txt

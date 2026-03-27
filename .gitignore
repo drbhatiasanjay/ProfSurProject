@@ -17,8 +17,9 @@ __pycache__/
 # Demo & test artifacts
 demo/
 test_screenshots/
-test_*.py
-demo_*.py
+# Ad-hoc test scripts (root level only, not tests/ directory)
+/test_*.py
+/demo_*.py
 
 # Documentation/planning (not needed for deployment)
 docs/
