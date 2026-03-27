@@ -41,6 +41,32 @@ button[data-baseweb="tab"] {
     font-weight: 600 !important;
 }
 
+/* Page header consistency */
+div[data-testid="stMarkdown"] h3:first-of-type {
+    color: #111827;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Expander styling */
+details[data-testid="stExpander"] summary {
+    font-weight: 600;
+    color: #374151;
+}
+
+/* Button primary */
+button[kind="primary"] {
+    background: #0D9488 !important;
+    border-color: #0D9488 !important;
+}
+
+button[kind="primary"]:hover {
+    background: #0F766E !important;
+    border-color: #0F766E !important;
+}
+
 /* Dark mode overrides */
 .dark-mode {
     --bg: #1F2937;

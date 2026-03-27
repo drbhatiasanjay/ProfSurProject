@@ -83,13 +83,9 @@ with st.sidebar:
 
     # Event period toggles
     st.markdown("**Event Periods**")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        gfc = st.toggle("GFC", value=False, help="Global Financial Crisis 2008-09")
-    with col2:
-        ibc = st.toggle("IBC", value=False, help="Insolvency & Bankruptcy Code 2016+")
-    with col3:
-        covid = st.toggle("COVID", value=False, help="COVID-19 2020-21")
+    gfc = st.checkbox("GFC (2008-09)", value=False, help="Global Financial Crisis")
+    ibc = st.checkbox("IBC (2016+)", value=False, help="Insolvency & Bankruptcy Code")
+    covid = st.checkbox("COVID (2020-21)", value=False, help="COVID-19 pandemic")
     st.session_state.filters["events"] = {"gfc": gfc, "ibc": ibc, "covid": covid}
 
     st.divider()
