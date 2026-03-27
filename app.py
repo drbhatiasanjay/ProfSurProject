@@ -105,6 +105,7 @@ data_explorer = st.Page("pages/5_data_explorer.py", title="Data Explorer", icon=
 settings = st.Page("pages/6_settings.py", title="Settings", icon=":material/settings:")
 knowledge_graph = st.Page("pages/7_knowledge_graph.py", title="Knowledge Graph", icon=":material/hub:")
 econometrics = st.Page("pages/8_econometrics.py", title="Econometrics Lab", icon=":material/functions:")
+ml_models = st.Page("pages/9_ml_models.py", title="ML Models", icon=":material/model_training:")
 
-nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, knowledge_graph, settings])
+nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, knowledge_graph, settings])
 nav.run()
