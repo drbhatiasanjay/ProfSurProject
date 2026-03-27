@@ -11,7 +11,7 @@ import numpy as np
 import db
 from helpers import (
     plotly_layout, format_pct, STAGE_COLORS, STAGE_ORDER,
-    PRIMARY, SECONDARY, ACCENT,
+    PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_ml_comparison, render_interpretation,
 )
 from models.base import DEFAULT_X_COLS
@@ -158,7 +158,7 @@ Then explore the other tabs:
             )
             fig_r2.update_layout(**plotly_layout("Model R² Comparison", height=350))
             fig_r2.update_layout(showlegend=False)
-            st.plotly_chart(fig_r2, use_container_width=True)
+            st.plotly_chart(fig_r2, use_container_width=True, config=PLOTLY_CONFIG)
 
         with cc2:
             fig_rmse = px.bar(
@@ -168,7 +168,7 @@ Then explore the other tabs:
             )
             fig_rmse.update_layout(**plotly_layout("Model RMSE Comparison", height=350))
             fig_rmse.update_layout(showlegend=False)
-            st.plotly_chart(fig_rmse, use_container_width=True)
+            st.plotly_chart(fig_rmse, use_container_width=True, config=PLOTLY_CONFIG)
 
         # Actual vs Predicted scatter for best model
         st.markdown(f"#### Actual vs Predicted ({best_name})")
@@ -185,7 +185,7 @@ Then explore the other tabs:
             line=dict(dash="dash", color="#9CA3AF"), showlegend=False,
         ))
         fig_ap.update_layout(**plotly_layout(height=400))
-        st.plotly_chart(fig_ap, use_container_width=True)
+        st.plotly_chart(fig_ap, use_container_width=True, config=PLOTLY_CONFIG)
 
         # Warning for low R²
         if comparison.iloc[0]["R-squared"] < 0.15:
@@ -229,7 +229,7 @@ with tab2:
             )
             fig_imp.update_layout(**plotly_layout(height=350))
             fig_imp.update_layout(showlegend=False, coloraxis_showscale=False)
-            st.plotly_chart(fig_imp, use_container_width=True)
+            st.plotly_chart(fig_imp, use_container_width=True, config=PLOTLY_CONFIG)
 
         with fi2:
             # SHAP values
@@ -246,7 +246,7 @@ with tab2:
                 )
                 fig_shap.update_layout(**plotly_layout(height=350))
                 fig_shap.update_layout(showlegend=False, coloraxis_showscale=False)
-                st.plotly_chart(fig_shap, use_container_width=True)
+                st.plotly_chart(fig_shap, use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.caption("SHAP not available — showing native importance")
 
@@ -284,7 +284,7 @@ with tab2:
                     labels={"color": "Importance (%)"},
                 )
                 fig_heat.update_layout(**plotly_layout("Feature Importance Heatmap by Stage", height=400))
-                st.plotly_chart(fig_heat, use_container_width=True)
+                st.plotly_chart(fig_heat, use_container_width=True, config=PLOTLY_CONFIG)
 
                 # Auto-generated insight
                 st.markdown("**Key Insights:**")

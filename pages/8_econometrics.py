@@ -11,7 +11,7 @@ import numpy as np
 import db
 from helpers import (
     format_coef_table, format_pvalue, significance_stars,
-    plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT,
+    plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_econometric, render_interpretation,
 )
 from models.econometric import (
@@ -125,7 +125,7 @@ with col_right:
             labels={"leverage": "Leverage (%)", "life_stage": ""},
         )
         fig.update_layout(**plotly_layout("Leverage Distribution by Life Stage", height=400))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
         st.stop()
 
     # ── Regression Models ──
@@ -232,7 +232,7 @@ with col_right:
             ))
         fig_coef.add_vline(x=0, line_dash="dash", line_color="#9CA3AF")
         fig_coef.update_layout(**plotly_layout(height=350))
-        st.plotly_chart(fig_coef, use_container_width=True)
+        st.plotly_chart(fig_coef, use_container_width=True, config=PLOTLY_CONFIG)
 
     # ── Dynamic Interpretation ──
     st.divider()
@@ -254,13 +254,13 @@ with col_right:
                                     labels={"x": "Fitted Values", "y": "Residuals"})
                 fig_rf.add_hline(y=0, line_dash="dash", line_color="#9CA3AF")
                 fig_rf.update_layout(**plotly_layout("Residuals vs Fitted", height=300))
-                st.plotly_chart(fig_rf, use_container_width=True)
+                st.plotly_chart(fig_rf, use_container_width=True, config=PLOTLY_CONFIG)
             with rd2:
                 fig_hist = px.histogram(x=resid_vals, nbins=50, opacity=0.7,
                                         labels={"x": "Residuals"})
                 fig_hist.update_layout(**plotly_layout("Residual Distribution", height=300))
                 fig_hist.update_traces(marker_color=PRIMARY)
-                st.plotly_chart(fig_hist, use_container_width=True)
+                st.plotly_chart(fig_hist, use_container_width=True, config=PLOTLY_CONFIG)
 
     # ── Stage-Specific Regression Comparison ──
     st.divider()
@@ -308,7 +308,7 @@ with col_right:
                 labels={"color": "Coefficient"},
             )
             fig_sc.update_layout(**plotly_layout("Coefficient Comparison Across Life Stages", height=400))
-            st.plotly_chart(fig_sc, use_container_width=True)
+            st.plotly_chart(fig_sc, use_container_width=True, config=PLOTLY_CONFIG)
 
             # Interpretation
             _sf, _sa = [], []

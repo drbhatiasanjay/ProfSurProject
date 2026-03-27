@@ -7,7 +7,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import db
-from helpers import plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, interpret_clustering, render_interpretation
+from helpers import plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG, interpret_clustering, render_interpretation
 from models.clustering import (
     prepare_firm_features, find_optimal_k, run_kmeans,
     compare_with_dickinson, get_cluster_summary,
@@ -58,7 +58,7 @@ with col_chart:
                       labels={"k": "K", "silhouette": "Silhouette Score"})
     fig_sil.add_vline(x=k, line_dash="dash", line_color=ACCENT)
     fig_sil.update_layout(**plotly_layout("Silhouette Score by K", height=280))
-    st.plotly_chart(fig_sil, use_container_width=True)
+    st.plotly_chart(fig_sil, use_container_width=True, config=PLOTLY_CONFIG)
 
 # Run K-Means
 labels, clustered_df, profiles, km = run_kmeans(X_scaled, k, firm_df)
@@ -78,7 +78,7 @@ with cp2:
                       color_continuous_scale=[PRIMARY, ACCENT],
                       labels={"n_firms": "Firms", "cluster_label": "", "avg_leverage": "Avg Lev"})
     fig_size.update_layout(**plotly_layout("Cluster Sizes", height=300))
-    st.plotly_chart(fig_size, use_container_width=True)
+    st.plotly_chart(fig_size, use_container_width=True, config=PLOTLY_CONFIG)
 
 # Scatter: leverage vs profitability colored by cluster
 st.markdown("#### Cluster Visualization")
@@ -89,7 +89,7 @@ fig_scatter = px.scatter(
     labels={"profitability": "Avg Profitability", "leverage": "Avg Leverage (%)"},
 )
 fig_scatter.update_layout(**plotly_layout(height=450))
-st.plotly_chart(fig_scatter, use_container_width=True)
+st.plotly_chart(fig_scatter, use_container_width=True, config=PLOTLY_CONFIG)
 
 st.divider()
 

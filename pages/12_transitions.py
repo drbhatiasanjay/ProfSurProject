@@ -10,7 +10,7 @@ import numpy as np
 import db
 from helpers import (
     plotly_layout, format_pvalue, significance_stars,
-    STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT,
+    STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_survival, render_interpretation,
 )
 from models.survival import (
@@ -91,10 +91,10 @@ with km1:
                 fill="toself", fillcolor=color.replace(")", ",0.1)").replace("rgb", "rgba") if "rgb" in color else f"rgba({int(color[1:3],16)},{int(color[3:5],16)},{int(color[5:7],16)},0.1)",
                 line=dict(width=0), showlegend=False,
             ))
-    fig_km.update_layout(**plotly_layout("Kaplan-Meier Survival Curves", height=450))
+    fig_km.update_layout(**plotly_layout("Kaplan-Meier Survival Curves", height=480))
     fig_km.update_xaxes(title="Years in Stage")
     fig_km.update_yaxes(title="Survival Probability", range=[0, 1.05])
-    st.plotly_chart(fig_km, use_container_width=True)
+    st.plotly_chart(fig_km, use_container_width=True, config=PLOTLY_CONFIG)
 
 with km2:
     st.markdown("**Stage Duration Summary**")
@@ -129,7 +129,7 @@ if cph is not None:
         fig_hr.add_vline(x=0, line_dash="dash", line_color="#9CA3AF")
         fig_hr.update_layout(**plotly_layout("Hazard Ratios (>0 accelerates, <0 delays)", height=350))
         fig_hr.update_xaxes(title="Hazard Ratio - 1")
-        st.plotly_chart(fig_hr, use_container_width=True)
+        st.plotly_chart(fig_hr, use_container_width=True, config=PLOTLY_CONFIG)
 
     # Interpretation
     st.markdown("**Key Insights:**")
@@ -167,7 +167,7 @@ if not trans_matrix.empty:
     fig_heat.update_layout(**plotly_layout("Transition Probability Matrix (%)", height=450))
     fig_heat.update_xaxes(title="To Stage", side="top")
     fig_heat.update_yaxes(title="From Stage")
-    st.plotly_chart(fig_heat, use_container_width=True)
+    st.plotly_chart(fig_heat, use_container_width=True, config=PLOTLY_CONFIG)
 else:
     st.info("Not enough transitions to build a matrix.")
 

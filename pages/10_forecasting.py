@@ -8,11 +8,11 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import db
-from helpers import plotly_layout, format_pct, PRIMARY, SECONDARY, ACCENT
+from helpers import plotly_layout, format_pct, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG
 try:
     from models.timeseries import run_full_forecast, forecast_firm
     HAS_TORCH = True
-except ImportError:
+except (ImportError, NameError):
     HAS_TORCH = False
 
 filters = st.session_state.filters
@@ -127,7 +127,7 @@ with tc1:
     fig_loss.update_layout(**plotly_layout("Training Curve", height=350))
     fig_loss.add_vline(x=result["best_epoch"], line_dash="dash", line_color="#9CA3AF",
                        annotation_text=f"Best epoch: {result['best_epoch']}")
-    st.plotly_chart(fig_loss, use_container_width=True)
+    st.plotly_chart(fig_loss, use_container_width=True, config=PLOTLY_CONFIG)
 
 with tc2:
     # Actual vs predicted
@@ -136,7 +136,7 @@ with tc2:
     fig_ap.add_trace(go.Scatter(x=[0, 80], y=[0, 80], mode="lines",
                                 line=dict(dash="dash", color="#9CA3AF"), showlegend=False))
     fig_ap.update_layout(**plotly_layout("Actual vs Predicted (Test Set)", height=350))
-    st.plotly_chart(fig_ap, use_container_width=True)
+    st.plotly_chart(fig_ap, use_container_width=True, config=PLOTLY_CONFIG)
 
 # ── Firm-level forecast ──
 st.divider()
@@ -169,7 +169,7 @@ if not firm_df.empty and result.get("model"):
                 line=dict(color=ACCENT, width=2, dash="dash"), marker=dict(size=8, symbol="diamond"),
             ))
             fig_fc.update_layout(**plotly_layout(f"{sel_firm} — Leverage Forecast", height=400))
-            st.plotly_chart(fig_fc, use_container_width=True)
+            st.plotly_chart(fig_fc, use_container_width=True, config=PLOTLY_CONFIG)
 
             st.dataframe(fc_df, hide_index=True, use_container_width=True)
         else:
