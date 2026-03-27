@@ -597,6 +597,108 @@ def compute_stage_metric_matrix(G):
     return pd.DataFrame(rows).set_index("Stage")
 
 
+def compute_covid_cohorts(G, fin_df):
+    """
+    Identify and compare post-COVID cohorts:
+    1. Firms already in Decline/Decay BEFORE COVID (pre-2020)
+    2. Firms that entered Decline/Decay AFTER COVID (2022+)
+    3. Resilient firms: improved stage post-COVID vs deteriorated
+
+    Returns dict with cohort DataFrames and comparison stats.
+    """
+    from helpers import STAGE_RANK
+
+    decline_stages = {"Decline", "Decay", "Shakeout1", "Shakeout2", "Shakeout3"}
+
+    # Pre-COVID stage (2019) and post-COVID stage (latest available, 2022+)
+    company_nodes = [n for n, d in G.nodes(data=True) if d.get("type") == "company"]
+
+    rows = []
+    for cid in company_nodes:
+        nd = G.nodes[cid]
+        code = nd.get("company_code")
+
+        obs_list = sorted(
+            [(G.nodes[nb].get("year"), nb) for nb in G.neighbors(cid)
+             if G.nodes[nb].get("type") == "observation"],
+        )
+        if not obs_list:
+            continue
+
+        # Find pre-COVID (2019) and post-COVID (2022 or later) observations
+        pre_covid_obs = [(y, o) for y, o in obs_list if y == 2019]
+        post_covid_obs = [(y, o) for y, o in obs_list if y >= 2022]
+
+        if not pre_covid_obs or not post_covid_obs:
+            continue
+
+        pre_year, pre_oid = pre_covid_obs[0]
+        post_year, post_oid = post_covid_obs[-1]  # latest available
+
+        pre_stage = _get_obs_stage(G, pre_oid)
+        post_stage = _get_obs_stage(G, post_oid)
+        pre_lev = G.nodes[pre_oid].get("leverage")
+        post_lev = G.nodes[post_oid].get("leverage")
+        pre_prof = G.nodes[pre_oid].get("profitability")
+        post_prof = G.nodes[post_oid].get("profitability")
+
+        if not pre_stage or not post_stage:
+            continue
+
+        pre_rank = STAGE_RANK.get(pre_stage, 0)
+        post_rank = STAGE_RANK.get(post_stage, 0)
+
+        # Classify
+        was_declining = pre_stage in decline_stages
+        now_declining = post_stage in decline_stages
+        entered_decline_after = not was_declining and now_declining
+        recovered = was_declining and not now_declining
+        deteriorated = post_rank > pre_rank
+        improved = post_rank < pre_rank
+
+        rows.append({
+            "company": nd.get("label"),
+            "industry": nd.get("industry"),
+            "pre_stage": pre_stage,
+            "post_stage": post_stage,
+            "pre_rank": pre_rank,
+            "post_rank": post_rank,
+            "pre_leverage": pre_lev,
+            "post_leverage": post_lev,
+            "leverage_change": (post_lev - pre_lev) if pre_lev is not None and post_lev is not None else None,
+            "pre_profitability": pre_prof,
+            "post_profitability": post_prof,
+            "was_declining": was_declining,
+            "entered_decline_after_covid": entered_decline_after,
+            "recovered": recovered,
+            "deteriorated": deteriorated,
+            "improved": improved,
+        })
+
+    cohort_df = pd.DataFrame(rows)
+
+    if cohort_df.empty:
+        return {"error": "No firms with both pre-COVID (2019) and post-COVID (2022+) data"}
+
+    # Summary stats
+    n_total = len(cohort_df)
+    n_deteriorated = cohort_df["deteriorated"].sum()
+    n_improved = cohort_df["improved"].sum()
+    n_entered_decline = cohort_df["entered_decline_after_covid"].sum()
+    n_recovered = cohort_df["recovered"].sum()
+
+    return {
+        "cohort_df": cohort_df,
+        "n_total": n_total,
+        "n_deteriorated": int(n_deteriorated),
+        "n_improved": int(n_improved),
+        "n_entered_decline": int(n_entered_decline),
+        "n_recovered": int(n_recovered),
+        "pct_deteriorated": round(n_deteriorated / n_total * 100, 1),
+        "pct_improved": round(n_improved / n_total * 100, 1),
+    }
+
+
 def extract_transition_sequences(G, min_length=2, max_length=4):
     """
     For each company, walk TRANSITION edges to extract stage sequences,

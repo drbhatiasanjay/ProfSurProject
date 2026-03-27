@@ -23,6 +23,7 @@ from graph_builder import (
     compute_transition_matrix, compute_stickiness,
     find_event_triggered_transitions,
     compute_event_impact_matrix, compute_stage_metric_matrix,
+    compute_covid_cohorts,
     extract_transition_sequences, find_paths_to_stage,
     query_stage_transitions, _get_obs_stage,
 )
@@ -92,10 +93,11 @@ def _make_matrix_figure(df, title, fmt=".1f", colorscale="Teal", height=400, zmi
 
 
 # ── Tabs ──
-tab_markov, tab_events, tab_paths, tab_profiler = st.tabs([
+tab_markov, tab_events, tab_paths, tab_covid, tab_profiler = st.tabs([
     "Transition Probabilities",
     "Event Impact Matrices",
     "Stage Pathways",
+    "COVID Cohorts",
     "Company Profiler",
 ])
 
@@ -417,7 +419,87 @@ with tab_paths:
 
 
 # ══════════════════════════════════════════════
-# TAB 4: Multi-Hop Company Profiler
+# TAB 4: COVID Cohort Analysis
+# ══════════════════════════════════════════════
+with tab_covid:
+    st.subheader("Post-COVID Cohort Analysis")
+    st.caption("Which firms entered Decline after COVID? Which recovered? Comparing pre-COVID (2019) vs post-COVID (2022+) stages.")
+
+    cohort_data = compute_covid_cohorts(G, fin_df)
+
+    if "error" in cohort_data:
+        st.warning(cohort_data["error"])
+    else:
+        cdf = cohort_data["cohort_df"]
+
+        # KPIs
+        kc1, kc2, kc3, kc4, kc5 = st.columns(5)
+        kc1.metric("Total Firms", cohort_data["n_total"])
+        kc2.metric("Deteriorated", f"{cohort_data['n_deteriorated']} ({cohort_data['pct_deteriorated']}%)")
+        kc3.metric("Improved", f"{cohort_data['n_improved']} ({cohort_data['pct_improved']}%)")
+        kc4.metric("Entered Decline", cohort_data["n_entered_decline"])
+        kc5.metric("Recovered", cohort_data["n_recovered"])
+
+        # Stage migration heatmap
+        st.markdown("#### Pre-COVID → Post-COVID Stage Migration")
+        migration = cdf.groupby(["pre_stage", "post_stage"]).size().reset_index(name="count")
+        pivot = migration.pivot_table(index="pre_stage", columns="post_stage",
+                                       values="count", fill_value=0)
+        ordered = [s for s in STAGE_ORDER if s in pivot.index]
+        ordered_cols = [s for s in STAGE_ORDER if s in pivot.columns]
+        if ordered and ordered_cols:
+            pivot = pivot.reindex(index=ordered, columns=ordered_cols, fill_value=0)
+            fig_mig = _make_matrix_figure(pivot, "Firms: Pre-COVID Stage (rows) → Post-COVID Stage (cols)",
+                                           fmt=".0f", height=400)
+            st.plotly_chart(fig_mig, use_container_width=True, config=PLOTLY_CONFIG)
+
+        # Leverage change comparison
+        st.markdown("#### Leverage Change: Deteriorated vs Improved Firms")
+        det_firms = cdf[cdf["deteriorated"]]["leverage_change"].dropna()
+        imp_firms = cdf[cdf["improved"]]["leverage_change"].dropna()
+
+        if not det_firms.empty or not imp_firms.empty:
+            box_data = []
+            for val in det_firms:
+                box_data.append({"Group": "Deteriorated", "Leverage Change (pp)": val})
+            for val in imp_firms:
+                box_data.append({"Group": "Improved", "Leverage Change (pp)": val})
+            if box_data:
+                bdf = pd.DataFrame(box_data)
+                fig_box = px.box(bdf, x="Group", y="Leverage Change (pp)", color="Group",
+                                  color_discrete_map={"Deteriorated": "#EF4444", "Improved": "#22C55E"})
+                fig_box.update_layout(**plotly_layout("", height=350))
+                st.plotly_chart(fig_box, use_container_width=True, config=PLOTLY_CONFIG)
+
+        # Table of firms that entered decline after COVID
+        if cohort_data["n_entered_decline"] > 0:
+            st.markdown("#### Firms That Entered Decline/Decay After COVID")
+            entered = cdf[cdf["entered_decline_after_covid"]].sort_values("leverage_change", ascending=False)
+            st.dataframe(
+                entered[["company", "industry", "pre_stage", "post_stage", "leverage_change"]].rename(columns={
+                    "company": "Company", "industry": "Industry",
+                    "pre_stage": "Pre-COVID Stage", "post_stage": "Post-COVID Stage",
+                    "leverage_change": "Leverage Δ (pp)",
+                }),
+                use_container_width=True, hide_index=True,
+            )
+
+        # Recovered firms
+        if cohort_data["n_recovered"] > 0:
+            st.markdown("#### Firms That Recovered After COVID")
+            recovered = cdf[cdf["recovered"]].sort_values("leverage_change")
+            st.dataframe(
+                recovered[["company", "industry", "pre_stage", "post_stage", "leverage_change"]].rename(columns={
+                    "company": "Company", "industry": "Industry",
+                    "pre_stage": "Pre-COVID Stage", "post_stage": "Post-COVID Stage",
+                    "leverage_change": "Leverage Δ (pp)",
+                }),
+                use_container_width=True, hide_index=True,
+            )
+
+
+# ══════════════════════════════════════════════
+# TAB 5: Multi-Hop Company Profiler
 # ══════════════════════════════════════════════
 with tab_profiler:
     st.subheader("Multi-Hop Company Profiler")

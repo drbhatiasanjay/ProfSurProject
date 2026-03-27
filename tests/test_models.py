@@ -67,6 +67,62 @@ class TestEconometric:
         assert tang_row.iloc[0]["Coefficient"] > 0, "Tangibility should increase leverage (Trade-off)"
 
 
+    def test_breusch_pagan_lm(self, full_panel):
+        """BP-LM test: Pooled OLS vs Random Effects."""
+        from models.econometric import run_pooled_ols, run_breusch_pagan_lm
+        ols = run_pooled_ols(full_panel)
+        bp = run_breusch_pagan_lm(ols)
+        assert "lm_stat" in bp
+        assert "lm_pvalue" in bp
+        assert bp["lm_stat"] > 0
+        assert "verdict" in bp
+
+    def test_delta_leverage_ols(self, full_panel):
+        """Delta-leverage OLS regression."""
+        from models.econometric import run_delta_leverage_ols
+        result = run_delta_leverage_ols(full_panel)
+        assert result["type"] == "Pooled OLS"
+        assert result["n_obs"] > 3000
+
+    def test_delta_leverage_all(self, full_panel):
+        """Delta-leverage with FE/RE + Hausman."""
+        from models.econometric import run_delta_leverage_all
+        result = run_delta_leverage_all(full_panel)
+        assert result["recommended"] in ("Fixed Effects", "Random Effects")
+        assert "ols" in result
+        assert "fe" in result
+        assert "re" in result
+
+    def test_delta_leverage_by_stage(self, full_panel):
+        """Stage-specific delta-leverage regressions."""
+        from models.econometric import run_delta_leverage_by_stage
+        results = run_delta_leverage_by_stage(full_panel)
+        assert len(results) >= 3  # At least Growth, Maturity, Startup
+        for stage, res in results.items():
+            if "error" not in res:
+                assert "coef_table" in res
+
+    def test_stage_comparison(self, full_panel):
+        """Growth vs Maturity comparison regression."""
+        from models.econometric import run_stage_comparison
+        result = run_stage_comparison(full_panel, "Growth", "Maturity")
+        assert "comparison" in result
+        assert "result_a" in result
+        assert "result_b" in result
+        assert "Divergent" in result["comparison"].columns
+
+    def test_system_gmm(self, full_panel):
+        """System GMM with lag DV."""
+        from models.econometric import run_system_gmm
+        result = run_system_gmm(full_panel)
+        assert "coef_table" in result
+        assert result["lag_dv_included"] is True
+        assert "ar1" in result
+        assert "ar2" in result
+        assert "sargan" in result
+        assert result["n_obs"] > 2000
+
+
 class TestMLModels:
     def test_cross_validate_rf(self, small_panel):
         from models.ml_predict import cross_validate_model
