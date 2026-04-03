@@ -230,6 +230,76 @@ def run_anova_by_stage(df, y_col=DEFAULT_Y_COL, stage_col="life_stage"):
     }
 
 
+def run_pairwise_comparison(df, y_col=DEFAULT_Y_COL, stage_col="life_stage"):
+    """
+    Tukey's HSD pairwise comparison of leverage means across all life stages.
+    Post-hoc test after ANOVA — identifies which specific stage pairs differ.
+    Matches thesis Table 5.9.
+
+    Returns dict with:
+      - pairwise_df: DataFrame with all pairs, mean diff, p-value, significance
+      - matrix_diff: 8x8 DataFrame of mean differences
+      - matrix_pval: 8x8 DataFrame of p-values
+      - matrix_sig: 8x8 DataFrame of significance flags
+      - group_means: mean leverage per stage
+      - significant_pairs: list of (stageA, stageB) pairs with p < 0.05
+    """
+    from statsmodels.stats.multicomp import pairwise_tukeyhsd
+
+    clean = df[[y_col, stage_col]].dropna()
+    result = pairwise_tukeyhsd(clean[y_col], clean[stage_col], alpha=0.05)
+
+    # Extract into DataFrame
+    pairs = []
+    for i in range(len(result.summary().data) - 1):
+        row = result.summary().data[i + 1]
+        pairs.append({
+            "Stage A": str(row[0]),
+            "Stage B": str(row[1]),
+            "Mean Diff": float(row[2]),
+            "p-value": float(row[3]),
+            "CI Lower": float(row[4]),
+            "CI Upper": float(row[5]),
+            "Significant": bool(row[6]) if isinstance(row[6], bool) else str(row[6]).strip().lower() == "true",
+        })
+    pairwise_df = pd.DataFrame(pairs)
+
+    # Build matrices
+    from helpers import STAGE_ORDER
+    stages_present = [s for s in STAGE_ORDER if s in clean[stage_col].unique()]
+
+    matrix_diff = pd.DataFrame(0.0, index=stages_present, columns=stages_present)
+    matrix_pval = pd.DataFrame(1.0, index=stages_present, columns=stages_present)
+    matrix_sig = pd.DataFrame(False, index=stages_present, columns=stages_present)
+
+    for _, row in pairwise_df.iterrows():
+        a, b = row["Stage A"], row["Stage B"]
+        if a in stages_present and b in stages_present:
+            matrix_diff.loc[a, b] = row["Mean Diff"]
+            matrix_diff.loc[b, a] = -row["Mean Diff"]
+            matrix_pval.loc[a, b] = row["p-value"]
+            matrix_pval.loc[b, a] = row["p-value"]
+            matrix_sig.loc[a, b] = row["Significant"]
+            matrix_sig.loc[b, a] = row["Significant"]
+
+    # Group means for diagonal
+    group_means = clean.groupby(stage_col)[y_col].mean().to_dict()
+
+    # Significant pairs list
+    sig_pairs = [(r["Stage A"], r["Stage B"]) for _, r in pairwise_df.iterrows() if r["Significant"]]
+
+    return {
+        "pairwise_df": pairwise_df,
+        "matrix_diff": matrix_diff,
+        "matrix_pval": matrix_pval,
+        "matrix_sig": matrix_sig,
+        "group_means": group_means,
+        "significant_pairs": sig_pairs,
+        "n_pairs": len(pairwise_df),
+        "n_significant": len(sig_pairs),
+    }
+
+
 def run_all_and_compare(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", time="year"):
     """
     Run OLS, FE, RE + Hausman + BP-LM. Auto-recommend the best model.

@@ -12,7 +12,7 @@ import db
 from helpers import (
     plotly_layout, format_pvalue, significance_stars, format_coef_table,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
-    _render_insight_box,
+    render_interpretation,
 )
 from models.econometric import (
     run_system_gmm, run_delta_leverage_all, run_delta_leverage_by_stage,
@@ -112,10 +112,10 @@ with tab_gmm:
             if sargan["p_value"] > 0.05:
                 insights.append("Sargan test passes — overidentifying restrictions are valid.")
 
-            _render_insight_box("GMM Interpretation", insights, [
+            render_interpretation(insights, [
                 "Compare the lag DV coefficient with thesis Table 5.12 results.",
                 "A coefficient between 0.3-0.7 is typical for capital structure persistence.",
-            ])
+            ], title="GMM Interpretation")
 
 
 # ══════════════════════════════════════════════
@@ -160,10 +160,10 @@ with tab_delta:
                 "Delta-leverage models show what drives **changes** in leverage, complementing level regressions.",
                 f"The {result['recommended']} model is preferred based on the Hausman test."
             ]
-            _render_insight_box("Delta-Leverage Interpretation", insights, [
+            render_interpretation(insights, [
                 "Compare coefficient signs with the level regressions in the Econometrics Lab.",
                 "If profitability is negative here too, the Pecking Order holds for both levels and changes.",
-            ])
+            ], title="Delta-Leverage Interpretation")
 
         else:
             with st.spinner("Running stage-specific delta-leverage regressions..."):
@@ -263,7 +263,7 @@ with tab_compare:
                 else:
                     insights.append(f"No strongly divergent determinants between {stage_a} and {stage_b}.")
 
-                _render_insight_box(f"{stage_a} vs {stage_b} — Key Differences", insights, [
+                render_interpretation(insights, [
                     f"Divergent variables indicate where {stage_a} and {stage_b} firms respond differently to the same determinant.",
                     "Compare with thesis Table 7.5 for Growth vs Maturity results.",
-                ])
+                ], title=f"{stage_a} vs {stage_b} — Key Differences")

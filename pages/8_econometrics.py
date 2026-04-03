@@ -12,11 +12,11 @@ import db
 from helpers import (
     format_coef_table, format_pvalue, significance_stars,
     plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
-    interpret_econometric, render_interpretation,
+    interpret_econometric, render_interpretation, _render_insight_box,
 )
 from models.econometric import (
     run_pooled_ols, run_fixed_effects, run_random_effects,
-    run_hausman_test, run_breusch_pagan_lm, run_anova_by_stage,
+    run_hausman_test, run_breusch_pagan_lm, run_anova_by_stage, run_pairwise_comparison,
     run_all_and_compare,
 )
 from models.base import DEFAULT_X_COLS
@@ -126,6 +126,167 @@ with col_right:
         )
         fig.update_layout(**plotly_layout("Leverage Distribution by Life Stage", height=400))
         st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+
+        # ── Pairwise Comparison (Table 5.9) ──
+        st.divider()
+        st.markdown("#### Pairwise Comparison")
+        st.caption("Tukey's HSD post-hoc test — which specific stage pairs have significantly different mean leverage?")
+
+        with st.spinner("Running pairwise comparisons across all life stages..."):
+            pw = run_pairwise_comparison(panel_df)
+
+        # KPI strip
+        pw_c1, pw_c2, pw_c3 = st.columns(3)
+        pw_c1.metric("Total Pairs Tested", pw["n_pairs"])
+        pw_c2.metric("Significant Pairs", pw["n_significant"])
+        pw_c3.metric("Significance Rate", f"{pw['n_significant'] / max(pw['n_pairs'], 1) * 100:.0f}%")
+
+        # Heatmap: p-values with significance highlighting
+        st.markdown("##### Mean Difference Heatmap")
+        st.caption("Each cell shows the difference in mean leverage (row stage minus column stage). **Red border = statistically significant at 5%.**")
+
+        import plotly.figure_factory as ff
+
+        diff_matrix = pw["matrix_diff"]
+        pval_matrix = pw["matrix_pval"]
+        sig_matrix = pw["matrix_sig"]
+        stages = list(diff_matrix.index)
+
+        # Build annotated text: show mean diff + significance star
+        annotations = []
+        for i, row_stage in enumerate(stages):
+            for j, col_stage in enumerate(stages):
+                if row_stage == col_stage:
+                    text = f"{pw['group_means'].get(row_stage, 0):.1f}"
+                else:
+                    diff_val = diff_matrix.loc[row_stage, col_stage]
+                    pval = pval_matrix.loc[row_stage, col_stage]
+                    star = significance_stars(pval)
+                    text = f"{diff_val:+.1f}{star}"
+                annotations.append(text)
+
+        # Reshape annotations to 2D
+        ann_matrix = [annotations[i*len(stages):(i+1)*len(stages)] for i in range(len(stages))]
+
+        # Color: diverging scale centered at 0
+        fig_pw = px.imshow(
+            diff_matrix.values, x=stages, y=stages,
+            color_continuous_scale="RdBu_r", zmin=-15, zmax=15,
+            aspect="auto",
+            labels=dict(x="Stage B", y="Stage A", color="Mean Diff (pp)"),
+        )
+        fig_pw.update_traces(
+            text=ann_matrix, texttemplate="%{text}", textfont_size=11,
+        )
+        pw_layout = plotly_layout("", height=480)
+        pw_layout["margin"] = dict(l=120, r=20, t=30, b=80)
+        fig_pw.update_layout(**pw_layout)
+        st.plotly_chart(fig_pw, use_container_width=True, config=PLOTLY_CONFIG)
+
+        # Significant pairs table
+        if pw["significant_pairs"]:
+            st.markdown("##### Significant Pairs Detail")
+            sig_df = pw["pairwise_df"][pw["pairwise_df"]["Significant"]].copy()
+            sig_df["Stars"] = sig_df["p-value"].apply(significance_stars)
+            sig_df["p-value"] = sig_df["p-value"].apply(format_pvalue)
+            sig_df["Mean Diff"] = sig_df["Mean Diff"].round(2)
+            sig_df["CI Lower"] = sig_df["CI Lower"].round(2)
+            sig_df["CI Upper"] = sig_df["CI Upper"].round(2)
+            st.dataframe(
+                sig_df[["Stage A", "Stage B", "Mean Diff", "p-value", "Stars", "CI Lower", "CI Upper"]],
+                use_container_width=True, hide_index=True,
+            )
+
+        # ── Detailed Explanation ──
+        st.divider()
+        st.markdown("#### Understanding Pairwise Comparison")
+
+        st.markdown("""
+**What is being tested?**
+
+After ANOVA confirms that leverage differs significantly across life stages *as a group*, the natural follow-up question is: **which specific pairs of stages differ?** This is where pairwise comparison comes in.
+
+For example, ANOVA tells us "at least one stage is different" — but it does not tell us whether Startup firms have significantly different leverage from Growth firms, or whether Maturity differs from Decline. Pairwise comparison answers this precisely.
+
+**Method: Tukey's Honestly Significant Difference (HSD)**
+
+Tukey's HSD is the gold standard post-hoc test for ANOVA. It compares the mean leverage of *every possible pair* of life stages while controlling for the **family-wise error rate** — the risk of false positives when making many comparisons simultaneously.
+
+With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, testing 28 pairs at the 5% level would produce ~1.4 false positives by chance alone. Tukey's HSD adjusts for this, ensuring the overall false positive rate stays at 5%.
+
+**How to read the heatmap:**
+
+| Element | Meaning |
+|---------|---------|
+| **Diagonal cells** | Mean leverage (%) for that stage |
+| **Off-diagonal cells** | Difference in mean leverage: Row stage minus Column stage |
+| **Positive values (red)** | Row stage has *higher* leverage than column stage |
+| **Negative values (blue)** | Row stage has *lower* leverage than column stage |
+| **Stars (\\*\\*\\*, \\*\\*, \\*)** | Statistical significance: \\*\\*\\* p<0.001, \\*\\* p<0.01, \\* p<0.05 |
+| **No stars** | Difference is *not* statistically significant — could be due to chance |
+""")
+
+        # Dynamic findings based on actual data
+        findings = []
+        actions = []
+
+        if pw["significant_pairs"]:
+            # Group findings
+            sig_df_raw = pw["pairwise_df"][pw["pairwise_df"]["Significant"]].sort_values("Mean Diff", key=abs, ascending=False)
+
+            top_pair = sig_df_raw.iloc[0]
+            findings.append(
+                f"The **largest significant difference** is between **{top_pair['Stage A']}** and **{top_pair['Stage B']}** "
+                f"(mean difference: {top_pair['Mean Diff']:+.1f} percentage points, p={top_pair['p-value']:.4f}). "
+                f"This means {top_pair['Stage A']} firms carry {'more' if top_pair['Mean Diff'] > 0 else 'less'} "
+                f"debt relative to equity than {top_pair['Stage B']} firms, and this difference is not due to chance."
+            )
+
+            # Check thesis-specific pairs
+            thesis_pairs = [("Startup", "Maturity"), ("Growth", "Maturity"), ("Maturity", "Decline"), ("Decline", "Decay")]
+            for a, b in thesis_pairs:
+                match = pw["pairwise_df"][
+                    ((pw["pairwise_df"]["Stage A"] == a) & (pw["pairwise_df"]["Stage B"] == b)) |
+                    ((pw["pairwise_df"]["Stage A"] == b) & (pw["pairwise_df"]["Stage B"] == a))
+                ]
+                if not match.empty:
+                    row = match.iloc[0]
+                    status = "**significantly different**" if row["Significant"] else "not significantly different"
+                    findings.append(f"**{a} vs {b}**: {status} (mean diff: {row['Mean Diff']:+.1f}pp, p={row['p-value']:.4f})")
+
+            # Count non-significant pairs
+            n_nonsig = pw["n_pairs"] - pw["n_significant"]
+            if n_nonsig > 0:
+                nonsig_pairs = pw["pairwise_df"][~pw["pairwise_df"]["Significant"]]
+                sample = nonsig_pairs.head(3)
+                examples = ", ".join([f"{r['Stage A']}-{r['Stage B']}" for _, r in sample.iterrows()])
+                findings.append(
+                    f"**{n_nonsig} pairs** show no significant difference in leverage — "
+                    f"for example: {examples}. These stages may have similar financing patterns."
+                )
+
+            actions.append(
+                "**For researchers:** These pairwise results validate whether the thesis claim that 'capital structure varies across life stages' holds at the pair level, not just the group level. "
+                "Report the significant pairs alongside the ANOVA F-test."
+            )
+            actions.append(
+                "**For practitioners:** Stages with non-significant differences may be treated similarly for credit analysis. "
+                "Focus lending criteria differentiation on stage pairs that ARE significantly different."
+            )
+            actions.append(
+                "**For policy makers:** The magnitude of mean differences between stages (not just significance) indicates where intervention may be most impactful — "
+                "large gaps suggest structural financing constraints at specific life stages."
+            )
+
+        st.markdown("**Key Findings from This Data:**")
+        for f in findings:
+            st.markdown(f"- {f}")
+
+        if actions:
+            st.markdown("**Actionable Insights:**")
+            for a in actions:
+                st.markdown(f"- {a}")
+
         st.stop()
 
     # ── Regression Models ──
@@ -203,36 +364,28 @@ with col_right:
 
     st.divider()
 
-    # Coefficient table and chart side by side
-    coef_left, coef_right = st.columns([1, 1])
+    # Coefficient table — full width so all columns visible
+    st.markdown("**Coefficient Table**")
+    display_coefs = format_coef_table(best["coef_table"])
+    st.dataframe(display_coefs, hide_index=True, use_container_width=True)
 
-    with coef_left:
-        st.markdown("**Coefficient Table**")
-        display_coefs = format_coef_table(best["coef_table"])
-        st.dataframe(display_coefs, hide_index=True, use_container_width=True)
+    # Coefficient plot — full width below
+    st.markdown("**Coefficient Plot**")
+    ct = best["coef_table"]
+    ct_no_const = ct[ct["Variable"] != "const"].copy()
 
-    with coef_right:
-        st.markdown("**Coefficient Plot**")
-        ct = best["coef_table"]
-        ct_no_const = ct[ct["Variable"] != "const"].copy()
-
-        fig_coef = go.Figure()
-        fig_coef.add_trace(go.Bar(
-            x=ct_no_const["Coefficient"],
-            y=ct_no_const["Variable"],
-            orientation="h",
-            marker_color=[PRIMARY if c > 0 else "#EF4444" for c in ct_no_const["Coefficient"]],
-        ))
-        if "CI Lower" in ct_no_const.columns and "CI Upper" in ct_no_const.columns:
-            fig_coef.add_trace(go.Scatter(
-                x=pd.concat([ct_no_const["CI Lower"], ct_no_const["CI Upper"][::-1]]),
-                y=pd.concat([ct_no_const["Variable"], ct_no_const["Variable"][::-1]]),
-                mode="lines", line=dict(width=0), fill="toself",
-                fillcolor="rgba(13,148,136,0.15)", showlegend=False,
-            ))
-        fig_coef.add_vline(x=0, line_dash="dash", line_color="#9CA3AF")
-        fig_coef.update_layout(**plotly_layout(height=350))
-        st.plotly_chart(fig_coef, use_container_width=True, config=PLOTLY_CONFIG)
+    fig_coef = go.Figure()
+    fig_coef.add_trace(go.Bar(
+        x=ct_no_const["Coefficient"],
+        y=ct_no_const["Variable"],
+        orientation="h",
+        marker_color=[PRIMARY if c > 0 else "#EF4444" for c in ct_no_const["Coefficient"]],
+        text=[f"{c:.2f}" for c in ct_no_const["Coefficient"]],
+        textposition="outside",
+    ))
+    fig_coef.add_vline(x=0, line_dash="dash", line_color="#9CA3AF")
+    fig_coef.update_layout(**plotly_layout(height=320))
+    st.plotly_chart(fig_coef, use_container_width=True, config=PLOTLY_CONFIG)
 
     # ── Dynamic Interpretation ──
     st.divider()
