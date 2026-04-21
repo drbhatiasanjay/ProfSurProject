@@ -23,6 +23,7 @@ from cmie.client import CmieClient
 from cmie.errors import CmieError, CmieParseError
 from cmie.pipeline import import_from_raw_dataframe, import_from_zip_file, merge_zip_paths_to_version
 from cmie.query_form import cmie_tabular_json_to_dataframe
+from cmie.rate_limit import TokenBucket  # §F.3.1 — default 2 req/sec, burst 3 on every CmieClient in this file
 
 
 def render_cmie_sidebar_block(*, key_prefix: str = "cmie") -> None:
@@ -176,11 +177,29 @@ def _run_form_import(api_key: str, form_fields_json: str, min_years: int) -> Non
         fields = json.loads(form_fields_json)
         if not isinstance(fields, dict):
             raise ValueError("Form fields must be a JSON object.")
-        client = CmieClient(api_key, timeout_s=600.0)
+        client = CmieClient(api_key, timeout_s=600.0, limiter=TokenBucket(rate_per_sec=2.0, burst=3))
         resp = client.post_query_form(fields)
         status.write("Received JSON response.")
         with st.expander("Raw JSON (debug)", expanded=False):
             st.json(resp)
+
+        # §E.5.3 guard — cmie_tabular_json_to_dataframe does not branch on meta.errno.
+        # On an error-shape body (head=[[label, value], …]) it silently produces a
+        # DataFrame with tuple-shaped columns. Short-circuit here instead.
+        _meta = resp.get("meta", {}) if isinstance(resp, dict) else {}
+        _errno = _meta.get("errno")
+        if _errno not in (None, 0):
+            from cmie.errors import CmieAuthError, CmieEntitlementError
+            _msg = _meta.get("errmsg") or "CMIE returned a non-zero errno"
+            _detail = (
+                f"errno={_errno} user={_meta.get('user')!r} "
+                f"service={_meta.get('service')!r} hits={_meta.get('hits')!r}"
+            )
+            if _errno == -4:
+                raise CmieAuthError(code="ERRNO_-4", message=_msg, detail=_detail)
+            if _errno == -23:
+                raise CmieEntitlementError(code="ERRNO_-23", message=_msg, detail=_detail)
+            raise CmieParseError(code=f"ERRNO_{_errno}", message=_msg, detail=_detail)
 
         set_step(40, "Parsing head/data table")
         raw = cmie_tabular_json_to_dataframe(resp)
@@ -229,7 +248,7 @@ def _run_wapicall_import(api_key: str, codes: list[int], min_years: int) -> None
         os.makedirs(tmp_dir, exist_ok=True)
         zip_path = os.path.join(tmp_dir, "wapicall.zip")
         set_step(8, "Downloading company ZIP (wapicall)")
-        client = CmieClient(api_key, timeout_s=600.0)
+        client = CmieClient(api_key, timeout_s=600.0, limiter=TokenBucket(rate_per_sec=2.0, burst=3))
         last_prog = {"t": time.monotonic()}
 
         def on_dl(p):
@@ -282,7 +301,7 @@ def _run_legacy_single_zip(api_key: str, payload_text: str, company_code: int, m
         tmp_dir = os.path.join(tempfile.gettempdir(), f"cmie_{import_id}")
         os.makedirs(tmp_dir, exist_ok=True)
         zip_path = os.path.join(tmp_dir, "response.zip")
-        client = CmieClient(api_key, timeout_s=600.0)
+        client = CmieClient(api_key, timeout_s=600.0, limiter=TokenBucket(rate_per_sec=2.0, burst=3))
         last_prog = {"t": time.monotonic()}
 
         def on_dl(p):
@@ -332,7 +351,7 @@ def _run_legacy_batch_zip(api_key: str, payload_text: str, codes_text: str, dela
     try:
         tmp_dir = os.path.join(tempfile.gettempdir(), f"cmie_{import_id}")
         os.makedirs(tmp_dir, exist_ok=True)
-        client = CmieClient(api_key, timeout_s=600.0)
+        client = CmieClient(api_key, timeout_s=600.0, limiter=TokenBucket(rate_per_sec=2.0, burst=3))
         last_prog = {"t": time.monotonic()}
 
         def on_dl(p):

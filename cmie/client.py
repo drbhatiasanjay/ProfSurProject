@@ -56,6 +56,18 @@ def _hash_key(api_key: str) -> str:
     return hashlib.sha256(api_key.encode("utf-8")).hexdigest()[:12]
 
 
+def _parse_retry_after(header_value: Optional[str]) -> Optional[float]:
+    """Parse a CMIE Retry-After header (seconds as number) to float.
+    Silently returns None for non-numeric values or HTTP-date forms — callers
+    fall back to their own defaults.  §F.3.6."""
+    if not header_value:
+        return None
+    try:
+        return float(header_value)
+    except (ValueError, TypeError):
+        return None
+
+
 def _zip_sanity_check(path: str, *, context: str) -> None:
     """
     CMIE sometimes returns HTML/JSON error bodies with HTTP 200.
@@ -159,6 +171,7 @@ class CmieClient:
                             code="RATE_LIMIT_REMOTE",
                             message="CMIE rate limit reached. Please retry later.",
                             detail=f"Retry-After: {retry_after}" if retry_after else "HTTP 429",
+                            retry_after_s=_parse_retry_after(retry_after),
                         )
                     if resp.status_code >= 500:
                         raise CmieNetworkError(
@@ -249,10 +262,12 @@ class CmieClient:
                         detail=f"HTTP {resp.status_code}",
                     )
                 if resp.status_code == 429:
+                    retry_after = resp.headers.get("Retry-After")
                     raise CmieRateLimitError(
                         code="RATE_LIMIT_REMOTE",
                         message="CMIE rate limit reached.",
-                        detail=resp.headers.get("Retry-After", "HTTP 429"),
+                        detail=retry_after or "HTTP 429",
+                        retry_after_s=_parse_retry_after(retry_after),
                     )
                 if resp.status_code >= 500:
                     raise CmieNetworkError(code="SERVER", message="CMIE server error.", detail=f"HTTP {resp.status_code}")
@@ -317,10 +332,12 @@ class CmieClient:
                             detail=f"HTTP {resp.status_code}",
                         )
                     if resp.status_code == 429:
+                        retry_after = resp.headers.get("Retry-After")
                         raise CmieRateLimitError(
                             code="RATE_LIMIT_REMOTE",
                             message="CMIE rate limit reached.",
-                            detail=resp.headers.get("Retry-After", "HTTP 429"),
+                            detail=retry_after or "HTTP 429",
+                            retry_after_s=_parse_retry_after(retry_after),
                         )
                     if resp.status_code >= 500:
                         raise CmieNetworkError(code="SERVER", message="CMIE server error.", detail=f"HTTP {resp.status_code}")

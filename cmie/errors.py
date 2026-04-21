@@ -23,8 +23,13 @@ class CmieEntitlementError(CmieError):
     pass
 
 
+@dataclass(frozen=True)
 class CmieRateLimitError(CmieError):
-    pass
+    """429 (or local bucket refusal). `retry_after_s` holds the parsed `Retry-After`
+    header from CMIE when present, so callers can time.sleep() without re-parsing
+    `detail`.  See docs/plans/2026-04-21-cmie-refactor-execution-strategy.md §F.3.6.
+    """
+    retry_after_s: Optional[float] = None
 
 
 class CmieNetworkError(CmieError):
