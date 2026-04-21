@@ -27,6 +27,9 @@ test_screenshots/
 # Crash dumps
 *.stackdump
 
+# CMIE API test artifacts (raw ZIPs + extracted .txt + per-run report)
+cmie_validation/
+
 # Misc
 *.log
 .DS_Store
