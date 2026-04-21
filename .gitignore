@@ -21,10 +21,11 @@ test_screenshots/
 /test_*.py
 /demo_*.py
 
-# Documentation/planning (not needed for deployment)
-docs/
-*.md
-!requirements.txt
+# Secrets (NEVER commit)
+.streamlit/secrets.toml
+
+# Crash dumps
+*.stackdump
 
 # Misc
 *.log
