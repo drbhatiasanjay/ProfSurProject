@@ -235,6 +235,44 @@ copy once (not shown again); update `.streamlit/secrets.toml`; re-run the diagno
 3. **§F.1 row 5 updated:** quota-exhausted response shape is unconfirmed, but **"Passkey-invalid
    response shape"** is now confirmed — it's an HTML landing page, not a 401 and not an ERROR.txt.
 
+#### E.5.2 Second-run + router probe — 2026-04-22 (new Passkey installed)
+
+User rotated the Passkey at `register.cmie.com` / `wuuseredit&tab=2015`; `.streamlit/secrets.toml`
+updated to 32 characters. Second full diagnostic run + router method probe:
+
+| Test | Result |
+|---|---|
+| Re-run `cmie_stage1_reliance_diagnostic.py` (POST JSON wapicall) | Same 8,440-byte landing page — byte-diff vs first run shows **only the timestamp differs** |
+| Form-encoded variant (`apikey=…&company_code[]=…`) | Same 8,440-byte landing page |
+| All HTTP methods on wapicall (OPTIONS/HEAD/GET/POST/PUT/DELETE/PATCH) | **All return `302 → http://economyapi.cmie.com`**, empty `Allow:` header — classic auth-gate redirect before any `kall` dispatch |
+| Same methods on `query.php` | Returns `200` with structured JSON (`errno` / `errmsg` fields) — no redirect |
+| `POST query.php` with just `apikey` (no scheme) | Returns `{"errno":0, "errmsg":"Success", "user":"sk_pgdav", "service":"", "hits":"Hits Consumed: 0"}` — **Passkey IS valid**, username exposed |
+| Final wapicall retry with `username=sk_pgdav&apikey=&company_code[]=196667` | Still `302` — username isn't the missing piece |
+| Exploratory `query.php` with `scheme=MITS&indicnum=12692320&freq=A&nperiod=1` (CMIE's own docs example) | `errno:-23 "Invalid Indicator Number"`, `data:["ERROR", "Invalid Indicator Number, No-Service Indicator Number"]` |
+
+**Root cause** — **account has zero services activated**:
+- `"service": ""` in every query.php success response
+- Every indicator query fails with *"No-Service Indicator Number"*
+- This is CMIE's *"NO live subscription"* error category (from `cmie_validation/docs_example_php.html`)
+
+**Hit cost across entire session: 0.** CMIE returns 302/JSON-error before the meter runs; nothing we probed cost hits.
+
+**User-side unblock (not a code task):**
+
+1. At `register.cmie.com` — look for *"Subscription"* / *"My Services"* / *"Request Access"* section.
+2. Email CMIE support (`wfaq` link on every page) with:
+   - Username: `sk_pgdav`
+   - Error: *"Passkey authenticates (errno:0) but every indicator returns 'No-Service Indicator Number'"*
+   - Request: activate Prowess **MITS** (for indicator-level query.php access) and/or **wapicall** (for per-company ZIPs)
+3. Services may already be on a different CMIE account (e.g. Prof. Kumar's institutional subscription) that needs to be linked to `sk_pgdav`.
+
+**Refactor-plan implications once services activate:**
+
+- **If wapicall is activated** → all §A–§F plans apply unchanged; re-run Stage 1 diagnostic should succeed.
+- **If only query.php is activated** → the refactor's transport flips: swap the per-company ZIP model (`cmie.client.download_wapicall_zip` + `cmie.pipeline.merge_zip_paths_to_version`) for the indicator-JSON model (`cmie.client.post_query_form` + `cmie.query_form.cmie_tabular_json_to_dataframe`). The `cmie/` package already has both transports implemented; only the pipeline wiring in `batch_pipeline.py` changes. Batch semantics also change: query.php returns one table per indicator query, not one ZIP per company.
+
+**Current status: service-blocked, not code-blocked.** All 6 infrastructure commits (febafe5…8c0e036) are correct and immediately usable once CMIE activates a service.
+
 ---
 
 ## F) Rate limits, retries, circuit breakers — implementation deltas
