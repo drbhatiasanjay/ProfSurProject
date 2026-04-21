@@ -200,6 +200,41 @@ That disambiguates the earlier test failure — it's one of:
 Until this diagnostic is run, the schema assumptions in `normalize.py` and `indicator_map.py`
 are **unverified** against real CMIE output for any company this subscription covers.
 
+#### E.5.1 First-run outcome — 2026-04-22 00:05 UTC (commit 8e138a9)
+
+Script: [`scripts/cmie_stage1_reliance_diagnostic.py`](../../scripts/cmie_stage1_reliance_diagnostic.py).
+
+| Check | Result |
+|---|---|
+| URL + method + body encoding | ✅ Match CMIE's own `?section=example_php` verbatim (both JSON and form-encoded are documented as valid — our code sends JSON) |
+| §E.2 filename pattern prediction | ✅ Confirmed verbatim by CMIE docs: `196667_RELIANCE_INDUSTRIES_LTD__latest_username.txt` |
+| F.3.2 hotfix classification | ✅ `non_zip_body` raised and short-circuited in 0.6 s (without the fix, 4 retries × ~19 s backoff would have run) |
+| Wapicall response for Reliance | ❌ HTTP 200, `Content-Type: text/html`, 8,440 bytes — CMIE's landing page (not a ZIP and not an `ERROR.txt`) |
+| `/kommon/bin/sr.php?kall=wdiagnosis` GET | Returns *"User status: User not logged in."* — confirms session/key not associated |
+| API Passkey present in `.streamlit/secrets.toml` | ✅ 19 chars, loaded correctly |
+
+**Root cause:** API Passkey is invalid / expired / for-wrong-account. CMIE silently returns its
+landing page rather than a 401 or an `ERROR.txt` ZIP — which is why our existing
+`raise_if_error_txt` heuristics don't catch this class of failure either.
+
+**Unblock step:** rotate the Passkey at `register.cmie.com → API Passkey → Generate New API Passkey`;
+copy once (not shown again); update `.streamlit/secrets.toml`; re-run the diagnostic.
+
+**Refactor implications (new, beyond §E.4):**
+
+1. **`raise_if_error_txt` only catches ERROR.txt content** — but CMIE's "invalid-passkey" failure
+   mode returns a normal HTML landing page with no ERROR.txt anywhere. Current code relies on
+   `_zip_sanity_check` → `CmieZipError("ZIP_BAD")` to catch this, which F.3.2 now routes to a
+   fail-fast path. Good, but the user-facing message says *"response was not a valid zip"* —
+   misleading for a Passkey issue. **Add a lightweight HTML sniff** in `_zip_sanity_check` that
+   recognises CMIE's prelogin markers (`prelogin.js`, `prelogin.css`, `loginform`) and raises a
+   `CmieAuthError("AUTH_PRELOGIN")` instead, with a message pointing at `register.cmie.com`.
+2. **Add a cheap pre-flight call** to `/wdiagnosis` (GET, no hits consumed, returns HTML) that
+   can confirm network reachability *without* burning 3 hits on a dead Passkey. Useful as the
+   first thing a batch pipeline does before fanning out.
+3. **§F.1 row 5 updated:** quota-exhausted response shape is unconfirmed, but **"Passkey-invalid
+   response shape"** is now confirmed — it's an HTML landing page, not a 401 and not an ERROR.txt.
+
 ---
 
 ## F) Rate limits, retries, circuit breakers — implementation deltas
