@@ -11,7 +11,9 @@ filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 
 st.markdown("### Data Explorer")
-st.caption("Browse, filter, and export the full dataset. Respects sidebar filters.")
+_panel = st.session_state.get("panel_mode", "latest")
+_panel_suffix = " · Latest panel (includes CMIE 2025)" if _panel == "latest" else " · Thesis panel (2001–2024)"
+st.caption(f"Browse, filter, and export the full dataset. Respects sidebar filters.{_panel_suffix}")
 
 # ── Column selection ──
 ALL_COLUMNS = [

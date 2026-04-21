@@ -18,7 +18,9 @@ filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 
 st.markdown("### Peer Benchmarks")
-st.caption("Compare a company against its industry and life-stage peers.")
+_panel = st.session_state.get("panel_mode", "latest")
+_panel_suffix = " · Latest panel (includes CMIE 2025)" if _panel == "latest" else " · Thesis panel (2001–2024)"
+st.caption(f"Compare a company against its industry and life-stage peers.{_panel_suffix}")
 
 # ── Company selector ──
 companies_df = db.get_companies()

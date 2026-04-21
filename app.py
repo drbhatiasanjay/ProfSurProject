@@ -129,6 +129,8 @@ with st.sidebar:
     meta = db.get_db_metadata(chosen_panel)
     panel_suffix = " • includes CMIE 2025" if chosen_panel == "latest" else " • thesis only"
     st.caption(f"{meta['total_firms']} firms | {meta['total_obs']:,} obs | {meta['year_min']}–{meta['year_max']}{panel_suffix}")
+    _theme = st.session_state.get("theme", "light")
+    st.caption(f"Theme: **{_theme}** · change in Settings")
 
     # CMIE API Live sidebar hidden — API integration is a separate capability handled in its own track.
     # To re-enable: uncomment the two lines below.
