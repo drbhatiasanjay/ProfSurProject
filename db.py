@@ -7,8 +7,31 @@ import os
 import sqlite3
 import pandas as pd
 import streamlit as st
+from datetime import datetime, timezone
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "capital_structure.db")
+
+
+def is_cmie_lab_enabled() -> bool:
+    """
+    Gate all CMIE UI and CMIE-backed data paths. Default: off (production parity).
+
+    Enable with environment variable ENABLE_CMIE=true (or 1/yes/on), or Streamlit
+    secret ENABLE_CMIE=true. Used by upstream repo; fork labs turn this on.
+    """
+    v = os.environ.get("ENABLE_CMIE", "").strip().lower()
+    if v in ("1", "true", "yes", "on"):
+        return True
+    if v in ("0", "false", "no", "off"):
+        return False
+    try:
+        sec = st.secrets.get("ENABLE_CMIE", False)
+        if isinstance(sec, str):
+            return sec.strip().lower() in ("1", "true", "yes", "on")
+        return bool(sec)
+    except Exception:
+        return False
+
 
 # Set WAL mode once at import time, not per-connection
 _init_conn = sqlite3.connect(DB_PATH)
@@ -20,6 +43,14 @@ def get_connection():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 
+def db_cache_revision() -> int:
+    """Integer that changes when the SQLite file on disk changes (for Streamlit cache keys)."""
+    try:
+        return int(os.path.getmtime(DB_PATH))
+    except OSError:
+        return 0
+
+
 def _query(sql, params=None):
     """Execute a read query with automatic connection cleanup."""
     conn = get_connection()
@@ -28,6 +59,345 @@ def _query(sql, params=None):
     finally:
         conn.close()
     return df
+
+
+def _exec(sql: str, params=None) -> None:
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.execute(sql, params or [])
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def ensure_cmie_tables():
+    """
+    Create versioned CMIE import tables if missing.
+    Kept in db.py so Streamlit pages can rely on it without separate migrations.
+    """
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("PRAGMA journal_mode=WAL")
+        cur.execute("PRAGMA foreign_keys=ON")
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS api_imports (
+                import_id TEXT PRIMARY KEY,
+                company_code INTEGER,
+                requested_at TEXT NOT NULL,
+                finished_at TEXT,
+                status TEXT NOT NULL, -- running|success|failed
+                error_code TEXT,
+                error_message TEXT,
+                bytes_downloaded INTEGER,
+                rows_written INTEGER,
+                year_min INTEGER,
+                year_max INTEGER,
+                indicators TEXT,
+                files TEXT
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS api_versions (
+                version_id TEXT PRIMARY KEY,
+                company_code INTEGER,
+                import_id TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                is_current INTEGER NOT NULL DEFAULT 0,
+                note TEXT,
+                FOREIGN KEY(import_id) REFERENCES api_imports(import_id)
+            )
+            """
+        )
+
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS api_financials (
+                version_id TEXT NOT NULL,
+                company_code INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                life_stage TEXT,
+                leverage REAL,
+                profitability REAL,
+                tangibility REAL,
+                tax REAL,
+                dividend REAL,
+                firm_size REAL,
+                log_size REAL,
+                tax_shield REAL,
+                borrowings REAL,
+                total_liabilities REAL,
+                cash_holdings REAL,
+                ncfo REAL,
+                ncfi REAL,
+                ncff REAL,
+                gfc INTEGER,
+                ibc_2016 INTEGER,
+                covid_dummy INTEGER,
+                PRIMARY KEY (version_id, company_code, year)
+            )
+            """
+        )
+
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_api_financials_version ON api_financials(version_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_api_versions_current ON api_versions(company_code, is_current)")
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def get_current_api_version(company_code: int | None = None) -> str | None:
+    ensure_cmie_tables()
+    if company_code is None:
+        df = _query("SELECT version_id FROM api_versions WHERE is_current = 1 ORDER BY created_at DESC LIMIT 1")
+    else:
+        df = _query(
+            "SELECT version_id FROM api_versions WHERE is_current = 1 AND company_code = ? ORDER BY created_at DESC LIMIT 1",
+            [company_code],
+        )
+    return df["version_id"].iloc[0] if not df.empty else None
+
+
+def mark_current_api_version(version_id: str, company_code: int | None = None) -> None:
+    ensure_cmie_tables()
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("PRAGMA foreign_keys=ON")
+        if company_code is None:
+            cur.execute("UPDATE api_versions SET is_current = 0")
+        else:
+            cur.execute("UPDATE api_versions SET is_current = 0 WHERE company_code = ?", [company_code])
+        cur.execute("UPDATE api_versions SET is_current = 1 WHERE version_id = ?", [version_id])
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def insert_import_row(import_id: str, company_code: int | None, *, status: str, indicators: str = "", files: str = "") -> None:
+    ensure_cmie_tables()
+    _exec(
+        """
+        INSERT OR REPLACE INTO api_imports(import_id, company_code, requested_at, status, indicators, files)
+        VALUES(?,?,?,?,?,?)
+        """,
+        [import_id, company_code, utc_now_iso(), status, indicators, files],
+    )
+
+
+def finish_import_row(
+    import_id: str,
+    *,
+    status: str,
+    error_code: str | None = None,
+    error_message: str | None = None,
+    bytes_downloaded: int | None = None,
+    rows_written: int | None = None,
+    year_min: int | None = None,
+    year_max: int | None = None,
+) -> None:
+    ensure_cmie_tables()
+    _exec(
+        """
+        UPDATE api_imports
+        SET finished_at = ?, status = ?, error_code = ?, error_message = ?,
+            bytes_downloaded = ?, rows_written = ?, year_min = ?, year_max = ?
+        WHERE import_id = ?
+        """,
+        [utc_now_iso(), status, error_code, error_message, bytes_downloaded, rows_written, year_min, year_max, import_id],
+    )
+
+
+def create_version(import_id: str, company_code: int | None, note: str = "") -> str:
+    ensure_cmie_tables()
+    version_id = f"v_{import_id}"
+    _exec(
+        """
+        INSERT OR REPLACE INTO api_versions(version_id, company_code, import_id, created_at, is_current, note)
+        VALUES(?,?,?,?,0,?)
+        """,
+        [version_id, company_code, import_id, utc_now_iso(), note],
+    )
+    return version_id
+
+
+def write_api_financials(version_id: str, panel_df: pd.DataFrame) -> int:
+    """
+    Store normalized panel rows into api_financials for the given version_id.
+    """
+    ensure_cmie_tables()
+    if panel_df.empty:
+        return 0
+
+    df = panel_df.copy()
+    df["version_id"] = version_id
+
+    cols = [
+        "version_id",
+        "company_code",
+        "year",
+        "life_stage",
+        "leverage",
+        "profitability",
+        "tangibility",
+        "tax",
+        "dividend",
+        "firm_size",
+        "log_size",
+        "tax_shield",
+        "borrowings",
+        "total_liabilities",
+        "cash_holdings",
+        "ncfo",
+        "ncfi",
+        "ncff",
+        "gfc",
+        "ibc_2016",
+        "covid_dummy",
+    ]
+    df = df[[c for c in cols if c in df.columns]]
+
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.execute("BEGIN")
+        cur.execute("DELETE FROM api_financials WHERE version_id = ?", [version_id])
+        df.to_sql("api_financials", conn, if_exists="append", index=False, method="multi", chunksize=2000)
+        cur.execute("COMMIT")
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        raise
+    finally:
+        conn.close()
+
+    return int(len(df))
+
+
+def _where_api_financials_join(filters_tuple):
+    """WHERE clause for api_financials + companies join (industry lives on c, not f)."""
+    filters = _deserialize_filters(filters_tuple)
+    where, params = _build_where(filters, "f")
+    where = where.replace("f.industry_group", "c.industry_group")
+    return where, params
+
+
+@st.cache_data(ttl=300)
+def get_api_financials(version_id: str, _filters_tuple):
+    """
+    Read normalized CMIE panel rows for the active version_id and apply the same global filters.
+    """
+    where, params = _where_api_financials_join(_filters_tuple)
+    sql = f"""
+        SELECT
+            f.company_code,
+            c.company_name,
+            c.nse_symbol,
+            c.industry_group,
+            c.inc_year,
+            f.year,
+            f.life_stage,
+            f.leverage,
+            f.profitability,
+            f.tangibility,
+            f.tax,
+            f.dividend,
+            f.firm_size,
+            f.log_size,
+            f.tax_shield,
+            f.borrowings,
+            f.total_liabilities,
+            f.cash_holdings,
+            f.ncfo,
+            f.ncfi,
+            f.ncff,
+            f.gfc,
+            f.ibc_2016,
+            f.covid_dummy
+        FROM api_financials f
+        LEFT JOIN companies c ON f.company_code = c.company_code
+        WHERE f.version_id = ? AND {where}
+        ORDER BY c.company_name, f.year
+    """
+    return _query(sql, [version_id] + params)
+
+
+@st.cache_data(ttl=300)
+def get_api_panel_data(version_id: str, _filters_tuple):
+    """
+    Panel shaped like get_panel_data but sourced from api_financials for the given version.
+    Interest / int_rate columns come from packaged financials when the same (company_code, year) exists.
+    """
+    where, params = _where_api_financials_join(_filters_tuple)
+    sql = f"""
+        SELECT f.company_code, f.year, f.life_stage,
+               f.leverage, f.profitability, f.tangibility, f.tax,
+               f.dividend, f.firm_size, f.log_size, f.tax_shield,
+               f.borrowings, f.total_liabilities, f.cash_holdings,
+               f.ncfo, f.ncfi, f.ncff,
+               f_stat.interest, f_stat.int_rate, f_stat.int_rate_lt,
+               f.gfc, f.ibc_2016, f.covid_dummy,
+               c.industry_group,
+               o.promoter_share, o.non_promoters,
+               m.index_pe, m.index_pb, m.daily_returns AS market_return,
+               m.index_yield AS market_yield
+        FROM api_financials f
+        LEFT JOIN companies c ON f.company_code = c.company_code
+        LEFT JOIN financials f_stat ON f.company_code = f_stat.company_code AND f.year = f_stat.year
+        LEFT JOIN ownership o ON f.company_code = o.company_code AND f.year = o.year
+        LEFT JOIN market_index m ON f.year = m.year
+        WHERE f.version_id = ? AND {where}
+        ORDER BY f.company_code, f.year
+    """
+    return _query(sql, [version_id] + params)
+
+
+@st.cache_data(ttl=300)
+def get_api_life_stage_summary(version_id: str, _filters_tuple):
+    """Aggregate life-stage × year from CMIE-imported api_financials (same shape as get_life_stage_summary)."""
+    where, params = _where_api_financials_join(_filters_tuple)
+    sql = f"""
+        SELECT f.life_stage, f.year,
+               COUNT(*) AS num_firms,
+               AVG(f.leverage) AS avg_leverage,
+               AVG(f.profitability) AS avg_profitability,
+               AVG(f.tangibility) AS avg_tangibility,
+               AVG(f.firm_size) AS avg_size,
+               AVG(f.tax_shield) AS avg_tax_shield,
+               AVG(f.cash_holdings) AS avg_cash_holdings
+        FROM api_financials f
+        LEFT JOIN companies c ON f.company_code = c.company_code
+        WHERE f.version_id = ? AND {where}
+        GROUP BY f.life_stage, f.year
+        ORDER BY f.year
+    """
+    return _query(sql, [version_id] + params)
+
+
+def get_active_life_stage_summary(_filters_tuple):
+    """Match get_life_stage_summary when using CMIE active version."""
+    if not is_cmie_lab_enabled():
+        return get_life_stage_summary(_filters_tuple)
+    mode = getattr(st.session_state, "data_source_mode", "sqlite")
+    if mode == "cmie":
+        version_id = get_current_api_version()
+        if version_id:
+            return get_api_life_stage_summary(version_id, _filters_tuple)
+    return get_life_stage_summary(_filters_tuple)
 
 
 def _deserialize_filters(filters_tuple):
@@ -121,6 +491,37 @@ def get_filtered_financials(_filters_tuple):
         ORDER BY company_name, year
     """
     return _query(sql, params)
+
+
+def get_active_financials(_filters_tuple):
+    """
+    Unified accessor used by pages.
+    - If sidebar mode is 'cmie' and a current API version exists, return api_financials join.
+    - Otherwise fall back to the packaged SQLite view.
+    """
+    if not is_cmie_lab_enabled():
+        return get_filtered_financials(_filters_tuple)
+    mode = getattr(st.session_state, "data_source_mode", "sqlite")
+    if mode == "cmie":
+        version_id = get_current_api_version()
+        if version_id:
+            return get_api_financials(version_id, _filters_tuple)
+    return get_filtered_financials(_filters_tuple)
+
+
+def get_active_panel_data(_filters_tuple):
+    """
+    Same contract as get_panel_data for econometrics/ML pages.
+    When ENABLE_CMIE is on and data_source_mode is cmie with a current API version, read api_financials path.
+    """
+    if not is_cmie_lab_enabled():
+        return get_panel_data(_filters_tuple)
+    mode = getattr(st.session_state, "data_source_mode", "sqlite")
+    if mode == "cmie":
+        version_id = get_current_api_version()
+        if version_id:
+            return get_api_panel_data(version_id, _filters_tuple)
+    return get_panel_data(_filters_tuple)
 
 
 @st.cache_data(ttl=600)

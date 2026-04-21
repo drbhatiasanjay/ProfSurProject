@@ -7,6 +7,24 @@ import db
 
 st.markdown("### Settings")
 
+# ── CMIE Lab (optional) ──
+st.markdown("#### CMIE Economy API Lab")
+if db.is_cmie_lab_enabled():
+    from cmie.streamlit_import import render_cmie_sidebar_block
+
+    st.caption(
+        "CMIE lab is enabled. Use the block below to switch data source and import a new CMIE version "
+        "(writes to SQLite `api_financials`)."
+    )
+    render_cmie_sidebar_block(key_prefix="cmie_settings")
+else:
+    st.caption(
+        "CMIE lab UI is disabled unless **ENABLE_CMIE** is set (env or Streamlit secrets). "
+        "Restart the app after setting it."
+    )
+
+st.divider()
+
 # ── About ──
 st.markdown("#### About LifeCycle Leverage Dashboard")
 st.markdown("""
@@ -66,6 +84,11 @@ st.markdown("""
 - **Interest rates:** Reserve Bank of India
 - **Shareholding:** NSE/BSE quarterly filings
 """)
+
+st.caption(
+    "Optional CMIE Economy API lab UI is disabled unless **ENABLE_CMIE** is set "
+    "(env or Streamlit secrets). Use a **GitHub fork** for CMIE development; see **FORK_WORKFLOW.md**."
+)
 
 st.divider()
 

@@ -42,7 +42,14 @@ with fc2:
 
 # ── Load data ──
 with st.spinner("Loading data..."):
-    df = db.get_full_data_explorer(ft)
+    if (
+        db.is_cmie_lab_enabled()
+        and getattr(st.session_state, "data_source_mode", "sqlite") == "cmie"
+        and db.get_current_api_version()
+    ):
+        df = db.get_api_financials(db.get_current_api_version(), ft)
+    else:
+        df = db.get_full_data_explorer(ft)
 
 if df.empty:
     st.warning("No data matches the current filters.")

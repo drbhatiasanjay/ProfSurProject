@@ -38,14 +38,15 @@ st.caption("How firms move between life stages, what triggers transitions, and h
 
 # ── Build / cache the graph + source data ──
 @st.cache_resource
-def _build_graph():
+def _build_graph(db_revision: int):
+    _ = db_revision  # cache key only — busts graph when capital_structure.db mtime changes
     fin_df = db.get_graph_financials()
     own_df = db.get_graph_ownership()
     G = build_knowledge_graph(fin_df, own_df)
     return G, fin_df
 
 
-G, fin_df = _build_graph()
+G, fin_df = _build_graph(db.db_cache_revision())
 stats = get_graph_stats(G)
 
 # ── KPI strip ──

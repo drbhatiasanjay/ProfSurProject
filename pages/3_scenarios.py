@@ -8,73 +8,48 @@ import pandas as pd
 import numpy as np
 import db
 from helpers import plotly_layout, format_pct, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box
+from models.scenario_regression import compute_leverage_ols_coefs, leverage_predictor_sample_means
 
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
+_data_source = getattr(st.session_state, "data_source_mode", "sqlite")
+_version_id = (
+    db.get_current_api_version()
+    if db.is_cmie_lab_enabled() and _data_source == "cmie"
+    else None
+)
 
 st.markdown("### Scenario Analysis")
 st.caption("Adjust firm characteristics to see predicted leverage based on panel regression coefficients.")
 
-# ── Compute OLS coefficients from the data ──
+# ── Compute OLS coefficients from the active panel (filters + CMIE version when applicable) ──
+# Args must NOT use a leading underscore: Streamlit excludes those from the cache key.
 @st.cache_data(ttl=3600)
-def compute_coefficients():
-    """Run simple OLS on the full dataset to get coefficients."""
-    conn = db.get_connection()
-    df = pd.read_sql("""
-        SELECT leverage, profitability, tangibility, tax, log_size, tax_shield, dividend
-        FROM financials
-        WHERE leverage IS NOT NULL
-          AND profitability IS NOT NULL
-          AND tangibility IS NOT NULL
-          AND tax IS NOT NULL
-          AND log_size IS NOT NULL
-    """, conn)
-    conn.close()
-    df = df.dropna()
+def compute_coefficients(filters_tuple, data_source: str, version_id: str | None):
+    """Run simple OLS on the filtered panel (SQLite or CMIE api_financials)."""
+    if db.is_cmie_lab_enabled() and data_source == "cmie" and version_id:
+        panel = db.get_api_panel_data(version_id, filters_tuple)
+    else:
+        panel = db.get_panel_data(filters_tuple)
+    return compute_leverage_ols_coefs(panel)
 
-    # Simple OLS using numpy (no statsmodels dependency)
-    y = df["leverage"].values
-    predictors = ["profitability", "tangibility", "tax", "log_size", "tax_shield", "dividend"]
-    X = df[predictors].fillna(0).values
-    X = np.column_stack([np.ones(len(X)), X])  # add intercept
 
-    # OLS: beta = (X'X)^-1 X'y
-    try:
-        beta = np.linalg.lstsq(X, y, rcond=None)[0]
-        coefs = {"intercept": beta[0]}
-        for i, name in enumerate(predictors):
-            coefs[name] = beta[i + 1]
-        # R-squared
-        y_hat = X @ beta
-        ss_res = np.sum((y - y_hat) ** 2)
-        ss_tot = np.sum((y - np.mean(y)) ** 2)
-        coefs["r_squared"] = 1 - ss_res / ss_tot
-        coefs["n_obs"] = len(df)
-    except np.linalg.LinAlgError:
-        coefs = {
-            "intercept": 21.0, "profitability": -0.3, "tangibility": 0.15,
-            "tax": -0.05, "log_size": 2.0, "tax_shield": 0.1, "dividend": -0.02,
-            "r_squared": 0.0, "n_obs": 0,
-        }
-    return coefs
-
-coefs = compute_coefficients()
-
-# ── Get sample means for defaults ──
 @st.cache_data(ttl=3600)
-def get_sample_means():
-    conn = db.get_connection()
-    df = pd.read_sql("""
-        SELECT AVG(profitability) as prof, AVG(tangibility) as tang,
-               AVG(tax) as tax, AVG(log_size) as log_size,
-               AVG(tax_shield) as tax_shield, AVG(dividend) as dvnd
-        FROM financials
-        WHERE leverage IS NOT NULL
-    """, conn)
-    conn.close()
-    return df.iloc[0].to_dict()
+def get_sample_means(filters_tuple, data_source: str, version_id: str | None):
+    if db.is_cmie_lab_enabled() and data_source == "cmie" and version_id:
+        panel = db.get_api_panel_data(version_id, filters_tuple)
+    else:
+        panel = db.get_panel_data(filters_tuple)
+    return leverage_predictor_sample_means(panel)
 
-means = get_sample_means()
+
+coefs = compute_coefficients(ft, _data_source, _version_id)
+means = get_sample_means(ft, _data_source, _version_id)
+
+if db.is_cmie_lab_enabled() and _data_source == "cmie" and _version_id:
+    st.caption(f"Regression fit on **CMIE import** (version `{_version_id[:16]}…`, n={coefs.get('n_obs', 0):,}).")
+elif coefs.get("n_obs", 0) == 0:
+    st.caption("Insufficient observations for OLS after filters — using fallback coefficients.")
 
 # ── Sliders ──
 st.markdown("#### Adjust Firm Characteristics")
@@ -182,7 +157,16 @@ st.markdown("#### Compare with a Real Company")
 companies_df = db.get_companies()
 comp_name = st.selectbox("Select company to compare", companies_df["company_name"].tolist(), index=0)
 comp_code = int(companies_df[companies_df["company_name"] == comp_name]["company_code"].iloc[0])
-comp_df = db.get_company_detail(comp_code)
+use_cmie_series = (
+    db.is_cmie_lab_enabled()
+    and getattr(st.session_state, "data_source_mode", "sqlite") == "cmie"
+    and db.get_current_api_version()
+)
+if use_cmie_series:
+    comp_df = db.get_active_financials(ft)
+    comp_df = comp_df[comp_df["company_code"] == comp_code].sort_values("year")
+else:
+    comp_df = db.get_company_detail(comp_code)
 
 if not comp_df.empty:
     actual_avg = comp_df["leverage"].mean()

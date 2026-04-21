@@ -48,7 +48,7 @@ with st.expander("ℹ️ About these models"):
 """)
 
 # Load data
-panel_df = db.get_panel_data(ft)
+    panel_df = db.get_active_panel_data(ft)
 if panel_df.empty:
     st.warning("No data. Adjust filters.")
     st.stop()

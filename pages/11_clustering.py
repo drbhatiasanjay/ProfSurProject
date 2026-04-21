@@ -37,7 +37,7 @@ with st.expander("ℹ️ About this model"):
 **In the capital structure context:** Dickinson (2011) classifies firms by cash flow signs alone. But two firms with identical cash flow signs can have vastly different leverage, profitability, and size profiles. Clustering reveals these hidden subgroups — potentially identifying a "high-growth-high-debt" cluster that Dickinson would simply label "Growth."
 """)
 
-panel_df = db.get_panel_data(ft)
+panel_df = db.get_active_panel_data(ft)
 if panel_df.empty:
     st.warning("No data. Adjust filters.")
     st.stop()

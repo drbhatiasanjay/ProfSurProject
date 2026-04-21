@@ -35,8 +35,16 @@ st.info(f"**{selected}** | NSE: {company_row['nse_symbol']} | Industry: {company
 
 # ── Load data ──
 with st.spinner("Loading benchmarks..."):
-    company_df = db.get_company_detail(company_code)
-    full_df = db.get_filtered_financials(ft)
+    full_df = db.get_active_financials(ft)
+    use_cmie_series = (
+        db.is_cmie_lab_enabled()
+        and getattr(st.session_state, "data_source_mode", "sqlite") == "cmie"
+        and db.get_current_api_version()
+    )
+    if use_cmie_series:
+        company_df = full_df[full_df["company_code"] == company_code].sort_values("year")
+    else:
+        company_df = db.get_company_detail(company_code)
     industry_df = full_df[full_df["industry_group"] == company_industry]
 
 if company_df.empty:
