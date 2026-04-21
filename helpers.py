@@ -14,6 +14,13 @@ NEUTRAL = "#374151"       # gray-700
 BG_LIGHT = "#F8FAFC"
 BG_CARD = "#FFFFFF"
 
+# Dark-theme palette (matches assets/style_dark.css and docs/mocks/datav2_dashboard_mock.html)
+BG_DARK = "#0e1117"
+PANEL_DARK = "#1a1d24"
+BORDER_DARK = "#2a2e37"
+TEXT_DARK = "#e6e6e6"
+MUTED_DARK = "#9aa0a6"
+
 STAGE_COLORS = {
     "Startup":   "#F97316",
     "Growth":    "#22C55E",
@@ -425,7 +432,29 @@ PLOTLY_CONFIG = {
 }
 
 
-def plotly_layout(title="", height=400):
+def new_badge(label: str = "NEW") -> str:
+    """HTML snippet for a NEW / recency badge — pass to `st.markdown(..., unsafe_allow_html=True)`.
+
+    Styled by `.new-badge` in `assets/style_{light,dark}.css` (amber-on-dark pill, both themes).
+    Use this helper instead of inline `<span class="new-badge">…</span>` so the markup
+    stays consistent across dashboards (DataV2 KPIs, T623 picker, future surfaces).
+    """
+    # Label is assumed trusted (literal callers); no user input flows here today.
+    return f'<span class="new-badge">{label}</span>'
+
+
+def _current_theme() -> str:
+    """Read session_state.theme if Streamlit is running; default 'light'.
+    Kept lazy so this module stays importable from scripts/tests without Streamlit."""
+    try:
+        import streamlit as st  # local import so helpers stays importable without Streamlit
+        t = getattr(st.session_state, "theme", "light")
+        return t if t in ("light", "dark") else "light"
+    except Exception:
+        return "light"
+
+
+def plotly_layout_light(title="", height=400):
     return dict(
         title=dict(text=title, font=dict(size=16, color=NEUTRAL)),
         font=dict(family="Inter, system-ui, sans-serif", size=12, color=NEUTRAL),
@@ -438,6 +467,35 @@ def plotly_layout(title="", height=400):
                      activecolor=PRIMARY, color=NEUTRAL),
         hovermode="x unified",
     )
+
+
+def plotly_layout_dark(title="", height=400):
+    return dict(
+        title=dict(text=title, font=dict(size=16, color="#ffffff")),
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color=TEXT_DARK),
+        plot_bgcolor=BG_DARK,
+        paper_bgcolor=PANEL_DARK,
+        margin=dict(l=40, r=20, t=50, b=60),
+        height=height,
+        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5,
+                    font=dict(color=TEXT_DARK)),
+        modebar=dict(orientation="h", bgcolor="rgba(26,29,36,0.7)",
+                     activecolor=ACCENT, color=MUTED_DARK),
+        xaxis=dict(gridcolor=BORDER_DARK, zerolinecolor=BORDER_DARK,
+                   tickcolor=MUTED_DARK, tickfont=dict(color=MUTED_DARK),
+                   title=dict(font=dict(color=TEXT_DARK))),
+        yaxis=dict(gridcolor=BORDER_DARK, zerolinecolor=BORDER_DARK,
+                   tickcolor=MUTED_DARK, tickfont=dict(color=MUTED_DARK),
+                   title=dict(font=dict(color=TEXT_DARK))),
+        hovermode="x unified",
+    )
+
+
+def plotly_layout(title="", height=400):
+    """Theme-aware layout dispatcher. Callers get the right palette automatically."""
+    if _current_theme() == "dark":
+        return plotly_layout_dark(title, height)
+    return plotly_layout_light(title, height)
 
 
 def event_bands(fig, year_col="year"):

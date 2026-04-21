@@ -1,22 +1,24 @@
-/* LifeCycle Leverage Dashboard — Custom Styles */
+/* LifeCycle Leverage Dashboard — Light Theme (default) */
 
 /* KPI metric cards */
 div[data-testid="stMetric"] {
     background: #FFFFFF;
     border: 1px solid #E5E7EB;
-    border-radius: 12px;
-    padding: 16px 20px;
+    border-radius: 14px;
+    padding: 18px 22px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 
 div[data-testid="stMetric"] label {
     color: #6B7280 !important;
-    font-size: 0.85rem !important;
+    font-size: 0.78rem !important;
     font-weight: 500 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-    font-size: 1.8rem !important;
+    font-size: 2rem !important;
     font-weight: 700 !important;
     color: #0D9488 !important;
 }
@@ -86,4 +88,40 @@ div.stDownloadButton > button {
 
 div.stDownloadButton > button:hover {
     background: #0F766E !important;
+}
+
+/* NEW-badge helper (inline HTML snippet in st.markdown) */
+.new-badge {
+    display: inline-block;
+    background: #FFB020;
+    color: #111;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.04em;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* Vintage pills for Data Explorer rows (Phase 3) */
+.pill-thesis {
+    display: inline-block;
+    background: #EEF2F7;
+    color: #274066;
+    border: 1px solid #C7D2FE;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.pill-cmie-2025 {
+    display: inline-block;
+    background: #FFF4DC;
+    color: #8A5A00;
+    border: 1px solid #F5C97A;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
 }

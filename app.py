@@ -13,8 +13,14 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Load custom CSS
-css_path = os.path.join(os.path.dirname(__file__), "assets", "style.css")
+# Theme: light (default) or dark. Toggle lives on the Settings page.
+if "theme" not in st.session_state:
+    st.session_state.theme = "light"
+
+# Load theme CSS. style_light.css is the original; style_dark.css is the DataV2-era refresh.
+_theme = st.session_state.theme if st.session_state.theme in ("light", "dark") else "light"
+_css_filename = f"style_{_theme}.css"
+css_path = os.path.join(os.path.dirname(__file__), "assets", _css_filename)
 if os.path.exists(css_path):
     with open(css_path) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)

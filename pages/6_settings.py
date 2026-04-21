@@ -7,6 +7,27 @@ import db
 
 st.markdown("### Settings")
 
+# ── Appearance ──
+st.markdown("#### Appearance")
+_theme_options = ["light", "dark"]
+_theme_labels = {"light": "Light (default)", "dark": "Dark (mock-inspired)"}
+_current = st.session_state.get("theme", "light")
+_chosen = st.radio(
+    "Theme",
+    options=_theme_options,
+    index=_theme_options.index(_current) if _current in _theme_options else 0,
+    format_func=lambda t: _theme_labels[t],
+    horizontal=True,
+    help="Light keeps the original teal-on-white look. Dark matches the DataV2 mock palette.",
+    key="settings_theme_radio",
+)
+if _chosen != _current:
+    st.session_state.theme = _chosen
+    st.rerun()
+st.caption("Theme persists for the current session. Switching does not alter any data.")
+
+st.divider()
+
 # ── CMIE Lab (optional) ──
 st.markdown("#### CMIE Economy API Lab")
 if db.is_cmie_lab_enabled():

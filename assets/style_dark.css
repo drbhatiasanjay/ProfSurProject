@@ -1,0 +1,234 @@
+/* LifeCycle Leverage Dashboard — Dark Theme */
+/* Palette matches docs/mocks/datav2_dashboard_mock.html */
+
+:root {
+    --bg: #0e1117;
+    --panel: #1a1d24;
+    --border: #2a2e37;
+    --text: #e6e6e6;
+    --muted: #9aa0a6;
+    --accent: #ff4b4b;      /* streamlit red */
+    --accent2: #1f77b4;     /* thesis blue */
+    --accent3: #2ca02c;     /* cmie green */
+    --new: #ffb020;         /* NEW badge amber */
+}
+
+/* App background + default text (!important to override Streamlit's inline theme bg) */
+.stApp,
+div[data-testid="stAppViewContainer"],
+section.main,
+div[data-testid="stMainBlockContainer"] {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+.main .block-container,
+div[data-testid="block-container"] {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+}
+
+/* Top toolbar / header */
+header[data-testid="stHeader"] {
+    background: var(--bg) !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6,
+div[data-testid="stMarkdown"] h1,
+div[data-testid="stMarkdown"] h2,
+div[data-testid="stMarkdown"] h3,
+div[data-testid="stMarkdown"] h4 {
+    color: #ffffff;
+}
+
+div[data-testid="stMarkdown"] h3:first-of-type {
+    color: #ffffff;
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Body text */
+div[data-testid="stMarkdown"] p,
+.stCaption,
+div[data-testid="stCaptionContainer"] {
+    color: var(--text);
+}
+
+/* KPI metric cards */
+div[data-testid="stMetric"] {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 22px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.35);
+}
+
+div[data-testid="stMetric"] label {
+    color: var(--muted) !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+}
+
+div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {
+    color: var(--accent3) !important;
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+}
+
+section[data-testid="stSidebar"] h1 {
+    color: #ffffff;
+    font-size: 1.3rem;
+    font-weight: 700;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: 1rem;
+}
+
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] div[data-testid="stMarkdown"] p {
+    color: var(--text);
+}
+
+/* Sidebar form inputs */
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+section[data-testid="stSidebar"] input,
+section[data-testid="stSidebar"] textarea {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+    border-color: var(--border) !important;
+}
+
+/* Radio buttons (panel mode, theme toggle) */
+div[data-baseweb="radio"] label {
+    color: var(--text) !important;
+}
+
+/* Tabs */
+button[data-baseweb="tab"] {
+    font-weight: 600 !important;
+    color: var(--muted) !important;
+}
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: var(--accent) !important;
+}
+
+div[data-baseweb="tab-highlight"] {
+    background-color: var(--accent) !important;
+}
+
+/* Expanders */
+details[data-testid="stExpander"] {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+details[data-testid="stExpander"] summary {
+    font-weight: 600;
+    color: var(--text);
+}
+
+details[data-testid="stExpander"] > div {
+    color: var(--text);
+}
+
+/* Buttons */
+button[kind="primary"] {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #ffffff !important;
+}
+
+button[kind="primary"]:hover {
+    background: #e63946 !important;
+    border-color: #e63946 !important;
+}
+
+button[kind="secondary"] {
+    background: var(--panel) !important;
+    border-color: var(--border) !important;
+    color: var(--text) !important;
+}
+
+/* Download buttons */
+div.stDownloadButton > button {
+    background: var(--accent) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}
+
+div.stDownloadButton > button:hover {
+    background: #e63946 !important;
+}
+
+/* Dataframes / tables */
+div[data-testid="stDataFrame"] {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+/* Alert boxes (info, success, warning, error) */
+div[data-testid="stAlert"] {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+}
+
+/* Sliders */
+div[data-baseweb="slider"] [role="slider"] {
+    background: var(--accent) !important;
+}
+
+/* NEW-badge helper (inline HTML snippet in st.markdown) */
+.new-badge {
+    display: inline-block;
+    background: var(--new);
+    color: #111;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.04em;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* Vintage pills for Data Explorer rows (Phase 3) */
+.pill-thesis {
+    display: inline-block;
+    background: #12151b;
+    color: #9ec5fe;
+    border: 1px solid #274066;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.pill-cmie-2025 {
+    display: inline-block;
+    background: #2a1f0c;
+    color: var(--new);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
