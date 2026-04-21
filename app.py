@@ -124,8 +124,10 @@ with st.sidebar:
     panel_suffix = " • includes CMIE 2025" if chosen_panel == "latest" else " • thesis only"
     st.caption(f"{meta['total_firms']} firms | {meta['total_obs']:,} obs | {meta['year_min']}–{meta['year_max']}{panel_suffix}")
 
-    if db.is_cmie_lab_enabled():
-        render_cmie_sidebar_block(key_prefix="cmie_sidebar")
+    # CMIE API Live sidebar hidden — API integration is a separate capability handled in its own track.
+    # To re-enable: uncomment the two lines below.
+    # if db.is_cmie_lab_enabled():
+    #     render_cmie_sidebar_block(key_prefix="cmie_sidebar")
 
 # ── Navigation ──
 dashboard = st.Page("pages/1_dashboard.py", title="Dashboard", icon=":material/dashboard:", default=True)
