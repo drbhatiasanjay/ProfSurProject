@@ -105,6 +105,16 @@ def format_coef_table(coef_df):
     return display
 
 
+# ── UI chrome helpers ──
+
+def new_badge(text: str = "NEW") -> str:
+    """Inline amber 'NEW' badge. Render via `st.markdown(new_badge(), unsafe_allow_html=True)`.
+
+    Styling lives in `assets/style_light.css` and `assets/style_dark.css` under `.new-badge`.
+    """
+    return f'<span class="new-badge">{text}</span>'
+
+
 # ── Dynamic Interpretation Engine ──
 # All functions read actual data/results and generate insights dynamically.
 # If data changes, interpretations change automatically.
@@ -430,17 +440,6 @@ PLOTLY_CONFIG = {
     "modeBarButtonsToRemove": ["lasso2d", "select2d"],
     "displaylogo": False,
 }
-
-
-def new_badge(label: str = "NEW") -> str:
-    """HTML snippet for a NEW / recency badge — pass to `st.markdown(..., unsafe_allow_html=True)`.
-
-    Styled by `.new-badge` in `assets/style_{light,dark}.css` (amber-on-dark pill, both themes).
-    Use this helper instead of inline `<span class="new-badge">…</span>` so the markup
-    stays consistent across dashboards (DataV2 KPIs, T623 picker, future surfaces).
-    """
-    # Label is assumed trusted (literal callers); no user input flows here today.
-    return f'<span class="new-badge">{label}</span>'
 
 
 def _current_theme() -> str:
