@@ -11,7 +11,7 @@ from scipy import stats
 import db
 from helpers import (
     winsorize, format_pct, format_inr, format_number, format_pvalue,
-    plotly_layout, event_bands, STAGE_COLORS, STAGE_ORDER,
+    plotly_layout, event_bands, new_badge, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     _render_insight_box, interpret_kpi_cards, interpret_leverage_trend,
     interpret_lifecycle_distribution, interpret_top_leveraged, interpret_event_impact,
@@ -73,6 +73,34 @@ with c7:
     st.metric("Dominant Stage", dominant_stage)
 with c8:
     st.metric("Observations", format_number(n_obs))
+
+# ── Row 3: DataV2-era KPIs (NEW badge on each) ─────────────────────────────
+# Introduced in DataV2 vintage ingest (2026-04-21). Hidden when panel_mode='thesis'.
+_panel_mode = st.session_state.get("panel_mode", "latest")
+if _panel_mode == "latest":
+    c9, c10, c11, c12 = st.columns(4)
+    latest_yr = int(df["year"].max()) if not df.empty else None
+    try:
+        n_indices = len(db.get_available_indices())
+    except Exception:
+        n_indices = 0
+    _cmie_2025_rows = df[df.get("vintage", "").eq("cmie_2025")] if "vintage" in df.columns else df[df["year"] == 2025]
+    n_cmie_firms = _cmie_2025_rows["company_name"].nunique() if not _cmie_2025_rows.empty else 0
+    with c9:
+        st.markdown(new_badge(), unsafe_allow_html=True)
+        st.metric("Latest year", str(latest_yr) if latest_yr else "—",
+                  delta="CMIE Mar-2025 close" if latest_yr == 2025 else None)
+    with c10:
+        st.markdown(new_badge(), unsafe_allow_html=True)
+        st.metric("Market indices", format_number(n_indices),
+                  delta="was 1 (Sensex only)" if n_indices > 1 else None)
+    with c11:
+        st.markdown(new_badge(), unsafe_allow_html=True)
+        st.metric("CMIE 2025 firms", format_number(n_cmie_firms),
+                  delta="from DataV2 rollforward" if n_cmie_firms else None)
+    with c12:
+        st.markdown(new_badge(), unsafe_allow_html=True)
+        st.metric("Data vintages", "2", delta="thesis + cmie_2025")
 
 insights, actions = interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_prof, dominant_stage, n_obs)
 _render_insight_box("KPI Overview — What do these numbers tell us?", insights, actions,
@@ -158,18 +186,50 @@ with stage_right:
         else:
             st.info("No significant difference found")
 
-    # Stage means bar chart
+    # Stage-means bar chart. When the Latest panel is active AND 2025 rows are in scope,
+    # surface the vintage comparison as tabs (mock-inspired). Otherwise fall back to a
+    # single "All years" view so the thesis panel reads cleanly.
+    # The `stage_means` variable is kept (computed from the full df) so the interpretation
+    # narrative below still references the overall highest/lowest stages.
     stage_means = df.groupby("life_stage")["leverage"].mean().reset_index()
     stage_means.columns = ["life_stage", "avg_leverage"]
     stage_means = stage_means.sort_values("avg_leverage", ascending=True)
-    fig_stage_bar = px.bar(
-        stage_means, x="avg_leverage", y="life_stage", orientation="h",
-        color="life_stage", color_discrete_map=STAGE_COLORS,
-        labels={"avg_leverage": "Avg Leverage (%)", "life_stage": ""},
-    )
-    fig_stage_bar.update_layout(**plotly_layout(height=300))
-    fig_stage_bar.update_layout(showlegend=False)
-    st.plotly_chart(fig_stage_bar, use_container_width=True, config=PLOTLY_CONFIG)
+
+    _panel = st.session_state.get("panel_mode", "latest")
+    _has_2025 = bool((df.get("vintage", pd.Series(dtype=str)) == "cmie_2025").any()) if "vintage" in df.columns else (df["year"] == 2025).any()
+
+    def _stage_bar(df_slice, title_suffix: str):
+        if df_slice.empty:
+            st.info(f"No rows available for {title_suffix}.")
+            return
+        sm = df_slice.groupby("life_stage")["leverage"].mean().reset_index()
+        sm.columns = ["life_stage", "avg_leverage"]
+        sm = sm.sort_values("avg_leverage", ascending=True)
+        fig = px.bar(
+            sm, x="avg_leverage", y="life_stage", orientation="h",
+            color="life_stage", color_discrete_map=STAGE_COLORS,
+            labels={"avg_leverage": "Avg Leverage (%)", "life_stage": ""},
+        )
+        fig.update_layout(**plotly_layout(height=300))
+        fig.update_layout(showlegend=False)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+
+    if _panel == "latest" and _has_2025:
+        tab_all, tab_thesis, tab_2025 = st.tabs(["All years", "Thesis only (2001–2024)", "2025 snapshot"])
+        with tab_all:
+            _stage_bar(df, "all years")
+        with tab_thesis:
+            if "vintage" in df.columns:
+                _stage_bar(df[df["vintage"] == "thesis"], "thesis vintage")
+            else:
+                _stage_bar(df[df["year"] <= 2024], "pre-2025 rows")
+        with tab_2025:
+            if "vintage" in df.columns:
+                _stage_bar(df[df["vintage"] == "cmie_2025"], "2025 snapshot")
+            else:
+                _stage_bar(df[df["year"] == 2025], "2025 snapshot")
+    else:
+        _stage_bar(df, "all years")
 
 # Interpretation
 _f2, _a2 = [], []
@@ -306,19 +366,34 @@ _render_insight_box("Macro Context — Interest Rates & Market Conditions", _fm,
     "Shows how macro-level factors (RBI rates, BSE valuations) co-move with aggregate leverage.")
 
 # ─── Sector / Index benchmark (T623, ~749 series from DataV2 CMIE load) ──────
-with st.expander("Compare leverage to a sector / market index (CMIE T623, 749 series)", expanded=False):
-    indices_df = db.get_available_indices()
-    if indices_df.empty:
-        st.info("No T623 index series loaded. Run `py -3.12 -m cmie.load_vintage ./DataV2 --vintage cmie_2025` to populate.")
-    else:
+# Promoted out of an expander into a first-class panel so the benchmarking affordance
+# is visible without scrolling/clicking. Matches the mock's "Macro overlay" right panel.
+_idx_header_cols = st.columns([4, 1])
+with _idx_header_cols[0]:
+    st.markdown("### Compare leverage to a sector / market index")
+with _idx_header_cols[1]:
+    st.markdown(f'<div style="text-align:right;">{new_badge()}</div>', unsafe_allow_html=True)
+st.caption("Overlay any of the ~749 CMIE T623 index series (BSE / Nifty / sector / industry) against the aggregate leverage line.")
+
+indices_df = db.get_available_indices()
+if indices_df.empty:
+    st.info("No T623 index series loaded. Run `py -3.12 -m cmie.load_vintage ./DataV2 --vintage cmie_2025` to populate.")
+else:
+    _pick_col, _chart_col = st.columns([1, 3])
+    with _pick_col:
         default_name = "Bse 500" if (indices_df["index_name"] == "Bse 500").any() else indices_df["index_name"].iloc[0]
         chosen_name = st.selectbox(
             "Benchmark index",
             options=indices_df["index_name"].tolist(),
             index=int(indices_df.index[indices_df["index_name"] == default_name][0]),
             key="dashboard_index_picker",
+            help=f"Search {len(indices_df):,} series — BSE / Nifty / CMIE sector / CMIE industry.",
         )
         chosen_code = int(indices_df.loc[indices_df["index_name"] == chosen_name, "index_code"].iloc[0])
+        _row = indices_df.loc[indices_df["index_code"] == chosen_code].iloc[0]
+        st.caption(f"`index_code={chosen_code}`")
+        st.caption(f"Coverage: {int(_row['year_min'])}–{int(_row['year_max'])} ({int(_row['n_years'])} yrs)")
+    with _chart_col:
         series_df = db.get_market_index(yr_min, yr_max, index_code=chosen_code)
         if series_df.empty or series_df["index_closing"].dropna().empty:
             st.warning(f"No closing data for {chosen_name} in {yr_min}–{yr_max}.")
@@ -341,7 +416,6 @@ with st.expander("Compare leverage to a sector / market index (CMIE T623, 749 se
             )
             fig_idx = event_bands(fig_idx)
             st.plotly_chart(fig_idx, use_container_width=True, config=PLOTLY_CONFIG)
-            st.caption(f"Source: CMIE T623 closing values for index_code={chosen_code}, {series_df['year'].min()}–{series_df['year'].max()}.")
 
 st.divider()
 

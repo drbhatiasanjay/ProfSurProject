@@ -523,7 +523,8 @@ def get_filtered_financials(_filters_tuple):
                year, age_group, size_decile, life_stage,
                leverage, profitability, tangibility, tax, dividend,
                firm_size, tax_shield, borrowings, total_liabilities,
-               cash_holdings, gfc, ibc_2016, covid_dummy
+               cash_holdings, gfc, ibc_2016, covid_dummy,
+               vintage
         FROM v_company_financials
         WHERE {where}
         ORDER BY company_name, year
