@@ -273,6 +273,39 @@ updated to 32 characters. Second full diagnostic run + router method probe:
 
 **Current status: service-blocked, not code-blocked.** All 6 infrastructure commits (febafe5…8c0e036) are correct and immediately usable once CMIE activates a service.
 
+#### E.5.3 query.php E2E POC — parser does not branch on `errno`
+
+POC: [`scripts/cmie_stage1_queryphp_probe.py`](../../scripts/cmie_stage1_queryphp_probe.py) (run
+against the current no-service account as a transport-exercise).
+
+**What the POC demonstrated cleanly:**
+- `cmie.client.CmieClient.post_query_form()` is callable from external code without package
+  changes.
+- `cmie.query_form.cmie_tabular_json_to_dataframe()` can be fed live CMIE responses.
+- `cmie.normalize.CANONICAL_COLUMNS` is accessible for schema-drift detection from the same
+  external code.
+- Error classification into discrete outcomes (`ok_with_data / ok_empty / invalid_apikey /
+  no_service_indicator / errno_<n>`) maps cleanly from CMIE's `meta.errno` field.
+
+**New refactor finding:**
+
+`cmie_tabular_json_to_dataframe` **does not branch on `meta.errno`**. Given CMIE's error
+response shape (`head: [[label, value], …]`, `data: [["ERROR", …]]`), pandas silently
+produces a DataFrame with **tuple-shaped columns** — not a crash, but meaningless data that
+downstream consumers will treat as real. The refactor pipeline must short-circuit on
+`meta.errno != 0` *before* calling the parser:
+
+```python
+resp = client.post_query_form(form_fields)
+meta = resp.get("meta", {})
+if meta.get("errno") != 0:
+    raise CmieError(code=f"ERRNO_{meta.get('errno')}", message=meta.get("errmsg", ""))
+df = cmie_tabular_json_to_dataframe(resp)
+```
+
+This is a one-liner to add in `cmie/pipeline.py` (or the new `cmie/batch_pipeline.py`); the
+parser itself doesn't need to change.
+
 ---
 
 ## F) Rate limits, retries, circuit breakers — implementation deltas
