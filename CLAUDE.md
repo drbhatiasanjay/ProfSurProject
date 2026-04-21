@@ -72,16 +72,22 @@ assets/
   style_dark.css    - DataV2-mock palette (full widget coverage)
 cmie/
   client.py         - CmieClient (download_wapicall_zip, post_query_form,
-                      download_query_zip) with backoff + TokenBucket hook
+                      download_query_zip) with backoff + TokenBucket hook;
+                      Retry-After parsed into CmieRateLimitError.retry_after_s
   errors.py         - CmieError hierarchy (Auth / Entitlement / RateLimit / …)
   pipeline.py       - import_from_raw_dataframe, merge_zip_paths_to_version
+  batch_pipeline.py - Hardened per-company wapicall loop: abort-on-auth,
+                      Retry-After honouring, 5-consecutive-5xx circuit breaker,
+                      shared TokenBucket (§F.3.3/4/5). run_per_company_batch +
+                      import_results_to_db; returns CompanyResult + BatchSummary
   normalize.py      - CANONICAL_COLUMNS, normalize_panel_like, validate_panel
   indicator_map.py  - COLUMN_ALIASES (CMIE → canonical)
   query_form.py     - cmie_tabular_json_to_dataframe
   zip_parse.py      - ZIP extract + ERROR.txt classification
-  rate_limit.py     - TokenBucket (optional; not wired by default)
+  rate_limit.py     - TokenBucket (now wired on all 4 streamlit_import sites)
   load_vintage.py   - DataV2 T616/T617/T618/T623 loader
-  streamlit_import.py - Sidebar import UI (currently hidden at app.py:133-136)
+  streamlit_import.py - Sidebar import UI (currently hidden at app.py:133-136);
+                      errno-check guard (§E.5.3) before tabular parser
   __main__.py       - CLI: download / import-zip / merge-zips / batch-download
 models/
   base.py           - PanelGroupKFold, prepare_panel, metrics

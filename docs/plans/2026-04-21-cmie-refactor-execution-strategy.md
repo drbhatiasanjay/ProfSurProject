@@ -458,12 +458,13 @@ is ≈ 100 ms per small company — negligible.
 
 ### F.6 Summary — files changed by §F
 
-| File | Change |
-|---|---|
-| `cmie/client.py` | Add `CmieZipError` to no-retry tuples (3 sites, F.3.2); parse `Retry-After` → populate `CmieRateLimitError.retry_after_s` at 429 branches (F.3.6) |
-| `cmie/errors.py` | Add `retry_after_s: float \| None = None` to `CmieRateLimitError` (F.3.6) |
-| `cmie/batch_pipeline.py` *(new)* | `max_retries=1`, shared `TokenBucket`, abort-on-auth, respect `Retry-After`, 5-consecutive-5xx circuit breaker |
-| `pages/15_data_load.py` *(new)* | Advanced-controls expander; "Total hits estimated" KPI |
+| File | Change | Status |
+|---|---|---|
+| `cmie/client.py` | Add `CmieZipError` to no-retry tuples (3 sites, F.3.2); parse `Retry-After` → populate `CmieRateLimitError.retry_after_s` at 429 branches (F.3.6) | ✅ `afb7a4a` + `b25c052` |
+| `cmie/errors.py` | Add `retry_after_s: float \| None = None` to `CmieRateLimitError` (F.3.6) | ✅ `b25c052` |
+| `cmie/streamlit_import.py` | §E.5.3 errno check; default `TokenBucket` on all 4 `CmieClient` sites (F.3.1) | ✅ `b25c052` |
+| `cmie/batch_pipeline.py` *(new)* | `max_retries=1`, shared `TokenBucket`, abort-on-auth (F.3.3), respect `Retry-After` (F.3.4), 5-consecutive-5xx circuit breaker (F.3.5). Tests: `tests/test_batch_pipeline.py` (12 cases) | ✅ `584e552` |
+| `pages/15_data_load.py` *(new)* | Advanced-controls expander; "Total hits estimated" KPI | ⏳ pending CMIE service activation (no point wiring UI until live data is fetchable) |
 
 ---
 
