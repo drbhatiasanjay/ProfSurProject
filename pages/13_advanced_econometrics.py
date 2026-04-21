@@ -19,11 +19,17 @@ from models.econometric import (
     run_stage_comparison, run_breusch_pagan_lm, run_pooled_ols,
 )
 
-filters = st.session_state.filters
+# Reproducibility pin — thesis-panel only.
+filters = dict(st.session_state.filters)
+filters["panel_mode"] = "thesis"
+yr_min_t, yr_max_t = db.get_year_range("thesis")
+yr_prev = filters.get("year_range", (yr_min_t, yr_max_t))
+filters["year_range"] = (max(yr_prev[0], yr_min_t), min(yr_prev[1], yr_max_t))
 ft = db.filters_to_tuple(filters)
 
 st.markdown("### Advanced Econometrics")
 st.caption("Dynamic panel GMM, change-in-leverage models, and stage comparison regressions — extending the thesis methodology.")
+st.info("📌 **Pinned to Thesis panel (2001–2024)** for reproducibility.", icon="🔒")
 
 with st.expander("About these models"):
     st.markdown("""
@@ -40,7 +46,7 @@ This answers: *What drives changes in capital structure, not just its level?*
 This reveals which determinants differ between stages — e.g., profitability matters more in Maturity than Growth.
 """)
 
-panel_df = db.get_panel_data(ft)
+    panel_df = db.get_active_panel_data(ft)
 if panel_df.empty:
     st.warning("No data. Adjust filters.")
     st.stop()

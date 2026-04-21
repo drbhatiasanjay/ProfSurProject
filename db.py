@@ -431,9 +431,40 @@ def get_industry_groups():
 
 
 @st.cache_data(ttl=3600)
-def get_year_range():
-    row = _query("SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials")
+def get_year_range(panel_mode: str = "latest"):
+    """Year range of the selected panel. `thesis` stops at 2024; `latest` extends to newest CMIE vintage."""
+    if panel_mode == "thesis":
+        sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage = 'thesis'"
+    else:
+        sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials"
+    row = _query(sql)
     return int(row["min_yr"].iloc[0]), int(row["max_yr"].iloc[0])
+
+
+@st.cache_data(ttl=3600)
+def get_data_vintages():
+    """All loaded vintages with human labels. Drives the Panel dropdown."""
+    return _query("SELECT vintage, label, loaded_at, description FROM data_vintages ORDER BY vintage")
+
+
+def _vintage_predicate(panel_mode: str, table_prefix: str = "") -> tuple[str, list]:
+    """Return (SQL fragment, params) for the panel_mode vintage predicate."""
+    p = f"{table_prefix}." if table_prefix else ""
+    if panel_mode == "thesis":
+        return f"{p}vintage = ?", ["thesis"]
+    # "latest" = all vintages; use IN with the full set so cache invalidates on new vintage.
+    # For v1 the set is {thesis, cmie_2025}. Future loads extend this automatically via data_vintages.
+    try:
+        conn = get_connection()
+        try:
+            rows = conn.execute("SELECT vintage FROM data_vintages ORDER BY vintage").fetchall()
+        finally:
+            conn.close()
+        vintages = [r[0] for r in rows] or ["thesis"]
+    except Exception:
+        vintages = ["thesis", "cmie_2025"]
+    placeholders = ",".join("?" * len(vintages))
+    return f"{p}vintage IN ({placeholders})", vintages
 
 
 # ── Core filtered queries ──
@@ -442,6 +473,13 @@ def _build_where(filters, table_prefix=""):
     p = f"{table_prefix}." if table_prefix else ""
     clauses = ["1=1"]
     params = []
+
+    # Panel mode → vintage predicate. Defaults to 'latest' if not set (Dashboard/Benchmarks/Explorer).
+    # Reproducibility-critical pages (Econometrics/ML/Forecasting) set panel_mode='thesis' before querying.
+    panel_mode = filters.get("panel_mode", "latest")
+    vintage_sql, vintage_params = _vintage_predicate(panel_mode, table_prefix)
+    clauses.append(vintage_sql)
+    params.extend(vintage_params)
 
     yr = filters.get("year_range", (2001, 2024))
     clauses.append(f"{p}year BETWEEN ? AND ?")
@@ -601,16 +639,40 @@ def get_top_leveraged(n, _filters_tuple):
 
 
 @st.cache_data(ttl=600)
-def get_market_index(year_min, year_max):
+def get_market_index(year_min, year_max, index_code: int | None = None):
+    """Market index closing values. Default (index_code=None) keeps Sensex back-compat via the
+    legacy market_index table (rich fields: PE, PB, yield, beta, ...). If an explicit index_code
+    is passed, pull closing values from market_index_series (T623 has 700+ series)."""
+    if index_code is None:
+        sql = """
+            SELECT year, index_opening, index_closing, index_high, index_low,
+                   index_market_cap, daily_returns, excess_returns,
+                   index_pe, index_pb, index_yield, index_beta
+            FROM market_index
+            WHERE year BETWEEN ? AND ?
+            ORDER BY year
+        """
+        return _query(sql, [year_min, year_max])
+
     sql = """
-        SELECT year, index_opening, index_closing, index_high, index_low,
-               index_market_cap, daily_returns, excess_returns,
-               index_pe, index_pb, index_yield, index_beta
-        FROM market_index
-        WHERE year BETWEEN ? AND ?
+        SELECT year, index_name, index_closing
+        FROM market_index_series
+        WHERE index_code = ? AND year BETWEEN ? AND ?
         ORDER BY year
     """
-    return _query(sql, [year_min, year_max])
+    return _query(sql, [index_code, year_min, year_max])
+
+
+@st.cache_data(ttl=3600)
+def get_available_indices():
+    """All T623 market index series with their latest closing year. Drives the Dashboard index picker."""
+    sql = """
+        SELECT index_code, index_name, MIN(year) AS year_min, MAX(year) AS year_max, COUNT(*) AS n_years
+        FROM market_index_series
+        GROUP BY index_code, index_name
+        ORDER BY index_name
+    """
+    return _query(sql)
 
 
 @st.cache_data(ttl=3600)
@@ -639,8 +701,9 @@ def get_full_data_explorer(_filters_tuple):
 
 
 @st.cache_data(ttl=3600)
-def get_db_metadata():
-    df = _query("""
+def get_db_metadata(panel_mode: str = "latest"):
+    vintage_sql, vintage_params = _vintage_predicate(panel_mode, "f")
+    df = _query(f"""
         SELECT
             COUNT(DISTINCT f.company_code) AS total_firms,
             COUNT(*) AS total_obs,
@@ -648,7 +711,8 @@ def get_db_metadata():
             MAX(f.year) AS year_max,
             (SELECT COUNT(DISTINCT industry_group) FROM companies) AS industries
         FROM financials f
-    """)
+        WHERE {vintage_sql}
+    """, vintage_params)
     row = df.iloc[0]
     return {
         "total_firms": int(row["total_firms"]),
@@ -656,6 +720,7 @@ def get_db_metadata():
         "year_min": int(row["year_min"]),
         "year_max": int(row["year_max"]),
         "industries": int(row["industries"]),
+        "panel_mode": panel_mode,
     }
 
 

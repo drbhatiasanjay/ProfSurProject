@@ -21,11 +21,17 @@ from models.ml_predict import (
     _prepare_ml_data,
 )
 
-filters = st.session_state.filters
+# Reproducibility pin — ML models are trained on the thesis panel to match the reported results.
+filters = dict(st.session_state.filters)
+filters["panel_mode"] = "thesis"
+yr_min_t, yr_max_t = db.get_year_range("thesis")
+yr_prev = filters.get("year_range", (yr_min_t, yr_max_t))
+filters["year_range"] = (max(yr_prev[0], yr_min_t), min(yr_prev[1], yr_max_t))
 ft = db.filters_to_tuple(filters)
 
 st.markdown("### ML Models")
 st.caption("Train, compare, and interpret machine learning models for leverage prediction. Panel-aware cross-validation prevents data leakage.")
+st.info("📌 **Pinned to Thesis panel (2001–2024)** for reproducibility.", icon="🔒")
 
 with st.expander("ℹ️ About these models — parameters & interpretation"):
     st.markdown("""
@@ -68,7 +74,7 @@ with st.sidebar:
         selected_x = DEFAULT_X_COLS
 
 # ── Load data ──
-panel_df = db.get_panel_data(ft)
+    panel_df = db.get_active_panel_data(ft)
 if panel_df.empty or len(panel_df) < 100:
     st.warning("Not enough data. Adjust filters (need 100+ observations).")
     st.stop()

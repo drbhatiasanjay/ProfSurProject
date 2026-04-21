@@ -10,7 +10,12 @@ import db
 from helpers import plotly_layout, format_pct, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box
 from models.scenario_regression import compute_leverage_ols_coefs, leverage_predictor_sample_means
 
-filters = st.session_state.filters
+# Reproducibility pin — scenario OLS coefficients come from the thesis panel.
+filters = dict(st.session_state.filters)
+filters["panel_mode"] = "thesis"
+yr_min_t, yr_max_t = db.get_year_range("thesis")
+yr_prev = filters.get("year_range", (yr_min_t, yr_max_t))
+filters["year_range"] = (max(yr_prev[0], yr_min_t), min(yr_prev[1], yr_max_t))
 ft = db.filters_to_tuple(filters)
 _data_source = getattr(st.session_state, "data_source_mode", "sqlite")
 _version_id = (

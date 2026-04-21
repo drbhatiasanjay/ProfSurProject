@@ -22,8 +22,8 @@ ft = db.filters_to_tuple(filters)
 
 # ── Load data ──
 with st.spinner("Loading dashboard..."):
-    df = db.get_filtered_financials(ft)
-    stage_summary = db.get_life_stage_summary(ft)
+    df = db.get_active_financials(ft)
+    stage_summary = db.get_active_life_stage_summary(ft)
 
 if df.empty:
     st.warning("No data matches the current filters. Adjust the sidebar filters.")
@@ -304,6 +304,44 @@ if not macro_df.empty and "index_pe" in macro_df.columns:
 _am.append("Include interest rate and market P/E as controls in regression models (available in Econometrics Lab) to isolate firm-level determinant effects from macro trends.")
 _render_insight_box("Macro Context — Interest Rates & Market Conditions", _fm, _am,
     "Shows how macro-level factors (RBI rates, BSE valuations) co-move with aggregate leverage.")
+
+# ─── Sector / Index benchmark (T623, ~749 series from DataV2 CMIE load) ──────
+with st.expander("Compare leverage to a sector / market index (CMIE T623, 749 series)", expanded=False):
+    indices_df = db.get_available_indices()
+    if indices_df.empty:
+        st.info("No T623 index series loaded. Run `py -3.12 -m cmie.load_vintage ./DataV2 --vintage cmie_2025` to populate.")
+    else:
+        default_name = "Bse 500" if (indices_df["index_name"] == "Bse 500").any() else indices_df["index_name"].iloc[0]
+        chosen_name = st.selectbox(
+            "Benchmark index",
+            options=indices_df["index_name"].tolist(),
+            index=int(indices_df.index[indices_df["index_name"] == default_name][0]),
+            key="dashboard_index_picker",
+        )
+        chosen_code = int(indices_df.loc[indices_df["index_name"] == chosen_name, "index_code"].iloc[0])
+        series_df = db.get_market_index(yr_min, yr_max, index_code=chosen_code)
+        if series_df.empty or series_df["index_closing"].dropna().empty:
+            st.warning(f"No closing data for {chosen_name} in {yr_min}–{yr_max}.")
+        else:
+            fig_idx = go.Figure()
+            fig_idx.add_trace(go.Scatter(
+                x=overall_yearly["year"], y=overall_yearly["mean_leverage"],
+                mode="lines+markers", name="Avg Leverage (%)",
+                line=dict(color=PRIMARY, width=2.5), marker=dict(size=5),
+            ))
+            fig_idx.add_trace(go.Scatter(
+                x=series_df["year"], y=series_df["index_closing"],
+                mode="lines+markers", name=chosen_name,
+                line=dict(color=SECONDARY, width=2, dash="dash"), marker=dict(size=4),
+                yaxis="y2",
+            ))
+            fig_idx.update_layout(
+                **plotly_layout(f"Leverage vs {chosen_name}", height=380),
+                yaxis2=dict(title=f"{chosen_name} closing", overlaying="y", side="right", showgrid=False),
+            )
+            fig_idx = event_bands(fig_idx)
+            st.plotly_chart(fig_idx, use_container_width=True, config=PLOTLY_CONFIG)
+            st.caption(f"Source: CMIE T623 closing values for index_code={chosen_code}, {series_df['year'].min()}–{series_df['year'].max()}.")
 
 st.divider()
 

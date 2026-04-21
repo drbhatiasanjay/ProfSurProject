@@ -204,6 +204,13 @@ def load_financials(conn: sqlite3.Connection, datadir: Path, vintage: str, sourc
     # Slot Year is YYYYMMDD like 20250331 — derive panel year from the March close.
     df["year"] = (df["Slot Year"] // 10000).astype("Int64")
 
+    # Age group is firm-level in T616 but stored per-year on financials by the original
+    # load_to_db.py convention. Read T616 and build a code→age_group map.
+    t616 = _read_pipe(_find_file(datadir, "T616"), HEADER_SKIPROWS["T616"])
+    t616 = t616.rename(columns={c: c.strip() for c in t616.columns})
+    t616["Company Code"] = _to_int_series(t616["Company Code"])
+    age_map = dict(zip(t616["Company Code"].dropna().astype(int), t616["Age group"]))
+
     num_cols = [
         "prof", "tang", "tax", "dvnd", "interest", "size",
         "PBIT", "PBT", "Intamt", "Total capital", "Reserves and funds",
@@ -241,9 +248,7 @@ def load_financials(conn: sqlite3.Connection, datadir: Path, vintage: str, sourc
         slot_date = row.get("Slot Date")
         slot_year = str(int(row["Slot Year"]))
 
-        # Age group is firm-level in T616, but existing financials rows carry it per-year.
-        # Look up from companies join via inc_year bucket (simplest: leave NULL and let views join).
-        age_group = None
+        age_group = age_map.get(code)
 
         ncfo = _none_if_nan(row.get("ncfo"))
         ncfi = _none_if_nan(row.get("ncfi"))

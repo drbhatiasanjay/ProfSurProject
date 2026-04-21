@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>DataV2 — Dashboard Mock (old + new)</title>
+<style>
+  :root {
+    --bg: #0e1117;
+    --panel: #1a1d24;
+    --border: #2a2e37;
+    --text: #e6e6e6;
+    --muted: #9aa0a6;
+    --accent: #ff4b4b;       /* streamlit red */
+    --accent2: #1f77b4;      /* thesis blue */
+    --accent3: #2ca02c;      /* cmie green */
+    --new: #ffb020;          /* highlight for NEW */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #0b0d12;
+    color: var(--text);
+  }
+  .legend {
+    background: #11141a;
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+  }
+  .legend strong { color: #fff; }
+  .badge-new {
+    display: inline-block;
+    background: var(--new);
+    color: #111;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: .04em;
+  }
+  .chip {
+    display: inline-block; font-size: 12px; padding: 2px 8px;
+    border-radius: 10px; border: 1px solid var(--border);
+    color: var(--muted); background:#12151b;
+  }
+  .chip.thesis { color:#9ec5fe; border-color:#274066; }
+  .chip.cmie   { color:#a3e4b2; border-color:#25532f; }
+
+  .app { display: grid; grid-template-columns: 300px 1fr; min-height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px 18px;
+  }
+  .sidebar h1 { font-size: 18px; margin: 0 0 18px 0; color:#fff; }
+  .sidebar .block { margin-bottom: 18px; }
+  .sidebar label { display:block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .sidebar .control {
+    background: #0e1117; border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px 10px; color: var(--text); font-size: 13px;
+  }
+  .multi { display:flex; flex-wrap: wrap; gap: 6px; min-height: 34px; align-items:center; }
+  .pill {
+    display:inline-flex; align-items:center; gap: 6px;
+    background: #1f2430; border: 1px solid #2e3342; color: #dbe2ef;
+    padding: 2px 8px; border-radius: 12px; font-size: 12px;
+  }
+  .pill .x { color:#8a93a6; }
+  .pill.new { border-color: var(--new); color: #ffd48a; background:#2a1f0c;}
+  .slider { height: 26px; background: linear-gradient(to right, #2a2e37 0%, #2a2e37 0%, var(--accent) 0%, var(--accent) 100%, #2a2e37 100%); border-radius: 4px; position: relative; margin-top: 6px;}
+  .slider .handle {
+    position: absolute; top: -3px; width: 12px; height: 30px;
+    background: var(--accent); border-radius: 3px;
+  }
+  .slider .track {
+    position: absolute; top: 10px; left: 0; right: 0; height: 6px;
+    background: #2a2e37; border-radius: 3px;
+  }
+  .slider .fill {
+    position: absolute; top: 10px; height: 6px;
+    background: var(--accent); border-radius: 3px;
+  }
+  .slider .marks { position:absolute; top: 32px; width: 100%; font-size: 11px; color: var(--muted); display:flex; justify-content: space-between;}
+  .check { display:flex; gap:8px; align-items:center; font-size: 13px; margin: 4px 0; color:#cfd4dc;}
+  .check input { accent-color: var(--accent); }
+  .caption { color: var(--muted); font-size: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+  .caption .hi { color:#e6e6e6; }
+  .caption .new-line { color:#ffd48a; margin-top: 4px; }
+
+  /* MAIN */
+  .main { padding: 24px 28px; }
+  .main h1 { font-size: 24px; margin:0 0 4px; color:#fff; }
+  .main .subtitle { color: var(--muted); margin-bottom: 20px; }
+
+  .kpis { display:grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px;}
+  .kpi {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px 16px;
+  }
+  .kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  .kpi .value { color: #fff; font-size: 22px; font-weight: 600; margin-top: 4px; }
+  .kpi .delta { color:#2ca02c; font-size: 12px; margin-top: 2px; }
+  .kpi .delta.neg { color:#ef553b; }
+  .kpi.new { border: 1px solid var(--new); box-shadow: 0 0 0 1px rgba(255,176,32,.15) inset; }
+
+  .row { display:grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-bottom: 20px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 10px; color:#fff; display:flex; align-items:center; gap:8px;}
+  .card .row-controls { display:flex; gap: 8px; margin-bottom: 10px; align-items:center; flex-wrap:wrap;}
+  .card .row-controls select, .card .row-controls .fake-select {
+    background:#0e1117; border:1px solid var(--border); color: var(--text);
+    padding: 5px 8px; border-radius: 5px; font-size: 13px;
+  }
+
+  /* fake chart */
+  .chart { position: relative; height: 260px; border-radius: 4px; background:#0e1117; border:1px solid var(--border); padding: 8px;}
+  .chart svg { width: 100%; height: 100%; }
+  .chart .legend-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; vertical-align: middle;}
+  .chart-legend { font-size: 12px; color: var(--muted); margin-top: 6px; display:flex; gap:14px;}
+
+  /* tabs */
+  .tabs { display:flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 12px;}
+  .tabs .tab {
+    padding: 8px 14px; font-size: 13px; color: var(--muted); cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .tabs .tab.active { color: #fff; border-bottom-color: var(--accent); }
+  .tabs .tab .badge-new { transform: translateY(-1px); margin-left: 6px; }
+
+  /* table */
+  table { width:100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align:left; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing:.04em;}
+  tr.cmie-row td:first-child::after {
+    content: "CMIE 2025"; margin-left: 8px;
+    background: #2a1f0c; color: var(--new); font-size: 10px;
+    padding: 1px 6px; border-radius: 8px; font-weight: 600;
+  }
+
+  /* annotations */
+  .callout {
+    margin-top: 8px; font-size: 12px; color:#ffd48a;
+    background: rgba(255,176,32,.08); border-left: 3px solid var(--new);
+    padding: 8px 10px; border-radius: 0 4px 4px 0;
+  }
+  .callout strong { color: var(--new); }
+
+</style>
+</head>
+<body>
+
+<div class="legend">
+  <strong>Mock preview</strong>
+  <span>— Dashboard in "Latest panel" mode (2001–2025). Sidebar Panel dropdown flips to "Thesis panel" for reproducibility.</span>
+  <span class="chip thesis">&#9679; Thesis rows</span>
+  <span class="chip cmie">&#9679; CMIE 2025 rows</span>
+  <span class="badge-new">NEW</span>
+  <span style="color:var(--muted)">= element added for DataV2</span>
+</div>
+
+<div class="app">
+
+  <!-- ─────────── SIDEBAR ─────────── -->
+  <aside class="sidebar">
+    <h1>LifeCycle Leverage</h1>
+
+    <div class="block">
+      <label>Companies</label>
+      <div class="control multi"><span style="color:var(--muted)">All companies</span></div>
+    </div>
+
+    <div class="block">
+      <label>Year Range <span class="badge-new">scoped to active panel</span></label>
+      <div class="slider">
+        <div class="track"></div>
+        <div class="fill" style="left:0%; width:100%;"></div>
+        <div class="handle" style="left:0%;"></div>
+        <div class="handle" style="left:calc(100% - 12px);"></div>
+        <div class="marks"><span>2001</span><span>2025</span></div>
+      </div>
+      <div class="callout">Slider max tracks the selected panel — <code>2001–2024</code> in Thesis mode, <code>2001–2025</code> in Latest mode. Reads <code>get_year_range(panel_mode)</code>.</div>
+    </div>
+
+    <div class="block">
+      <label>Panel <span class="badge-new">NEW</span></label>
+      <div class="control" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>Latest panel (2001–2025)</span>
+        <span style="color:var(--muted); font-size:11px;">▾</span>
+      </div>
+      <div style="font-size: 11px; color: var(--muted); margin-top: 6px; padding-left: 8px;">
+        ○ Thesis panel (2001–2024)<br>
+        ● <span style="color:#a3e4b2">Latest panel (2001–2025)</span>
+      </div>
+      <div class="callout"><strong>Single-select — one panel at a time.</strong> Dashboard/Benchmarks/Explorer land on <em>Latest</em>. Econometrics/Forecasting/ML land on <em>Thesis</em> so published thesis results reproduce bit-for-bit. "Thesis panel" is frozen at 2001–2024 — it's the reproducibility anchor, not a rolling window.</div>
+    </div>
+
+    <div class="block">
+      <label>Life Stages</label>
+      <div class="control multi"><span style="color:var(--muted)">All stages</span></div>
+    </div>
+
+    <div class="block">
+      <label>Industries</label>
+      <div class="control multi"><span style="color:var(--muted)">All industries</span></div>
+    </div>
+
+    <div class="block">
+      <label>Event Periods</label>
+      <div class="check"><input type="checkbox"> GFC (2008–09)</div>
+      <div class="check"><input type="checkbox"> IBC (2016+)</div>
+      <div class="check"><input type="checkbox"> COVID (2020–21)</div>
+    </div>
+
+    <div class="caption">
+      <span class="hi">401 firms</span> | <span class="hi">9,077 obs</span> | 2001–2025
+      <div class="new-line">Panel: Latest • includes CMIE 2025 (400 firm-years)</div>
+    </div>
+  </aside>
+
+  <!-- ─────────── MAIN ─────────── -->
+  <main class="main">
+    <h1>Dashboard</h1>
+    <div class="subtitle">Leverage across corporate life stages — 401 Indian firms, 2001–2025.</div>
+
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Firms</div>
+        <div class="value">401</div>
+        <div class="delta">+1 (Tata Motors remap)</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Observations</div>
+        <div class="value">9,077</div>
+        <div class="delta">+400 from 2025</div>
+      </div>
+      <div class="kpi new">
+        <div class="label">Latest year <span class="badge-new">NEW</span></div>
+        <div class="value">2025</div>
+        <div class="delta">CMIE Mar-2025 close</div>
+      </div>
+      <div class="kpi new">
+        <div class="label">Market indices <span class="badge-new">NEW</span></div>
+        <div class="value">639</div>
+        <div class="delta">was 1 (Sensex only)</div>
+      </div>
+    </div>
+
+    <!-- Leverage vs life stage + Macro overlay -->
+    <div class="row">
+      <div class="card">
+        <h2>Median leverage by life stage</h2>
+        <div class="tabs">
+          <div class="tab active">All years</div>
+          <div class="tab">Thesis only (2001–2024)</div>
+          <div class="tab">2025 snapshot <span class="badge-new">NEW</span></div>
+        </div>
+        <div class="chart">
+          <svg viewBox="0 0 600 240" preserveAspectRatio="none">
+            <!-- axes -->
+            <line x1="40" y1="10" x2="40" y2="210" stroke="#2a2e37" />
+            <line x1="40" y1="210" x2="590" y2="210" stroke="#2a2e37" />
+            <!-- grid -->
+            <g stroke="#1a1d24">
+              <line x1="40" y1="50" x2="590" y2="50"/>
+              <line x1="40" y1="100" x2="590" y2="100"/>
+              <line x1="40" y1="150" x2="590" y2="150"/>
+            </g>
+            <!-- bars: Intro Growth Mature Shake-out Decline -->
+            <!-- thesis (blue) -->
+            <rect x="70"  y="90"  width="28" height="120" fill="#1f77b4"/>
+            <rect x="170" y="60"  width="28" height="150" fill="#1f77b4"/>
+            <rect x="270" y="100" width="28" height="110" fill="#1f77b4"/>
+            <rect x="370" y="80"  width="28" height="130" fill="#1f77b4"/>
+            <rect x="470" y="120" width="28" height="90"  fill="#1f77b4"/>
+            <!-- cmie 2025 (green) -->
+            <rect x="100" y="100" width="28" height="110" fill="#2ca02c"/>
+            <rect x="200" y="70"  width="28" height="140" fill="#2ca02c"/>
+            <rect x="300" y="115" width="28" height="95"  fill="#2ca02c"/>
+            <rect x="400" y="95"  width="28" height="115" fill="#2ca02c"/>
+            <rect x="500" y="135" width="28" height="75"  fill="#2ca02c"/>
+            <!-- x labels -->
+            <g fill="#9aa0a6" font-size="11" text-anchor="middle">
+              <text x="99"  y="228">Introduction</text>
+              <text x="199" y="228">Growth</text>
+              <text x="299" y="228">Mature</text>
+              <text x="399" y="228">Shake-out</text>
+              <text x="499" y="228">Decline</text>
+            </g>
+            <!-- y labels -->
+            <g fill="#9aa0a6" font-size="10" text-anchor="end">
+              <text x="35" y="54">0.6</text>
+              <text x="35" y="104">0.4</text>
+              <text x="35" y="154">0.2</text>
+              <text x="35" y="214">0</text>
+            </g>
+          </svg>
+        </div>
+        <div class="chart-legend">
+          <span><span class="legend-dot" style="background:#1f77b4"></span> Thesis 2001–2024</span>
+          <span><span class="legend-dot" style="background:#2ca02c"></span> CMIE 2025</span>
+        </div>
+        <div class="callout">Side-by-side bars come from the vintage filter — the query already groups by <code>life_stage</code>, we just add <code>vintage</code> to the <code>GROUP BY</code>.</div>
+      </div>
+
+      <div class="card">
+        <h2>Macro overlay <span class="badge-new">NEW picker</span></h2>
+        <div class="row-controls">
+          <span style="color:var(--muted); font-size:12px;">Benchmark index</span>
+          <div class="fake-select">BSE 500 ▾</div>
+        </div>
+        <div style="font-size:11px;color:var(--muted); margin-bottom:6px;">Search 639 series — Nifty 50, sector indices, CMIE industry indices…</div>
+        <div class="chart">
+          <svg viewBox="0 0 400 220" preserveAspectRatio="none">
+            <line x1="30" y1="10" x2="30" y2="190" stroke="#2a2e37"/>
+            <line x1="30" y1="190" x2="390" y2="190" stroke="#2a2e37"/>
+            <!-- thesis line 2001-2024 (blue) -->
+            <polyline fill="none" stroke="#1f77b4" stroke-width="2"
+              points="30,170 45,160 60,155 80,140 100,130 120,150 140,135 160,125 180,115 200,100 220,110 240,95 260,85 280,90 300,75 320,70 340,65 355,55"/>
+            <!-- cmie 2025 extension (green, dashed join) -->
+            <polyline fill="none" stroke="#2ca02c" stroke-width="2"
+              points="355,55 380,45"/>
+            <!-- vertical divider at 2024 -->
+            <line x1="355" y1="10" x2="355" y2="190" stroke="#ffb020" stroke-dasharray="3,3" opacity="0.5"/>
+            <text x="358" y="22" fill="#ffb020" font-size="10">+2025</text>
+            <!-- x axis -->
+            <g fill="#9aa0a6" font-size="10">
+              <text x="30" y="205">2001</text>
+              <text x="340" y="205">2025</text>
+            </g>
+          </svg>
+        </div>
+        <div class="chart-legend">
+          <span><span class="legend-dot" style="background:#1f77b4"></span> Index (2001–2024)</span>
+          <span><span class="legend-dot" style="background:#2ca02c"></span> CMIE 2025</span>
+        </div>
+        <div class="callout">Replaces the hard-coded Sensex chart at <code>pages/1_dashboard.py:243</code>. Sensex stays as default so nothing breaks.</div>
+      </div>
+    </div>
+
+    <!-- Data explorer preview -->
+    <div class="card">
+      <h2>Latest rows <span style="color:var(--muted); font-weight:400; font-size:12px;">(same table as Data Explorer)</span></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Company</th><th>Year</th><th>Life stage</th>
+            <th>Leverage</th><th>Profitability</th><th>Tangibility</th><th>Promoter %</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="cmie-row"><td>3M India Ltd.</td><td>2025</td><td>Mature</td><td>0.054</td><td>0.278</td><td>0.136</td><td>75.0</td></tr>
+          <tr class="cmie-row"><td>A B B India Ltd.</td><td>2025</td><td>Mature</td><td>0.007</td><td>0.215</td><td>0.084</td><td>75.0</td></tr>
+          <tr class="cmie-row"><td>Adani Enterprises Ltd.</td><td>2025</td><td>Growth</td><td>0.481</td><td>0.167</td><td>0.039</td><td>73.97</td></tr>
+          <tr><td>3M India Ltd.</td><td>2024</td><td>Mature</td><td>0.061</td><td>0.264</td><td>0.142</td><td>75.0</td></tr>
+          <tr><td>A B B India Ltd.</td><td>2024</td><td>Mature</td><td>0.009</td><td>0.198</td><td>0.088</td><td>75.0</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">CMIE-sourced rows carry a <strong>CMIE 2025</strong> chip so you always know the provenance without hiding the data.</div>
+    </div>
+
+    <div style="color:var(--muted); font-size:12px; margin-top:24px;">
+      What's not shown here: Econometrics / ML / Forecasting pages auto-land on "Thesis panel" so published coefficients reproduce bit-for-bit. A dedicated <code>pages/15_market_indices.py</code> page for browsing all 639 T623 series is <strong>deferred to v1.1</strong> — T623 data still loads in v1 and is reachable via the macro picker above.
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>

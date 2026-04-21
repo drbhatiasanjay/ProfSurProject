@@ -21,11 +21,23 @@ from models.econometric import (
 )
 from models.base import DEFAULT_X_COLS
 
-filters = st.session_state.filters
+# Reproducibility pin — econometric estimates in the thesis were computed on the 2001–2024
+# thesis panel. This page forces panel_mode='thesis' regardless of the sidebar selection so
+# published coefficients reproduce bit-for-bit. Use Dashboard/Benchmarks/Explorer to see 2025.
+filters = dict(st.session_state.filters)
+filters["panel_mode"] = "thesis"
+yr_min_t, yr_max_t = db.get_year_range("thesis")
+yr_range_prev = filters.get("year_range", (yr_min_t, yr_max_t))
+filters["year_range"] = (max(yr_range_prev[0], yr_min_t), min(yr_range_prev[1], yr_max_t))
 ft = db.filters_to_tuple(filters)
 
 st.markdown("### Econometrics Lab")
 st.caption("Panel regression models replicating the thesis methodology. Auto-suggests the best model via diagnostic tests.")
+st.info(
+    "📌 **Pinned to Thesis panel (2001–2024)** for reproducibility of the published thesis coefficients. "
+    "The sidebar's Latest panel setting does not affect this page. Use Dashboard / Benchmarks / Data Explorer to see CMIE 2025 data.",
+    icon="🔒",
+)
 
 with st.expander("ℹ️ About these models — what do they mean?"):
     st.markdown("""
@@ -88,7 +100,7 @@ with col_left:
 with col_right:
     # ── Load data ──
     with st.spinner("Loading panel data..."):
-        panel_df = db.get_panel_data(ft)
+        panel_df = db.get_active_panel_data(ft)
 
     if panel_df.empty or len(panel_df) < 50:
         st.warning("Not enough data for regression. Adjust filters (need 50+ observations).")

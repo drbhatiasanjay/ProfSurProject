@@ -15,11 +15,17 @@ try:
 except (ImportError, NameError):
     HAS_TORCH = False
 
-filters = st.session_state.filters
+# Reproducibility pin — forecasting models are trained/evaluated on the thesis panel.
+filters = dict(st.session_state.filters)
+filters["panel_mode"] = "thesis"
+yr_min_t, yr_max_t = db.get_year_range("thesis")
+yr_prev = filters.get("year_range", (yr_min_t, yr_max_t))
+filters["year_range"] = (max(yr_prev[0], yr_min_t), min(yr_prev[1], yr_max_t))
 ft = db.filters_to_tuple(filters)
 
 st.markdown("### Leverage Forecasting")
 st.caption("LSTM/GRU neural networks trained on 5-year firm sequences. Temporal split: train ≤2018, validate 2019-2021, test 2022+.")
+st.info("📌 **Pinned to Thesis panel (2001–2024)** for reproducibility.", icon="🔒")
 
 if not HAS_TORCH:
     st.warning("PyTorch is not installed. Forecasting requires `pip install torch` to run LSTM/GRU models.")
@@ -56,7 +62,7 @@ with col_set:
     model_type = st.radio("Model", ["LSTM", "GRU"], index=0, horizontal=True)
     seq_len = st.slider("Sequence Length (years)", 3, 8, 5)
 
-panel_df = db.get_panel_data(ft)
+    panel_df = db.get_active_panel_data(ft)
 if panel_df.empty:
     st.warning("No data. Adjust filters.")
     st.stop()

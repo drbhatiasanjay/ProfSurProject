@@ -30,6 +30,12 @@ test_screenshots/
 # CMIE API test artifacts (raw ZIPs + extracted .txt + per-run report)
 cmie_validation/
 
+# Raw CMIE vintage extract dumps (reproducible from CMIE API; committed DB carries the loaded state)
+DataV[0-9]*/
+
+# Transient SQLite backups (safety net taken during migrations)
+*.db.bak-*
+
 # Misc
 *.log
 .DS_Store
