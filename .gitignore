@@ -12,6 +12,7 @@ __pycache__/
 
 # Claude/dev tooling
 .claude/
+.cursor/
 .memsearch/
 
 # Demo & test artifacts
