@@ -9,11 +9,12 @@ import pandas as pd
 import numpy as np
 import db
 from helpers import (
-    winsorize, plotly_layout, event_bands, STAGE_COLORS, STAGE_ORDER,
+    winsorize, plotly_layout, event_bands, ensure_session_state, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     _render_insight_box, interpret_company_vs_industry, interpret_radar_profile,
 )
 
+ensure_session_state()
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 

@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 import db
 from helpers import (
-    plotly_layout, format_pvalue, significance_stars,
+    plotly_layout, format_pvalue, significance_stars, ensure_session_state,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_survival, render_interpretation,
 )
@@ -18,6 +18,7 @@ from models.survival import (
     get_transition_matrix, get_km_plot_data,
 )
 
+ensure_session_state()
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 

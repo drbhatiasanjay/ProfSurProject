@@ -5,8 +5,9 @@ Data Explorer — Full filterable table with column selection, search, and expor
 import streamlit as st
 import pandas as pd
 import db
-from helpers import export_csv, export_excel, format_pct, winsorize
+from helpers import export_csv, export_excel, format_pct, winsorize, ensure_session_state
 
+ensure_session_state()
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 

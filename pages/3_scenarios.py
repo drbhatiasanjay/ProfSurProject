@@ -7,8 +7,10 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import db
-from helpers import plotly_layout, format_pct, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box
+from helpers import plotly_layout, format_pct, ensure_session_state, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box
 from models.scenario_regression import compute_leverage_ols_coefs, leverage_predictor_sample_means
+
+ensure_session_state()
 
 # Reproducibility pin — scenario OLS coefficients come from the thesis panel.
 filters = dict(st.session_state.filters)

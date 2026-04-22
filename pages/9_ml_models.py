@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import db
 from helpers import (
-    plotly_layout, format_pct, STAGE_COLORS, STAGE_ORDER,
+    plotly_layout, format_pct, ensure_session_state, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_ml_comparison, render_interpretation,
 )
@@ -20,6 +20,8 @@ from models.ml_predict import (
     predict_leverage, get_stage_importance, cross_validate_model,
     _prepare_ml_data,
 )
+
+ensure_session_state()
 
 # Reproducibility pin — ML models are trained on the thesis panel to match the reported results.
 filters = dict(st.session_state.filters)

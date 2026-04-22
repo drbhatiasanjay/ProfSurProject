@@ -27,23 +27,10 @@ if os.path.exists(css_path):
 
 import db
 from cmie.streamlit_import import render_cmie_sidebar_block
+from helpers import ensure_session_state
 
-# ── Initialize session state defaults ──
-if "panel_mode" not in st.session_state:
-    # Dashboard/Benchmarks/Explorer default to 'latest' (incl. CMIE 2025).
-    # Econometrics/Forecasting/ML pages override to 'thesis' at their top for reproducibility.
-    st.session_state.panel_mode = "latest"
-
-if "filters" not in st.session_state:
-    yr_min, yr_max = db.get_year_range(st.session_state.panel_mode)
-    st.session_state.filters = {
-        "company_codes": [],
-        "year_range": (yr_min, yr_max),
-        "life_stages": [],
-        "industry_groups": [],
-        "events": {"gfc": False, "ibc": False, "covid": False},
-        "panel_mode": st.session_state.panel_mode,
-    }
+# ── Initialize session state defaults (shared with every page) ──
+ensure_session_state()
 
 # ── Sidebar: Global filters ──
 with st.sidebar:

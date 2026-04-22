@@ -4,6 +4,9 @@ Settings — Theme, about section, database metadata.
 
 import streamlit as st
 import db
+from helpers import ensure_session_state
+
+ensure_session_state()
 
 st.markdown("### Settings")
 

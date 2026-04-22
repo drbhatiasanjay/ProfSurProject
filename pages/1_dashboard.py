@@ -11,12 +11,13 @@ from scipy import stats
 import db
 from helpers import (
     winsorize, format_pct, format_inr, format_number, format_pvalue,
-    plotly_layout, event_bands, new_badge, STAGE_COLORS, STAGE_ORDER,
+    plotly_layout, event_bands, new_badge, ensure_session_state, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     _render_insight_box, interpret_kpi_cards, interpret_leverage_trend,
     interpret_lifecycle_distribution, interpret_top_leveraged, interpret_event_impact,
 )
 
+ensure_session_state()
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 

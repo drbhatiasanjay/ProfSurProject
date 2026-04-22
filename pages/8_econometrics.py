@@ -11,7 +11,7 @@ import numpy as np
 import db
 from helpers import (
     format_coef_table, format_pvalue, significance_stars,
-    plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    plotly_layout, ensure_session_state, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_econometric, render_interpretation, _render_insight_box,
 )
 from models.econometric import (
@@ -20,6 +20,8 @@ from models.econometric import (
     run_all_and_compare,
 )
 from models.base import DEFAULT_X_COLS
+
+ensure_session_state()
 
 # Reproducibility pin — econometric estimates in the thesis were computed on the 2001–2024
 # thesis panel. This page forces panel_mode='thesis' regardless of the sidebar selection so

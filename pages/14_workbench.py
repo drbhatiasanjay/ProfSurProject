@@ -13,10 +13,12 @@ from scipy import stats
 
 import db
 from helpers import (
-    format_coef_table, significance_stars, plotly_layout,
+    format_coef_table, significance_stars, plotly_layout, ensure_session_state,
     _render_insight_box, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     format_pvalue,
 )
+
+ensure_session_state()
 from models.workbench import (
     apply_transforms, apply_subsample_filter, fit_model,
     run_wald_test, compute_post_estimation, build_comparison_table,

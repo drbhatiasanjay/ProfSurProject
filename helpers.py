@@ -115,6 +115,45 @@ def new_badge(text: str = "NEW") -> str:
     return f'<span class="new-badge">{text}</span>'
 
 
+def ensure_session_state() -> None:
+    """Idempotent initialiser for `st.session_state` defaults.
+
+    Streamlit's MPA v1 mode (auto-detected from the `pages/` directory) runs ONLY the
+    current page's script on navigation — `app.py` is skipped when a user deep-links
+    to `/dashboard`, `/peer_benchmarks`, etc. Without this guard, every page that
+    reads `st.session_state.filters` crashes with `AttributeError`.
+
+    Call this at the top of every page (before any `st.session_state.*` read) and
+    once in `app.py`. Safe to call repeatedly — each init is guarded by a
+    `"<key>" not in st.session_state` check. Imports are lazy so `helpers.py` stays
+    importable from tests and CLI scripts.
+    """
+    import streamlit as st
+    import db
+
+    if "panel_mode" not in st.session_state:
+        # Dashboard/Benchmarks/Explorer default to 'latest' (incl. CMIE 2025).
+        # Econometrics/Forecasting/ML pages override to 'thesis' at their top.
+        st.session_state.panel_mode = "latest"
+
+    if "filters" not in st.session_state:
+        yr_min, yr_max = db.get_year_range(st.session_state.panel_mode)
+        st.session_state.filters = {
+            "company_codes": [],
+            "year_range": (yr_min, yr_max),
+            "life_stages": [],
+            "industry_groups": [],
+            "events": {"gfc": False, "ibc": False, "covid": False},
+            "panel_mode": st.session_state.panel_mode,
+        }
+
+    if "theme" not in st.session_state:
+        st.session_state.theme = "light"
+
+    if "data_source_mode" not in st.session_state:
+        st.session_state.data_source_mode = "sqlite"
+
+
 # ── Dynamic Interpretation Engine ──
 # All functions read actual data/results and generate insights dynamically.
 # If data changes, interpretations change automatically.

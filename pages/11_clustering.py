@@ -7,12 +7,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import db
-from helpers import plotly_layout, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG, interpret_clustering, render_interpretation
+from helpers import plotly_layout, ensure_session_state, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG, interpret_clustering, render_interpretation
 from models.clustering import (
     prepare_firm_features, find_optimal_k, run_kmeans,
     compare_with_dickinson, get_cluster_summary,
 )
 
+ensure_session_state()
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 

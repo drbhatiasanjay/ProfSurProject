@@ -8,12 +8,14 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import db
-from helpers import plotly_layout, format_pct, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG
+from helpers import plotly_layout, format_pct, ensure_session_state, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG
 try:
     from models.timeseries import run_full_forecast, forecast_firm
     HAS_TORCH = True
 except (ImportError, NameError):
     HAS_TORCH = False
+
+ensure_session_state()
 
 # Reproducibility pin — forecasting models are trained/evaluated on the thesis panel.
 filters = dict(st.session_state.filters)

@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import db
 from helpers import (
-    plotly_layout, format_pvalue, significance_stars, format_coef_table,
+    plotly_layout, format_pvalue, significance_stars, format_coef_table, ensure_session_state,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     render_interpretation,
 )
@@ -18,6 +18,8 @@ from models.econometric import (
     run_system_gmm, run_delta_leverage_all, run_delta_leverage_by_stage,
     run_stage_comparison, run_breusch_pagan_lm, run_pooled_ols,
 )
+
+ensure_session_state()
 
 # Reproducibility pin — thesis-panel only.
 filters = dict(st.session_state.filters)
