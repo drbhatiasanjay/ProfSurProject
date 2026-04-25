@@ -432,11 +432,21 @@ def get_industry_groups():
 
 @st.cache_data(ttl=3600)
 def get_year_range(panel_mode: str = "latest"):
-    """Year range of the selected panel. `thesis` stops at 2024; `latest` extends to newest CMIE vintage."""
+    """Year range of the selected panel.
+
+    - `thesis` (2001-2024) — frozen replication panel
+    - `latest` (2001-present) — thesis + cmie_2025 rollforward (production panel)
+    - `run3`   (2001-2025)   — Stata replication panel from initialResults.do (parallel
+                              to thesis + cmie_2025; overlapping years; do not union with them)
+    """
     if panel_mode == "thesis":
         sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage = 'thesis'"
+    elif panel_mode == "run3":
+        sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage = 'run3'"
     else:
-        sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials"
+        # `latest` = production panel only (thesis + cmie_2025). run3 is intentionally excluded
+        # because its 2001-2024 rows overlap with the thesis vintage; unioning would double-count.
+        sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage IN ('thesis', 'cmie_2025')"
     row = _query(sql)
     return int(row["min_yr"].iloc[0]), int(row["max_yr"].iloc[0])
 
@@ -448,21 +458,25 @@ def get_data_vintages():
 
 
 def _vintage_predicate(panel_mode: str, table_prefix: str = "") -> tuple[str, list]:
-    """Return (SQL fragment, params) for the panel_mode vintage predicate."""
+    """Return (SQL fragment, params) for the panel_mode vintage predicate.
+
+    Three production modes:
+      thesis  → vintage = 'thesis'                       (2001-2024 frozen panel)
+      latest  → vintage IN ('thesis', 'cmie_2025')       (production: thesis + 2025 rollforward)
+      run3    → vintage = 'run3'                         (Stata replication, 2001-2025)
+
+    Run3 is deliberately NOT in `latest` because its rows overlap thesis years —
+    unioning them would double-count. Future additive vintages (e.g. cmie_2026) should
+    be appended to the `latest` IN-list explicitly; replication / alternate panels stay
+    standalone.
+    """
     p = f"{table_prefix}." if table_prefix else ""
     if panel_mode == "thesis":
         return f"{p}vintage = ?", ["thesis"]
-    # "latest" = all vintages; use IN with the full set so cache invalidates on new vintage.
-    # For v1 the set is {thesis, cmie_2025}. Future loads extend this automatically via data_vintages.
-    try:
-        conn = get_connection()
-        try:
-            rows = conn.execute("SELECT vintage FROM data_vintages ORDER BY vintage").fetchall()
-        finally:
-            conn.close()
-        vintages = [r[0] for r in rows] or ["thesis"]
-    except Exception:
-        vintages = ["thesis", "cmie_2025"]
+    if panel_mode == "run3":
+        return f"{p}vintage = ?", ["run3"]
+    # `latest` — production union. Hardcoded list so we control which vintages compose it.
+    vintages = ["thesis", "cmie_2025"]
     placeholders = ",".join("?" * len(vintages))
     return f"{p}vintage IN ({placeholders})", vintages
 

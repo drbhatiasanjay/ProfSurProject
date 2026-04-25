@@ -115,6 +115,20 @@ def new_badge(text: str = "NEW") -> str:
     return f'<span class="new-badge">{text}</span>'
 
 
+# Human-friendly labels for the sidebar Panel radio. Used by app.py for the radio
+# itself and by every analysis page that reports which panel is currently active.
+PANEL_LABELS = {
+    "latest": "Latest panel (2001–present)",
+    "thesis": "Thesis panel (2001–2024)",
+    "run3":   "Run 3 — Stata replication (2001–2025)",
+}
+
+
+def panel_label(mode: str) -> str:
+    """Return the human label for a panel-mode key, or the key itself if unknown."""
+    return PANEL_LABELS.get(mode, mode)
+
+
 def ensure_session_state() -> None:
     """Idempotent initialiser for `st.session_state` defaults.
 

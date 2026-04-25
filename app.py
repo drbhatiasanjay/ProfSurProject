@@ -36,18 +36,28 @@ ensure_session_state()
 with st.sidebar:
     st.markdown("# LifeCycle Leverage")
 
-    # Panel mode: switches the entire read-path between thesis-only and latest (thesis + CMIE).
+    # Panel mode: switches the entire read-path across three independent vintage groups.
+    # - latest = production panel (thesis 2001-2024 + cmie_2025 rollforward)
+    # - thesis = frozen reproducibility panel (2001-2024 only)
+    # - run3   = Stata replication panel (2001-2025, 400 firms; standalone — does NOT
+    #            union with thesis or cmie_2025 because years overlap)
     vintages_df = db.get_data_vintages()
-    panel_label_map = {"thesis": "Thesis panel (2001–2024)", "latest": "Latest panel (2001–present)"}
-    panel_options = ["latest", "thesis"]
+    from helpers import PANEL_LABELS as panel_label_map
+    panel_options = ["latest", "thesis", "run3"]
     current_panel = st.session_state.get("panel_mode", "latest")
+    if current_panel not in panel_options:
+        current_panel = "latest"
     chosen_panel = st.radio(
         "Panel",
         options=panel_options,
         index=panel_options.index(current_panel),
         format_func=lambda m: panel_label_map.get(m, m),
-        help="Thesis panel freezes at 2001–2024 for reproducibility of the published thesis. "
-             "Latest panel adds the CMIE 2025 rollforward.",
+        help=(
+            "**Latest** — production panel (thesis + CMIE 2025 rollforward).\n\n"
+            "**Thesis** — frozen 2001-2024 panel for reproducing published thesis tables.\n\n"
+            "**Run 3** — Stata replication panel from initialResults.do (25 Apr 2026), "
+            "9,031 obs × 400 firms × 2001-2025."
+        ),
     )
     if chosen_panel != current_panel:
         # Panel changed: re-seed year range to match the new panel's bounds and rerun so
