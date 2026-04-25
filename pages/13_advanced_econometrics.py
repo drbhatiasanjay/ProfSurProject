@@ -17,7 +17,9 @@ from helpers import (
 from models.econometric import (
     run_system_gmm, run_delta_leverage_all, run_delta_leverage_by_stage,
     run_stage_comparison, run_breusch_pagan_lm, run_pooled_ols,
+    run_iv_regression,
 )
+from models.base import DEFAULT_X_COLS
 
 ensure_session_state()
 
@@ -53,10 +55,11 @@ if panel_df.empty:
     st.warning("No data. Adjust filters.")
     st.stop()
 
-tab_gmm, tab_delta, tab_compare = st.tabs([
+tab_gmm, tab_delta, tab_compare, tab_iv = st.tabs([
     "System GMM",
     "Delta-Leverage",
     "Stage Comparisons",
+    "IV / 2SLS",
 ])
 
 
@@ -275,3 +278,141 @@ with tab_compare:
                     f"Divergent variables indicate where {stage_a} and {stage_b} firms respond differently to the same determinant.",
                     "Compare with thesis Table 7.5 for Growth vs Maturity results.",
                 ], title=f"{stage_a} vs {stage_b} — Key Differences")
+
+
+# ══════════════════════════════════════════════
+# TAB 4: IV / 2SLS (endogeneity correction)
+# ══════════════════════════════════════════════
+with tab_iv:
+    st.subheader("Instrumental-Variables Regression (2SLS)")
+    st.caption(
+        "Address endogeneity by instrumenting a suspected-endogenous regressor with its lagged values. "
+        "Default: instrument profitability with profitability_lag1 + profitability_lag2."
+    )
+
+    with st.expander("Why this matters", expanded=False):
+        st.markdown("""
+**Endogeneity in capital structure**: profitability and leverage are simultaneously determined.
+A simple OLS coefficient on profitability is biased because *current-year residuals* feed
+back into *current-year profitability* through retained earnings, dividend policy, and
+managerial response to financing constraints.
+
+**The 2SLS fix**: replace the endogenous regressor with its predicted value from a first-stage
+regression on lagged values (which are pre-determined and therefore exogenous to current
+residuals).
+
+**Three diagnostics that decide whether the IV estimate is trustworthy:**
+- **First-stage F-statistic** — instrument *strength*. Rule of thumb: F > 10 means lags are
+  meaningful predictors of the current value. Below 10, instruments are weak and 2SLS is
+  worse than just running OLS.
+- **Sargan over-identification** (only when ≥ 2 instruments) — instrument *validity*.
+  p > 0.05 means we cannot reject the moment conditions; instruments behave as exogenous.
+- **Wu-Hausman** — *was the regressor actually endogenous?* p < 0.05 says yes, IV was needed.
+  p > 0.05 says OLS would have given the same answer; you can quote the simpler model.
+""")
+
+    iv_col_left, iv_col_right = st.columns([1, 3])
+
+    with iv_col_left:
+        iv_endog = st.selectbox(
+            "Endogenous regressor",
+            options=DEFAULT_X_COLS,
+            index=DEFAULT_X_COLS.index("profitability"),
+            help="The regressor to instrument. Profitability is the canonical endogenous variable in capital structure.",
+        )
+        iv_lags = st.multiselect(
+            "Instruments (lags of the endogenous regressor)",
+            options=[1, 2, 3],
+            default=[1, 2],
+            format_func=lambda n: f"{iv_endog}_lag{n}",
+        )
+        run_iv_btn = st.button("Run 2SLS", type="primary", key="run_iv")
+
+    with iv_col_right:
+        if run_iv_btn:
+            instruments = [f"{iv_endog}_lag{n}" for n in iv_lags] if iv_lags else None
+            with st.spinner("Estimating 2SLS..."):
+                iv = run_iv_regression(panel_df, x_endog=iv_endog, instruments=instruments)
+
+            if "error" in iv:
+                st.error(iv["error"])
+            else:
+                # Headline metrics
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("R-squared", f"{iv['r_squared']:.4f}")
+                m2.metric("Observations", f"{iv['n_obs']:,}")
+                m3.metric("Firms", f"{iv['n_firms']:,}")
+                m4.metric("Endogenous", iv["endogenous"])
+
+                # Diagnostic strip — strength + validity + endogeneity tests
+                st.markdown("#### Diagnostic Tests")
+                d1, d2, d3 = st.columns(3)
+                with d1:
+                    st.markdown("**First-Stage F-stat**")
+                    fs_f = iv.get("first_stage_f")
+                    if fs_f is not None:
+                        st.metric("F", f"{fs_f:.2f}")
+                        if fs_f > 10:
+                            st.success("Strong instruments (F > 10)")
+                        else:
+                            st.warning("Weak instruments — interpret IV cautiously")
+                    else:
+                        st.info("Not reported by linearmodels")
+                with d2:
+                    st.markdown("**Sargan over-id**")
+                    sp = iv.get("sargan_pvalue")
+                    if sp is not None:
+                        st.metric("p-value", format_pvalue(sp))
+                        if sp > 0.05:
+                            st.success("Instruments appear valid (p > 0.05)")
+                        else:
+                            st.warning("Over-id rejected — moment conditions may not hold")
+                    else:
+                        st.caption("Needs ≥ 2 instruments")
+                with d3:
+                    st.markdown("**Wu-Hausman**")
+                    wp = iv.get("wu_hausman_pvalue")
+                    if wp is not None:
+                        st.metric("p-value", format_pvalue(wp))
+                        if wp < 0.05:
+                            st.success("Endogeneity confirmed — IV was warranted")
+                        else:
+                            st.info("OLS and IV agree — endogeneity not detected")
+                    else:
+                        st.info("Not reported")
+
+                # Coefficient table
+                st.markdown("#### IV / 2SLS Coefficients")
+                ct = format_coef_table(iv["coef_table"])
+                st.dataframe(ct, hide_index=True, use_container_width=True)
+
+                # Interpretation
+                insights = []
+                endog_row = iv["coef_table"][iv["coef_table"]["Variable"] == iv_endog]
+                if not endog_row.empty:
+                    iv_coef = endog_row.iloc[0]["Coefficient"]
+                    iv_p = endog_row.iloc[0]["p-value"]
+                    insights.append(
+                        f"**IV coefficient on {iv_endog}**: {iv_coef:+.4f} "
+                        f"(p={format_pvalue(iv_p)}). Compare against OLS — if magnitudes "
+                        f"differ materially, OLS was biased by endogeneity."
+                    )
+                if iv.get("first_stage_f") is not None and iv["first_stage_f"] < 10:
+                    insights.append(
+                        "First-stage F-stat is below 10, so instruments are weak — "
+                        "the 2SLS estimate inherits high standard errors. Try adding more lags."
+                    )
+                if iv.get("wu_hausman_pvalue") is not None and iv["wu_hausman_pvalue"] > 0.05:
+                    insights.append(
+                        "Wu-Hausman cannot reject exogeneity — OLS and IV give the same answer. "
+                        "You can quote the simpler OLS estimate without bias concerns."
+                    )
+
+                render_interpretation(insights, [
+                    "Run a Pooled OLS in the Econometrics Lab on the same panel and compare the "
+                    f"coefficient on {iv_endog} against the IV value above.",
+                    "If you suspect tangibility or dividend are also endogenous, re-run with "
+                    "those as the endogenous regressor and the same lag structure.",
+                ], title="2SLS Interpretation")
+        else:
+            st.info("Configure the spec on the left and click **Run 2SLS** to estimate.")

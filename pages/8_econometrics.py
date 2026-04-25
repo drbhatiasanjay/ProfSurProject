@@ -15,7 +15,7 @@ from helpers import (
     interpret_econometric, render_interpretation, _render_insight_box,
 )
 from models.econometric import (
-    run_pooled_ols, run_fixed_effects, run_random_effects,
+    run_pooled_ols, run_fixed_effects, run_random_effects, run_robust_regression,
     run_hausman_test, run_breusch_pagan_lm, run_anova_by_stage, run_pairwise_comparison,
     run_all_and_compare,
 )
@@ -95,8 +95,15 @@ with col_left:
 
     model_choice = st.radio(
         "Model",
-        ["Auto-Suggest", "Pooled OLS", "Fixed Effects", "Random Effects", "ANOVA"],
+        ["Auto-Suggest", "Pooled OLS", "Fixed Effects", "Random Effects",
+         "Robust (Huber M)", "ANOVA"],
         index=0,
+        help=(
+            "**Robust (Huber M)** — outlier-resistant OLS via iteratively-reweighted "
+            "least squares (statsmodels.RLM). Down-weights extreme leverage values "
+            "rather than fixing only the standard errors. Use this to test whether "
+            "thesis findings hold under outlier downweighting."
+        ),
     )
 
 with col_right:
@@ -356,6 +363,7 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
             "Pooled OLS": run_pooled_ols,
             "Fixed Effects": run_fixed_effects,
             "Random Effects": run_random_effects,
+            "Robust (Huber M)": run_robust_regression,
         }
         with st.spinner(f"Running {model_choice}..."):
             best = model_map[model_choice](panel_df, x_cols=selected_x)
@@ -363,14 +371,26 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
     # ── Display Results ──
     st.markdown(f"#### {best['type']} Results")
 
-    # Metrics row
+    # Metrics row — second cell adapts to whichever R² flavour the model exposes
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1:
-        st.metric("R-squared", f"{best['r_squared']:.4f}")
+        # Robust regression returns a pseudo-R²; label it as such
+        r2_label = "Pseudo R²" if best["type"].startswith("Robust M") else "R-squared"
+        st.metric(r2_label, f"{best['r_squared']:.4f}")
     with mc2:
         r2w = best.get("r_squared_within")
-        st.metric("Within R-squared" if r2w is not None else "Adj R-squared",
-                  f"{r2w:.4f}" if r2w is not None else f"{best.get('adj_r_squared', 0):.4f}")
+        if r2w is not None:
+            st.metric("Within R-squared", f"{r2w:.4f}")
+        elif best["type"].startswith("Robust M"):
+            # Show how many observations got downweighted by the M-estimator
+            st.metric(
+                "Downweighted obs",
+                f"{best.get('n_downweighted', 0):,}",
+                delta=f"min weight {best.get('weight_min', 1.0):.2f}",
+                delta_color="off",
+            )
+        else:
+            st.metric("Adj R-squared", f"{best.get('adj_r_squared', 0):.4f}")
     with mc3:
         st.metric("Observations", f"{best['n_obs']:,}")
     with mc4:
