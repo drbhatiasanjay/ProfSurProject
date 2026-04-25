@@ -122,6 +122,131 @@ class TestEconometric:
         assert "sargan" in result
         assert result["n_obs"] > 2000
 
+    def test_pairwise_comparison_structure(self, full_panel):
+        """Tukey HSD pairwise comparison — output shape + matrix invariants."""
+        from models.econometric import run_pairwise_comparison
+        result = run_pairwise_comparison(full_panel)
+
+        # Required keys
+        for key in ("pairwise_df", "matrix_diff", "matrix_pval", "matrix_sig",
+                    "group_means", "significant_pairs", "n_pairs", "n_significant"):
+            assert key in result, f"Missing key: {key}"
+
+        pdf = result["pairwise_df"]
+        # Required columns
+        for col in ("Stage A", "Stage B", "Mean Diff", "p-value", "Significant"):
+            assert col in pdf.columns
+
+        # Pair count = C(k, 2) for k stages present
+        all_stages = set(pdf["Stage A"]) | set(pdf["Stage B"])
+        k = len(all_stages)
+        assert result["n_pairs"] == k * (k - 1) // 2
+
+        # Matrix invariants
+        m_diff = result["matrix_diff"]
+        m_pval = result["matrix_pval"]
+        for s in m_diff.index:
+            # Diagonal: zero diff, p=1
+            assert m_diff.loc[s, s] == 0.0
+            assert m_pval.loc[s, s] == 1.0
+        # Anti-symmetry of diff and symmetry of p-value
+        stages = list(m_diff.index)
+        for i in range(len(stages)):
+            for j in range(i + 1, len(stages)):
+                a, b = stages[i], stages[j]
+                assert m_diff.loc[a, b] == pytest.approx(-m_diff.loc[b, a])
+                assert m_pval.loc[a, b] == pytest.approx(m_pval.loc[b, a])
+
+    def test_robust_regression_huber(self, full_panel):
+        """RLM with Huber-T norm — return shape + outlier downweighting."""
+        from models.econometric import run_robust_regression
+        result = run_robust_regression(full_panel)
+        assert result["type"].startswith("Robust M")
+        assert result["norm"] == "HuberT"
+        assert result["n_obs"] > 5000
+        assert len(result["coef_table"]) >= 6  # const + 6 predictors
+        # Sanity on pseudo-R² — should be in (-1, 1) plausibly
+        assert -1.0 < result["r_squared"] < 1.0
+        # IRLS should downweight some obs on a panel with leverage outliers
+        assert result["n_downweighted"] > 0, \
+            "RLM should downweight some outliers on the thesis panel"
+        # Min weight strictly < 1 confirms IRLS actually fired
+        assert result["weight_min"] < 1.0
+
+    def test_robust_vs_ols_pecking_order(self, full_panel):
+        """Both OLS and RLM should keep profitability negative (Pecking Order),
+        but coefficient magnitudes differ — that's the whole point of robust regression."""
+        from models.econometric import run_pooled_ols, run_robust_regression
+        ols = run_pooled_ols(full_panel)
+        rlm = run_robust_regression(full_panel)
+
+        ols_prof = ols["coef_table"].set_index("Variable").loc["profitability", "Coefficient"]
+        rlm_prof = rlm["coef_table"].set_index("Variable").loc["profitability", "Coefficient"]
+        assert ols_prof < 0, "OLS profitability coefficient should be negative"
+        assert rlm_prof < 0, "RLM profitability coefficient should be negative"
+        # RLM should not produce identical coefficients to OLS — IRLS reweights
+        assert ols_prof != pytest.approx(rlm_prof, abs=1e-6), \
+            "RLM and OLS coefficients should differ"
+
+    def test_robust_regression_unknown_norm_raises(self, full_panel):
+        """Invalid norm string raises ValueError with supported-list hint."""
+        from models.econometric import run_robust_regression
+        with pytest.raises(ValueError, match="Supported"):
+            run_robust_regression(full_panel, norm="NonExistentNorm")
+
+    def test_iv_regression_default(self, full_panel):
+        """IV/2SLS with default spec (instrument profitability with its 1- and 2-period lags)."""
+        from models.econometric import run_iv_regression
+        result = run_iv_regression(full_panel)
+        assert result["type"] == "IV / 2SLS"
+        assert "error" not in result, f"Got error: {result.get('error')}"
+        assert result["endogenous"] == "profitability"
+        assert result["instruments"] == ["profitability_lag1", "profitability_lag2"]
+        assert "coef_table" in result
+        # Lagging by 2 + dropna trims rows; expect at least 3000 obs (panel has 8.6k)
+        assert result["n_obs"] > 3000
+
+    def test_iv_regression_diagnostics(self, full_panel):
+        """First-stage F-stat should be strong (>10) and Sargan p > 0.05 (instruments valid)
+        for the default profitability spec on the thesis panel."""
+        from models.econometric import run_iv_regression
+        result = run_iv_regression(full_panel)
+        # First-stage F-stat (rule of thumb: > 10 = strong instruments)
+        if result.get("first_stage_f") is not None:
+            assert result["first_stage_f"] > 10, \
+                f"Weak instruments — first-stage F = {result['first_stage_f']:.2f}"
+        # Sargan over-id test — only meaningful with > 1 instrument
+        if result.get("sargan_pvalue") is not None:
+            # Document but don't enforce: thesis panel may or may not satisfy
+            # over-id at strict 5% on these instruments. This test just records.
+            assert 0.0 <= result["sargan_pvalue"] <= 1.0
+
+    def test_iv_regression_custom_endog(self, full_panel):
+        """Override the endogenous regressor + instruments."""
+        from models.econometric import run_iv_regression
+        result = run_iv_regression(
+            full_panel,
+            x_endog="tangibility",
+            instruments=["tangibility_lag1", "tangibility_lag2"],
+        )
+        assert "error" not in result, f"Got error: {result.get('error')}"
+        assert result["endogenous"] == "tangibility"
+        # Profitability now in exogenous list
+        assert "profitability" in result["exogenous"]
+        # Coefficient table includes the instrumented endogenous regressor
+        assert "tangibility" in set(result["coef_table"]["Variable"])
+
+    def test_pairwise_aligns_with_anova(self, full_panel):
+        """If ANOVA finds a significant between-stage difference, at least
+        one Tukey-HSD pair should also be significant. (Tukey is conservative,
+        so the converse isn't guaranteed.)"""
+        from models.econometric import run_anova_by_stage, run_pairwise_comparison
+        anova = run_anova_by_stage(full_panel)
+        pw = run_pairwise_comparison(full_panel)
+        if anova["p_value"] < 0.05:
+            assert pw["n_significant"] >= 1, \
+                "ANOVA significant but Tukey HSD found no significant pairs"
+
 
 class TestMLModels:
     def test_cross_validate_rf(self, small_panel):

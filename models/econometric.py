@@ -52,6 +52,93 @@ def run_pooled_ols(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", 
     }
 
 
+def run_robust_regression(df, y_col=DEFAULT_Y_COL, x_cols=None, norm="HuberT",
+                           entity="company_code", time="year"):
+    """
+    Robust M-estimator regression — outlier-resistant alternative to Pooled OLS.
+
+    Uses ``statsmodels.RLM`` with iteratively-reweighted least squares (IRLS).
+    Large residuals get downweighted, so a handful of leverage outliers (firms
+    with leverage > 200% are common in Indian financial data) cannot dominate
+    the coefficient values the way they can with OLS.
+
+    This is the methodologically-different "Robust Regression" from the thesis
+    discussion (where one stage flipped to non-significant under robust testing) —
+    distinct from ``run_pooled_ols`` whose ``cov_type='HC1'`` only fixes the
+    standard errors for heteroscedasticity but keeps OLS-fitted coefficients.
+
+    Parameters
+    ----------
+    norm : str
+        M-estimator norm. Supported:
+          - ``"HuberT"`` (default) — quadratic on small residuals, linear on tails
+          - ``"TukeyBiweight"`` — fully redescending; rejects extreme outliers
+          - ``"Hampel"`` — three-part redescending
+          - ``"AndrewWave"`` — sinusoidal redescending
+
+    Returns
+    -------
+    dict matching the ``run_pooled_ols`` return shape (so the existing UI
+    formatters render this without changes), plus:
+      - ``norm`` : the M-estimator used
+      - ``n_downweighted`` : number of observations with final weight < 0.5
+      - ``r_squared`` : pseudo-R² (1 - var(resid)/var(y)); RLM doesn't expose
+        OLS-style R² because the loss function isn't squared error
+    """
+    if x_cols is None:
+        x_cols = DEFAULT_X_COLS
+
+    panel, y_col, x_cols = prepare_panel(df, y_col, x_cols, entity, time)
+    y = panel[y_col]
+    X = sm.add_constant(panel[x_cols])
+
+    norm_map = {
+        "HuberT":        sm.robust.norms.HuberT(),
+        "TukeyBiweight": sm.robust.norms.TukeyBiweight(),
+        "Hampel":        sm.robust.norms.Hampel(),
+        "AndrewWave":    sm.robust.norms.AndrewWave(),
+    }
+    if norm not in norm_map:
+        raise ValueError(
+            f"Unknown norm {norm!r}. Supported: {list(norm_map)}"
+        )
+
+    model = sm.RLM(y, X, M=norm_map[norm])
+    result = model.fit()
+
+    # Pseudo-R² — RLM has no rsquared attribute since the objective isn't OLS.
+    # 1 - var(resid)/var(y) keeps the same intuition (1 = perfect fit, 0 = mean-only).
+    pseudo_r2 = float(1 - np.var(np.asarray(result.resid)) / np.var(np.asarray(y)))
+
+    weights = np.asarray(result.weights)
+    n_downweighted = int((weights < 0.5).sum())
+
+    coef_table = pd.DataFrame({
+        "Variable": result.params.index,
+        "Coefficient": result.params.values,
+        "Std Error": result.bse.values,
+        "t-stat": result.tvalues.values,
+        "p-value": result.pvalues.values,
+        "CI Lower": result.conf_int()[0].values,
+        "CI Upper": result.conf_int()[1].values,
+    })
+
+    return {
+        "type": f"Robust M ({norm})",
+        "coef_table": coef_table,
+        "r_squared": pseudo_r2,
+        "norm": norm,
+        "n_obs": int(result.nobs),
+        "n_firms": panel.index.get_level_values(0).nunique(),
+        "n_downweighted": n_downweighted,
+        "weight_min": float(weights.min()),
+        "weight_mean": float(weights.mean()),
+        "result_obj": result,
+        "residuals": result.resid,
+        "fitted": result.fittedvalues,
+    }
+
+
 def run_fixed_effects(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", time="year"):
     """
     Panel Fixed Effects model using linearmodels.
@@ -455,6 +542,135 @@ def run_stage_comparison(df, stage_a, stage_b, y_col=DEFAULT_Y_COL, x_cols=None,
         "stage_a": stage_a, "stage_b": stage_b,
         "result_a": result_a, "result_b": result_b,
         "comparison": comparison.reset_index(),
+    }
+
+
+# ── IV / 2SLS (endogeneity correction) ──
+
+def run_iv_regression(df, y_col=DEFAULT_Y_COL, x_endog="profitability", x_exog=None,
+                       instruments=None, entity="company_code", time="year"):
+    """
+    Two-Stage Least Squares (2SLS) instrumental-variable regression.
+
+    The thesis discussion flagged endogeneity ("independent variables must
+    precede dependent variables") — capital-structure literature in particular
+    has long debated reverse causality between profitability and leverage
+    (does low leverage cause high profits, or do profitable firms accumulate
+    cash and stay low-leveraged?). 2SLS lets us instrument the suspected
+    endogenous regressor with its own lagged values, which are correlated
+    with the current value (relevance) but uncorrelated with the current-year
+    residual (exogeneity-by-construction).
+
+    Default: instrument ``profitability`` with ``profitability_lag1`` and
+    ``profitability_lag2``. Override via ``x_endog`` / ``instruments`` for
+    other suspected endogenous regressors (e.g. tangibility, dividend).
+
+    Parameters
+    ----------
+    x_endog : str
+        The endogenous regressor (instrumented in the first stage).
+    x_exog : list[str] | None
+        Exogenous regressors. Defaults to ``DEFAULT_X_COLS \\ {x_endog}``.
+    instruments : list[str] | None
+        Excluded instruments. Defaults to two lags of ``x_endog``.
+
+    Returns
+    -------
+    dict — same shape as ``run_pooled_ols`` plus diagnostics:
+      - ``first_stage_f`` : F-stat on excluded instruments in first stage.
+        Rule of thumb: > 10 = strong instruments.
+      - ``sargan_pvalue`` : over-identification test. > 0.05 = instruments
+        appear valid (we cannot reject the moment conditions).
+      - ``wu_hausman_pvalue`` : endogeneity test. < 0.05 = the regressor
+        was meaningfully endogenous (IV was worth doing); > 0.05 = OLS
+        would have given the same answer.
+      - ``endogenous`` / ``instruments`` : echo of the spec used.
+    """
+    from linearmodels.iv import IV2SLS
+
+    if x_exog is None:
+        x_exog = [c for c in DEFAULT_X_COLS if c != x_endog]
+    if instruments is None:
+        instruments = [f"{x_endog}_lag1", f"{x_endog}_lag2"]
+
+    # Build lag columns for the instruments — assumed to be lags of x_endog
+    work = df.sort_values([entity, time]).copy()
+    for inst in instruments:
+        if inst not in work.columns and inst.startswith(f"{x_endog}_lag"):
+            try:
+                lag_n = int(inst.rsplit("_lag", 1)[1])
+            except ValueError:
+                continue
+            work[inst] = work.groupby(entity)[x_endog].shift(lag_n)
+
+    needed = [y_col, x_endog] + list(x_exog) + list(instruments)
+    work = work.dropna(subset=needed)
+    work = work.set_index([entity, time])
+
+    if len(work) < 100:
+        return {
+            "type": "IV / 2SLS",
+            "error": f"Too few observations after lag-and-dropna ({len(work)}). Need 100+.",
+            "endogenous": x_endog,
+            "instruments": instruments,
+        }
+
+    y = work[y_col]
+    X_exog_df = work[x_exog].copy()
+    X_exog_df.insert(0, "const", 1.0)
+    X_endog_df = work[[x_endog]]
+    Z_inst = work[instruments]
+
+    model = IV2SLS(y, X_exog_df, X_endog_df, Z_inst)
+    result = model.fit(cov_type="robust")
+
+    coef_table = pd.DataFrame({
+        "Variable": result.params.index,
+        "Coefficient": result.params.values,
+        "Std Error": result.std_errors.values,
+        "t-stat": result.tstats.values,
+        "p-value": result.pvalues.values,
+    })
+
+    # First-stage F-stat — strength-of-instruments diagnostic
+    first_stage_f = None
+    try:
+        fs = result.first_stage
+        # linearmodels exposes diagnostics differently across versions;
+        # try the documented attribute then fall back to the dict keys
+        diag = getattr(fs, "diagnostics", None)
+        if diag is not None and "f.stat" in diag.columns:
+            first_stage_f = float(diag.loc[x_endog, "f.stat"])
+    except Exception:
+        first_stage_f = None
+
+    # Sargan over-identification test (only available when len(instruments) > 1)
+    sargan_p = None
+    try:
+        sargan_p = float(result.sargan.pval)
+    except Exception:
+        sargan_p = None
+
+    # Wu-Hausman endogeneity test
+    wu_p = None
+    try:
+        wu_p = float(result.wu_hausman().pval)
+    except Exception:
+        wu_p = None
+
+    return {
+        "type": "IV / 2SLS",
+        "coef_table": coef_table,
+        "r_squared": float(result.rsquared),
+        "n_obs": int(result.nobs),
+        "n_firms": work.index.get_level_values(0).nunique(),
+        "endogenous": x_endog,
+        "instruments": list(instruments),
+        "exogenous": list(x_exog),
+        "first_stage_f": first_stage_f,
+        "sargan_pvalue": sargan_p,
+        "wu_hausman_pvalue": wu_p,
+        "result_obj": result,
     }
 
 
