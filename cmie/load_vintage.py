@@ -231,14 +231,16 @@ def load_financials(conn: sqlite3.Connection, datadir: Path, vintage: str, sourc
     insert_sql = """
         INSERT INTO financials (
             company_code, year, slot_date, slot_year, age_group, cls_code, life_stage,
-            leverage, lev_pct, profitability, tangibility, tax, dividend, interest,
+            leverage, lev_pct, lev1_100,
+            profitability, prof100, tangibility, tang100,
+            tax, dividend, interest,
             firm_size, log_size, ln_size, tax_shield,
             pbit, pbt, interest_amt, total_capital, reserves_and_funds,
             borrowings, debentures_bonds, total_liabilities,
             ncfo, ncfi, ncff, net_cash_flow, ncf_dummy,
             oc, ic, fc, gfc, ibc_2016, ibc_2016_20, covid_dummy,
             vintage, source_file
-        ) VALUES (?,?,?,?,?,?,?, ?,?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?,?,?,?, ?,?,?,?,?,?,?, ?,?)
+        ) VALUES (?,?,?,?,?,?,?, ?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?,?,?,?, ?,?,?,?,?,?,?, ?,?)
     """
 
     inserted = 0
@@ -259,9 +261,21 @@ def load_financials(conn: sqlite3.Connection, datadir: Path, vintage: str, sourc
         ln_size = math.log(size) if size and size > 0 else None
         log_size = math.log10(size) if size and size > 0 else None
 
-        # Leverage from CMIE D/E ratio (times). Keep on same scale as the thesis column.
-        leverage = _none_if_nan(row.get("Debt to equity ratio (times)"))
+        # Leverage from CMIE D/E ratio (times) — that's a multiple
+        # (e.g. 0.5 means liabilities are 50% of equity). Thesis convention stores
+        # `leverage` as PERCENT (multiple x 100) and quirkily stores `lev_pct` as
+        # PERCENT x 100 again (a side-effect of the original load); `lev1_100` keeps
+        # the original decimal multiple. Populate all three for cross-vintage parity.
+        lev1_100 = _none_if_nan(row.get("Debt to equity ratio (times)"))
+        leverage = (lev1_100 * 100) if lev1_100 is not None else None
         lev_pct = (leverage * 100) if leverage is not None else None
+
+        # prof100 / tang100 — thesis convention stores percent versions of
+        # profitability and tangibility alongside the decimal originals.
+        profitability_dec = _none_if_nan(row.get("prof"))
+        prof100 = (profitability_dec * 100) if profitability_dec is not None else None
+        tangibility_dec = _none_if_nan(row.get("tang"))
+        tang100 = (tangibility_dec * 100) if tangibility_dec is not None else None
 
         pbit = _none_if_nan(row.get("PBIT"))
         # Tax shield in the thesis column is a depreciation/PBIT-ish ratio; not in T617.
@@ -291,8 +305,8 @@ def load_financials(conn: sqlite3.Connection, datadir: Path, vintage: str, sourc
             insert_sql,
             (
                 code, year, slot_date, slot_year, age_group, cls_code, life_stage,
-                leverage, lev_pct,
-                _none_if_nan(row.get("prof")), _none_if_nan(row.get("tang")),
+                leverage, lev_pct, lev1_100,
+                profitability_dec, prof100, tangibility_dec, tang100,
                 _none_if_nan(row.get("tax")), _none_if_nan(row.get("dvnd")),
                 _none_if_nan(row.get("interest")),
                 size, log_size, ln_size, tax_shield,
