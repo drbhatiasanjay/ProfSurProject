@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import db
-from helpers import plotly_layout, format_pct, ensure_session_state, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG
+from helpers import plotly_layout, format_pct, ensure_session_state, panel_label, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG
 try:
     from models.timeseries import run_full_forecast, forecast_firm
     HAS_TORCH = True
@@ -17,17 +17,22 @@ except (ImportError, NameError):
 
 ensure_session_state()
 
-# Reproducibility pin — forecasting models are trained/evaluated on the thesis panel.
-filters = dict(st.session_state.filters)
-filters["panel_mode"] = "thesis"
-yr_min_t, yr_max_t = db.get_year_range("thesis")
-yr_prev = filters.get("year_range", (yr_min_t, yr_max_t))
-filters["year_range"] = (max(yr_prev[0], yr_min_t), min(yr_prev[1], yr_max_t))
+# Panel choice from the sidebar — forecasting trains on whichever panel is active.
+# (Previously pinned to thesis; now follows user selection.)
+filters = st.session_state.filters
+_panel = st.session_state.get("panel_mode", "latest")
 ft = db.filters_to_tuple(filters)
 
 st.markdown("### Leverage Forecasting")
 st.caption("LSTM/GRU neural networks trained on 5-year firm sequences. Temporal split: train ≤2018, validate 2019-2021, test 2022+.")
-st.info("📌 **Pinned to Thesis panel (2001–2024)** for reproducibility.", icon="🔒")
+st.caption(f"Active panel: **{panel_label(_panel)}**")
+if _panel != "thesis":
+    st.warning(
+        f"Forecasting models are trained on the **{panel_label(_panel)}** and will produce "
+        "different temporal-split metrics from the thesis baseline. Switch to **Thesis panel "
+        "(2001–2024)** in the sidebar to reproduce reported results.",
+        icon="🔄",
+    )
 
 if not HAS_TORCH:
     st.warning("PyTorch is not installed. Forecasting requires `pip install torch` to run LSTM/GRU models.")

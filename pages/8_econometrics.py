@@ -11,7 +11,7 @@ import numpy as np
 import db
 from helpers import (
     format_coef_table, format_pvalue, significance_stars,
-    plotly_layout, ensure_session_state, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    plotly_layout, ensure_session_state, panel_label, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_econometric, render_interpretation, _render_insight_box,
 )
 from models.econometric import (
@@ -23,23 +23,25 @@ from models.base import DEFAULT_X_COLS
 
 ensure_session_state()
 
-# Reproducibility pin — econometric estimates in the thesis were computed on the 2001–2024
-# thesis panel. This page forces panel_mode='thesis' regardless of the sidebar selection so
-# published coefficients reproduce bit-for-bit. Use Dashboard/Benchmarks/Explorer to see 2025.
-filters = dict(st.session_state.filters)
-filters["panel_mode"] = "thesis"
-yr_min_t, yr_max_t = db.get_year_range("thesis")
-yr_range_prev = filters.get("year_range", (yr_min_t, yr_max_t))
-filters["year_range"] = (max(yr_range_prev[0], yr_min_t), min(yr_range_prev[1], yr_max_t))
+# Panel choice from the sidebar — regression results reflect whichever panel is active.
+# (Previously pinned to thesis; now follows user selection so users can compare
+# coefficients across thesis / latest / run3.)
+filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
+_panel = st.session_state.get("panel_mode", "latest")
 
 st.markdown("### Econometrics Lab")
-st.caption("Panel regression models replicating the thesis methodology. Auto-suggests the best model via diagnostic tests.")
-st.info(
-    "📌 **Pinned to Thesis panel (2001–2024)** for reproducibility of the published thesis coefficients. "
-    "The sidebar's Latest panel setting does not affect this page. Use Dashboard / Benchmarks / Data Explorer to see CMIE 2025 data.",
-    icon="🔒",
+st.caption(
+    "Panel regression models replicating the thesis methodology. Auto-suggests the best model via diagnostic tests."
+    f" · Active panel: **{panel_label(_panel)}**"
 )
+if _panel != "thesis":
+    st.warning(
+        f"Estimates use the **{panel_label(_panel)}** and will differ from the published thesis "
+        "coefficients (Tables 5.10 / 5.11 / 5.12). Switch to **Thesis panel (2001–2024)** in the "
+        "sidebar to reproduce thesis tables bit-for-bit.",
+        icon="🔄",
+    )
 
 with st.expander("ℹ️ About these models — what do they mean?"):
     st.markdown("""

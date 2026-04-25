@@ -7,18 +7,17 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import db
-from helpers import plotly_layout, format_pct, ensure_session_state, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box
+from helpers import plotly_layout, format_pct, ensure_session_state, panel_label, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box
 from models.scenario_regression import compute_leverage_ols_coefs, leverage_predictor_sample_means
 
 ensure_session_state()
 
-# Reproducibility pin — scenario OLS coefficients come from the thesis panel.
-filters = dict(st.session_state.filters)
-filters["panel_mode"] = "thesis"
-yr_min_t, yr_max_t = db.get_year_range("thesis")
-yr_prev = filters.get("year_range", (yr_min_t, yr_max_t))
-filters["year_range"] = (max(yr_prev[0], yr_min_t), min(yr_prev[1], yr_max_t))
+# Panel choice from the sidebar — coefficients reflect whichever panel is active.
+# (Previously pinned to thesis; now follows user selection so users can compare
+# scenarios across thesis / latest / run3.)
+filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
+_panel = st.session_state.get("panel_mode", "latest")
 _data_source = getattr(st.session_state, "data_source_mode", "sqlite")
 _version_id = (
     db.get_current_api_version()
@@ -27,7 +26,17 @@ _version_id = (
 )
 
 st.markdown("### Scenario Analysis")
-st.caption("Adjust firm characteristics to see predicted leverage based on panel regression coefficients.")
+st.caption(
+    "Adjust firm characteristics to see predicted leverage based on panel regression coefficients."
+    f" · Active panel: **{panel_label(_panel)}**"
+)
+if _panel != "thesis":
+    st.warning(
+        f"Coefficients are computed on the **{panel_label(_panel)}** and will differ from "
+        "the published thesis values. Switch to **Thesis panel (2001–2024)** in the sidebar "
+        "to reproduce thesis tables.",
+        icon="🔄",
+    )
 
 # ── Compute OLS coefficients from the active panel (filters + CMIE version when applicable) ──
 # Args must NOT use a leading underscore: Streamlit excludes those from the cache key.

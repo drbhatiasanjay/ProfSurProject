@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 import db
 from helpers import (
-    plotly_layout, format_pvalue, significance_stars, format_coef_table, ensure_session_state,
+    plotly_layout, format_pvalue, significance_stars, format_coef_table, ensure_session_state, panel_label,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     render_interpretation,
 )
@@ -23,17 +23,24 @@ from models.base import DEFAULT_X_COLS
 
 ensure_session_state()
 
-# Reproducibility pin — thesis-panel only.
-filters = dict(st.session_state.filters)
-filters["panel_mode"] = "thesis"
-yr_min_t, yr_max_t = db.get_year_range("thesis")
-yr_prev = filters.get("year_range", (yr_min_t, yr_max_t))
-filters["year_range"] = (max(yr_prev[0], yr_min_t), min(yr_prev[1], yr_max_t))
+# Panel choice from the sidebar — GMM and delta-leverage results follow user selection.
+# (Previously pinned to thesis; now respects the sidebar so users can compare across panels.)
+filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
+_panel = st.session_state.get("panel_mode", "latest")
 
 st.markdown("### Advanced Econometrics")
-st.caption("Dynamic panel GMM, change-in-leverage models, and stage comparison regressions — extending the thesis methodology.")
-st.info("📌 **Pinned to Thesis panel (2001–2024)** for reproducibility.", icon="🔒")
+st.caption(
+    "Dynamic panel GMM, change-in-leverage models, and stage comparison regressions — extending the thesis methodology."
+    f" · Active panel: **{panel_label(_panel)}**"
+)
+if _panel != "thesis":
+    st.warning(
+        f"Estimates use the **{panel_label(_panel)}** and will differ from the published thesis "
+        "values (Tables 5.12 / 5.11 / 7.5 etc.). Switch to **Thesis panel (2001–2024)** in the "
+        "sidebar to reproduce thesis tables.",
+        icon="🔄",
+    )
 
 with st.expander("About these models"):
     st.markdown("""
