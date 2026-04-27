@@ -27,7 +27,7 @@ if os.path.exists(css_path):
 
 import db
 from cmie.streamlit_import import render_cmie_sidebar_block
-from helpers import ensure_session_state
+from helpers import ensure_session_state, is_india_panel
 
 # ── Initialize session state defaults (shared with every page) ──
 ensure_session_state()
@@ -43,7 +43,7 @@ with st.sidebar:
     #            union with thesis or cmie_2025 because years overlap)
     vintages_df = db.get_data_vintages()
     from helpers import PANEL_LABELS as panel_label_map
-    panel_options = ["latest", "thesis", "run3"]
+    panel_options = ["latest", "thesis", "run3", "us_av_2024"]
     current_panel = st.session_state.get("panel_mode", "latest")
     if current_panel not in panel_options:
         current_panel = "latest"
@@ -56,7 +56,10 @@ with st.sidebar:
             "**Latest** — production panel (thesis + CMIE 2025 rollforward).\n\n"
             "**Thesis** — frozen 2001-2024 panel for reproducing published thesis tables.\n\n"
             "**Run 3** — Stata replication panel from initialResults.do (25 Apr 2026), "
-            "9,031 obs × 400 firms × 2001-2025."
+            "9,031 obs × 400 firms × 2001-2025.\n\n"
+            "**US S&P Sample** — 25 DJIA / S&P blue-chip firms via Alpha Vantage API; "
+            "Dickinson life-stages from cash-flow signs. Load with "
+            "`scripts/load_us_av_panel.py`."
         ),
     )
     if chosen_panel != current_panel:
@@ -77,9 +80,9 @@ with st.sidebar:
     st.session_state.panel_mode = chosen_panel
     st.session_state.filters["panel_mode"] = chosen_panel
 
-    companies_df = db.get_companies()
+    companies_df = db.get_companies(chosen_panel)
     all_stages = db.get_life_stages()
-    all_industries = db.get_industry_groups()
+    all_industries = db.get_industry_groups(chosen_panel)
     yr_min, yr_max = db.get_year_range(chosen_panel)
 
     # Company search
@@ -130,13 +133,22 @@ with st.sidebar:
     # Event period toggles
     st.markdown("**Event Periods**")
     gfc = st.checkbox("GFC (2008-09)", value=False, help="Global Financial Crisis")
-    ibc = st.checkbox("IBC (2016+)", value=False, help="Insolvency & Bankruptcy Code")
+    if is_india_panel(chosen_panel):
+        ibc = st.checkbox("IBC (2016+)", value=False, help="Insolvency & Bankruptcy Code")
+    else:
+        ibc = False
+        st.caption("_IBC dummy: India-only — not applicable for US panel_")
     covid = st.checkbox("COVID (2020-21)", value=False, help="COVID-19 pandemic")
     st.session_state.filters["events"] = {"gfc": gfc, "ibc": ibc, "covid": covid}
 
     st.divider()
     meta = db.get_db_metadata(chosen_panel)
-    panel_suffix = " • includes CMIE 2025" if chosen_panel == "latest" else " • thesis only"
+    if chosen_panel == "latest":
+        panel_suffix = " • includes CMIE 2025"
+    elif chosen_panel == "us_av_2024":
+        panel_suffix = " • US S&P Sample"
+    else:
+        panel_suffix = " • thesis only"
     st.caption(f"{meta['total_firms']} firms | {meta['total_obs']:,} obs | {meta['year_min']}–{meta['year_max']}{panel_suffix}")
     _theme = st.session_state.get("theme", "light")
     st.caption(f"Theme: **{_theme}** · change in Settings")

@@ -11,7 +11,7 @@ import numpy as np
 import db
 from helpers import (
     format_coef_table, format_pvalue, significance_stars,
-    plotly_layout, ensure_session_state, panel_label, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    plotly_layout, ensure_session_state, panel_label, is_india_panel, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_econometric, render_interpretation, _render_insight_box,
 )
 from models.econometric import (
@@ -42,6 +42,9 @@ if _panel != "thesis":
         "sidebar to reproduce thesis tables bit-for-bit.",
         icon="🔄",
     )
+if not is_india_panel(_panel):
+    st.info("IBC (2016+) event dummy is India-specific and is set to NULL for the US panel. "
+            "GFC and COVID dummies remain active.", icon="ℹ️")
 
 with st.expander("ℹ️ About these models — what do they mean?"):
     st.markdown("""

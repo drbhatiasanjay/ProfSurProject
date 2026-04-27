@@ -414,8 +414,13 @@ def _deserialize_filters(filters_tuple):
 # ── Lookup queries (long cache) ──
 
 @st.cache_data(ttl=3600)
-def get_companies():
-    return _query("SELECT company_code, company_name, nse_symbol, industry_group FROM companies ORDER BY company_name")
+def get_companies(panel_mode: str = "latest"):
+    """Return companies filtered to the active panel's country."""
+    if panel_mode == "us_av_2024":
+        sql = "SELECT company_code, company_name, nse_symbol AS ticker, industry_group FROM companies WHERE country = 'USA' ORDER BY company_name"
+    else:
+        sql = "SELECT company_code, company_name, nse_symbol, industry_group FROM companies WHERE country = 'India' OR country IS NULL ORDER BY company_name"
+    return _query(sql)
 
 
 @st.cache_data(ttl=3600)
@@ -425,8 +430,12 @@ def get_life_stages():
 
 
 @st.cache_data(ttl=3600)
-def get_industry_groups():
-    df = _query("SELECT DISTINCT industry_group FROM companies ORDER BY industry_group")
+def get_industry_groups(panel_mode: str = "latest"):
+    """Distinct industry groups for the active panel's companies."""
+    if panel_mode == "us_av_2024":
+        df = _query("SELECT DISTINCT industry_group FROM companies WHERE country = 'USA' ORDER BY industry_group")
+    else:
+        df = _query("SELECT DISTINCT industry_group FROM companies WHERE country = 'India' OR country IS NULL ORDER BY industry_group")
     return df["industry_group"].tolist()
 
 
@@ -434,20 +443,24 @@ def get_industry_groups():
 def get_year_range(panel_mode: str = "latest"):
     """Year range of the selected panel.
 
-    - `thesis` (2001-2024) — frozen replication panel
-    - `latest` (2001-present) — thesis + cmie_2025 rollforward (production panel)
-    - `run3`   (2001-2025)   — Stata replication panel from initialResults.do (parallel
-                              to thesis + cmie_2025; overlapping years; do not union with them)
+    - `thesis`     (2001-2024) — frozen replication panel
+    - `latest`     (2001-present) — thesis + cmie_2025 rollforward
+    - `run3`       (2001-2025) — Stata replication panel
+    - `us_av_2024` (dynamic)   — US S&P sample loaded from Alpha Vantage
     """
     if panel_mode == "thesis":
         sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage = 'thesis'"
     elif panel_mode == "run3":
         sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage = 'run3'"
+    elif panel_mode == "us_av_2024":
+        sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage = 'us_av_2024'"
     else:
         # `latest` = production panel only (thesis + cmie_2025). run3 is intentionally excluded
         # because its 2001-2024 rows overlap with the thesis vintage; unioning would double-count.
         sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage IN ('thesis', 'cmie_2025')"
     row = _query(sql)
+    if row.empty or row["min_yr"].isna().all():
+        return (2000, 2024)
     return int(row["min_yr"].iloc[0]), int(row["max_yr"].iloc[0])
 
 
@@ -475,6 +488,8 @@ def _vintage_predicate(panel_mode: str, table_prefix: str = "") -> tuple[str, li
         return f"{p}vintage = ?", ["thesis"]
     if panel_mode == "run3":
         return f"{p}vintage = ?", ["run3"]
+    if panel_mode == "us_av_2024":
+        return f"{p}vintage = ?", ["us_av_2024"]
     # `latest` — production union. Hardcoded list so we control which vintages compose it.
     vintages = ["thesis", "cmie_2025"]
     placeholders = ",".join("?" * len(vintages))

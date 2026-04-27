@@ -118,15 +118,21 @@ def new_badge(text: str = "NEW") -> str:
 # Human-friendly labels for the sidebar Panel radio. Used by app.py for the radio
 # itself and by every analysis page that reports which panel is currently active.
 PANEL_LABELS = {
-    "latest": "Latest panel (2001–present)",
-    "thesis": "Thesis panel (2001–2024)",
-    "run3":   "Run 3 — Stata replication (2001–2025)",
+    "latest":    "Latest panel (2001–present)",
+    "thesis":    "Thesis panel (2001–2024)",
+    "run3":      "Run 3 — Stata replication (2001–2025)",
+    "us_av_2024": "US S&P Sample (Alpha Vantage)",
 }
 
 
 def panel_label(mode: str) -> str:
     """Return the human label for a panel-mode key, or the key itself if unknown."""
     return PANEL_LABELS.get(mode, mode)
+
+
+def is_india_panel(mode: str) -> bool:
+    """True for the three India panels; False for the US panel and any unknown future panels."""
+    return mode in ("thesis", "latest", "run3")
 
 
 def ensure_session_state() -> None:
