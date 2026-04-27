@@ -60,12 +60,19 @@ with st.sidebar:
         ),
     )
     if chosen_panel != current_panel:
-        # Panel changed: re-seed year range to match the new panel's bounds and rerun so
-        # every page's cached query recomputes with the new vintage predicate.
+        # Panel changed: clamp the user's existing year selection into the new panel's
+        # bounds (preserve their narrower window where possible) and rerun so every
+        # page's cached query recomputes with the new vintage predicate.
         st.session_state.panel_mode = chosen_panel
         st.session_state.filters["panel_mode"] = chosen_panel
         yr_min_new, yr_max_new = db.get_year_range(chosen_panel)
-        st.session_state.filters["year_range"] = (yr_min_new, yr_max_new)
+        prev_lo, prev_hi = st.session_state.filters.get("year_range", (yr_min_new, yr_max_new))
+        new_lo = max(int(prev_lo), yr_min_new)
+        new_hi = min(int(prev_hi), yr_max_new)
+        if new_lo > new_hi:
+            # Edge case: prior range entirely outside new panel's bounds — reset to full.
+            new_lo, new_hi = yr_min_new, yr_max_new
+        st.session_state.filters["year_range"] = (new_lo, new_hi)
         st.rerun()
     st.session_state.panel_mode = chosen_panel
     st.session_state.filters["panel_mode"] = chosen_panel
@@ -88,14 +95,19 @@ with st.sidebar:
     else:
         st.session_state.filters["company_codes"] = []
 
-    # Year range
+    # Year range — bounds derived from the active panel's vintage range
+    # (Thesis: 2001-2024, Latest: 2001-2025, Run 3: 2001-2025).
     year_range = st.slider(
         "Year Range",
         min_value=yr_min,
         max_value=yr_max,
         value=st.session_state.filters["year_range"],
+        help=f"Bounds reflect the active panel's data range ({yr_min}-{yr_max}). "
+             "Changing panel preserves your narrower selection where possible.",
     )
     st.session_state.filters["year_range"] = year_range
+    if year_range[0] > yr_min or year_range[1] < yr_max:
+        st.caption(f"_Panel range: {yr_min}-{yr_max}_ (currently filtered to {year_range[0]}-{year_range[1]})")
 
     # Life stage
     selected_stages = st.multiselect(
