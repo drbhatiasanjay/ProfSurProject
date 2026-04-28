@@ -744,12 +744,17 @@ def get_db_metadata(panel_mode: str = "latest"):
         WHERE {vintage_sql}
     """, vintage_params)
     row = df.iloc[0]
+    # Use safe coercion so panels with no data yet (e.g. us_av_2024 before loading)
+    # return sensible defaults instead of crashing on int(None).
+    def _safe_int(v, default=0):
+        return int(v) if v is not None and str(v) != "nan" else default
+
     return {
-        "total_firms": int(row["total_firms"]),
-        "total_obs": int(row["total_obs"]),
-        "year_min": int(row["year_min"]),
-        "year_max": int(row["year_max"]),
-        "industries": int(row["industries"]),
+        "total_firms": _safe_int(row["total_firms"]),
+        "total_obs": _safe_int(row["total_obs"]),
+        "year_min": _safe_int(row["year_min"], 2000),
+        "year_max": _safe_int(row["year_max"], 2024),
+        "industries": _safe_int(row["industries"]),
         "panel_mode": panel_mode,
     }
 
