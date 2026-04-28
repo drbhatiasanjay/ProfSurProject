@@ -124,7 +124,7 @@ def _map_row(inc: dict, bal: dict, cf: dict, ticker: str, year: int) -> dict:
     total_assets = _num(bal, "totalAssets")
     long_term_debt = _num(bal, "longTermDebt")
     total_debt = _num(bal, "shortLongTermDebtTotal", "longTermDebt")
-    pp_ne = _num(bal, "propertyPlantEquipmentNet")
+    pp_ne = _num(bal, "propertyPlantEquipmentNet", "propertyPlantEquipment")
     total_liabilities = _num(bal, "totalLiabilities")
     cash_eq = _num(bal, "cashAndCashEquivalentsAtCarryingValue", "cashAndShortTermInvestments")
 
@@ -223,19 +223,35 @@ def _av_get(function: str, symbol: str, api_key: str, session: requests.Session,
         return None
 
 
-def fetch_ticker(ticker: str, api_key: str, session: requests.Session, log: list) -> list[dict]:
-    """Fetch 3 AV endpoints for one ticker; return list of mapped canonical rows."""
+def fetch_ticker(ticker: str, api_key: str, session: requests.Session, log: list,
+                 raw_cache_dir: Path | None = None, save_raw_dir: Path | None = None) -> list[dict]:
+    """Fetch 3 AV endpoints for one ticker; return list of mapped canonical rows.
+
+    raw_cache_dir: if set, read raw JSON responses from <dir>/<TICKER>_<function>.json
+                   instead of calling the API (zero API quota consumed).
+    save_raw_dir:  if set, save raw JSON responses to <dir>/<TICKER>_<function>.json
+                   alongside the fetch so future runs can use --from-raw-cache.
+    """
+    def _load_or_fetch(function: str) -> dict | None:
+        cache_file = raw_cache_dir / f"{ticker}_{function}.json" if raw_cache_dir else None
+        if cache_file and cache_file.exists():
+            return json.loads(cache_file.read_text(encoding="utf-8"))
+        data = _av_get(function, ticker, api_key, session, log)
+        time.sleep(INTER_CALL_SLEEP)
+        if data and save_raw_dir:
+            (save_raw_dir / f"{ticker}_{function}.json").write_text(
+                json.dumps(data, indent=2), encoding="utf-8"
+            )
+        return data
+
     print(f"  [{ticker}] INCOME_STATEMENT", end=" ", flush=True)
-    inc_data = _av_get("INCOME_STATEMENT", ticker, api_key, session, log)
-    time.sleep(INTER_CALL_SLEEP)
+    inc_data = _load_or_fetch("INCOME_STATEMENT")
 
     print(f"BALANCE_SHEET", end=" ", flush=True)
-    bal_data = _av_get("BALANCE_SHEET", ticker, api_key, session, log)
-    time.sleep(INTER_CALL_SLEEP)
+    bal_data = _load_or_fetch("BALANCE_SHEET")
 
     print(f"CASH_FLOW", end=" ", flush=True)
-    cf_data = _av_get("CASH_FLOW", ticker, api_key, session, log)
-    time.sleep(INTER_CALL_SLEEP)
+    cf_data = _load_or_fetch("CASH_FLOW")
 
     if not inc_data or not bal_data or not cf_data:
         print("-> SKIP (fetch failed)")
@@ -341,10 +357,21 @@ def main() -> int:
     parser.add_argument("--api-key", default=os.environ.get("ALPHA_VANTAGE_KEY", ""), help="AV API key")
     parser.add_argument("--tickers", default="", help="Comma-separated subset of tickers (default: all 25)")
     parser.add_argument("--dry-run", action="store_true", help="Print rows but write nothing")
+    parser.add_argument("--from-raw-cache", default="",
+                        help="Path to a previous run dir that contains <TICKER>_<FUNCTION>.json "
+                             "raw response files — reprocesses without using API quota")
     args = parser.parse_args()
 
-    if not args.api_key:
-        print("ERROR: provide --api-key <KEY> or set ALPHA_VANTAGE_KEY env var", file=sys.stderr)
+    raw_cache_dir: Path | None = None
+    if args.from_raw_cache:
+        raw_cache_dir = Path(args.from_raw_cache)
+        if not raw_cache_dir.exists():
+            print(f"ERROR: --from-raw-cache path does not exist: {raw_cache_dir}", file=sys.stderr)
+            return 1
+
+    if not args.api_key and not raw_cache_dir:
+        print("ERROR: provide --api-key <KEY> or set ALPHA_VANTAGE_KEY env var "
+              "(or use --from-raw-cache to reload from saved responses)", file=sys.stderr)
         return 1
 
     ticker_filter: set[str] | None = None
@@ -369,9 +396,11 @@ def main() -> int:
     log: list = []
     session = requests.Session()
     all_rows: dict[str, list[dict]] = {}
+    save_raw_dir = out_dir  # always save raw responses alongside mapped rows
 
     for ticker, name, sector in firms_to_load:
-        rows = fetch_ticker(ticker, args.api_key, session, log)
+        rows = fetch_ticker(ticker, args.api_key, session, log,
+                            raw_cache_dir=raw_cache_dir, save_raw_dir=save_raw_dir)
         all_rows[ticker] = rows
         if rows:
             (out_dir / f"{ticker}.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")

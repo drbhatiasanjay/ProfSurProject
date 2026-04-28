@@ -12,11 +12,13 @@ class TestSchema:
         assert df[0] >= 401, f"Expected ≥401 companies, got {df[0]}"
 
     def test_current_universe_is_401(self, db_conn):
-        """Current universe = non-delisted, non-superseded firms. Still 401 by design."""
+        """India universe = non-delisted, non-superseded firms. Still 401 by design (US firms excluded)."""
         row = db_conn.execute(
-            "SELECT COUNT(*) FROM companies WHERE delisted_in_year IS NULL AND superseded_by IS NULL"
+            "SELECT COUNT(*) FROM companies "
+            "WHERE delisted_in_year IS NULL AND superseded_by IS NULL "
+            "AND (country IS NULL OR country = 'India')"
         ).fetchone()
-        assert row[0] == 400 or row[0] == 401, f"Expected 400/401 current firms, got {row[0]}"
+        assert row[0] == 400 or row[0] == 401, f"Expected 400/401 India firms, got {row[0]}"
 
     def test_financials_thesis_vintage(self, db_conn):
         df = db_conn.execute("SELECT COUNT(*) FROM financials WHERE vintage = 'thesis'").fetchone()
