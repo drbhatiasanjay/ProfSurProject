@@ -297,11 +297,11 @@ def _where_api_financials_join(filters_tuple):
 
 
 @st.cache_data(ttl=300)
-def get_api_financials(version_id: str, _filters_tuple):
+def get_api_financials(version_id: str, filters_tuple):
     """
     Read normalized CMIE panel rows for the active version_id and apply the same global filters.
     """
-    where, params = _where_api_financials_join(_filters_tuple)
+    where, params = _where_api_financials_join(filters_tuple)
     sql = f"""
         SELECT
             f.company_code,
@@ -337,12 +337,12 @@ def get_api_financials(version_id: str, _filters_tuple):
 
 
 @st.cache_data(ttl=300)
-def get_api_panel_data(version_id: str, _filters_tuple):
+def get_api_panel_data(version_id: str, filters_tuple):
     """
     Panel shaped like get_panel_data but sourced from api_financials for the given version.
     Interest / int_rate columns come from packaged financials when the same (company_code, year) exists.
     """
-    where, params = _where_api_financials_join(_filters_tuple)
+    where, params = _where_api_financials_join(filters_tuple)
     sql = f"""
         SELECT f.company_code, f.year, f.life_stage,
                f.leverage, f.profitability, f.tangibility, f.tax,
@@ -367,9 +367,9 @@ def get_api_panel_data(version_id: str, _filters_tuple):
 
 
 @st.cache_data(ttl=300)
-def get_api_life_stage_summary(version_id: str, _filters_tuple):
+def get_api_life_stage_summary(version_id: str, filters_tuple):
     """Aggregate life-stage × year from CMIE-imported api_financials (same shape as get_life_stage_summary)."""
-    where, params = _where_api_financials_join(_filters_tuple)
+    where, params = _where_api_financials_join(filters_tuple)
     sql = f"""
         SELECT f.life_stage, f.year,
                COUNT(*) AS num_firms,
@@ -388,16 +388,16 @@ def get_api_life_stage_summary(version_id: str, _filters_tuple):
     return _query(sql, [version_id] + params)
 
 
-def get_active_life_stage_summary(_filters_tuple):
+def get_active_life_stage_summary(filters_tuple):
     """Match get_life_stage_summary when using CMIE active version."""
     if not is_cmie_lab_enabled():
-        return get_life_stage_summary(_filters_tuple)
+        return get_life_stage_summary(filters_tuple)
     mode = getattr(st.session_state, "data_source_mode", "sqlite")
     if mode == "cmie":
         version_id = get_current_api_version()
         if version_id:
-            return get_api_life_stage_summary(version_id, _filters_tuple)
-    return get_life_stage_summary(_filters_tuple)
+            return get_api_life_stage_summary(version_id, filters_tuple)
+    return get_life_stage_summary(filters_tuple)
 
 
 def _deserialize_filters(filters_tuple):
@@ -544,8 +544,8 @@ def _build_where(filters, table_prefix=""):
 
 
 @st.cache_data(ttl=600)
-def get_filtered_financials(_filters_tuple):
-    filters = _deserialize_filters(_filters_tuple)
+def get_filtered_financials(filters_tuple):
+    filters = _deserialize_filters(filters_tuple)
     where, params = _build_where(filters)
     sql = f"""
         SELECT company_code, company_name, nse_symbol, industry_group, inc_year,
@@ -561,40 +561,40 @@ def get_filtered_financials(_filters_tuple):
     return _query(sql, params)
 
 
-def get_active_financials(_filters_tuple):
+def get_active_financials(filters_tuple):
     """
     Unified accessor used by pages.
     - If sidebar mode is 'cmie' and a current API version exists, return api_financials join.
     - Otherwise fall back to the packaged SQLite view.
     """
     if not is_cmie_lab_enabled():
-        return get_filtered_financials(_filters_tuple)
+        return get_filtered_financials(filters_tuple)
     mode = getattr(st.session_state, "data_source_mode", "sqlite")
     if mode == "cmie":
         version_id = get_current_api_version()
         if version_id:
-            return get_api_financials(version_id, _filters_tuple)
-    return get_filtered_financials(_filters_tuple)
+            return get_api_financials(version_id, filters_tuple)
+    return get_filtered_financials(filters_tuple)
 
 
-def get_active_panel_data(_filters_tuple):
+def get_active_panel_data(filters_tuple):
     """
     Same contract as get_panel_data for econometrics/ML pages.
     When ENABLE_CMIE is on and data_source_mode is cmie with a current API version, read api_financials path.
     """
     if not is_cmie_lab_enabled():
-        return get_panel_data(_filters_tuple)
+        return get_panel_data(filters_tuple)
     mode = getattr(st.session_state, "data_source_mode", "sqlite")
     if mode == "cmie":
         version_id = get_current_api_version()
         if version_id:
-            return get_api_panel_data(version_id, _filters_tuple)
-    return get_panel_data(_filters_tuple)
+            return get_api_panel_data(version_id, filters_tuple)
+    return get_panel_data(filters_tuple)
 
 
 @st.cache_data(ttl=600)
-def get_life_stage_summary(_filters_tuple):
-    filters = _deserialize_filters(_filters_tuple)
+def get_life_stage_summary(filters_tuple):
+    filters = _deserialize_filters(filters_tuple)
     where, params = _build_where(filters, "f")
     sql = f"""
         SELECT f.life_stage, f.year,
@@ -614,8 +614,8 @@ def get_life_stage_summary(_filters_tuple):
 
 
 @st.cache_data(ttl=600)
-def get_industry_summary(_filters_tuple):
-    filters = _deserialize_filters(_filters_tuple)
+def get_industry_summary(filters_tuple):
+    filters = _deserialize_filters(filters_tuple)
     where, params = _build_where(filters, "f")
     sql = f"""
         SELECT c.industry_group, f.year,
@@ -650,8 +650,8 @@ def get_company_detail(company_code):
 
 
 @st.cache_data(ttl=600)
-def get_top_leveraged(n, _filters_tuple):
-    filters = _deserialize_filters(_filters_tuple)
+def get_top_leveraged(n, filters_tuple):
+    filters = _deserialize_filters(filters_tuple)
     where, params = _build_where(filters)
     sql = f"""
         SELECT company_name, life_stage,
@@ -712,8 +712,8 @@ def get_leverage_percentiles():
 
 
 @st.cache_data(ttl=600)
-def get_full_data_explorer(_filters_tuple):
-    filters = _deserialize_filters(_filters_tuple)
+def get_full_data_explorer(filters_tuple):
+    filters = _deserialize_filters(filters_tuple)
     where, params = _build_where(filters, "f")
     sql = f"""
         SELECT c.company_name, c.nse_symbol, c.industry_group, f.year, f.life_stage,
@@ -785,9 +785,9 @@ def get_graph_ownership():
 
 
 @st.cache_data(ttl=600)
-def get_panel_data(_filters_tuple):
+def get_panel_data(filters_tuple):
     """Get panel data ready for econometric/ML modeling. Returns flat DataFrame."""
-    filters = _deserialize_filters(_filters_tuple)
+    filters = _deserialize_filters(filters_tuple)
     where, params = _build_where(filters, "f")
     sql = f"""
         SELECT f.company_code, f.year, f.life_stage,
