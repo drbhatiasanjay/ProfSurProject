@@ -63,19 +63,15 @@ with st.sidebar:
         ),
     )
     if chosen_panel != current_panel:
-        # Panel changed: clamp the user's existing year selection into the new panel's
-        # bounds (preserve their narrower window where possible) and rerun so every
+        # Panel changed: reset to the new panel's full year range, then rerun so every
         # page's cached query recomputes with the new vintage predicate.
+        # We intentionally do NOT carry over the prior selection because each panel has a
+        # different natural start year (India: 2001, US: 2006) and a selection shaped by
+        # one panel misleads the user on another.
         st.session_state.panel_mode = chosen_panel
         st.session_state.filters["panel_mode"] = chosen_panel
         yr_min_new, yr_max_new = db.get_year_range(chosen_panel)
-        prev_lo, prev_hi = st.session_state.filters.get("year_range", (yr_min_new, yr_max_new))
-        new_lo = max(int(prev_lo), yr_min_new)
-        new_hi = min(int(prev_hi), yr_max_new)
-        if new_lo > new_hi:
-            # Edge case: prior range entirely outside new panel's bounds — reset to full.
-            new_lo, new_hi = yr_min_new, yr_max_new
-        st.session_state.filters["year_range"] = (new_lo, new_hi)
+        st.session_state.filters["year_range"] = (yr_min_new, yr_max_new)
         st.rerun()
     st.session_state.panel_mode = chosen_panel
     st.session_state.filters["panel_mode"] = chosen_panel
