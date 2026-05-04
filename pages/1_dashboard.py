@@ -429,57 +429,100 @@ for _si in _stages_pw:
     _text_pw.append(_row_t)
     _heat_pw.append(_row_h)
 
-_pw_left, _pw_right = st.columns([3, 2])
+# ── Pairwise heatmap (full width) ──
+_fig_pw = go.Figure(go.Heatmap(
+    z=_heat_pw,
+    x=_stages_pw,
+    y=_stages_pw,
+    text=_text_pw,
+    texttemplate="%{text}",
+    textfont={"size": 9},
+    colorscale=[[0, "#EFF6FF"], [0.5, "#F1F5F9"], [1.0, "#DC2626"]],
+    showscale=False,
+    zmin=0, zmax=1,
+    hovertemplate="<b>%{y}</b> vs <b>%{x}</b><br>%{text}<extra></extra>",
+))
+_fig_pw.update_layout(
+    **plotly_layout("Pairwise Significance Matrix — Red = Significant (p < 0.05)", height=420),
+    xaxis_tickangle=-30,
+)
+_fig_pw.update_xaxes(tickfont=dict(size=10))
+_fig_pw.update_yaxes(tickfont=dict(size=10))
+st.plotly_chart(_fig_pw, use_container_width=True, config=PLOTLY_CONFIG)
 
-with _pw_left:
-    _fig_pw = go.Figure(go.Heatmap(
-        z=_heat_pw,
-        x=_stages_pw,
-        y=_stages_pw,
-        text=_text_pw,
-        texttemplate="%{text}",
-        textfont={"size": 9},
-        colorscale=[[0, "#EFF6FF"], [0.5, "#F1F5F9"], [1.0, "#DC2626"]],
-        showscale=False,
-        zmin=0, zmax=1,
-        hovertemplate="<b>%{y}</b> vs <b>%{x}</b><br>%{text}<extra></extra>",
+# ── Figure 5.1 — Capital Structure Variables by Life Stage ──
+st.markdown("#### Capital Structure Variables by Life Stage (Figure 5.1)")
+st.caption(
+    "Panel-average levels of leverage, profitability, firm size and dividend across corporate "
+    "life stages in lifecycle order. Replicates thesis Figure 5.1 (p. 96)."
+)
+
+_F51_VARS = {
+    "leverage":      ("Leverage (%)",      PRIMARY),
+    "profitability": ("Profitability (%)", SECONDARY),
+    "firm_size":     ("Firm Size (log)",   ACCENT),
+    "dividend":      ("Dividend (%)",      "#8B5CF6"),
+}
+_f51_keys   = list(_F51_VARS.keys())
+_f51_labels = {k: v[0] for k, v in _F51_VARS.items()}
+_f51_colors = {k: v[1] for k, v in _F51_VARS.items()}
+
+_stage51 = (
+    df.groupby("life_stage")[_f51_keys].mean()
+    .reindex([s for s in STAGE_ORDER if s in df["life_stage"].unique()])
+    .reset_index()
+)
+
+# Chart A: combined normalized (0–100) line chart, stages on X-axis
+_fig51_combined = go.Figure()
+for _var in _f51_keys:
+    _col = _stage51[_var].dropna()
+    _mn, _mx = _col.min(), _col.max()
+    _norm = (_stage51[_var] - _mn) / (_mx - _mn) * 100 if _mx > _mn else _stage51[_var] * 0 + 50
+    _actuals = _stage51[_var].round(3).tolist()
+    _fig51_combined.add_trace(go.Scatter(
+        x=_stage51["life_stage"],
+        y=_norm,
+        mode="lines+markers",
+        name=_f51_labels[_var],
+        line=dict(color=_f51_colors[_var], width=2.5),
+        marker=dict(size=7),
+        customdata=_actuals,
+        hovertemplate=f"<b>{_f51_labels[_var]}</b><br>Stage: %{{x}}<br>Actual: %{{customdata:.3f}}<br>Normalised: %{{y:.0f}}<extra></extra>",
     ))
-    _fig_pw.update_layout(
-        **plotly_layout("Pairwise Significance Matrix — Red = Significant (p < 0.05)", height=430),
-        xaxis_tickangle=-30,
-    )
-    _fig_pw.update_xaxes(tickfont=dict(size=10))
-    _fig_pw.update_yaxes(tickfont=dict(size=10))
-    st.plotly_chart(_fig_pw, use_container_width=True, config=PLOTLY_CONFIG)
+_fig51_combined.update_layout(
+    **plotly_layout("Capital Structure Variables by Life Stage — Normalised (0=lowest, 100=highest)", height=380),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+)
+_fig51_combined.update_yaxes(title="Relative Level (0 = lowest, 100 = highest)")
+_fig51_combined.update_xaxes(title="Corporate Life Stage")
+st.plotly_chart(_fig51_combined, use_container_width=True, config=PLOTLY_CONFIG)
 
-with _pw_right:
-    _stage_stats_pw = df.groupby("life_stage")["leverage"].agg(["mean", "sem", "count"]).reset_index()
-    _stage_stats_pw.columns = ["life_stage", "mean", "sem", "count"]
-    _stage_stats_pw["ci95"] = _stage_stats_pw["sem"] * 1.96
-    _stage_stats_pw = (
-        _stage_stats_pw[_stage_stats_pw["life_stage"].isin(_stages_pw)]
-        .set_index("life_stage").reindex(_stages_pw).reset_index()
-    )
-
-    _fig_means_pw = go.Figure()
-    for _, _sr in _stage_stats_pw.iterrows():
-        _clr = STAGE_COLORS.get(_sr["life_stage"], PRIMARY)
-        _fig_means_pw.add_trace(go.Bar(
-            name=_sr["life_stage"],
-            x=[_sr["life_stage"]],
-            y=[_sr["mean"]],
-            error_y=dict(type="data", array=[_sr["ci95"]], visible=True),
-            marker_color=_clr,
+# Chart B: 2×2 subplot grid — raw values per variable
+from plotly.subplots import make_subplots as _make_subplots51
+_rc51 = [(1,1),(1,2),(2,1),(2,2)]
+_fig51_grid = _make_subplots51(
+    rows=2, cols=2,
+    subplot_titles=[_f51_labels[v] for v in _f51_keys],
+    vertical_spacing=0.14, horizontal_spacing=0.1,
+)
+for (_var, (_lbl, _clr)), (_r, _c) in zip(_F51_VARS.items(), _rc51):
+    _fig51_grid.add_trace(
+        go.Bar(
+            x=_stage51["life_stage"],
+            y=_stage51[_var],
+            marker_color=[STAGE_COLORS.get(s, _clr) for s in _stage51["life_stage"]],
+            name=_lbl,
             showlegend=False,
-            hovertemplate=f"<b>{_sr['life_stage']}</b><br>Mean: {_sr['mean']:.1f}%<br>95% CI: ±{_sr['ci95']:.1f}pp<extra></extra>",
-        ))
-    _fig_means_pw.update_layout(
-        **plotly_layout("Mean Leverage by Stage (± 95% CI)  — Figure 5.3", height=430),
-        yaxis_title="Avg Leverage (%)",
-        xaxis_tickangle=-30,
-        bargap=0.3,
+            hovertemplate=f"<b>%{{x}}</b><br>{_lbl}: %{{y:.3f}}<extra></extra>",
+        ),
+        row=_r, col=_c,
     )
-    st.plotly_chart(_fig_means_pw, use_container_width=True, config=PLOTLY_CONFIG)
+_grid51_layout = plotly_layout("Capital Structure Variables by Stage — Raw Values", height=520)
+_fig51_grid.update_layout(**_grid51_layout, showlegend=False)
+for (_r, _c) in _rc51:
+    _fig51_grid.update_xaxes(tickangle=-30, tickfont=dict(size=9), row=_r, col=_c)
+st.plotly_chart(_fig51_grid, use_container_width=True, config=PLOTLY_CONFIG)
 
 # Significant-pair callout badges
 if _sig_pairs:
@@ -519,11 +562,12 @@ _apw.append(
     "leverage rises sharply as cash generation weakens and debt overhang builds."
 )
 _render_insight_box(
-    "Table 5.9 — Pairwise Comparison of Capital Structure Across Life Stages",
+    "Table 5.9 + Figure 5.1 — Pairwise Comparison & Capital Structure by Stage",
     _fpw, _apw,
     "Red cells = significantly different mean leverage (Tukey HSD, p < 0.05). "
-    "Diagonal shows each stage's mean leverage. Bar chart replicates thesis Figure 5.3 (p. 101). "
-    "Reproduces thesis Table 5.9 (p. 102).",
+    "Diagonal shows each stage's mean leverage. "
+    "Charts below replicate thesis Figure 5.1 (p. 96) — leverage, profitability, firm size and dividend "
+    "by corporate life stage in lifecycle order. Reproduces thesis Table 5.9 (p. 102).",
 )
 
 st.divider()
