@@ -330,50 +330,12 @@ with stage_right:
         else:
             st.info("No significant difference found")
 
-    # Stage-means bar chart. When the Latest panel is active AND 2025 rows are in scope,
-    # surface the vintage comparison as tabs (mock-inspired). Otherwise fall back to a
-    # single "All years" view so the thesis panel reads cleanly.
-    # The `stage_means` variable is kept (computed from the full df) so the interpretation
-    # narrative below still references the overall highest/lowest stages.
+    # stage_means kept for interpretation narrative below
     stage_means = df.groupby("life_stage")["leverage"].mean().reset_index()
     stage_means.columns = ["life_stage", "avg_leverage"]
     stage_means = stage_means.sort_values("avg_leverage", ascending=True)
-
     _panel = st.session_state.get("panel_mode", "latest")
     _has_2025 = bool((df.get("vintage", pd.Series(dtype=str)) == "cmie_2025").any()) if "vintage" in df.columns else (df["year"] == 2025).any()
-
-    def _stage_bar(df_slice, title_suffix: str):
-        if df_slice.empty:
-            st.info(f"No rows available for {title_suffix}.")
-            return
-        sm = df_slice.groupby("life_stage")["leverage"].mean().reset_index()
-        sm.columns = ["life_stage", "avg_leverage"]
-        sm = sm.sort_values("avg_leverage", ascending=True)
-        fig = px.bar(
-            sm, x="avg_leverage", y="life_stage", orientation="h",
-            color="life_stage", color_discrete_map=STAGE_COLORS,
-            labels={"avg_leverage": "Avg Leverage (%)", "life_stage": ""},
-        )
-        fig.update_layout(**plotly_layout(height=300))
-        fig.update_layout(showlegend=False)
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
-
-    if _panel == "latest" and _has_2025:
-        tab_all, tab_thesis, tab_2025 = st.tabs(["All years", "Thesis only (2001–2024)", "2025 snapshot"])
-        with tab_all:
-            _stage_bar(df, "all years")
-        with tab_thesis:
-            if "vintage" in df.columns:
-                _stage_bar(df[df["vintage"] == "thesis"], "thesis vintage")
-            else:
-                _stage_bar(df[df["year"] <= 2024], "pre-2025 rows")
-        with tab_2025:
-            if "vintage" in df.columns:
-                _stage_bar(df[df["vintage"] == "cmie_2025"], "2025 snapshot")
-            else:
-                _stage_bar(df[df["year"] == 2025], "2025 snapshot")
-    else:
-        _stage_bar(df, "all years")
 
 # Interpretation
 _f2, _a2 = [], []
@@ -490,10 +452,8 @@ for _var in _f51_keys:
         customdata=_actuals,
         hovertemplate=f"<b>{_f51_labels[_var]}</b><br>Stage: %{{x}}<br>Actual: %{{customdata:.3f}}<br>Normalised: %{{y:.0f}}<extra></extra>",
     ))
-_fig51_combined.update_layout(
-    **plotly_layout("Capital Structure Variables by Life Stage — Normalised (0=lowest, 100=highest)", height=380),
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-)
+_fig51_combined.update_layout(**plotly_layout("Capital Structure Variables by Life Stage — Normalised (0=lowest, 100=highest)", height=380))
+_fig51_combined.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
 _fig51_combined.update_yaxes(title="Relative Level (0 = lowest, 100 = highest)")
 _fig51_combined.update_xaxes(title="Corporate Life Stage")
 st.plotly_chart(_fig51_combined, use_container_width=True, config=PLOTLY_CONFIG)
