@@ -152,6 +152,148 @@ _render_insight_box("Leverage Over Time — Trend Analysis", _f, _a)
 st.divider()
 
 # ═══════════════════════════════════════════════
+# Figure 5.2 — Year-wise Capital Structure Trends
+# Replicates thesis Figure 5.2 (p. 93):
+# "Trends in Leverage, Profitability, Size of Assets and Dividend (FY2001–FY2024)"
+# ═══════════════════════════════════════════════
+from plotly.subplots import make_subplots as _make_subplots
+
+st.markdown("### Capital Structure Determinants — Year-wise Trends")
+st.caption(
+    "Panel-average levels for each year across the full sample. "
+    "Replicates thesis Figure 5.2. Top: all four variables on a common normalized scale "
+    "(0 = historical low, 100 = historical high). Bottom: actual levels in separate panels."
+)
+
+_FIG52_VARS = {
+    "leverage":      ("Leverage (%)",      PRIMARY),
+    "profitability": ("Profitability (%)", SECONDARY),
+    "tangibility":   ("Tangibility (%)",   ACCENT),
+    "dividend":      ("Dividend (%)",      "#8B5CF6"),
+}
+_f52_keys   = list(_FIG52_VARS.keys())
+_f52_labels = {k: v[0] for k, v in _FIG52_VARS.items()}
+_f52_colors = {k: v[1] for k, v in _FIG52_VARS.items()}
+
+_yearly52 = (
+    df.groupby("year")[_f52_keys]
+    .mean()
+    .reset_index()
+    .sort_values("year")
+)
+
+# ── A: Combined normalized chart ─────────────────────────────────────────
+_fig52_combined = go.Figure()
+for _var in _f52_keys:
+    _col = _yearly52[_var].dropna()
+    if _col.empty:
+        continue
+    _mn, _mx = _col.min(), _col.max()
+    _norm = (_yearly52[_var] - _mn) / (_mx - _mn) * 100 if _mx > _mn else _yearly52[_var] * 0 + 50
+    _actuals = _yearly52[_var].round(2).tolist()
+    _fig52_combined.add_trace(go.Scatter(
+        x=_yearly52["year"],
+        y=_norm,
+        mode="lines+markers",
+        name=_f52_labels[_var],
+        line=dict(color=_f52_colors[_var], width=2.5),
+        marker=dict(size=5),
+        customdata=_actuals,
+        hovertemplate=(
+            f"<b>{_f52_labels[_var]}</b><br>"
+            "Year: %{x}<br>"
+            "Actual: %{customdata:.2f}%<br>"
+            "Normalized: %{y:.1f}<extra></extra>"
+        ),
+    ))
+_fig52_combined.update_layout(
+    **plotly_layout("All Determinants — Normalized Trends (0–100)", height=400)
+)
+_fig52_combined = event_bands(_fig52_combined)
+_fig52_combined.update_yaxes(title="Relative Level (0 = lowest, 100 = highest)")
+_fig52_combined.update_xaxes(title="Year")
+st.plotly_chart(_fig52_combined, use_container_width=True, config=PLOTLY_CONFIG)
+
+# ── B: 2×2 grid — actual levels ──────────────────────────────────────────
+_fig52_grid = _make_subplots(
+    rows=2, cols=2,
+    subplot_titles=[_f52_labels[v] for v in _f52_keys],
+    vertical_spacing=0.18,
+    horizontal_spacing=0.10,
+)
+_rc52 = [(1, 1), (1, 2), (2, 1), (2, 2)]
+for _i, _var in enumerate(_f52_keys):
+    _r, _c = _rc52[_i]
+    _fig52_grid.add_trace(
+        go.Scatter(
+            x=_yearly52["year"],
+            y=_yearly52[_var],
+            mode="lines+markers",
+            name=_f52_labels[_var],
+            line=dict(color=_f52_colors[_var], width=2.5),
+            marker=dict(size=5),
+            showlegend=False,
+            hovertemplate=f"<b>%{{x}}</b><br>{_f52_labels[_var]}: %{{y:.2f}}%<extra></extra>",
+        ),
+        row=_r, col=_c,
+    )
+
+# Add event bands to every subplot cell
+_evt52 = [
+    (2007.5, 2009.5, "rgba(239,68,68,0.10)",   "GFC"),
+    (2015.5, 2020.5, "rgba(99,102,241,0.08)",  "IBC"),
+    (2019.5, 2021.5, "rgba(249,115,22,0.10)",  "COVID"),
+]
+for _x0, _x1, _fc, _lbl in _evt52:
+    for _r, _c in _rc52:
+        _fig52_grid.add_vrect(
+            x0=_x0, x1=_x1, fillcolor=_fc, line_width=0,
+            annotation_text=_lbl if _r == 1 else "",
+            annotation_position="top left",
+            annotation_font_size=9,
+            annotation_font_color="#9CA3AF",
+            row=_r, col=_c,
+        )
+
+_grid_layout = plotly_layout("Year-wise Averages — Actual Levels", height=600)
+_fig52_grid.update_layout(**_grid_layout, showlegend=False)
+st.plotly_chart(_fig52_grid, use_container_width=True, config=PLOTLY_CONFIG)
+st.caption("Shaded bands: GFC (2008-09, red) · IBC 2016+ (indigo) · COVID (2020-21, amber)")
+
+# Interpretation
+_f52i, _a52i = [], []
+for _var in _f52_keys:
+    _col = _yearly52[_var].dropna()
+    if _col.empty:
+        continue
+    _start_yr = int(_yearly52.loc[_col.index[0], "year"])
+    _end_yr   = int(_yearly52.loc[_col.index[-1], "year"])
+    _start_v  = _col.iloc[0]
+    _end_v    = _col.iloc[-1]
+    _change   = _end_v - _start_v
+    _peak_yr  = int(_yearly52.loc[_col.idxmax(), "year"])
+    _f52i.append(
+        f"**{_f52_labels[_var]}**: {_start_v:.1f}% ({_start_yr}) → {_end_v:.1f}% ({_end_yr}), "
+        f"change = **{_change:+.1f}pp**. Peak: {_col.max():.1f}% in {_peak_yr}."
+    )
+_a52i.append(
+    "Leverage and profitability tend to move in opposite directions — consistent with Pecking Order Theory "
+    "(more profitable firms need less external debt)."
+)
+_a52i.append(
+    "Tangibility underpins debt capacity — rising tangibility provides collateral that supports borrowing "
+    "(Trade-off Theory)."
+)
+_render_insight_box(
+    "Figure 5.2 — Determinant Trends Over Time",
+    _f52i, _a52i,
+    "Year-wise panel averages for leverage, profitability, tangibility and dividend. "
+    "Reproduces thesis Figure 5.2 (p. 93).",
+)
+
+st.divider()
+
+# ═══════════════════════════════════════════════
 # CHANGE 2: Leverage by Stage + ANOVA
 # ═══════════════════════════════════════════════
 st.markdown("### Is Leverage Significantly Different Across Life Stages?")
