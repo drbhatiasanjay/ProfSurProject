@@ -128,8 +128,8 @@ if cph is not None:
             textposition="outside",
         ))
         fig_hr.add_vline(x=0, line_dash="dash", line_color="#9CA3AF")
-        fig_hr.update_layout(**plotly_layout("Hazard Ratios (>0 accelerates, <0 delays)", height=350))
-        fig_hr.update_xaxes(title="Hazard Ratio - 1")
+        fig_hr.update_layout(**plotly_layout("Hazard Ratios", height=350))
+        fig_hr.update_xaxes(title="Hazard Ratio − 1  (>0 accelerates transition, <0 delays)")
         st.plotly_chart(fig_hr, use_container_width=True, config=PLOTLY_CONFIG)
 
     # Interpretation

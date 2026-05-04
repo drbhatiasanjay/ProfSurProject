@@ -495,7 +495,7 @@ def interpret_survival(km_summary, hr_df):
 # ── Plotly theme ──
 
 PLOTLY_CONFIG = {
-    "displayModeBar": True,
+    "displayModeBar": "hover",
     "modeBarButtonsToRemove": ["lasso2d", "select2d"],
     "displaylogo": False,
 }
@@ -513,12 +513,13 @@ def _current_theme() -> str:
 
 
 def plotly_layout_light(title="", height=400):
+    _t = 65 if title else 30
     return dict(
-        title=dict(text=title, font=dict(size=16, color=NEUTRAL)),
+        title=dict(text=title, font=dict(size=15, color=NEUTRAL), x=0, xanchor="left", pad=dict(l=4)),
         font=dict(family="Inter, system-ui, sans-serif", size=12, color=NEUTRAL),
         plot_bgcolor=BG_LIGHT,
         paper_bgcolor=BG_CARD,
-        margin=dict(l=40, r=20, t=50, b=60),
+        margin=dict(l=40, r=20, t=_t, b=60),
         height=height,
         legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
         modebar=dict(orientation="h", bgcolor="rgba(255,255,255,0.7)",
@@ -528,12 +529,13 @@ def plotly_layout_light(title="", height=400):
 
 
 def plotly_layout_dark(title="", height=400):
+    _t = 65 if title else 30
     return dict(
-        title=dict(text=title, font=dict(size=16, color="#ffffff")),
+        title=dict(text=title, font=dict(size=15, color="#ffffff"), x=0, xanchor="left", pad=dict(l=4)),
         font=dict(family="Inter, system-ui, sans-serif", size=12, color=TEXT_DARK),
         plot_bgcolor=BG_DARK,
         paper_bgcolor=PANEL_DARK,
-        margin=dict(l=40, r=20, t=50, b=60),
+        margin=dict(l=40, r=20, t=_t, b=60),
         height=height,
         legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5,
                     font=dict(color=TEXT_DARK)),

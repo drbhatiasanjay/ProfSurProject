@@ -405,7 +405,7 @@ _fig_pw = go.Figure(go.Heatmap(
     hovertemplate="<b>%{y}</b> vs <b>%{x}</b><br>%{text}<extra></extra>",
 ))
 _fig_pw.update_layout(
-    **plotly_layout("Pairwise Significance Matrix — Red = Significant (p < 0.05)", height=420),
+    **plotly_layout("Pairwise Significance Matrix (red = p < 0.05)", height=420),
     xaxis_tickangle=-30,
 )
 _fig_pw.update_xaxes(tickfont=dict(size=10))
@@ -452,7 +452,7 @@ for _var in _f51_keys:
         customdata=_actuals,
         hovertemplate=f"<b>{_f51_labels[_var]}</b><br>Stage: %{{x}}<br>Actual: %{{customdata:.3f}}<br>Normalised: %{{y:.0f}}<extra></extra>",
     ))
-_fig51_combined.update_layout(**plotly_layout("Capital Structure Variables by Life Stage — Normalised (0=lowest, 100=highest)", height=380))
+_fig51_combined.update_layout(**plotly_layout("Capital Structure by Stage — Normalised (0=min, 100=max)", height=380))
 _fig51_combined.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
 _fig51_combined.update_yaxes(title="Relative Level (0 = lowest, 100 = highest)")
 _fig51_combined.update_xaxes(title="Corporate Life Stage")
