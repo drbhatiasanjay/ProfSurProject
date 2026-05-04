@@ -391,6 +391,144 @@ _render_insight_box("Stage Comparison — Is Leverage Different?", _f2, _a2,
 st.divider()
 
 # ═══════════════════════════════════════════════
+# Pairwise Comparison (Table 5.9)
+# ═══════════════════════════════════════════════
+st.markdown("### Pairwise Significance: Which Stage Pairs Differ?")
+st.caption(
+    "Tukey's HSD post-hoc test after one-way ANOVA — identifies which specific stage pairs have "
+    "significantly different mean leverage. Replicates thesis Table 5.9 (p. 102)."
+)
+
+from models.econometric import run_pairwise_comparison as _run_pairwise, run_anova_by_stage as _run_anova
+
+_pw_result = _run_pairwise(df)
+_matrix_pval = _pw_result["matrix_pval"]
+_matrix_sig  = _pw_result["matrix_sig"]
+_matrix_diff = _pw_result["matrix_diff"]
+_group_means = _pw_result["group_means"]
+_sig_pairs   = _pw_result["significant_pairs"]
+
+_stages_pw = [s for s in STAGE_ORDER if s in _matrix_pval.index]
+_pval_m = _matrix_pval.reindex(index=_stages_pw, columns=_stages_pw)
+_sig_m  = _matrix_sig.reindex(index=_stages_pw, columns=_stages_pw)
+
+# Build annotation text and colour matrix
+_text_pw, _heat_pw = [], []
+for _si in _stages_pw:
+    _row_t, _row_h = [], []
+    for _sj in _stages_pw:
+        if _si == _sj:
+            _row_t.append(f"μ={_group_means.get(_si, 0):.1f}%")
+            _row_h.append(0.5)
+        else:
+            _pv = _pval_m.loc[_si, _sj]
+            _is_sig = bool(_sig_m.loc[_si, _sj])
+            _star = "★" if _is_sig else ""
+            _row_t.append(f"{_star}p={_pv:.3f}")
+            _row_h.append(1.0 if _is_sig else 0.0)
+    _text_pw.append(_row_t)
+    _heat_pw.append(_row_h)
+
+_pw_left, _pw_right = st.columns([3, 2])
+
+with _pw_left:
+    _fig_pw = go.Figure(go.Heatmap(
+        z=_heat_pw,
+        x=_stages_pw,
+        y=_stages_pw,
+        text=_text_pw,
+        texttemplate="%{text}",
+        textfont={"size": 9},
+        colorscale=[[0, "#EFF6FF"], [0.5, "#F1F5F9"], [1.0, "#DC2626"]],
+        showscale=False,
+        zmin=0, zmax=1,
+        hovertemplate="<b>%{y}</b> vs <b>%{x}</b><br>%{text}<extra></extra>",
+    ))
+    _fig_pw.update_layout(
+        **plotly_layout("Pairwise Significance Matrix — Red = Significant (p < 0.05)", height=430),
+        xaxis_tickangle=-30,
+    )
+    _fig_pw.update_xaxes(tickfont=dict(size=10))
+    _fig_pw.update_yaxes(tickfont=dict(size=10))
+    st.plotly_chart(_fig_pw, use_container_width=True, config=PLOTLY_CONFIG)
+
+with _pw_right:
+    _stage_stats_pw = df.groupby("life_stage")["leverage"].agg(["mean", "sem", "count"]).reset_index()
+    _stage_stats_pw.columns = ["life_stage", "mean", "sem", "count"]
+    _stage_stats_pw["ci95"] = _stage_stats_pw["sem"] * 1.96
+    _stage_stats_pw = (
+        _stage_stats_pw[_stage_stats_pw["life_stage"].isin(_stages_pw)]
+        .set_index("life_stage").reindex(_stages_pw).reset_index()
+    )
+
+    _fig_means_pw = go.Figure()
+    for _, _sr in _stage_stats_pw.iterrows():
+        _clr = STAGE_COLORS.get(_sr["life_stage"], PRIMARY)
+        _fig_means_pw.add_trace(go.Bar(
+            name=_sr["life_stage"],
+            x=[_sr["life_stage"]],
+            y=[_sr["mean"]],
+            error_y=dict(type="data", array=[_sr["ci95"]], visible=True),
+            marker_color=_clr,
+            showlegend=False,
+            hovertemplate=f"<b>{_sr['life_stage']}</b><br>Mean: {_sr['mean']:.1f}%<br>95% CI: ±{_sr['ci95']:.1f}pp<extra></extra>",
+        ))
+    _fig_means_pw.update_layout(
+        **plotly_layout("Mean Leverage by Stage (± 95% CI)  — Figure 5.3", height=430),
+        yaxis_title="Avg Leverage (%)",
+        xaxis_tickangle=-30,
+        bargap=0.3,
+    )
+    st.plotly_chart(_fig_means_pw, use_container_width=True, config=PLOTLY_CONFIG)
+
+# Significant-pair callout badges
+if _sig_pairs:
+    _pw_cols = st.columns(min(len(_sig_pairs), 5))
+    for _idx, (_sa, _sb) in enumerate(_sig_pairs):
+        _diff_val = _matrix_diff.loc[_sa, _sb] if _sa in _matrix_diff.index and _sb in _matrix_diff.columns else 0.0
+        with _pw_cols[_idx % len(_pw_cols)]:
+            st.markdown(
+                f"<div style='background:#FEE2E2;border-left:3px solid #DC2626;padding:6px 8px;"
+                f"border-radius:4px;font-size:12px;margin:2px 0'>"
+                f"<b>{_sa}</b> vs <b>{_sb}</b><br>"
+                f"Δμ = {_diff_val:+.1f}pp · p&lt;0.05</div>",
+                unsafe_allow_html=True,
+            )
+
+# Table 5.9 interpretation
+_fpw, _apw = [], []
+_fpw.append(
+    f"Tukey HSD identifies **{_pw_result['n_significant']} significantly different** pairs "
+    f"out of {_pw_result['n_pairs']} total stage combinations (α = 0.05)."
+)
+_fpw.append(
+    "Thesis key pairs: **Startup vs Maturity** · **Growth vs Maturity** · "
+    "**Maturity vs Decline** · **Decline vs Decay** — each confirming that leverage "
+    "changes fundamentally as firms traverse life-cycle boundaries."
+)
+_fpw.append(
+    "Shakeout sub-stages show heterogeneous results: Shakeout3 differs significantly from "
+    "Growth, Startup, Shakeout2 and Decline; Shakeout1 differs only from Decline."
+)
+_apw.append(
+    "Stage-to-stage benchmarking is statistically valid only within the same life stage — "
+    "comparing a Startup's leverage ratio to a Maturity firm's is not meaningful."
+)
+_apw.append(
+    "The Maturity–Decline boundary is the most economically significant transition: "
+    "leverage rises sharply as cash generation weakens and debt overhang builds."
+)
+_render_insight_box(
+    "Table 5.9 — Pairwise Comparison of Capital Structure Across Life Stages",
+    _fpw, _apw,
+    "Red cells = significantly different mean leverage (Tukey HSD, p < 0.05). "
+    "Diagonal shows each stage's mean leverage. Bar chart replicates thesis Figure 5.3 (p. 101). "
+    "Reproduces thesis Table 5.9 (p. 102).",
+)
+
+st.divider()
+
+# ═══════════════════════════════════════════════
 # CHANGE 3: What Explains the Differences?
 # ═══════════════════════════════════════════════
 st.markdown("### What Explains the Leverage Differences Across Stages?")
