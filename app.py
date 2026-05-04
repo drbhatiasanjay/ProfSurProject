@@ -168,6 +168,7 @@ forecasting = st.Page("pages/10_forecasting.py", title="Forecasting", icon=":mat
 clustering = st.Page("pages/11_clustering.py", title="Clustering", icon=":material/bubble_chart:")
 transitions = st.Page("pages/12_transitions.py", title="Transitions", icon=":material/swap_horiz:")
 advanced_econ = st.Page("pages/13_advanced_econometrics.py", title="Advanced Econometrics", icon=":material/science:")
+interaction_effects = st.Page("pages/15_interaction_effects.py", title="Interaction Effects", icon=":material/join_inner:")
 
-nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, knowledge_graph, settings])
+nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, interaction_effects, knowledge_graph, settings])
 nav.run()
