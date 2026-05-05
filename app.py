@@ -25,6 +25,36 @@ if os.path.exists(css_path):
     with open(css_path) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+# ── Authentication ────────────────────────────────────────────────────────────
+import streamlit_authenticator as stauth
+
+_creds = {"usernames": {
+    k: dict(v) for k, v in st.secrets.get("credentials", {}).get("usernames", {}).items()
+}}
+_cookie = st.secrets.get("cookie", {})
+authenticator = stauth.Authenticate(
+    _creds,
+    _cookie.get("name", "lclev_auth"),
+    _cookie.get("key", "fallback-key"),
+    int(_cookie.get("expiry_days", 7)),
+)
+authenticator.login()
+if not st.session_state.get("authentication_status"):
+    if st.session_state.get("authentication_status") is False:
+        st.error("Username or password incorrect.")
+    else:
+        st.info("Please sign in to access the LifeCycle Leverage Dashboard.")
+    st.stop()
+
+_username = st.session_state.get("username", "")
+_role = _creds["usernames"].get(_username, {}).get("role", "viewer")
+st.session_state["user"] = {
+    "name": st.session_state.get("name", _username),
+    "username": _username,
+    "role": _role,
+}
+# ─────────────────────────────────────────────────────────────────────────────
+
 import db
 from cmie.streamlit_import import render_cmie_sidebar_block
 from helpers import ensure_session_state, is_india_panel
@@ -35,6 +65,7 @@ ensure_session_state()
 # ── Sidebar: Global filters ──
 with st.sidebar:
     st.markdown("# LifeCycle Leverage")
+    authenticator.logout("Sign out", "sidebar")
 
     # Panel mode: switches the entire read-path across three independent vintage groups.
     # - latest = production panel (thesis 2001-2024 + cmie_2025 rollforward)

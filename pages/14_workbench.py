@@ -8,6 +8,9 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+from helpers import require_role
+
+require_role("admin")
 import numpy as np
 from scipy import stats
 
