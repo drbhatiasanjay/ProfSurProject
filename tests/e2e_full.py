@@ -52,12 +52,13 @@ ALL_PAGES = [
     ("Workbench",             ["researcher", "viewer"]),
     ("Interaction Effects",   []),
     ("Activity Log",          ["researcher", "viewer"]),
+    ("Board Deck",            ["viewer"]),
 ]
 
 ROLE_BLOCKED = {
     "admin":      [],
     "researcher": ["Workbench", "Activity Log"],
-    "viewer":     ["Bulk Upload", "Workbench", "Activity Log"],
+    "viewer":     ["Bulk Upload", "Workbench", "Activity Log", "Board Deck"],
 }
 
 

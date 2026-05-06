@@ -241,7 +241,8 @@ workbench = st.Page("pages/14_workbench.py", title="Workbench", icon=":material/
 interaction_effects = st.Page("pages/15_interaction_effects.py", title="Interaction Effects", icon=":material/join_inner:")
 
 admin_activity = st.Page("pages/16_admin_activity.py", title="Activity Log", icon=":material/monitoring:")
-nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, knowledge_graph, settings])
+board_deck     = st.Page("pages/17_board_export.py",  title="Board Deck",    icon=":material/description:")
+nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, knowledge_graph, settings])
 
 # ── Top-of-page header bar (sticky, renders above every page's content) ──
 from datetime import datetime, timezone as _tz

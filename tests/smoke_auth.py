@@ -39,7 +39,7 @@ USERS = {
 ROLE_BLOCKED = {
     "admin":      [],
     "researcher": ["workbench", "activity_log"],
-    "viewer":     ["bulk_upload", "workbench", "activity_log"],
+    "viewer":     ["bulk_upload", "workbench", "activity_log", "board_deck"],
 }
 
 # Pages to probe: (slug, display label, nav title in sidebar)
@@ -51,6 +51,7 @@ PROBE_PAGES = [
     ("data_explorer",   "Data Explorer",   "Data Explorer"),
     ("workbench",       "Workbench",       "Workbench"),       # in "View X more" section
     ("activity_log",    "Activity Log",    "Activity Log"),    # admin-only page 16
+    ("board_deck",      "Board Deck",      "Board Deck"),      # admin+researcher page 17
 ]
 
 

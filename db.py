@@ -720,9 +720,11 @@ def get_industry_summary(filters_tuple):
 def get_company_detail(company_code):
     sql = """
         SELECT f.year, f.life_stage, f.leverage, f.profitability, f.tangibility,
-               f.tax, f.dividend, f.firm_size, f.tax_shield, f.borrowings,
+               f.tax, f.dividend, f.firm_size, f.log_size, f.tax_shield, f.borrowings,
+               f.debentures_bonds, f.total_capital, f.reserves_and_funds,
                f.total_liabilities, f.cash_holdings, f.ncfo, f.ncfi, f.ncff,
-               f.gfc, f.ibc_2016, f.covid_dummy,
+               f.pbit, f.pbt, f.interest_amt, f.int_rate,
+               f.gfc, f.ibc_2016, f.covid_dummy, f.age_group, f.size_decile,
                o.promoter_share, o.indian_promoters, o.foreign_promoters,
                o.non_promoters, o.non_promoter_institutions, o.non_promoter_fiis
         FROM financials f
@@ -731,6 +733,48 @@ def get_company_detail(company_code):
         ORDER BY f.year
     """
     return _query(sql, [company_code])
+
+
+def get_company_peers(company_code: int, full_panel_df, n: int = 20):
+    """
+    Returns up to n peer firms from full_panel_df (already loaded — no extra DB hit).
+    Peers share the focal company's most-recent life_stage AND size_decile ±1.
+    Excludes the focal company itself.
+    """
+    import pandas as pd
+    if full_panel_df is None or full_panel_df.empty:
+        return pd.DataFrame()
+    # Most-recent year per company
+    latest = (
+        full_panel_df.sort_values("year")
+        .groupby("company_code")
+        .last()
+        .reset_index()
+    )
+    focal = latest[latest["company_code"] == company_code]
+    if focal.empty:
+        return pd.DataFrame()
+    focal_stage = focal.iloc[0]["life_stage"]
+    focal_decile = focal.iloc[0].get("size_decile", None)
+
+    def _decile_int(v):
+        try:
+            return int(str(v).strip().split()[-1])
+        except (ValueError, IndexError, AttributeError):
+            return None
+
+    mask = (latest["company_code"] != company_code) & (latest["life_stage"] == focal_stage)
+    focal_decile_int = _decile_int(focal_decile) if focal_decile is not None and pd.notna(focal_decile) else None
+    if focal_decile_int is not None:
+        decile_ints = latest["size_decile"].apply(_decile_int)
+        mask &= (decile_ints - focal_decile_int).abs() <= 1
+
+    peers = latest[mask].head(n)
+    # Merge company_name if not present
+    if "company_name" not in peers.columns and "company_name" in full_panel_df.columns:
+        names = full_panel_df[["company_code", "company_name"]].drop_duplicates("company_code")
+        peers = peers.merge(names, on="company_code", how="left", suffixes=("", "_y"))
+    return peers.reset_index(drop=True)
 
 
 @st.cache_data(ttl=600)
