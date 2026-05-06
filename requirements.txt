@@ -14,5 +14,6 @@ lightgbm>=4.0
 lifelines>=0.29
 torch>=2.0
 streamlit-authenticator==0.3.3
+extra-streamlit-components>=0.1.71
 bcrypt>=4.0.0
 pytest>=8.0

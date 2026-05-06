@@ -37,12 +37,28 @@ def _who(row):
 
 _full_df["who"] = _full_df.apply(_who, axis=1)
 
+# Separate login events from page visits for accurate metrics
+_page_df  = _full_df[_full_df["action_type"] == "page_visit"].copy()
+_login_df = _full_df[_full_df["action_type"] == "login"].copy()
+
 # ── KPI row ───────────────────────────────────────────────────────────────
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("Total Visits",    len(_full_df))
-k2.metric("Unique Sessions", _full_df["session_id"].nunique())
-k3.metric("Active Users",    _full_df["who"].nunique())
-k4.metric("Most Visited",    _full_df["page_name"].value_counts().idxmax())
+k1, k2, k3, k4, k5 = st.columns(5)
+k1.metric("Page Visits",     len(_page_df))
+k2.metric("Total Logins",    len(_login_df))
+k3.metric("Unique Sessions", _full_df["session_id"].nunique())
+k4.metric("Active Users",    _full_df["who"].nunique())
+k5.metric("Most Visited",    _page_df["page_name"].value_counts().idxmax() if not _page_df.empty else "—")
+st.divider()
+
+# ── Login events ──────────────────────────────────────────────────────────
+st.markdown("**Recent Login Events**")
+if _login_df.empty:
+    st.caption("No login events recorded yet. Login events are captured from the next deployment onward.")
+else:
+    _login_show = _login_df[["ts", "who", "role", "session_id"]].rename(columns={
+        "ts": "Time (UTC)", "who": "User", "role": "Role", "session_id": "Session ID"
+    })
+    st.dataframe(_login_show, use_container_width=True, hide_index=True)
 st.divider()
 
 # ── 3-column chart row ────────────────────────────────────────────────────
@@ -50,7 +66,7 @@ c1, c2, c3 = st.columns(3)
 
 with c1:
     st.markdown("**Page Popularity**")
-    _pc = _full_df["page_name"].value_counts().reset_index()
+    _pc = _page_df["page_name"].value_counts().reset_index()
     _pc.columns = ["Page", "Visits"]
     fig1 = px.bar(_pc, x="Visits", y="Page", orientation="h",
                   color="Visits", color_continuous_scale="teal")
@@ -61,7 +77,7 @@ with c1:
 
 with c2:
     st.markdown("**Visits by User**")
-    _uc = _full_df["who"].value_counts().reset_index()
+    _uc = _page_df["who"].value_counts().reset_index()
     _uc.columns = ["User", "Visits"]
     fig2 = px.pie(_uc, names="User", values="Visits", hole=0.45)
     fig2.update_layout(**plotly_layout("", height=360))
@@ -69,7 +85,7 @@ with c2:
 
 with c3:
     st.markdown("**Activity Over Time**")
-    _daily = _full_df.groupby(["date", "who"]).size().reset_index(name="Visits")
+    _daily = _page_df.groupby(["date", "who"]).size().reset_index(name="Visits")
     fig3 = px.bar(_daily, x="date", y="Visits", color="who",
                   labels={"date": "Date", "who": "User"})
     fig3.update_layout(**plotly_layout("", height=360))
@@ -79,7 +95,7 @@ with c3:
 st.markdown("**Usage Heatmap — Hour of Day x Day of Week**")
 _DOW = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 _heat = (
-    _full_df.groupby(["dow", "hour"]).size()
+    _page_df.groupby(["dow", "hour"]).size()
     .reindex(index=_DOW, level=0)
     .reset_index(name="Visits")
 )

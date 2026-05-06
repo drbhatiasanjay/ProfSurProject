@@ -86,6 +86,10 @@ if "prefs_loaded" not in st.session_state:
             st.session_state["theme"] = _saved["theme"]
     st.session_state["prefs_loaded"] = True
 
+if "login_logged" not in st.session_state:
+    db.log_user_login(_username, _role, st.session_state["session_id"])
+    st.session_state["login_logged"] = True
+
 # ── Initialize session state defaults (shared with every page) ──
 ensure_session_state()
 
@@ -239,7 +243,7 @@ interaction_effects = st.Page("pages/15_interaction_effects.py", title="Interact
 admin_activity = st.Page("pages/16_admin_activity.py", title="Activity Log", icon=":material/monitoring:")
 nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, knowledge_graph, settings])
 
-# ── Top-of-page header bar (renders above every page's content) ───────────
+# ── Top-of-page header bar (sticky, renders above every page's content) ──
 from datetime import datetime, timezone as _tz
 _panel_display = panel_label_map.get(st.session_state.get("panel_mode", "latest"), "Latest")
 _user_obj     = st.session_state.get("user", {})
@@ -251,6 +255,35 @@ if _user_obj.get("role") == "viewer":
 _role_display = _user_obj.get("role", "viewer").title()
 _now_str      = datetime.now(_tz.utc).strftime("%a %d %b %Y · %H:%M UTC")
 
+_header_bg     = "#ffffff" if _theme == "light" else "#0f1117"
+_header_border = "rgba(49,51,63,0.1)" if _theme == "light" else "rgba(255,255,255,0.08)"
+st.markdown(f"""<style>
+section[data-testid="stMain"] div[data-testid="stHorizontalBlock"]:first-of-type {{
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 999 !important;
+    background: {_header_bg} !important;
+    padding: 8px 16px 6px !important;
+    border-bottom: 1px solid {_header_border} !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+    margin-bottom: 0 !important;
+}}
+section[data-testid="stMain"] div[data-testid="stHorizontalBlock"]:first-of-type > div:last-child button {{
+    background: #dc2626 !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(220,38,38,0.3) !important;
+    width: 100% !important;
+}}
+section[data-testid="stMain"] div[data-testid="stHorizontalBlock"]:first-of-type > div:last-child button:hover {{
+    background: #b91c1c !important;
+    box-shadow: 0 3px 8px rgba(220,38,38,0.4) !important;
+    transform: translateY(-1px) !important;
+}}
+</style>""", unsafe_allow_html=True)
+
 _hc1, _hc2, _hc3, _hc4 = st.columns([3, 3, 3, 1])
 with _hc1:
     st.markdown(f"**Dataset:** {_panel_display}")
@@ -259,7 +292,7 @@ with _hc2:
 with _hc3:
     st.markdown(_now_str)
 with _hc4:
-    authenticator.logout("Sign out", "main")
+    authenticator.logout("⏻  Sign out", "main")
 st.divider()
 # ─────────────────────────────────────────────────────────────────────────
 

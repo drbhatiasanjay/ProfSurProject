@@ -95,6 +95,14 @@ def log_page_visit(page_name: str) -> None:
     )
 
 
+def log_user_login(username: str, role: str, session_id: str) -> None:
+    _exec(
+        "INSERT INTO audit_log(username, role, page_name, action_type, session_id)"
+        " VALUES (?,?,?,?,?)",
+        [username, role, "—", "login", session_id],
+    )
+
+
 def get_audit_log(limit: int = 200, username: str | None = None) -> "pd.DataFrame":
     where = "WHERE username = ?" if username else ""
     params = ([username] if username else []) + [limit]
