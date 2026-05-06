@@ -14,6 +14,7 @@ from models.clustering import (
 )
 
 ensure_session_state()
+db.log_page_visit("Clustering")
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 

@@ -7,9 +7,11 @@ import tempfile
 
 import pandas as pd
 import streamlit as st
+import db
 from helpers import require_role
 
 require_role("admin", "researcher")
+db.log_page_visit("Bulk Upload")
 
 from helpers import classify_life_stage, winsorize, export_csv, export_excel, STAGE_COLORS
 from models.data_ingest import (

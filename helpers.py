@@ -625,6 +625,7 @@ def classify_life_stage(ncfo, ncfi, ncff):
 
 def require_role(*allowed_roles: str) -> None:
     """Block page if the signed-in user's role is not in allowed_roles."""
+    import streamlit as st
     role = st.session_state.get("user", {}).get("role", "viewer")
     if role not in allowed_roles:
         st.warning("You do not have permission to access this page. Contact the administrator.")

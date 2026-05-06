@@ -19,6 +19,7 @@ from models.survival import (
 )
 
 ensure_session_state()
+db.log_page_visit("Transitions")
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 

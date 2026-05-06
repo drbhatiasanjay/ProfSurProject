@@ -8,6 +8,11 @@ import db
 from helpers import export_csv, export_excel, format_pct, winsorize, ensure_session_state
 
 ensure_session_state()
+db.log_page_visit("Data Explorer")
+
+_username = st.session_state.get("user", {}).get("username", "")
+_dprefs   = db.load_user_prefs(_username, "data_explorer") if _username else {}
+
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 
@@ -28,10 +33,11 @@ DEFAULT_COLUMNS = [
     "tangibility", "firm_size", "borrowings",
 ]
 
+_saved_cols = _dprefs.get("selected_cols", DEFAULT_COLUMNS)
 selected_cols = st.multiselect(
     "Columns to display",
     options=ALL_COLUMNS,
-    default=DEFAULT_COLUMNS,
+    default=[c for c in _saved_cols if c in ALL_COLUMNS] or DEFAULT_COLUMNS,
 )
 if not selected_cols:
     selected_cols = DEFAULT_COLUMNS
@@ -132,3 +138,7 @@ if not display_df.empty:
             file_name="lifecycle_data_export.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+
+# ── Persist user widget state ─────────────────────────────────────────────
+if _username:
+    db.save_user_pref(_username, "data_explorer", {"selected_cols": selected_cols})

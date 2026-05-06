@@ -32,6 +32,7 @@ from helpers import (
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
 )
 
+db.log_page_visit("Knowledge Graph")
 st.markdown("### Knowledge Graph — Stage Transition Dynamics")
 st.caption("How firms move between life stages, what triggers transitions, and how events reshape patterns")
 

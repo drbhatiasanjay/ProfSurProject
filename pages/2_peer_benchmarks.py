@@ -15,6 +15,7 @@ from helpers import (
 )
 
 ensure_session_state()
+db.log_page_visit("Peer Benchmarks")
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 

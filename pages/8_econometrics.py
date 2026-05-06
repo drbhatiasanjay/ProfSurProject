@@ -22,6 +22,10 @@ from models.econometric import (
 from models.base import DEFAULT_X_COLS
 
 ensure_session_state()
+db.log_page_visit("Econometrics")
+
+_username = st.session_state.get("user", {}).get("username", "")
+_eprefs   = db.load_user_prefs(_username, "econometrics") if _username else {}
 
 # Panel choice from the sidebar — regression results reflect whichever panel is active.
 # (Previously pinned to thesis; now follows user selection so users can compare
@@ -89,20 +93,23 @@ col_left, col_right = st.columns([1, 3])
 
 with col_left:
     st.markdown("#### Variables")
+    _saved_x = _eprefs.get("selected_x", DEFAULT_X_COLS)
     selected_x = st.multiselect(
         "Determinants",
         options=all_predictors,
-        default=DEFAULT_X_COLS,
+        default=[v for v in _saved_x if v in all_predictors] or DEFAULT_X_COLS,
         format_func=lambda x: predictor_labels.get(x, x),
     )
     if not selected_x:
         selected_x = DEFAULT_X_COLS
 
+    _model_opts = ["Auto-Suggest", "Pooled OLS", "Fixed Effects", "Random Effects",
+                   "Robust (Huber M)", "ANOVA"]
+    _saved_model = _eprefs.get("model_choice", "Auto-Suggest")
     model_choice = st.radio(
         "Model",
-        ["Auto-Suggest", "Pooled OLS", "Fixed Effects", "Random Effects",
-         "Robust (Huber M)", "ANOVA"],
-        index=0,
+        _model_opts,
+        index=_model_opts.index(_saved_model) if _saved_model in _model_opts else 0,
         help=(
             "**Robust (Huber M)** — outlier-resistant OLS via iteratively-reweighted "
             "least squares (statsmodels.RLM). Down-weights extreme leverage values "
@@ -526,3 +533,10 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
             _sa.append("Variables that change sign across stages reveal lifecycle-dependent capital structure dynamics — a key thesis contribution.")
             _render_insight_box("Stage-Specific Coefficients — Lifecycle Dynamics", _sf, _sa,
                 "Reveals how the same determinant has different effects depending on where a firm is in its lifecycle.")
+
+# ── Persist user widget state ─────────────────────────────────────────────
+if _username:
+    db.save_user_pref(_username, "econometrics", {
+        "selected_x":   selected_x,
+        "model_choice": model_choice,
+    })

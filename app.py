@@ -53,11 +53,38 @@ st.session_state["user"] = {
     "username": _username,
     "role": _role,
 }
+
+import uuid as _uuid
+if "session_id" not in st.session_state:
+    st.session_state["session_id"] = _uuid.uuid4().hex[:12]
+
+# Guest self-identification — blocks page render until viewer enters their name
+if _role == "viewer" and "guest_display_name" not in st.session_state:
+    st.markdown("### Welcome to LifeCycle Leverage")
+    with st.form("guest_id_form"):
+        st.info("Please enter your name so your session is identifiable in the activity log.")
+        _dname = st.text_input("Your name or initials", placeholder="e.g. Prof. Dawar")
+        if st.form_submit_button("Continue to Dashboard") and _dname.strip():
+            st.session_state["guest_display_name"] = _dname.strip()
+            st.rerun()
+    st.stop()
 # ─────────────────────────────────────────────────────────────────────────────
 
 import db
 from cmie.streamlit_import import render_cmie_sidebar_block
 from helpers import ensure_session_state, is_india_panel
+
+# ── Restore saved preferences before session state defaults are set ──
+if "prefs_loaded" not in st.session_state:
+    _saved = db.load_user_prefs(_username, "app")
+    if _saved:
+        if "panel_mode" in _saved:
+            st.session_state["panel_mode"] = _saved["panel_mode"]
+        if "filters" in _saved:
+            st.session_state["filters"] = _saved["filters"]
+        if "theme" in _saved:
+            st.session_state["theme"] = _saved["theme"]
+    st.session_state["prefs_loaded"] = True
 
 # ── Initialize session state defaults (shared with every page) ──
 ensure_session_state()
@@ -65,7 +92,6 @@ ensure_session_state()
 # ── Sidebar: Global filters ──
 with st.sidebar:
     st.markdown("# LifeCycle Leverage")
-    authenticator.logout("Sign out", "sidebar")
 
     # Panel mode: switches the entire read-path across three independent vintage groups.
     # - latest = production panel (thesis 2001-2024 + cmie_2025 rollforward)
@@ -185,6 +211,14 @@ with st.sidebar:
     # if db.is_cmie_lab_enabled():
     #     render_cmie_sidebar_block(key_prefix="cmie_sidebar")
 
+    # Auto-save sidebar state for this user (panel, filters, theme)
+    if _username:
+        db.save_user_pref(_username, "app", {
+            "panel_mode": st.session_state.get("panel_mode", "latest"),
+            "filters":    st.session_state.get("filters", {}),
+            "theme":      st.session_state.get("theme", "light"),
+        })
+
 # ── Navigation ──
 dashboard = st.Page("pages/1_dashboard.py", title="Dashboard", icon=":material/dashboard:", default=True)
 benchmarks = st.Page("pages/2_peer_benchmarks.py", title="Peer Benchmarks", icon=":material/compare_arrows:")
@@ -199,7 +233,34 @@ forecasting = st.Page("pages/10_forecasting.py", title="Forecasting", icon=":mat
 clustering = st.Page("pages/11_clustering.py", title="Clustering", icon=":material/bubble_chart:")
 transitions = st.Page("pages/12_transitions.py", title="Transitions", icon=":material/swap_horiz:")
 advanced_econ = st.Page("pages/13_advanced_econometrics.py", title="Advanced Econometrics", icon=":material/science:")
+workbench = st.Page("pages/14_workbench.py", title="Workbench", icon=":material/construction:")
 interaction_effects = st.Page("pages/15_interaction_effects.py", title="Interaction Effects", icon=":material/join_inner:")
 
-nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, interaction_effects, knowledge_graph, settings])
+admin_activity = st.Page("pages/16_admin_activity.py", title="Activity Log", icon=":material/monitoring:")
+nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, knowledge_graph, settings])
+
+# ── Top-of-page header bar (renders above every page's content) ───────────
+from datetime import datetime, timezone as _tz
+_panel_display = panel_label_map.get(st.session_state.get("panel_mode", "latest"), "Latest")
+_user_obj     = st.session_state.get("user", {})
+_display_name = _user_obj.get("name", _user_obj.get("username", ""))
+if _user_obj.get("role") == "viewer":
+    _guest_name = st.session_state.get("guest_display_name", "")
+    if _guest_name:
+        _display_name = _guest_name
+_role_display = _user_obj.get("role", "viewer").title()
+_now_str      = datetime.now(_tz.utc).strftime("%a %d %b %Y · %H:%M UTC")
+
+_hc1, _hc2, _hc3, _hc4 = st.columns([3, 3, 3, 1])
+with _hc1:
+    st.markdown(f"**Dataset:** {_panel_display}")
+with _hc2:
+    st.markdown(f"**{_display_name}** &nbsp;·&nbsp; {_role_display}", unsafe_allow_html=True)
+with _hc3:
+    st.markdown(_now_str)
+with _hc4:
+    authenticator.logout("Sign out", "main")
+st.divider()
+# ─────────────────────────────────────────────────────────────────────────
+
 nav.run()

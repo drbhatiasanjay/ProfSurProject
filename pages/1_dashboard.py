@@ -18,6 +18,7 @@ from helpers import (
 )
 
 ensure_session_state()
+db.log_page_visit("Dashboard")
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 _india = is_india_panel(st.session_state.get("panel_mode", "latest"))

@@ -65,11 +65,87 @@ def _exec(sql: str, params=None) -> None:
     conn = get_connection()
     try:
         cur = conn.cursor()
+        cur.execute("PRAGMA busy_timeout=10000")
         cur.execute("PRAGMA foreign_keys=ON")
         cur.execute(sql, params or [])
         conn.commit()
     finally:
         conn.close()
+
+
+# ── Audit log ─────────────────────────────────────────────────────────────
+
+def log_page_visit(page_name: str) -> None:
+    """Log a page visit for the current authenticated user. Silent no-op in test context."""
+    import streamlit as st
+    import json
+    user = st.session_state.get("user")
+    if not user:
+        return
+    details = None
+    if user.get("role") == "viewer":
+        name = st.session_state.get("guest_display_name", "")
+        if name:
+            details = json.dumps({"display_name": name})
+    _exec(
+        "INSERT INTO audit_log(username, role, page_name, action_type, details, session_id)"
+        " VALUES (?,?,?,?,?,?)",
+        [user.get("username", ""), user.get("role", "viewer"), page_name,
+         "page_visit", details, st.session_state.get("session_id", "")],
+    )
+
+
+def get_audit_log(limit: int = 200, username: str | None = None) -> "pd.DataFrame":
+    where = "WHERE username = ?" if username else ""
+    params = ([username] if username else []) + [limit]
+    return _query(
+        f"SELECT ts, username, role, page_name, action_type, details, session_id"
+        f" FROM audit_log {where} ORDER BY ts DESC LIMIT ?",
+        params,
+    )
+
+
+# ── User preferences ──────────────────────────────────────────────────────
+
+def save_user_pref(username: str, page: str, prefs: dict) -> None:
+    import json
+    _exec(
+        "INSERT OR REPLACE INTO user_preferences(username, page, prefs_json, updated_at)"
+        " VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))",
+        [username, page, json.dumps(prefs)],
+    )
+
+
+def load_user_prefs(username: str, page: str) -> dict:
+    import json
+    df = _query(
+        "SELECT prefs_json FROM user_preferences WHERE username=? AND page=?",
+        [username, page],
+    )
+    if df.empty:
+        return {}
+    try:
+        return json.loads(df.iloc[0]["prefs_json"])
+    except Exception:
+        return {}
+
+
+# ── Model run history ─────────────────────────────────────────────────────
+
+def save_model_run(username: str, page: str, params: dict, summary: dict) -> None:
+    import json
+    _exec(
+        "INSERT INTO user_model_runs(username, page, params, summary) VALUES (?,?,?,?)",
+        [username, page, json.dumps(params), json.dumps(summary)],
+    )
+
+
+def get_model_runs(username: str, page: str, limit: int = 20) -> "pd.DataFrame":
+    return _query(
+        "SELECT ts, params, summary FROM user_model_runs"
+        " WHERE username=? AND page=? ORDER BY ts DESC LIMIT ?",
+        [username, page, limit],
+    )
 
 
 def ensure_cmie_tables():

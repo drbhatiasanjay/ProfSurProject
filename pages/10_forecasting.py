@@ -16,6 +16,7 @@ except (ImportError, NameError):
     HAS_TORCH = False
 
 ensure_session_state()
+db.log_page_visit("Forecasting")
 
 # Panel choice from the sidebar — forecasting trains on whichever panel is active.
 # (Previously pinned to thesis; now follows user selection.)

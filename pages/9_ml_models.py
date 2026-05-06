@@ -22,6 +22,10 @@ from models.ml_predict import (
 )
 
 ensure_session_state()
+db.log_page_visit("ML Models")
+
+_username = st.session_state.get("user", {}).get("username", "")
+_mprefs   = db.load_user_prefs(_username, "ml_models") if _username else {}
 
 # Panel choice from the sidebar — ML models train on whichever panel is active.
 # (Previously pinned to thesis; now follows user selection.)
@@ -71,10 +75,11 @@ all_predictors = [
 
 with st.sidebar:
     st.markdown("**ML Features**")
+    _saved_ml_x = _mprefs.get("ml_features", DEFAULT_X_COLS)
     selected_x = st.multiselect(
         "Predictors",
         options=all_predictors,
-        default=DEFAULT_X_COLS,
+        default=[v for v in _saved_ml_x if v in all_predictors] or DEFAULT_X_COLS,
         key="ml_features",
     )
     if not selected_x:
@@ -388,3 +393,7 @@ with tab3:
                           delta="Over-predicted" if diff > 0 else "Under-predicted")
     else:
         st.info("Train models in the **Train & Compare** tab first.")
+
+# ── Persist user widget state ─────────────────────────────────────────────
+if _username:
+    db.save_user_pref(_username, "ml_models", {"ml_features": selected_x})

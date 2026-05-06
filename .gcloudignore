@@ -1,0 +1,6 @@
+# Inherit all .gitignore rules then carve out exceptions for Cloud Run.
+#!include:.gitignore
+
+# secrets.toml is gitignored to protect it from VCS but must be bundled
+# with the Cloud Run source upload so Streamlit can read st.secrets.
+!.streamlit/secrets.toml

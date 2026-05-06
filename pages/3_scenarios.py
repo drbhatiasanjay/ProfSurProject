@@ -11,6 +11,10 @@ from helpers import plotly_layout, format_pct, ensure_session_state, panel_label
 from models.scenario_regression import compute_leverage_ols_coefs, leverage_predictor_sample_means
 
 ensure_session_state()
+db.log_page_visit("Scenarios")
+
+_username = st.session_state.get("user", {}).get("username", "")
+_sprefs   = db.load_user_prefs(_username, "scenarios") if _username else {}
 
 # Panel choice from the sidebar — coefficients reflect whichever panel is active.
 # (Previously pinned to thesis; now follows user selection so users can compare
@@ -72,18 +76,18 @@ st.markdown("#### Adjust Firm Characteristics")
 sc1, sc2, sc3 = st.columns(3)
 
 with sc1:
-    prof_val = st.slider("Profitability (%)", -20.0, 60.0, float(means.get("prof", 10.0)), 0.5)
-    tang_val = st.slider("Tangibility (%)", 0.0, 95.0, float(means.get("tang", 30.0)), 0.5)
+    prof_val = st.slider("Profitability (%)", -20.0, 60.0, float(_sprefs.get("prof_val", means.get("prof", 10.0))), 0.5)
+    tang_val = st.slider("Tangibility (%)", 0.0, 95.0, float(_sprefs.get("tang_val", means.get("tang", 30.0))), 0.5)
 
 with sc2:
-    tax_val = st.slider("Tax Rate (%)", -50.0, 80.0, float(means.get("tax", 20.0)), 0.5)
-    size_val = st.slider("Log Firm Size", 0.0, 15.0, float(means.get("log_size", 7.0)), 0.1)
+    tax_val  = st.slider("Tax Rate (%)", -50.0, 80.0, float(_sprefs.get("tax_val",  means.get("tax",  20.0))), 0.5)
+    size_val = st.slider("Log Firm Size", 0.0, 15.0,  float(_sprefs.get("size_val", means.get("log_size", 7.0))), 0.1)
 
 with sc3:
-    ts_val = st.slider("Tax Shield", 0.0, 50.0, float(means.get("tax_shield", 5.0)), 0.5)
+    ts_val   = st.slider("Tax Shield", 0.0, 50.0, float(_sprefs.get("ts_val", means.get("tax_shield", 5.0))), 0.5)
     dvnd_raw = means.get("dvnd", 2.0)
     dvnd_default = float(dvnd_raw) if dvnd_raw is not None and not (isinstance(dvnd_raw, float) and np.isnan(dvnd_raw)) else 2.0
-    dvnd_val = st.slider("Dividend (%)", 0.0, 30.0, dvnd_default, 0.5)
+    dvnd_val = st.slider("Dividend (%)", 0.0, 30.0, float(_sprefs.get("dvnd_val", dvnd_default)), 0.5)
 
 # ── Prediction ──
 contributions = {
@@ -195,3 +199,10 @@ if not comp_df.empty:
         diff = predicted - actual_avg
         st.metric("Difference", f"{diff:+.1f}pp",
                   delta="Over-predicted" if diff > 0 else "Under-predicted")
+
+# ── Persist user widget state ─────────────────────────────────────────────
+if _username:
+    db.save_user_pref(_username, "scenarios", {
+        "prof_val": prof_val, "tang_val": tang_val, "tax_val": tax_val,
+        "size_val": size_val, "ts_val": ts_val,     "dvnd_val": dvnd_val,
+    })

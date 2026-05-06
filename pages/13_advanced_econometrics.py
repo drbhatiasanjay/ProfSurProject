@@ -22,6 +22,7 @@ from models.econometric import (
 from models.base import DEFAULT_X_COLS
 
 ensure_session_state()
+db.log_page_visit("Advanced Econometrics")
 
 # Panel choice from the sidebar — GMM and delta-leverage results follow user selection.
 # (Previously pinned to thesis; now respects the sidebar so users can compare across panels.)

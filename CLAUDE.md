@@ -4,11 +4,11 @@
 Streamlit dashboard analyzing capital structure determinants across corporate life stages for 401 Indian companies. Based on PhD thesis by Prof Surendra Kumar, University of Delhi. Thesis panel covers 2001–2024; CMIE 2025 rollforward is available on the Latest panel (`panel_mode='latest'`).
 
 ## Architecture
-- **Frontend**: Streamlit multipage app (14 pages)
-- **Database**: SQLite (`capital_structure.db`) — vintage-tagged since the DataV2 work (thesis + cmie_2025 vintages coexist)
-- **Models**: `models/` package (econometric + ML + advanced + scenario_regression + data_ingest + workbench)
+- **Frontend**: Streamlit multipage app (15 pages)
+- **Database**: SQLite (`capital_structure.db`) — vintage-tagged (thesis + cmie_2025 + run3 + us_av_2024 vintages coexist)
+- **Models**: `models/` package (econometric + ML + advanced + scenario_regression + data_ingest + workbench + interaction)
 - **CMIE integration**: `cmie/` package (CmieClient, load_vintage, pipeline, normalize — all transports implemented)
-- **Tests**: `tests/` with pytest (81 tests — DB + models + 7 CMIE suites + scenario_regression)
+- **Tests**: `tests/` with pytest (219 tests — DB + models + 7 CMIE suites + scenario_regression + page integration)
 - **Deployment**: Docker (Python 3.11-slim) → Google Cloud Run
 
 ## Key Commands
@@ -100,8 +100,9 @@ models/
   data_ingest.py    - Bulk / CMIE ingest helpers (classification, validation)
   workbench.py      - Workbench page logic
   cache.py          - Model artifact storage
+  interaction.py    - Cross-term OLS + stage moderation + simple slopes (delta method SEs)
 pages/
-  1_dashboard.py           - KPIs, stage trends, T623 index, DataV2 vintage tabs
+  1_dashboard.py           - KPIs, Fig 5.1 stage view, Fig 5.2 year trends, Table 5.9, T623 index
   2_peer_benchmarks.py     - Company vs industry/stage
   3_scenarios.py           - OLS scenario coefficients (pinned: panel_mode='thesis')
   4_bulk_upload.py         - Bulk upload + CMIE API Sync tab
@@ -115,12 +116,14 @@ pages/
   12_transitions.py        - Life-stage transition matrices
   13_advanced_econometrics.py - GMM, delta-leverage, COVID cohorts (pinned: thesis)
   14_workbench.py          - Workbench scratchpad
+  15_interaction_effects.py - Cross-term (Prof×Tang) + stage moderation + simple slopes (pinned: thesis)
 scripts/
   cmie_stage1_reliance_diagnostic.py  - wapicall E2E probe (§E.5)
   cmie_stage1_queryphp_probe.py       - query.php E2E probe (§E.5.3)
 tests/
   test_database.py, test_models.py, test_scenario_regression.py,
-  test_cmie_*.py (7 files), test_bulk_upload_cmie_parse.py   (81 tests total)
+  test_cmie_*.py (7 files), test_bulk_upload_cmie_parse.py,
+  test_page_integration.py   (219 tests total)
 cmie_validation/    - Per-run CMIE API artifacts (gitignored)
 DataV2/             - Raw CMIE pipe-delimited extracts (gitignored)
 ```

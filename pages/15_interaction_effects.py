@@ -25,6 +25,7 @@ from helpers import (
 from models.interaction import run_cross_term_ols, simple_slopes, run_stage_moderation_ols
 
 ensure_session_state()
+db.log_page_visit("Interaction Effects")
 
 # Pin to thesis panel for reproducibility — matches the approach used on pages 8, 9, 10, 13.
 _PANEL = "thesis"

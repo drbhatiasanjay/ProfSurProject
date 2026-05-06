@@ -7,6 +7,7 @@ import db
 from helpers import ensure_session_state
 
 ensure_session_state()
+db.log_page_visit("Settings")
 
 st.markdown("### Settings")
 

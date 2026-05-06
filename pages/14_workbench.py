@@ -22,6 +22,7 @@ from helpers import (
 )
 
 ensure_session_state()
+db.log_page_visit("Workbench")
 from models.workbench import (
     apply_transforms, apply_subsample_filter, fit_model,
     run_wald_test, compute_post_estimation, build_comparison_table,
