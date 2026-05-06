@@ -244,7 +244,7 @@ admin_activity = st.Page("pages/16_admin_activity.py", title="Activity Log", ico
 board_deck     = st.Page("pages/17_board_export.py",  title="Board Deck",    icon=":material/description:")
 nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, knowledge_graph, settings])
 
-# ── Top-of-page header bar (sticky, renders above every page's content) ──
+# ── Fixed top header bar — stays visible on every page while scrolling ───
 from datetime import datetime, timezone as _tz
 _panel_display = panel_label_map.get(st.session_state.get("panel_mode", "latest"), "Latest")
 _user_obj     = st.session_state.get("user", {})
@@ -256,36 +256,67 @@ if _user_obj.get("role") == "viewer":
 _role_display = _user_obj.get("role", "viewer").title()
 _now_str      = datetime.now(_tz.utc).strftime("%a %d %b %Y · %H:%M UTC")
 
-_header_bg     = "#ffffff" if _theme == "light" else "#0f1117"
-_header_border = "rgba(49,51,63,0.1)" if _theme == "light" else "rgba(255,255,255,0.08)"
+_header_bg = "#ffffff" if _theme == "light" else "#0f1117"
+
 st.markdown(f"""<style>
-section[data-testid="stMain"] div[data-testid="stHorizontalBlock"]:first-of-type {{
-    position: sticky !important;
+/* ── Fix header to top of viewport (like a navbar) ── */
+div[data-testid="stHorizontalBlock"]:first-of-type {{
+    position: fixed !important;
     top: 0 !important;
-    z-index: 999 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 9999 !important;
     background: {_header_bg} !important;
-    padding: 8px 16px 6px !important;
-    border-bottom: 1px solid {_header_border} !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
-    margin-bottom: 0 !important;
+    padding: 0 2rem !important;
+    height: 52px !important;
+    display: flex !important;
+    align-items: center !important;
+    border-bottom: 3px solid #0D9488 !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
+    margin: 0 !important;
 }}
-section[data-testid="stMain"] div[data-testid="stHorizontalBlock"]:first-of-type > div:last-child button {{
+/* ── Vertically center text inside each header column ── */
+div[data-testid="stHorizontalBlock"]:first-of-type > div {{
+    display: flex !important;
+    align-items: center !important;
+}}
+div[data-testid="stHorizontalBlock"]:first-of-type > div p {{
+    margin: 0 !important;
+    line-height: 1.3 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}}
+/* ── Sign out: red, bold, single line ── */
+div[data-testid="stHorizontalBlock"]:first-of-type > div:last-child button {{
     background: #dc2626 !important;
     color: white !important;
     font-weight: 700 !important;
+    white-space: nowrap !important;
     border-radius: 8px !important;
     border: none !important;
     box-shadow: 0 2px 4px rgba(220,38,38,0.3) !important;
     width: 100% !important;
+    height: 34px !important;
+    font-size: 13px !important;
+    line-height: 34px !important;
+    padding: 0 12px !important;
 }}
-section[data-testid="stMain"] div[data-testid="stHorizontalBlock"]:first-of-type > div:last-child button:hover {{
+div[data-testid="stHorizontalBlock"]:first-of-type > div:last-child button:hover {{
     background: #b91c1c !important;
     box-shadow: 0 3px 8px rgba(220,38,38,0.4) !important;
-    transform: translateY(-1px) !important;
+}}
+/* ── Remove Streamlit's default top gap + push content below fixed header ── */
+section[data-testid="stMain"] > div:first-child {{
+    padding-top: 0 !important;
+}}
+.block-container {{
+    padding-top: 64px !important;
+    padding-bottom: 2rem !important;
 }}
 </style>""", unsafe_allow_html=True)
 
-_hc1, _hc2, _hc3, _hc4 = st.columns([3, 3, 3, 1])
+_hc1, _hc2, _hc3, _hc4 = st.columns([3, 3, 3, 2])
 with _hc1:
     st.markdown(f"**Dataset:** {_panel_display}")
 with _hc2:
@@ -294,7 +325,6 @@ with _hc3:
     st.markdown(_now_str)
 with _hc4:
     authenticator.logout("⏻  Sign out", "main")
-st.divider()
 # ─────────────────────────────────────────────────────────────────────────
 
 nav.run()
