@@ -4,11 +4,11 @@
 Streamlit dashboard analyzing capital structure determinants across corporate life stages for 401 Indian companies. Based on PhD thesis by Prof Surendra Kumar, University of Delhi. Thesis panel covers 2001–2024; CMIE 2025 rollforward is available on the Latest panel (`panel_mode='latest'`).
 
 ## Architecture
-- **Frontend**: Streamlit multipage app (15 pages)
+- **Frontend**: Streamlit multipage app (17 pages)
 - **Database**: SQLite (`capital_structure.db`) — vintage-tagged (thesis + cmie_2025 + run3 + us_av_2024 vintages coexist)
 - **Models**: `models/` package (econometric + ML + advanced + scenario_regression + data_ingest + workbench + interaction)
 - **CMIE integration**: `cmie/` package (CmieClient, load_vintage, pipeline, normalize — all transports implemented)
-- **Tests**: `tests/` with pytest (219 tests — DB + models + 7 CMIE suites + scenario_regression + page integration)
+- **Tests**: `tests/` with pytest (299 tests — DB + models + 7 CMIE suites + scenario_regression + page integration + board export)
 - **Deployment**: Docker (Python 3.11-slim) → Google Cloud Run
 
 ## Key Commands
@@ -101,6 +101,8 @@ models/
   workbench.py      - Workbench page logic
   cache.py          - Model artifact storage
   interaction.py    - Cross-term OLS + stage moderation + simple slopes (delta method SEs)
+  board_export.py   - 13 topic builder functions → {figs, tables, insights, actions} (page 17)
+  pptx_generator.py - PPTX assembly: Plotly→PNG (kaleido) → python-pptx slides
 pages/
   1_dashboard.py           - KPIs, Fig 5.1 stage view, Fig 5.2 year trends, Table 5.9, T623 index
   2_peer_benchmarks.py     - Company vs industry/stage
@@ -117,13 +119,15 @@ pages/
   13_advanced_econometrics.py - GMM, delta-leverage, COVID cohorts (pinned: thesis)
   14_workbench.py          - Workbench scratchpad
   15_interaction_effects.py - Cross-term (Prof×Tang) + stage moderation + simple slopes (pinned: thesis)
+  16_admin_activity.py     - Admin audit log viewer (role: admin only)
+  17_board_export.py       - Individual company board deck: 13 topics, preview + .pptx download (role: admin/researcher)
 scripts/
   cmie_stage1_reliance_diagnostic.py  - wapicall E2E probe (§E.5)
   cmie_stage1_queryphp_probe.py       - query.php E2E probe (§E.5.3)
 tests/
   test_database.py, test_models.py, test_scenario_regression.py,
   test_cmie_*.py (7 files), test_bulk_upload_cmie_parse.py,
-  test_page_integration.py   (219 tests total)
+  test_page_integration.py, test_board_export.py   (299 tests total)
 cmie_validation/    - Per-run CMIE API artifacts (gitignored)
 DataV2/             - Raw CMIE pipe-delimited extracts (gitignored)
 ```

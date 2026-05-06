@@ -244,7 +244,7 @@ admin_activity = st.Page("pages/16_admin_activity.py", title="Activity Log", ico
 board_deck     = st.Page("pages/17_board_export.py",  title="Board Deck",    icon=":material/description:")
 nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, knowledge_graph, settings])
 
-# ── Fixed top header bar — stays visible on every page while scrolling ───
+# ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
 from datetime import datetime, timezone as _tz
 _panel_display = panel_label_map.get(st.session_state.get("panel_mode", "latest"), "Latest")
 _user_obj     = st.session_state.get("user", {})
@@ -256,75 +256,88 @@ if _user_obj.get("role") == "viewer":
 _role_display = _user_obj.get("role", "viewer").title()
 _now_str      = datetime.now(_tz.utc).strftime("%a %d %b %Y · %H:%M UTC")
 
-_header_bg = "#ffffff" if _theme == "light" else "#0f1117"
+_header_bg   = "#ffffff" if _theme == "light" else "#0f1117"
+_header_text = "#111827" if _theme == "light" else "#f3f4f6"
+_header_sub  = "#6B7280" if _theme == "light" else "#9ca3af"
 
-st.markdown(f"""<style>
-/* ── Fix header to top of viewport (like a navbar) ── */
-div[data-testid="stHorizontalBlock"]:first-of-type {{
+st.markdown(f"""
+<div id="lc-navbar" style="
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000001;
+    height: 64px;
+    background: {_header_bg};
+    border-bottom: 3px solid #0D9488;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    padding: 0 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    font-size: 15px;
+    color: {_header_text};
+    font-family: inherit;
+">
+    <span style="font-weight:700; color:#0D9488; font-size:18px; white-space:nowrap;">LifeCycle Leverage</span>
+    <span style="color:{_header_sub}; white-space:nowrap;">Dataset:&nbsp;<strong style="color:{_header_text};">{_panel_display}</strong></span>
+    <span style="white-space:nowrap;"><strong>{_display_name}</strong>&nbsp;&middot;&nbsp;{_role_display}</span>
+    <span style="margin-left:auto; color:{_header_sub}; font-size:14px; white-space:nowrap;">{_now_str}</span>
+    <button
+        onclick="(function(){{var btns=document.querySelectorAll('section[data-testid=stSidebar] button');for(var b of btns){{if(b.innerText.includes('Sign out')){{b.click();return;}}}}}})()"
+        style="
+            background:#dc2626;
+            color:white;
+            font-weight:700;
+            font-size:14px;
+            border:none;
+            border-radius:8px;
+            padding:0 18px;
+            height:40px;
+            cursor:pointer;
+            white-space:nowrap;
+            box-shadow:0 2px 4px rgba(220,38,38,0.3);
+        "
+        onmouseover="this.style.background='#b91c1c'"
+        onmouseout="this.style.background='#dc2626'"
+    >&#9211;&nbsp; Sign out</button>
+</div>
+<style>
+/* ROW 2: Streamlit native header pushed below our 64px navbar */
+header[data-testid="stHeader"] {{
     position: fixed !important;
-    top: 0 !important;
+    top: 64px !important;
+    height: 48px !important;
+    min-height: 48px !important;
     left: 0 !important;
     right: 0 !important;
-    z-index: 9999 !important;
+    z-index: 1000000 !important;
     background: {_header_bg} !important;
-    padding: 0 2rem !important;
-    height: 52px !important;
-    display: flex !important;
-    align-items: center !important;
-    border-bottom: 3px solid #0D9488 !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.07) !important;
-    margin: 0 !important;
+    border-bottom: 1px solid #E5E7EB !important;
+    padding: 0 !important;
+    overflow: visible !important;
 }}
-/* ── Vertically center text inside each header column ── */
-div[data-testid="stHorizontalBlock"]:first-of-type > div {{
-    display: flex !important;
-    align-items: center !important;
+/* Sidebar starts below both rows (64 + 48 = 112px) */
+section[data-testid="stSidebar"] {{
+    top: 112px !important;
+    height: calc(100vh - 112px) !important;
 }}
-div[data-testid="stHorizontalBlock"]:first-of-type > div p {{
-    margin: 0 !important;
-    line-height: 1.3 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}}
-/* ── Sign out: red, bold, single line ── */
-div[data-testid="stHorizontalBlock"]:first-of-type > div:last-child button {{
-    background: #dc2626 !important;
-    color: white !important;
-    font-weight: 700 !important;
-    white-space: nowrap !important;
-    border-radius: 8px !important;
-    border: none !important;
-    box-shadow: 0 2px 4px rgba(220,38,38,0.3) !important;
-    width: 100% !important;
-    height: 34px !important;
-    font-size: 13px !important;
-    line-height: 34px !important;
-    padding: 0 12px !important;
-}}
-div[data-testid="stHorizontalBlock"]:first-of-type > div:last-child button:hover {{
-    background: #b91c1c !important;
-    box-shadow: 0 3px 8px rgba(220,38,38,0.4) !important;
-}}
-/* ── Remove Streamlit's default top gap + push content below fixed header ── */
-section[data-testid="stMain"] > div:first-child {{
-    padding-top: 0 !important;
-}}
+/* Main content below both rows */
 .block-container {{
-    padding-top: 64px !important;
-    padding-bottom: 2rem !important;
+    padding-top: 130px !important;
 }}
-</style>""", unsafe_allow_html=True)
-
-_hc1, _hc2, _hc3, _hc4 = st.columns([3, 3, 3, 2])
-with _hc1:
-    st.markdown(f"**Dataset:** {_panel_display}")
-with _hc2:
-    st.markdown(f"**{_display_name}** &nbsp;·&nbsp; {_role_display}", unsafe_allow_html=True)
-with _hc3:
-    st.markdown(_now_str)
-with _hc4:
-    authenticator.logout("⏻  Sign out", "main")
+/* Sidebar collapse arrow (<<) — positioned below both rows, above everything */
+button[data-testid="stSidebarCollapseButton"] {{
+    top: calc(112px + 0.5rem) !important;
+    z-index: 1000002 !important;
+}}
+/* Sidebar expand arrow (>>) — positioned below both rows, above everything */
+button[data-testid="collapsedControl"] {{
+    top: calc(112px + 0.5rem) !important;
+    z-index: 1000002 !important;
+}}
+</style>
+""", unsafe_allow_html=True)
 # ─────────────────────────────────────────────────────────────────────────
 
 nav.run()
