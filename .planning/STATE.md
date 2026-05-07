@@ -2,65 +2,93 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-28)
+See: .planning/PROJECT.md
 
-**Core value:** Researchers can explore leverage determinants across life stages with rigorous econometric models matching the thesis
-**Current focus:** Three-panel comparison (Thesis / Latest / Run 3) — analysis pages now respect user choice
+**Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
+
+**Current focus:** Phase 6 — AI Financial Assistant (floating chat widget + Page 19 + Board Deck Topic 13 AI Recommendations)
 
 ## Current Position
 
-Phase: Maintenance + extension (post-v1.2)
-Latest milestone: Methodology gaps closed (G2/G3/G4) + run3 vintage loaded + thesis pin removed
-Status: Code-complete on this thread of work; G1 (true System GMM Arellano-Bond/Blundell-Bond) deferred pending explicit go-ahead
-Last activity: **2026-04-25** — slider year-range now preserves user selection across panel switches
+Phase: Phase 7 (07-wave2-tier1-ux)
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-05-07 - Completed 07-01-PLAN.md (CSS fix + spinners + error guards)
 
-Progress: [██████████] 100% on the active scope (panel parity + methodology depth + run3 ingest)
+Progress: [██████████] Pages 1-18 complete; Phase 6 plan 1/5 done
 
-## Recent commits (chronological)
+## App State (as of 2026-05-07)
 
-- `8f57282` feat(panel): preserve year-range selection across panel switches
-- `5a4947b` feat(analysis): respect sidebar Panel choice on every analysis page
-- `a35b963` feat(panel): add Run 3 as a third sidebar option alongside Thesis / Latest
-- `ae51e1c` fix(cmie_2025): rescale leverage to percent + populate lev1_100/prof100/tang100
-- `b9cfc1a` feat(data): load nf400yrs2001_25.dta as vintage='run3'
-- `187d842` feat(ui): wire G2 robust regression into page 8 + G3 IV/2SLS into page 13
-- `fb33da6` feat(econometric): G2 robust M-estimator + G3 IV/2SLS + G4 pairwise tests
+**18 pages deployed** on GCP Cloud Run (revision 00039-6zp):
+- Pages 1-16: Thesis/Academic analytics (panel-wide; company is a data point)
+  - 1_dashboard, 2_peer_benchmarks, 3_scenarios, 4_bulk_upload, 5_data_explorer
+  - 6_settings, 7_knowledge_graph (sidebar: "Life Stage Dynamics"), 8_econometrics
+  - 9_ml_models, 10_forecasting, 11_clustering, 12_transitions
+  - 13_advanced_econometrics, 14_workbench, 15_interaction_effects, 16_admin_activity
+- Pages 17-18: Individual Company (company is the subject; panel is peer context)
+  - 17_board_export: 13 topic builders → branded .pptx; python-pptx + kaleido
+  - 18_company_navigator: pyvis ego graph + peer cluster + Plotly stage map; 3 zoom levels
 
-## Vintage inventory (capital_structure.db)
+**Auth gate**: streamlit-authenticator; 3 roles — sbhatia (admin), skumar (researcher), guest (viewer)
+**GCP URL**: https://lifecycle-leverage-779655496440.us-east1.run.app
+**GitHub**: https://github.com/drbhatiasanjay/ProfSurProject (master branch)
+**Tests**: 344 passing (py -3.12 -m pytest tests/ -v)
+**Python**: 3.12 locally, 3.11-slim in Docker/Cloud Run
 
-| Vintage | Rows | Years | Firms | Leverage units | Notes |
-|---|---:|---|---:|---|---|
-| `thesis` | 8,677 | 2001-2024 | 401 | percent | Frozen reproducibility panel |
-| `cmie_2025` | 400 | 2025 | 400 | percent (rescaled `ae51e1c`) | DataV2 rollforward |
-| `run3` | 9,031 | 2001-2025 | 400 | percent | Stata replication panel from `nf400yrs2001_25.dta` |
+## Key Architecture
 
-## Performance Metrics
+**Database**: SQLite capital_structure.db — vintage-tagged (thesis + cmie_2025 + run3 + us_av_2024)
+**Models package**: models/ (econometric, ml_predict, timeseries, clustering, survival, interaction, board_export, pptx_generator)
+**Graph layer**: graph_builder.py (NetworkX MultiGraph) + graph_viz.py (Plotly + pyvis renderers)
+  - CFO graph functions: build_cfo_ego_graph, build_peer_cluster_graph, build_stage_map_graph, get_cfo_node_panel
+  - pyvis renderer: build_pyvis_html()
+**Helpers**: helpers.py — plotly_layout(), STAGE_COLORS, STAGE_ORDER, render_interpretation(), require_role(), new_badge()
+**Session state keys in use**: filters, panel_mode, theme, user, guest_display_name
+**Session state keys reserved for Phase 6**: chat_history, chat_mode, chat_backend, chat_open, ai_recommendations
 
-**Tests:** 101 / 101 pass (was 93 before this session). Net +8 from G2/G3/G4 (3 robust + 3 IV/2SLS + 2 pairwise).
+## Recent commits (chronological, latest first)
 
-**Cloud Run revisions deployed today:** 00010 → 00011 → 00012 → 00013 (in flight)
+- revision 00039-6zp: feat(page18): Company Navigator — pyvis ego/peer/stage map; page 7 renamed Life Stage Dynamics
+- revision 00038: feat(auth+navbar): fixed header bar + Sign Out in navbar + sidebar arrow fix
+- feat(page17): Board Deck Export — 13 topics, python-pptx, kaleido
+- feat(auth+page16): streamlit-authenticator login gate, audit_log, Activity Log page
+- 8f57282 feat(panel): preserve year-range selection across panel switches (2026-04-25)
 
 ## Accumulated Context
 
 ### Decisions
 
-- **Run 3 is standalone** in the sidebar — does NOT union into "Latest" because its 2001-2024 rows overlap thesis vintage; unioning would double-count.
-- **Analysis pages now respect sidebar Panel choice** — previous thesis-pin removed from pages 3/8/9/10/13. A yellow `🔄` banner appears on non-thesis panels reminding users that coefficients differ from published values.
-- **Year-range slider preserves user selection across panel switches** — clamps to fit the new panel's bounds rather than wiping to full range.
-- **Robust regression in the thesis sense = M-estimator (RLM)**, not HC1 standard errors. The `run_pooled_ols(cov_type='HC1')` already does HC1; the new `run_robust_regression(norm='HuberT')` does the outlier-downweighting interpretation that the thesis discussion implied.
+- **Two use-case architecture (pages 17+)**: Pages 1-16 = thesis/academic (panel-as-subject); Pages 17+ = individual company (company-as-subject). Never mix these in the same page.
+- **Panel mode pins**: Pages 3/8/9/10/13/15 pin panel_mode='thesis' at import for reproducibility. Pages 1/2/5/7 respect sidebar selection.
+- **Size decile parsing**: size_decile stored as "Decile N" string in DB; always use _decile_int() helper before arithmetic.
+- **Pyvis over st-link-analysis**: st-link-analysis has no native click events without a fork; pyvis renders via components.v1.html(); companion st.selectbox for node selection.
+- **app.py atomic edits**: st.Page() definition AND nav list insertion must be in ONE Edit call — splitting caused invisible pages in previous sessions.
+- **No fine-tuning for LLM**: Context injection (800-900 token structured prompt) is the correct grounding mechanism. finance-llama:8b does not need fine-tuning.
+- **Ollama as local default**: Zero data egress, free, runs on CPU. Claude API is opt-in (data leaves server — shown clearly to user). Cloud Run production uses Claude API (no local Ollama server on GCP).
+- **Floating bubble over dedicated-page-only**: CFOs need to ask questions while looking at their board deck without navigating away. Bubble injected globally in app.py via st.html(). Dedicated Page 19 is for deep research sessions.
+- **Streamlit iframe sandbox**: Floating bubble JS cannot directly call Python callbacks. State bridge uses a hidden st.checkbox whose value is toggled by JS — Streamlit re-runs on checkbox change.
+- **Phase 6 page number**: AI Assistant is page 19 (page 17 = Board Deck, page 18 = Company Navigator).
+- **Page 17 Topic 13**: AI Recommendations sub-topics 13.1-13.4 are the primary integration point — they call chatbot.build_company_context() + LLM adapter.
+- **company_name/industry_group in companies table**: These columns are NOT in financials; any raw SQL needing them must JOIN companies c ON c.company_code = f.company_code.
+- **leverage_predictor_sample_means key mapping**: Returns abbreviated keys (prof/tang/dvnd); PREDICTORS uses full names (profitability/tangibility/dividend). Use _means_key_map in llm_adapters.py as reference.
+- **llm_adapters module import rule**: No streamlit at module level; all 9 public exports importable in plain Python/pytest; lazy st import only inside stream_anthropic function.
 
 ### Pending Todos
 
-- **G1 — true System GMM** (Arellano-Bond / Blundell-Bond replacing the OLS-with-lag-DV proxy at `models/econometric.py::run_system_gmm`). Deferred because the new estimator may shift chapter 5 GMM-table coefficients; needs explicit user decision on whether to revisit thesis tables.
-- **CMIE Economy API service activation on `sk_pgdav`** — external blocker; technical note drafted in chat for Prof Kumar to send to CMIE. Until activation, no live API ingestion is possible (POCs at `scripts/cmie_stage1_*.py` ready to fire when unblocked).
+- **Phase 6 AI Financial Assistant**: models/chatbot.py + floating bubble in app.py + pages/19_ai_assistant.py + page 17 topic 13 wiring. Plans being created now.
+- **Reload 8 US firms (NULL tangibility)**: 1hr effort in models/data_ingest.py — carry-forward.
+- **smoke_auth.py**: add page 17+18 checks.
+- **G1 System GMM (Arellano-Bond/Blundell-Bond)**: deferred pending explicit user decision.
+- **CMIE Economy API service activation**: external blocker on sk_pgdav; POC scripts ready.
 
 ### Blockers/Concerns
 
-- CMIE service activation is the only external blocker. Code side is fully ready.
-- G1 is the only un-closed methodology gap; everything else (G2/G3/G4 + delta-leverage + pairwise + Hausman/BP-LM + ANOVA + IV/2SLS) is shipped and tested.
+- Ollama must be installed locally for Phase 6 local dev: winget install Ollama.Ollama then ollama pull llama3.1:8b
+- GCP Cloud Run has no local Ollama server — production default must be Claude API or graceful "no backend configured" state with clear UI message.
+- Streamlit iframe sandbox limits floating bubble JS. Use hidden st.checkbox as state bridge (checkbox change triggers st.rerun()).
 
 ## Session Continuity
 
-Last session: 2026-04-25
-Stopped at: Three-panel sidebar live on local + Streamlit Cloud + Cloud Run rev 00013; STATE.md and Obsidian updated to reflect end-of-day.
-Resume file: None — clean stopping point. Next natural action is either G1 (System GMM), or wait for CMIE service activation, or move to a different feature.
+Last session: 2026-05-07T01:45:36Z
+Stopped at: Completed 06-01-PLAN.md — models/llm_adapters.py with all 9 public exports; 344 tests passing
+Resume file: None — clean stopping point. Next action: execute 06-02-PLAN.md (floating chat bubble)
