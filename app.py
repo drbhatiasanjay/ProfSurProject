@@ -230,19 +230,20 @@ scenarios = st.Page("pages/3_scenarios.py", title="Scenarios", icon=":material/t
 bulk_upload = st.Page("pages/4_bulk_upload.py", title="Bulk Upload", icon=":material/upload_file:")
 data_explorer = st.Page("pages/5_data_explorer.py", title="Data Explorer", icon=":material/table_chart:")
 settings = st.Page("pages/6_settings.py", title="Settings", icon=":material/settings:")
-knowledge_graph = st.Page("pages/7_knowledge_graph.py", title="Knowledge Graph", icon=":material/hub:")
-econometrics = st.Page("pages/8_econometrics.py", title="Econometrics Lab", icon=":material/functions:")
-ml_models = st.Page("pages/9_ml_models.py", title="ML Models", icon=":material/model_training:")
-forecasting = st.Page("pages/10_forecasting.py", title="Forecasting", icon=":material/trending_up:")
-clustering = st.Page("pages/11_clustering.py", title="Clustering", icon=":material/bubble_chart:")
-transitions = st.Page("pages/12_transitions.py", title="Transitions", icon=":material/swap_horiz:")
-advanced_econ = st.Page("pages/13_advanced_econometrics.py", title="Advanced Econometrics", icon=":material/science:")
-workbench = st.Page("pages/14_workbench.py", title="Workbench", icon=":material/construction:")
+knowledge_graph     = st.Page("pages/7_knowledge_graph.py",     title="Life Stage Dynamics", icon=":material/hub:")
+econometrics        = st.Page("pages/8_econometrics.py",         title="Econometrics Lab",    icon=":material/functions:")
+ml_models           = st.Page("pages/9_ml_models.py",           title="ML Models",           icon=":material/model_training:")
+forecasting         = st.Page("pages/10_forecasting.py",        title="Forecasting",         icon=":material/trending_up:")
+clustering          = st.Page("pages/11_clustering.py",         title="Clustering",          icon=":material/bubble_chart:")
+transitions         = st.Page("pages/12_transitions.py",        title="Transitions",         icon=":material/swap_horiz:")
+advanced_econ       = st.Page("pages/13_advanced_econometrics.py", title="Advanced Econometrics", icon=":material/science:")
+workbench           = st.Page("pages/14_workbench.py",          title="Workbench",           icon=":material/construction:")
 interaction_effects = st.Page("pages/15_interaction_effects.py", title="Interaction Effects", icon=":material/join_inner:")
 
-admin_activity = st.Page("pages/16_admin_activity.py", title="Activity Log", icon=":material/monitoring:")
-board_deck     = st.Page("pages/17_board_export.py",  title="Board Deck",    icon=":material/description:")
-nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, knowledge_graph, settings])
+admin_activity      = st.Page("pages/16_admin_activity.py",    title="Activity Log",        icon=":material/monitoring:")
+board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck",          icon=":material/description:")
+company_navigator   = st.Page("pages/18_company_navigator.py", title="Company Navigator",   icon=":material/explore:")
+nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, company_navigator, knowledge_graph, settings])
 
 # ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
 from datetime import datetime, timezone as _tz
@@ -335,6 +336,7 @@ button[data-testid="stSidebarCollapseButton"] {{
 button[data-testid="collapsedControl"] {{
     top: calc(112px + 0.5rem) !important;
     z-index: 1000002 !important;
+    left: 0.5rem !important;
 }}
 </style>
 """, unsafe_allow_html=True)
