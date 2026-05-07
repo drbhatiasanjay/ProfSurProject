@@ -81,6 +81,8 @@ import db
 from cmie.streamlit_import import render_cmie_sidebar_block
 from helpers import ensure_session_state, is_india_panel
 
+db.ensure_app_tables()  # idempotent — creates audit_log / user_preferences / user_model_runs if missing
+
 # ── Restore saved preferences before session state defaults are set ──
 if "prefs_loaded" not in st.session_state:
     _saved = db.load_user_prefs(_username, "app")
@@ -264,7 +266,8 @@ interaction_effects = st.Page("pages/15_interaction_effects.py", title="Interact
 admin_activity      = st.Page("pages/16_admin_activity.py",    title="Activity Log",        icon=":material/monitoring:")
 board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck",          icon=":material/description:")
 company_navigator   = st.Page("pages/18_company_navigator.py", title="Company Navigator",   icon=":material/explore:")
-nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, company_navigator, knowledge_graph, settings])
+ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
+nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, company_navigator, ai_assistant, knowledge_graph, settings])
 
 # ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
 from datetime import datetime, timezone as _tz
@@ -361,11 +364,7 @@ button[data-testid="collapsedControl"] {{
 }}
 </style>
 """, unsafe_allow_html=True)
-# ─────────────────────────────────────────────────────────────────────────
-
-nav.run()
-
-# ── Phase 6: Chat assistant ────────────────────────────────────────────────────
+# ── Phase 6: Chat assistant helpers ───────────────────────────────────────────
 
 def _detect_chat_mode() -> str:
     """CFO mode for company-centric pages (17, 18); researcher mode otherwise."""
@@ -381,32 +380,27 @@ def _detect_chat_mode() -> str:
 
 
 def render_chat_panel():
-    """Slide-in chat panel — only renders when st.session_state['chat_open'] is True."""
+    """Chat panel rendered in sidebar — only when chat_open is True."""
     if not st.session_state.get("chat_open"):
         return
     from models.llm_adapters import (
         build_company_context, build_panel_context,
         stream_ollama, stream_anthropic,
-        parse_llm_json, log_chat_query, count_tokens, GROUNDING_FOOTER,
+        log_chat_query, count_tokens,
     )
 
-    # Auto-detect mode each render
     st.session_state["chat_mode"] = _detect_chat_mode()
     mode = st.session_state["chat_mode"]
     backend = st.session_state["chat_backend"]
 
-    panel_class = "lc-chat-panel-frame"
-    if st.session_state.get("theme") == "dark":
-        panel_class += " dark"
-
-    with st.container():
-        st.markdown(f'<div class="{panel_class}">', unsafe_allow_html=True)
-        # Header row
+    with st.sidebar:
+        st.divider()
         col_a, col_b, col_c = st.columns([3, 2, 1])
         with col_a:
             st.markdown(
-                f'<div class="lc-chat-header">AI Assistant '
-                f'<span class="lc-chat-mode-badge">{mode.upper()}</span></div>',
+                f"**AI Assistant** &nbsp;"
+                f'<span style="font-size:11px;padding:2px 8px;border-radius:999px;'
+                f'background:rgba(13,148,136,0.15);color:#0D9488">{mode.upper()}</span>',
                 unsafe_allow_html=True,
             )
         with col_b:
@@ -423,15 +417,12 @@ def render_chat_panel():
                 st.session_state["chat_open"] = False
                 st.rerun()
 
-        # Chat history (last 10 turns)
-        for turn in st.session_state["chat_history"][-10:]:
+        for turn in st.session_state["chat_history"][-6:]:
             with st.chat_message(turn["role"]):
                 st.markdown(turn["content"])
 
-        # Chat input
         user_q = st.chat_input("Ask about your data...", key="chat_input_main")
         if user_q:
-            # Build grounded context
             if mode == "cfo" and st.session_state.get("active_company_cin"):
                 ctx = build_company_context(
                     st.session_state["active_company_cin"],
@@ -442,65 +433,57 @@ def render_chat_panel():
                     panel_mode=st.session_state.get("panel_mode", "thesis"),
                 )
 
-            # Append user turn
             st.session_state["chat_history"].append({"role": "user", "content": user_q})
             with st.chat_message("user"):
                 st.markdown(user_q)
 
-            # Build messages list for the LLM (last 5 prior turns + current)
             messages = []
             for turn in st.session_state["chat_history"][-11:-1]:
                 messages.append({"role": turn["role"], "content": turn["content"]})
             messages.append({"role": "user", "content": user_q})
 
-            system_prompt = ctx  # Already includes GROUNDING_FOOTER
-
-            # Stream reply
             with st.chat_message("assistant"):
                 if backend == "ollama":
                     full = st.write_stream(stream_ollama(
-                        [{"role": "system", "content": system_prompt}] + messages
+                        [{"role": "system", "content": ctx}] + messages
                     ))
                 else:
-                    full = st.write_stream(stream_anthropic(
-                        messages, system=system_prompt,
-                    ))
-                # Add to Board Deck button (CFO mode only)
+                    full = st.write_stream(stream_anthropic(messages, system=ctx))
                 if mode == "cfo" and full:
-                    if st.button("➕ Add to Board Deck", key=f"add_brd_{len(st.session_state['chat_history'])}"):
-                        st.session_state["ai_recommendations"].append({
-                            "question": user_q, "answer": full,
-                        })
+                    if st.button("➕ Add to Board Deck",
+                                 key=f"add_brd_{len(st.session_state['chat_history'])}"):
+                        st.session_state["ai_recommendations"].append(
+                            {"question": user_q, "answer": full}
+                        )
                         st.toast("Added to Board Deck")
 
             st.session_state["chat_history"].append({"role": "assistant", "content": full or ""})
 
-            # Audit log
             _user_info = st.session_state.get("user", {}) or {}
             log_chat_query(
                 username=_user_info.get("username", "anonymous"),
                 role=_user_info.get("role", "viewer"),
                 backend=backend,
-                token_count=count_tokens(system_prompt) + count_tokens(user_q) + count_tokens(full or ""),
+                token_count=count_tokens(ctx) + count_tokens(user_q) + count_tokens(full or ""),
                 query=user_q,
                 session_id=st.session_state.get("session_id", ""),
             )
 
-        st.markdown("</div>", unsafe_allow_html=True)
 
+# ─────────────────────────────────────────────────────────────────────────────
 
-# Phase 6: FAB state bridge — query_params toggle
+# Phase 6: FAB state bridge — must run BEFORE nav.run() so chat_open is correct when page renders
 _chat_param = st.query_params.get("chat")
-if _chat_param == "1" and not st.session_state["chat_open"]:
+if _chat_param == "1":
     st.session_state["chat_open"] = True
     st.query_params.clear()
-    st.rerun()
-elif _chat_param == "0" and st.session_state["chat_open"]:
+elif _chat_param == "0":
     st.session_state["chat_open"] = False
     st.query_params.clear()
-    st.rerun()
 
 render_chat_panel()
+
+nav.run()
 
 # Phase 6: Floating chat FAB (bottom-right, every page)
 _fab_icon = "✕" if st.session_state["chat_open"] else "\U0001f4ac"
