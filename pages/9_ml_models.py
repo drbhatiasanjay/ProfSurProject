@@ -86,7 +86,12 @@ with st.sidebar:
         selected_x = DEFAULT_X_COLS
 
 # ── Load data ──
-    panel_df = db.get_active_panel_data(ft)
+try:
+    with st.spinner("Loading..."):
+        panel_df = db.get_active_panel_data(ft)
+except Exception as _e:
+    st.error(f"Failed to load data. Please refresh. ({_e})")
+    st.stop()
 if panel_df.empty or len(panel_df) < 100:
     st.warning("Not enough data. Adjust filters (need 100+ observations).")
     st.stop()

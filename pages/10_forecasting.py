@@ -70,7 +70,12 @@ with col_set:
     model_type = st.radio("Model", ["LSTM", "GRU"], index=0, horizontal=True)
     seq_len = st.slider("Sequence Length (years)", 3, 8, 5)
 
-    panel_df = db.get_active_panel_data(ft)
+try:
+    with st.spinner("Loading..."):
+        panel_df = db.get_active_panel_data(ft)
+except Exception as _e:
+    st.error(f"Failed to load data. Please refresh. ({_e})")
+    st.stop()
 if panel_df.empty:
     st.warning("No data. Adjust filters.")
     st.stop()

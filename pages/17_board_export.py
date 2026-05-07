@@ -35,7 +35,12 @@ st.caption(
 _username  = st.session_state.get("user", {}).get("username", "")
 _bd_prefs  = db.load_user_prefs(_username, "board_deck") if _username else {}
 
-companies_df = db.get_companies("thesis")
+try:
+    with st.spinner("Loading..."):
+        companies_df = db.get_companies("thesis")
+except Exception as _e:
+    st.error(f"Failed to load company list. Please refresh. ({_e})")
+    st.stop()
 # Put Indian firms first (they have thesis data), US firms at the end
 india_df = companies_df[~companies_df["company_name"].str.contains("Inc\.|Corp\.|Co\.", regex=True, na=False)]
 us_df    = companies_df[companies_df["company_name"].str.contains("Inc\.|Corp\.|Co\.", regex=True, na=False)]
@@ -78,8 +83,12 @@ def _load_company_data(company_code: int):
     return company_df, full_panel, stage_summary, peers_df
 
 
-with st.spinner("Loading company data…"):
-    company_df, full_panel, stage_summary, peers_df = _load_company_data(company_code)
+try:
+    with st.spinner("Loading company data…"):
+        company_df, full_panel, stage_summary, peers_df = _load_company_data(company_code)
+except Exception as _e:
+    st.error(f"Failed to load data. Please refresh. ({_e})")
+    st.stop()
 
 if company_df.empty:
     st.warning("No financial data found for this company in the Thesis panel.")

@@ -15,7 +15,12 @@ require_role("admin")
 st.markdown("### Activity Log")
 
 # ── Load full audit data for charts ──────────────────────────────────────
-_full_df = db.get_audit_log(limit=5000)
+try:
+    with st.spinner("Loading..."):
+        _full_df = db.get_audit_log(limit=5000)
+except Exception as _e:
+    st.error(f"Failed to load audit log. Please refresh. ({_e})")
+    st.stop()
 if _full_df.empty:
     st.info("No activity recorded yet. Visit a few pages and return here.")
     st.stop()

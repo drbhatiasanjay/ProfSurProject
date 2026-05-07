@@ -58,7 +58,12 @@ This answers: *What drives changes in capital structure, not just its level?*
 This reveals which determinants differ between stages — e.g., profitability matters more in Maturity than Growth.
 """)
 
-    panel_df = db.get_active_panel_data(ft)
+try:
+    with st.spinner("Loading..."):
+        panel_df = db.get_active_panel_data(ft)
+except Exception as _e:
+    st.error(f"Failed to load data. Please refresh. ({_e})")
+    st.stop()
 if panel_df.empty:
     st.warning("No data. Adjust filters.")
     st.stop()

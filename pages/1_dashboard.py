@@ -24,9 +24,13 @@ ft = db.filters_to_tuple(filters)
 _india = is_india_panel(st.session_state.get("panel_mode", "latest"))
 
 # ── Load data ──
-with st.spinner("Loading dashboard..."):
-    df = db.get_active_financials(ft)
-    stage_summary = db.get_active_life_stage_summary(ft)
+try:
+    with st.spinner("Loading dashboard..."):
+        df = db.get_active_financials(ft)
+        stage_summary = db.get_active_life_stage_summary(ft)
+except Exception as _e:
+    st.error(f"Failed to load data. Please refresh. ({_e})")
+    st.stop()
 
 if df.empty:
     st.warning("No data matches the current filters. Adjust the sidebar filters.")
@@ -587,7 +591,11 @@ st.divider()
 # ═══════════════════════════════════════════════
 st.markdown("### Macro Context: Interest Rates & Market Returns vs Leverage")
 
-macro_df = db.get_market_index(yr_min, yr_max)
+try:
+    macro_df = db.get_market_index(yr_min, yr_max)
+except Exception as _e:
+    st.error(f"Could not load macro data: {_e}")
+    macro_df = pd.DataFrame()
 int_rate_yearly = df.groupby("year")["int_rate"].mean().reset_index() if "int_rate" in df.columns else None
 
 macro_left, macro_right = st.columns(2)
@@ -662,7 +670,11 @@ if _india:
         st.markdown(f'<div style="text-align:right;">{new_badge()}</div>', unsafe_allow_html=True)
     st.caption("Overlay any of the ~749 CMIE T623 index series (BSE / Nifty / sector / industry) against the aggregate leverage line.")
 
-    indices_df = db.get_available_indices()
+    try:
+        indices_df = db.get_available_indices()
+    except Exception as _e:
+        st.error(f"Could not load index series: {_e}")
+        indices_df = pd.DataFrame()
     if indices_df.empty:
         st.info("No T623 index series loaded. Run `py -3.12 -m cmie.load_vintage ./DataV2 --vintage cmie_2025` to populate.")
     else:
@@ -681,7 +693,11 @@ if _india:
             st.caption(f"`index_code={chosen_code}`")
             st.caption(f"Coverage: {int(_row['year_min'])}–{int(_row['year_max'])} ({int(_row['n_years'])} yrs)")
         with _chart_col:
-            series_df = db.get_market_index(yr_min, yr_max, index_code=chosen_code)
+            try:
+                series_df = db.get_market_index(yr_min, yr_max, index_code=chosen_code)
+            except Exception as _e:
+                st.error(f"Could not load index data: {_e}")
+                series_df = pd.DataFrame()
             if series_df.empty or series_df["index_closing"].dropna().empty:
                 st.warning(f"No closing data for {chosen_name} in {yr_min}–{yr_max}.")
             else:
@@ -794,7 +810,11 @@ with bottom_left:
 
 with bottom_right:
     st.markdown("### Top 10 Most Leveraged Companies")
-    top10 = db.get_top_leveraged(10, ft)
+    try:
+        top10 = db.get_top_leveraged(10, ft)
+    except Exception as _e:
+        st.error(f"Could not load top leveraged data: {_e}")
+        top10 = pd.DataFrame()
     if not top10.empty:
         top10["avg_leverage"] = winsorize(top10["avg_leverage"])
         top10 = top10.sort_values("avg_leverage", ascending=True)

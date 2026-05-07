@@ -63,8 +63,13 @@ def get_sample_means(filters_tuple, data_source: str, version_id: str | None):
     return leverage_predictor_sample_means(panel)
 
 
-coefs = compute_coefficients(ft, _data_source, _version_id)
-means = get_sample_means(ft, _data_source, _version_id)
+try:
+    with st.spinner("Loading..."):
+        coefs = compute_coefficients(ft, _data_source, _version_id)
+        means = get_sample_means(ft, _data_source, _version_id)
+except Exception as _e:
+    st.error(f"Failed to load data. Please refresh. ({_e})")
+    st.stop()
 
 if db.is_cmie_lab_enabled() and _data_source == "cmie" and _version_id:
     st.caption(f"Regression fit on **CMIE import** (version `{_version_id[:16]}…`, n={coefs.get('n_obs', 0):,}).")
@@ -174,7 +179,12 @@ st.divider()
 
 # ── Compare with real company ──
 st.markdown("#### Compare with a Real Company")
-companies_df = db.get_companies()
+try:
+    with st.spinner("Loading..."):
+        companies_df = db.get_companies()
+except Exception as _e:
+    st.error(f"Could not load companies: {_e}")
+    st.stop()
 comp_name = st.selectbox("Select company to compare", companies_df["company_name"].tolist(), index=0)
 comp_code = int(companies_df[companies_df["company_name"] == comp_name]["company_code"].iloc[0])
 use_cmie_series = (
@@ -182,11 +192,16 @@ use_cmie_series = (
     and getattr(st.session_state, "data_source_mode", "sqlite") == "cmie"
     and db.get_current_api_version()
 )
-if use_cmie_series:
-    comp_df = db.get_active_financials(ft)
-    comp_df = comp_df[comp_df["company_code"] == comp_code].sort_values("year")
-else:
-    comp_df = db.get_company_detail(comp_code)
+try:
+    with st.spinner("Loading..."):
+        if use_cmie_series:
+            comp_df = db.get_active_financials(ft)
+            comp_df = comp_df[comp_df["company_code"] == comp_code].sort_values("year")
+        else:
+            comp_df = db.get_company_detail(comp_code)
+except Exception as _e:
+    st.error(f"Could not load company data: {_e}")
+    st.stop()
 
 if not comp_df.empty:
     actual_avg = comp_df["leverage"].mean()

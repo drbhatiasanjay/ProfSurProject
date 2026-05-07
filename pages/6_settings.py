@@ -70,7 +70,12 @@ st.divider()
 
 # ── Database Metadata ──
 st.markdown("#### Database Info")
-meta = db.get_db_metadata()
+try:
+    with st.spinner("Loading..."):
+        meta = db.get_db_metadata()
+except Exception as _e:
+    st.error(f"Could not load database info: {_e}")
+    st.stop()
 
 mc1, mc2, mc3, mc4 = st.columns(4)
 with mc1:

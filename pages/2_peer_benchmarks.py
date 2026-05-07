@@ -25,7 +25,12 @@ _panel_suffix = " · Latest panel (includes CMIE 2025)" if _panel == "latest" el
 st.caption(f"Compare a company against its industry and life-stage peers.{_panel_suffix}")
 
 # ── Company selector ──
-companies_df = db.get_companies()
+try:
+    with st.spinner("Loading companies..."):
+        companies_df = db.get_companies()
+except Exception as _e:
+    st.error(f"Failed to load company list. Please refresh. ({_e})")
+    st.stop()
 selected = st.selectbox(
     "Select a company",
     options=companies_df["company_name"].tolist(),
@@ -38,18 +43,22 @@ company_industry = company_row["industry_group"]
 st.info(f"**{selected}** | NSE: {company_row['nse_symbol']} | Industry: {company_industry}")
 
 # ── Load data ──
-with st.spinner("Loading benchmarks..."):
-    full_df = db.get_active_financials(ft)
-    use_cmie_series = (
-        db.is_cmie_lab_enabled()
-        and getattr(st.session_state, "data_source_mode", "sqlite") == "cmie"
-        and db.get_current_api_version()
-    )
-    if use_cmie_series:
-        company_df = full_df[full_df["company_code"] == company_code].sort_values("year")
-    else:
-        company_df = db.get_company_detail(company_code)
-    industry_df = full_df[full_df["industry_group"] == company_industry]
+try:
+    with st.spinner("Loading benchmarks..."):
+        full_df = db.get_active_financials(ft)
+        use_cmie_series = (
+            db.is_cmie_lab_enabled()
+            and getattr(st.session_state, "data_source_mode", "sqlite") == "cmie"
+            and db.get_current_api_version()
+        )
+        if use_cmie_series:
+            company_df = full_df[full_df["company_code"] == company_code].sort_values("year")
+        else:
+            company_df = db.get_company_detail(company_code)
+        industry_df = full_df[full_df["industry_group"] == company_industry]
+except Exception as _e:
+    st.error(f"Failed to load data. Please refresh. ({_e})")
+    st.stop()
 
 if company_df.empty:
     st.warning("No data available for this company.")

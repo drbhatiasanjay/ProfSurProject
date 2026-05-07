@@ -120,8 +120,12 @@ with col_left:
 
 with col_right:
     # ── Load data ──
-    with st.spinner("Loading panel data..."):
-        panel_df = db.get_active_panel_data(ft)
+    try:
+        with st.spinner("Loading panel data..."):
+            panel_df = db.get_active_panel_data(ft)
+    except Exception as _e:
+        st.error(f"Failed to load data. Please refresh. ({_e})")
+        st.stop()
 
     if panel_df.empty or len(panel_df) < 50:
         st.warning("Not enough data for regression. Adjust filters (need 50+ observations).")

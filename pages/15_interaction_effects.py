@@ -64,7 +64,12 @@ interaction terms in one pooled regression (reference stage: **Maturity**).
 - The **Heatmap** shows marginal effects across all 8 stages for both variables.
 """)
 
-panel_df = db.get_active_panel_data(ft)
+try:
+    with st.spinner("Loading..."):
+        panel_df = db.get_active_panel_data(ft)
+except Exception as _e:
+    st.error(f"Failed to load data. Please refresh. ({_e})")
+    st.stop()
 if panel_df.empty:
     st.warning("No data. Adjust sidebar filters.")
     st.stop()

@@ -47,7 +47,12 @@ def _build_graph(db_revision: int):
     return G, fin_df
 
 
-G, fin_df = _build_graph(db.db_cache_revision())
+try:
+    with st.spinner("Loading..."):
+        G, fin_df = _build_graph(db.db_cache_revision())
+except Exception as _e:
+    st.error(f"Failed to load graph data. Please refresh. ({_e})")
+    st.stop()
 stats = get_graph_stats(G)
 
 # ── KPI strip ──
