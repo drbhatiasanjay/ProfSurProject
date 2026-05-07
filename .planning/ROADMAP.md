@@ -15,6 +15,8 @@ This milestone adds five missing econometric methods from the thesis that requir
 - [ ] **Phase 3: Stage Comparisons** - Growth vs Maturity and Decline vs Decay subset regressions
 - [ ] **Phase 4: Advanced Econometrics Page** - New page 13 surfacing all Phase 1-3 models with interpretation
 - [ ] **Phase 5: Post-COVID Cohort Analysis** - COVID cohort identification and Knowledge Graph integration
+- [ ] **Phase 6: AI Financial Assistant** - Floating global chat widget + Page 19 dedicated screen; Ollama local backend; context-aware CFO/Researcher modes; Page 17 Topic 13 AI Recommendations wired
+- [ ] **Phase 7: Wave 2 Tier 1 UX Quick Wins** - 8 UX improvements: download buttons on all charts/tables, loading spinners, error states, progressive disclosure (expanders), chart zoom defaults, citation generator, navbar >> arrow fix, panel selector in navbar dropdown
 
 ## Phase Details
 
@@ -91,10 +93,66 @@ Plans:
 - [ ] 05-01: COVID cohort identification and comparison functions
 - [ ] 05-02: Knowledge Graph page integration with cohort visualizations
 
+### Phase 6: AI Financial Assistant
+**Goal**: A CFO or researcher can ask natural-language questions about any company or the full panel from any page in the app, and receive grounded, data-driven answers via a floating chat widget; a dedicated Page 19 supports deep multi-turn research sessions; Page 17 Board Deck Topic 13 (AI Recommendations) is powered by the same backend.
+**Depends on**: Nothing (self-contained new module; integrates with existing db.py, graph_builder.py, models/)
+**Requirements**: CHAT-01 through CHAT-08 (see below)
+**Success Criteria** (what must be TRUE):
+  1. Floating 💬 bubble is visible in the bottom-right corner on every page; clicking opens a slide-in chat panel without full page reload
+  2. Chat panel auto-detects context: CFO mode on pages 17-18 (company + peer metrics injected), Researcher mode on pages 1-16 (panel OLS outputs injected)
+  3. Ollama backend answers questions using only the injected context — no hallucinated financial data
+  4. Claude API backend is selectable in Settings; switching backend mid-session preserves conversation history
+  5. Page 19 "AI Financial Assistant" renders as a full-screen dedicated chat with multi-turn history, mode selector, and backend toggle
+  6. Page 17 Topic 13 AI Recommendations calls the context builder and LLM adapter and returns ≥1 non-empty recommendation bullet per sub-topic (13.1-13.4)
+  7. tests/test_chatbot.py passes with mocked LLM: context builder produces correct token-bounded output for both modes
+  8. 344 + N tests pass with zero regressions
+
+**Requirements:**
+- CHAT-01: Context builder produces ≤900 token grounded context block from db.py queries (no hallucination surface)
+- CHAT-02: Query classifier routes factual SQL questions vs analytical/explanatory questions vs hybrid
+- CHAT-03: Ollama adapter streams responses using ollama Python SDK (local, zero data egress)
+- CHAT-04: Claude API adapter streams via anthropic SDK; key in .streamlit/secrets.toml
+- CHAT-05: Floating bubble injected in app.py via st.html() custom CSS/JS; no per-page modification needed
+- CHAT-06: Chat state (history, mode, backend) stored in st.session_state["chat_*"] keys
+- CHAT-07: Every query logged to audit_log table (existing) with llm_backend and token_count fields
+- CHAT-08: "Add to Board Deck" action in chat appends narrative to st.session_state["ai_recommendations"]
+
+**Plans**:
+- [ ] 06-01: models/chatbot.py — context builder + query classifier + LLM adapters (Ollama + Claude)
+- [ ] 06-02: tests/test_chatbot.py — context builder + classifier unit tests with mock LLM
+- [ ] 06-03: Floating chat widget injected in app.py (HTML/CSS/JS bubble + slide-in panel)
+- [ ] 06-04: pages/19_ai_assistant.py — full-screen dedicated page
+- [ ] 06-05: Page 17 Topic 13 AI Recommendations wired to chatbot backend + app.py registration
+
+### Phase 7: Wave 2 Tier 1 UX Quick Wins
+
+**Goal**: All 8 UX improvement items shipped with zero regressions in existing 344 tests and Playwright smoke tests updated for any moved widgets.
+
+**Depends on**: Nothing (independent UX layer, no model changes)
+
+**Success Criteria** (what must be TRUE):
+
+1. Every `st.dataframe()` and Plotly chart in all 18 pages has a download button (CSV/PNG)
+2. Every `db.*` call outside a cache hit is wrapped in `st.spinner()`
+3. No raw Python tracebacks on any page — all `db.*` calls wrapped in try/except with `st.error()` + `st.stop()`
+4. Advanced options on Econometrics, ML, Clustering, Advanced Econometrics, Interaction Effects pages are in `st.expander("Advanced options", expanded=False)`
+5. All time-series Plotly charts default x-axis range to `[year_range[0], year_range[1]]` from active filter
+6. Citation generator (APA + LaTeX) available on Econometrics, Scenarios, Advanced Econometrics pages
+7. Sidebar `>>` expand arrow has explicit `left: 0.5rem !important` CSS in `app.py`
+8. Panel selector moved from sidebar radio to navbar HTML `<select>` via `st.query_params`; all 18 pages read from `st.session_state.filters["panel_mode"]` unchanged
+
+**Plans**:
+
+- [ ] 07-01: Foundational fixes — >> arrow CSS, spinners, error states (W2-07, W2-02, W2-03)
+- [ ] 07-02: helpers.py chart zoom + progressive disclosure expanders (W2-05, W2-04)
+- [ ] 07-03: Download buttons — systematic pass all 18 pages (W2-01)
+- [ ] 07-04: Citation generator on 3 pages (W2-06)
+- [ ] 07-05: Panel selector → navbar dropdown via query_params (W2-08)
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
+Phases 1-5 execute in numeric order (thesis gap closure); Phase 6 is independent and can execute any time. Phase 7 is independent UX work — can execute in parallel with any phase.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -103,3 +161,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 | 3. Stage Comparisons | 0/1 | Not started | - |
 | 4. Advanced Econometrics Page | 0/2 | Not started | - |
 | 5. Post-COVID Cohort Analysis | 0/2 | Not started | - |
+| 6. AI Financial Assistant | 0/5 | Not started | - |
+| 7. Wave 2 Tier 1 UX Quick Wins | 0/5 | Not started | - |
