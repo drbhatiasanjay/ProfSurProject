@@ -10,12 +10,12 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: Phase 7 (07-wave2-tier1-ux)
-Plan: 1 of 5 in current phase
+Phase: Phase 6 (06-ai-financial-assistant)
+Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-05-07 - Completed 07-01-PLAN.md (CSS fix + spinners + error guards)
+Last activity: 2026-05-07 - Completed 06-02-PLAN.md (25 unit tests for llm_adapters.py)
 
-Progress: [██████████] Pages 1-18 complete; Phase 6 plan 1/5 done
+Progress: [██████████] Pages 1-18 complete; Phase 6 plan 2/5 done
 
 ## App State (as of 2026-05-07)
 
@@ -89,6 +89,6 @@ Progress: [██████████] Pages 1-18 complete; Phase 6 plan 1/5
 
 ## Session Continuity
 
-Last session: 2026-05-07T01:45:36Z
-Stopped at: Completed 06-01-PLAN.md — models/llm_adapters.py with all 9 public exports; 344 tests passing
-Resume file: None — clean stopping point. Next action: execute 06-02-PLAN.md (floating chat bubble)
+Last session: 2026-05-07T04:51:15Z
+Stopped at: Completed 06-02-PLAN.md — 25 unit tests for llm_adapters.py (test_chatbot.py + conftest fixtures)
+Resume file: None — clean stopping point. Next action: execute 06-03-PLAN.md (floating chat bubble)
