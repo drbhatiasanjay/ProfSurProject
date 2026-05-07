@@ -1,0 +1,58 @@
+/* ==== Floating Chat Assistant ==== */
+.lc-chat-fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000002;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #0D9488;
+  color: #FFFFFF !important;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(13, 148, 136, 0.4);
+  text-decoration: none !important;
+  transition: transform .15s ease;
+}
+.lc-chat-fab:hover { transform: scale(1.06); }
+
+/* Slide-in panel container — Streamlit will render the actual widgets;
+   this just provides the visual frame via a sibling div positioned by CSS. */
+.lc-chat-panel-frame {
+  position: fixed;
+  bottom: 6rem;
+  right: 2rem;
+  width: 380px;
+  max-height: 70vh;
+  z-index: 1000001;
+  background: var(--background-color, #FFFFFF);
+  border: 1px solid rgba(13, 148, 136, 0.25);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+}
+.lc-chat-panel-frame.dark {
+  background: #1F2937;
+  color: #F3F4F6;
+  border-color: rgba(13, 148, 136, 0.5);
+}
+.lc-chat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  padding-bottom: 6px; margin-bottom: 8px;
+  font-weight: 600;
+}
+.lc-chat-mode-badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  background: rgba(13,148,136,0.15); color: #0D9488;
+}
+@media (max-width: 480px) {
+  .lc-chat-panel-frame { width: calc(100vw - 1rem); right: 0.5rem; }
+}
