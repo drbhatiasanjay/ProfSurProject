@@ -6,14 +6,14 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** Phase 6 — AI Financial Assistant (chatbot, floating bubble, Page 19, Page 17 Topic 13 wiring)
+**Current focus:** Phase 7 Wave 2 Tier 1 UX — download buttons, sidebar presets, panel navbar (plans 03-05)
 
 ## Current Position
 
 Phase: Phase 7 (07-wave2-tier1-ux) — COMPLETE
-Plan: 5 of 5 (07-05 completed — panel selector moved to navbar)
+Plan: 5 of 5 (07-03 completed — in-app CSV/PNG download buttons on all 17 data pages)
 Status: Phase complete
-Last activity: 2026-05-10 - Completed 07-05-PLAN.md (Panel selector moved to navbar select element via query_params)
+Last activity: 2026-05-10 - Completed 07-03-PLAN.md (CSV/PNG download buttons across pages 1-5, 7-18)
 
 Progress: [██████████] Phase 7 all 5 plans complete; Phase 6 AI Assistant plans pending execution
 
@@ -90,6 +90,6 @@ Progress: [██████████] Phase 7 all 5 plans complete; Phase 6
 
 ## Session Continuity
 
-Last session: 2026-05-10T04:45:45Z
-Stopped at: Completed 07-05-PLAN.md — panel selector to navbar select via query_params (commit 8cadf60)
+Last session: 2026-05-10
+Stopped at: Completed 07-03-PLAN.md — CSV/PNG download buttons on all 17 data pages (commits 475ed7b, 0fb45bf)
 Resume file: None — Phase 7 complete. Next action: execute Phase 6 plans (06-03 floating bubble, 06-04 Page 19, 06-05 Page 17 Topic 13)
