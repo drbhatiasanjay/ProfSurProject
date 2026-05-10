@@ -10,16 +10,7 @@ import sqlite3
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-import streamlit as st
 import db as db_module
-
-
-@pytest.fixture(autouse=True)
-def clear_streamlit_cache():
-    """Clear st.cache_data between tests to prevent serialization state corruption."""
-    st.cache_data.clear()
-    yield
-    st.cache_data.clear()
 
 DB_PATH = os.path.join(PROJECT_ROOT, "capital_structure.db")
 
