@@ -29,11 +29,11 @@ This milestone adds five missing econometric methods from the thesis that requir
   2. Delta-leverage regressions (OLS/FE/RE) run with first-differenced dependent variable and return coefficient tables
   3. Hausman test works on delta-leverage FE vs RE models and returns correct selection
   4. Stage-specific delta-leverage regressions return separate results for each Dickinson life stage
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: BP-LM test function and delta-leverage model functions in econometric.py
-- [ ] 01-02: Unit tests for all Phase 1 functions + regression check on existing 40 tests
+- [ ] 01-01-PLAN.md — Harden assertions on existing 4 delta-leverage / BP-LM tests in tests/test_models.py
+- [ ] 01-02-PLAN.md — Add page-13 integration smoke test + full 345-test suite gate
 
 ### Phase 2: System GMM
 **Goal**: Researchers can estimate dynamic panel models with proper instrument validity diagnostics
