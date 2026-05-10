@@ -6,16 +6,16 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** Phase 8 — CI/CD Pipeline (v1.3 milestone start)
+**Current focus:** Phase 9 — Company Timeline View
 
 ## Current Position
 
-Phase: Phase 8 — CI/CD Pipeline
-Plan: 08-01 (Task 1 of 3 complete; Tasks 2-3 are human checkpoints)
-Status: In progress — awaiting human: GCP service account + GCP_SA_KEY GitHub secret
-Last activity: 2026-05-10 — 08-01 Task 1 complete (2d68601) — .github/workflows/deploy.yml created
+Phase: Phase 9 (company-timeline-view)
+Plan: 09-01 complete
+Status: Phase complete
+Last activity: 2026-05-10 - Completed 09-01-PLAN.md — Timeline view added to Company Navigator page 18
 
-Progress: [██████████░] Phases 1-7 complete; Phase 8 in progress
+Progress: [██████████░] Phases 1-8 (partial) + Phase 9 complete
 
 ## App State (as of 2026-05-10)
 
@@ -27,7 +27,7 @@ Progress: [██████████░] Phases 1-7 complete; Phase 8 in pr
   - 13_advanced_econometrics, 14_workbench, 15_interaction_effects, 16_admin_activity
 - Pages 17-18: Individual Company (company is the subject; panel is peer context)
   - 17_board_export: 13 topic builders → branded .pptx; python-pptx + kaleido
-  - 18_company_navigator: pyvis ego graph + peer cluster + Plotly stage map; 3 zoom levels
+  - 18_company_navigator: pyvis ego graph + peer cluster + Plotly stage map + Timeline (dual-axis: stage bars + leverage line); 4 view modes
   - 19_ai_assistant: full-screen AI chat (admin + researcher only); shared chat_history with any future FAB
 
 **Auth gate**: streamlit-authenticator; 3 roles — sbhatia (admin), skumar (researcher), guest (viewer)
@@ -91,6 +91,6 @@ Progress: [██████████░] Phases 1-7 complete; Phase 8 in pr
 
 ## Session Continuity
 
-Last session: 2026-05-10T11:35:00Z
-Stopped at: Completed 01-01-PLAN.md — contract docstrings + backend smoke verified. Ready for 01-02 unit test hardening.
+Last session: 2026-05-10T10:28:58Z
+Stopped at: Completed 09-01-PLAN.md — Timeline view added to page 18 Company Navigator (dual-axis Plotly: stage bars + leverage line). Phase 9 complete.
 Resume file: None — clean handoff point.
