@@ -30,8 +30,8 @@ class TestBuildCompanyContext:
 
     def test_contains_required_sections(self, sample_company_code):
         ctx = build_company_context(sample_company_code, panel_mode="thesis")
-        assert "## COMPANY" in ctx
-        assert "## PEER GROUP" in ctx
+        assert "## [SOURCE: THESIS]" in ctx
+        assert "## [SOURCE: DATA]" in ctx
         assert GROUNDING_FOOTER.strip() in ctx
 
     def test_token_budget_respected(self, sample_company_code):
@@ -52,8 +52,9 @@ class TestBuildPanelContext:
     def test_returns_string_with_sections(self):
         ctx = build_panel_context(panel_mode="thesis")
         assert isinstance(ctx, str)
-        assert "## PANEL OVERVIEW" in ctx
-        assert "## OLS BASELINE" in ctx
+        assert "## [SOURCE: THESIS]" in ctx
+        assert "## [SOURCE: DATA]" in ctx
+        assert "## [SOURCE: ANALYSIS]" in ctx
         assert GROUNDING_FOOTER.strip() in ctx
 
     def test_token_budget_respected(self):
