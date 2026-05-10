@@ -668,6 +668,7 @@ def compute_covid_cohorts(G, fin_df):
             "leverage_change": (post_lev - pre_lev) if pre_lev is not None and post_lev is not None else None,
             "pre_profitability": pre_prof,
             "post_profitability": post_prof,
+            "profitability_change": (post_prof - pre_prof) if pre_prof is not None and post_prof is not None else None,
             "was_declining": was_declining,
             "entered_decline_after_covid": entered_decline_after,
             "recovered": recovered,

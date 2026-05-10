@@ -18,6 +18,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from collections import Counter
 import operator
+from scipy import stats as _scipy_stats
 import db
 from graph_builder import (
     build_knowledge_graph, get_graph_stats,
@@ -634,6 +635,13 @@ with tab_covid:
     else:
         cdf = cohort_data["cohort_df"]
 
+        # Backwards compat: compute profitability_change if not present
+        if "profitability_change" not in cdf.columns:
+            cdf = cdf.copy()
+            cdf["profitability_change"] = (
+                cdf["post_profitability"] - cdf["pre_profitability"]
+            ).where(cdf["pre_profitability"].notna() & cdf["post_profitability"].notna())
+
         # KPIs
         kc1, kc2, kc3, kc4, kc5 = st.columns(5)
         kc1.metric("Total Firms", cohort_data["n_total"])
@@ -674,6 +682,89 @@ with tab_covid:
                 fig_box.update_layout(**plotly_layout("", height=350))
                 st.plotly_chart(fig_box, use_container_width=True, config=PLOTLY_CONFIG)
                 chart_download_button(fig_box, "covid_leverage_change.png")
+
+        # Profitability change comparison
+        st.markdown("#### Profitability Change: Deteriorated vs Improved Firms")
+        det_prof = cdf[cdf["deteriorated"]]["profitability_change"].dropna()
+        imp_prof = cdf[cdf["improved"]]["profitability_change"].dropna()
+
+        if not det_prof.empty or not imp_prof.empty:
+            prof_box_data = []
+            for val in det_prof:
+                prof_box_data.append({"Group": "Deteriorated", "Profitability Change (pp)": val})
+            for val in imp_prof:
+                prof_box_data.append({"Group": "Improved", "Profitability Change (pp)": val})
+            if prof_box_data:
+                pbdf = pd.DataFrame(prof_box_data)
+                fig_prof_box = px.box(pbdf, x="Group", y="Profitability Change (pp)", color="Group",
+                                      color_discrete_map={"Deteriorated": "#EF4444", "Improved": "#22C55E"})
+                fig_prof_box.update_layout(**plotly_layout("", height=350))
+                st.plotly_chart(fig_prof_box, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig_prof_box, "covid_profitability_change.png")
+
+        # Statistical comparison: Deteriorated vs Improved cohorts
+        st.markdown("#### Statistical Tests: Deteriorated vs Improved Cohorts")
+        st.caption(
+            "Welch's t-test (assumes unequal variances) + Mann-Whitney U (non-parametric). "
+            "Minimum 5 firms per group required."
+        )
+        from helpers import significance_stars, format_pvalue
+
+        _stat_rows = []
+
+        det_lev_s = cdf[cdf["deteriorated"]]["leverage_change"].dropna()
+        imp_lev_s = cdf[cdf["improved"]]["leverage_change"].dropna()
+        if len(det_lev_s) >= 5 and len(imp_lev_s) >= 5:
+            _t, _p_t = _scipy_stats.ttest_ind(det_lev_s, imp_lev_s, equal_var=False)
+            _u, _p_u = _scipy_stats.mannwhitneyu(det_lev_s, imp_lev_s, alternative="two-sided")
+            _stat_rows.append({
+                "Metric": "Leverage Change (pp)",
+                "Det Mean": f"{det_lev_s.mean():.2f}",
+                "Imp Mean": f"{imp_lev_s.mean():.2f}",
+                "Welch t": f"{_t:.2f}",
+                "t p-value": f"{format_pvalue(_p_t)}{significance_stars(_p_t)}",
+                "MW U": f"{_u:.0f}",
+                "MW p-value": f"{format_pvalue(_p_u)}{significance_stars(_p_u)}",
+            })
+
+        det_prof_s = cdf[cdf["deteriorated"]]["profitability_change"].dropna()
+        imp_prof_s = cdf[cdf["improved"]]["profitability_change"].dropna()
+        if len(det_prof_s) >= 5 and len(imp_prof_s) >= 5:
+            _t2, _p_t2 = _scipy_stats.ttest_ind(det_prof_s, imp_prof_s, equal_var=False)
+            _u2, _p_u2 = _scipy_stats.mannwhitneyu(det_prof_s, imp_prof_s, alternative="two-sided")
+            _stat_rows.append({
+                "Metric": "Profitability Change (pp)",
+                "Det Mean": f"{det_prof_s.mean():.3f}",
+                "Imp Mean": f"{imp_prof_s.mean():.3f}",
+                "Welch t": f"{_t2:.2f}",
+                "t p-value": f"{format_pvalue(_p_t2)}{significance_stars(_p_t2)}",
+                "MW U": f"{_u2:.0f}",
+                "MW p-value": f"{format_pvalue(_p_u2)}{significance_stars(_p_u2)}",
+            })
+
+        if _stat_rows:
+            st.dataframe(pd.DataFrame(_stat_rows), use_container_width=True, hide_index=True)
+            df_download_button(pd.DataFrame(_stat_rows), "covid_cohort_stats.csv")
+        elif cohort_data["n_deteriorated"] < 5 or cohort_data["n_improved"] < 5:
+            st.info("Not enough firms in each cohort for statistical tests (minimum 5 per group).")
+
+        # Interpretation
+        with st.expander("What does this mean?"):
+            _pct_det = cohort_data["pct_deteriorated"]
+            _pct_imp = cohort_data["pct_improved"]
+            _n_ent = cohort_data["n_entered_decline"]
+            _n_rec = cohort_data["n_recovered"]
+            _n_tot = cohort_data["n_total"]
+            st.markdown(
+                f"**{_n_ent} firms** entered Decline or Decay after COVID that were NOT in decline before — "
+                f"representing COVID-induced structural deterioration beyond pre-existing weakness.\n\n"
+                f"**{_n_rec} firms** recovered from decline-stage classifications post-COVID, "
+                f"demonstrating COVID resilience or restructuring effectiveness.\n\n"
+                f"Across all **{_n_tot} firms** with pre-COVID (2019) and post-COVID (2022+) data: "
+                f"**{_pct_det}% deteriorated** (moved to a worse life stage) vs "
+                f"**{_pct_imp}% improved** (moved to a better life stage). "
+                f"A deterioration rate above 50% signals net COVID-era structural damage to the panel."
+            )
 
         # Table of firms that entered decline after COVID
         if cohort_data["n_entered_decline"] > 0:
