@@ -186,6 +186,14 @@ with tab_delta:
             h = result["hausman"]
             st.info(f"Hausman test: chi2={h['chi2']:.2f}, p={h['p_value']:.4f} — {h['verdict']}")
 
+            # BP-LM Test: Pooled OLS vs Random Effects
+            with st.spinner("Running Breusch-Pagan LM test..."):
+                bplm = run_breusch_pagan_lm(result["ols"])
+            st.info(
+                f"Breusch-Pagan LM: statistic={bplm['lm_stat']:.4f}, "
+                f"p={format_pvalue(bplm['lm_pvalue'])} — {bplm['verdict']}"
+            )
+
             # Show recommended model's coefficients
             rec = result["fe"] if result["recommended"] == "Fixed Effects" else result["re"]
             st.markdown("#### Coefficient Estimates (Recommended Model)")
