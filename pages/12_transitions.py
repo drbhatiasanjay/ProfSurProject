@@ -12,6 +12,7 @@ from helpers import (
     plotly_layout, format_pvalue, significance_stars, ensure_session_state,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_survival, render_interpretation,
+    df_download_button, chart_download_button,
 )
 from models.survival import (
     prepare_transition_data, fit_kaplan_meier, fit_cox_ph,
@@ -102,10 +103,12 @@ with km1:
     fig_km.update_xaxes(title="Years in Stage")
     fig_km.update_yaxes(title="Survival Probability", range=[0, 1.05])
     st.plotly_chart(fig_km, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_km, "survival_kaplan_meier.png")
 
 with km2:
     st.markdown("**Stage Duration Summary**")
     st.dataframe(km_summary, hide_index=True, use_container_width=True)
+    df_download_button(km_summary, "kaplan_meier_summary.csv")
 
 st.divider()
 
@@ -121,6 +124,7 @@ if cph is not None:
     with cx1:
         st.markdown("**Hazard Ratios**")
         st.dataframe(hr_df, hide_index=True, use_container_width=True)
+        df_download_button(hr_df, "cox_hazard_ratios.csv")
 
     with cx2:
         # Forest plot of hazard ratios
@@ -137,6 +141,7 @@ if cph is not None:
         fig_hr.update_layout(**plotly_layout("Hazard Ratios", height=350))
         fig_hr.update_xaxes(title="Hazard Ratio − 1  (>0 accelerates transition, <0 delays)")
         st.plotly_chart(fig_hr, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_hr, "cox_hazard_ratios.png")
 
     # Interpretation
     st.markdown("**Key Insights:**")
@@ -175,6 +180,8 @@ if not trans_matrix.empty:
     fig_heat.update_xaxes(title="To Stage", side="top")
     fig_heat.update_yaxes(title="From Stage")
     st.plotly_chart(fig_heat, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_heat, "transition_probability_matrix.png")
+    df_download_button(trans_matrix, "transition_probability_matrix.csv")
 else:
     st.info("Not enough transitions to build a matrix.")
 

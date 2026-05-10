@@ -5,7 +5,7 @@ Data Explorer — Full filterable table with column selection, search, and expor
 import streamlit as st
 import pandas as pd
 import db
-from helpers import export_csv, export_excel, format_pct, winsorize, ensure_session_state
+from helpers import export_csv, export_excel, format_pct, winsorize, ensure_session_state, df_download_button, chart_download_button
 
 ensure_session_state()
 db.log_page_visit("Data Explorer")
@@ -123,6 +123,7 @@ if not display_df.empty:
         column_config=column_config,
         height=500,
     )
+    df_download_button(display_df, "data_explorer_export.csv")
 
     # ── Export ──
     st.divider()

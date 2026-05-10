@@ -7,7 +7,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import db
-from helpers import plotly_layout, ensure_session_state, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG, interpret_clustering, render_interpretation
+from helpers import plotly_layout, ensure_session_state, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG, interpret_clustering, render_interpretation, df_download_button, chart_download_button
 from models.clustering import (
     prepare_firm_features, find_optimal_k, run_kmeans,
     compare_with_dickinson, get_cluster_summary,
@@ -68,6 +68,7 @@ with st.expander("Advanced options", expanded=False):
         fig_sil.add_vline(x=k, line_dash="dash", line_color=ACCENT)
         fig_sil.update_layout(**plotly_layout("Silhouette Score by K", height=280))
         st.plotly_chart(fig_sil, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_sil, "clustering_silhouette.png")
 
 # Run K-Means
 labels, clustered_df, profiles, km = run_kmeans(X_scaled, k, firm_df)
@@ -81,6 +82,7 @@ st.markdown("#### Cluster Profiles")
 cp1, cp2 = st.columns([1, 1])
 with cp1:
     st.dataframe(summary, hide_index=True, use_container_width=True)
+    df_download_button(summary, "cluster_summary.csv")
 
 with cp2:
     fig_size = px.bar(summary, x="cluster_label", y="n_firms", color="avg_leverage",
@@ -88,6 +90,7 @@ with cp2:
                       labels={"n_firms": "Firms", "cluster_label": "", "avg_leverage": "Avg Lev"})
     fig_size.update_layout(**plotly_layout("Cluster Sizes", height=300))
     st.plotly_chart(fig_size, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_size, "cluster_sizes.png")
 
 # Scatter: leverage vs profitability colored by cluster
 st.markdown("#### Cluster Visualization")
@@ -99,6 +102,7 @@ fig_scatter = px.scatter(
 )
 fig_scatter.update_layout(**plotly_layout(height=450))
 st.plotly_chart(fig_scatter, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(fig_scatter, "cluster_scatter.png")
 
 st.divider()
 
@@ -127,6 +131,7 @@ with ac1:
 
 with ac2:
     st.dataframe(crosstab, use_container_width=True)
+    df_download_button(crosstab, "cluster_dickinson_crosstab.csv")
 
 # Dynamic interpretation
 st.divider()

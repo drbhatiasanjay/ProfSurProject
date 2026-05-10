@@ -33,6 +33,7 @@ from graph_viz import graph_to_plotly_figure, build_drill_down_figure
 from helpers import (
     STAGE_COLORS, STAGE_ORDER, STAGE_RANK, plotly_layout, event_bands,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    df_download_button, chart_download_button,
 )
 
 db.log_page_visit("Knowledge Graph")
@@ -190,6 +191,7 @@ with tab_graph:
             show_observations=False,
         )
         st.plotly_chart(fig_kg, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_kg, "knowledge_graph_stage_industry.png")
         st.caption("Edge thickness reflects number of companies. Showing top 15 industries by firm count.")
 
         # Legend / node-type guide
@@ -238,6 +240,7 @@ with tab_graph:
             show_observations=kg_show_obs,
         )
         st.plotly_chart(fig_kg, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_kg, "knowledge_graph_with_companies.png")
 
     else:  # Company drill-down
         # Company picker
@@ -262,6 +265,7 @@ with tab_graph:
             show_observations=kg_show_obs,
         )
         st.plotly_chart(fig_drill, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_drill, "knowledge_graph_drilldown.png")
 
         # Node details panel
         node_data = get_node_details(G, selected_node)
@@ -275,11 +279,12 @@ with tab_graph:
             transitions = query_stage_transitions(G, node_data.get("company_code"))
             if transitions:
                 st.markdown("**Stage transition history:**")
+                _trans_df = pd.DataFrame(transitions)[["year", "from_stage", "to_stage"]].rename(columns={"year": "Year", "from_stage": "From", "to_stage": "To"})
                 st.dataframe(
-                    pd.DataFrame(transitions)[["year", "from_stage", "to_stage"]]
-                    .rename(columns={"year": "Year", "from_stage": "From", "to_stage": "To"}),
+                    _trans_df,
                     hide_index=True, use_container_width=True,
                 )
+                df_download_button(_trans_df, "company_stage_transitions.csv")
 
 # ══════════════════════════════════════════════
 # TAB 1: Transition Probability Matrix + Metrics
@@ -307,6 +312,7 @@ with tab_markov:
     if event_compare == "None":
         fig = _make_heatmap(display_all, "All Years", show_counts)
         st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig, "transition_matrix.png")
     else:
         counts_evt, probs_evt = compute_transition_matrix(G, event_filter=event_compare, year_range=yr_range)
         counts_normal = counts_all - counts_evt
@@ -321,10 +327,12 @@ with tab_markov:
             st.markdown("**Normal Years**")
             fig_n = _make_heatmap(display_normal, "", show_counts, height=380)
             st.plotly_chart(fig_n, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_n, "transition_matrix_normal.png")
         with col_b:
             st.markdown(f"**During {event_compare}**")
             fig_e = _make_heatmap(display_evt, "", show_counts, height=380)
             st.plotly_chart(fig_e, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_e, "transition_matrix_event.png")
 
         if not show_counts:
             st.markdown("**Probability Shift (Event minus Normal)**")
@@ -333,6 +341,7 @@ with tab_markov:
             fig_d = _make_matrix_figure(delta, "", fmt="+.2f", colorscale="RdBu_r",
                                          height=380, zmin=-0.3, zmax=0.3)
             st.plotly_chart(fig_d, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_d, "transition_probability_shift.png")
 
             shifts = []
             for f_s in STAGE_ORDER:
@@ -348,6 +357,7 @@ with tab_markov:
                     "Shift", key=lambda x: x.str.rstrip('%').astype(float).abs(), ascending=False)
                 st.markdown(f"**Biggest probability shifts during {event_compare}**")
                 st.dataframe(shifts_df.head(10), use_container_width=True, hide_index=True)
+                df_download_button(shifts_df.head(10), "probability_shifts.csv")
 
     # Stickiness bar
     st.divider()
@@ -364,6 +374,7 @@ with tab_markov:
     fig_stick.update_layout(**plotly_layout("", height=320))
     fig_stick.update_layout(yaxis_title="Stickiness (%)", xaxis_title="")
     st.plotly_chart(fig_stick, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_stick, "stage_stickiness.png")
 
     # Stage × Metric Matrix
     st.divider()
@@ -372,7 +383,9 @@ with tab_markov:
     metric_matrix = compute_stage_metric_matrix(G)
     fig_mm = _make_matrix_figure(metric_matrix, "", fmt=".2f", height=380)
     st.plotly_chart(fig_mm, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_mm, "stage_metric_matrix.png")
     st.dataframe(metric_matrix.round(3), use_container_width=True)
+    df_download_button(metric_matrix.round(3).reset_index(), "stage_metric_matrix.csv")
 
 
 # ══════════════════════════════════════════════
@@ -398,10 +411,12 @@ with tab_events:
                                        fmt="+.2f", colorscale="RdBu_r", height=380,
                                        zmin=-5, zmax=5)
         st.plotly_chart(fig_lev, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_lev, "event_leverage_impact.png")
 
     # Full table
     with st.expander("Full leverage data"):
         st.dataframe(lev_df.round(2), use_container_width=True)
+        df_download_button(lev_df.round(2).reset_index(), "event_leverage_full.csv")
 
     st.divider()
 
@@ -417,6 +432,7 @@ with tab_events:
         fig_tr = _make_matrix_figure(rate_display, "Transition Rate by Stage × Event (%)",
                                       fmt=".1f", colorscale="OrRd", height=380)
         st.plotly_chart(fig_tr, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_tr, "event_transition_rate.png")
 
     st.divider()
 
@@ -430,6 +446,7 @@ with tab_events:
     fig_det = _make_matrix_figure(det_display, "Deterioration Rate (%)",
                                    fmt=".0f", colorscale="Reds", height=380)
     st.plotly_chart(fig_det, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_det, "event_deterioration_rate.png")
 
     st.divider()
 
@@ -453,6 +470,7 @@ with tab_events:
             fig_bar.add_hline(y=0, line_dash="dash", line_color="#D1D5DB")
             fig_bar.update_layout(**plotly_layout("", height=400))
             st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_bar, "event_leverage_shift_by_stage.png")
 
 
 # ══════════════════════════════════════════════
@@ -487,6 +505,7 @@ with tab_paths:
         fig_seq.update_layout(**plotly_layout("", height=max(350, len(sorted_seqs) * 28)))
         fig_seq.update_layout(xaxis_title="Frequency", yaxis_title="")
         st.plotly_chart(fig_seq, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_seq, "stage_sequences.png")
     else:
         st.info("No sequences found with current filters.")
 
@@ -531,9 +550,11 @@ with tab_paths:
         sun_layout["margin"] = dict(l=10, r=10, t=30, b=10)
         fig_sun.update_layout(**sun_layout)
         st.plotly_chart(fig_sun, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_sun, "stage_paths_sunburst.png")
 
         path_df = pd.DataFrame([{"Path": " → ".join(p), "Companies": c} for p, c in top_paths])
         st.dataframe(path_df, use_container_width=True, hide_index=True)
+        df_download_button(path_df, "stage_paths.csv")
     else:
         st.info(f"No transition paths found leading to {target_stage}.")
 
@@ -594,7 +615,9 @@ with tab_paths:
         fig_dur.update_layout(**plotly_layout("", height=350))
         fig_dur.update_layout(yaxis_title="Avg Years", xaxis_title="")
         st.plotly_chart(fig_dur, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_dur, "stage_duration.png")
         st.dataframe(dur_df.set_index("Stage").round(1), use_container_width=True)
+        df_download_button(dur_df, "stage_duration.csv")
 
 
 # ══════════════════════════════════════════════
@@ -631,6 +654,7 @@ with tab_covid:
             fig_mig = _make_matrix_figure(pivot, "Firms: Pre-COVID Stage (rows) → Post-COVID Stage (cols)",
                                            fmt=".0f", height=400)
             st.plotly_chart(fig_mig, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_mig, "covid_stage_migration.png")
 
         # Leverage change comparison
         st.markdown("#### Leverage Change: Deteriorated vs Improved Firms")
@@ -649,32 +673,37 @@ with tab_covid:
                                   color_discrete_map={"Deteriorated": "#EF4444", "Improved": "#22C55E"})
                 fig_box.update_layout(**plotly_layout("", height=350))
                 st.plotly_chart(fig_box, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig_box, "covid_leverage_change.png")
 
         # Table of firms that entered decline after COVID
         if cohort_data["n_entered_decline"] > 0:
             st.markdown("#### Firms That Entered Decline/Decay After COVID")
             entered = cdf[cdf["entered_decline_after_covid"]].sort_values("leverage_change", ascending=False)
+            _entered_display = entered[["company", "industry", "pre_stage", "post_stage", "leverage_change"]].rename(columns={
+                "company": "Company", "industry": "Industry",
+                "pre_stage": "Pre-COVID Stage", "post_stage": "Post-COVID Stage",
+                "leverage_change": "Leverage Δ (pp)",
+            })
             st.dataframe(
-                entered[["company", "industry", "pre_stage", "post_stage", "leverage_change"]].rename(columns={
-                    "company": "Company", "industry": "Industry",
-                    "pre_stage": "Pre-COVID Stage", "post_stage": "Post-COVID Stage",
-                    "leverage_change": "Leverage Δ (pp)",
-                }),
+                _entered_display,
                 use_container_width=True, hide_index=True,
             )
+            df_download_button(_entered_display, "covid_decline_firms.csv")
 
         # Recovered firms
         if cohort_data["n_recovered"] > 0:
             st.markdown("#### Firms That Recovered After COVID")
             recovered = cdf[cdf["recovered"]].sort_values("leverage_change")
+            _recovered_display = recovered[["company", "industry", "pre_stage", "post_stage", "leverage_change"]].rename(columns={
+                "company": "Company", "industry": "Industry",
+                "pre_stage": "Pre-COVID Stage", "post_stage": "Post-COVID Stage",
+                "leverage_change": "Leverage Δ (pp)",
+            })
             st.dataframe(
-                recovered[["company", "industry", "pre_stage", "post_stage", "leverage_change"]].rename(columns={
-                    "company": "Company", "industry": "Industry",
-                    "pre_stage": "Pre-COVID Stage", "post_stage": "Post-COVID Stage",
-                    "leverage_change": "Leverage Δ (pp)",
-                }),
+                _recovered_display,
                 use_container_width=True, hide_index=True,
             )
+            df_download_button(_recovered_display, "covid_recovered_firms.csv")
 
 
 # ══════════════════════════════════════════════
@@ -808,5 +837,6 @@ with tab_profiler:
                              "Leverage": st.column_config.NumberColumn(format="%.2f"),
                              "Profitability": st.column_config.NumberColumn(format="%.3f"),
                          })
+            df_download_button(rdf, "profiler_results.csv")
         else:
             st.warning("No companies match all conditions.")

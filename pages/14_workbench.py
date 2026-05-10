@@ -18,7 +18,7 @@ import db
 from helpers import (
     format_coef_table, significance_stars, plotly_layout, ensure_session_state,
     _render_insight_box, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
-    format_pvalue,
+    format_pvalue, df_download_button, chart_download_button,
 )
 
 ensure_session_state()
@@ -477,6 +477,7 @@ with col_right:
             if coef_df is not None and not coef_df.empty:
                 formatted = format_coef_table(coef_df)
                 st.dataframe(formatted, use_container_width=True, hide_index=True)
+                df_download_button(formatted, "workbench_coefficients.csv")
 
                 # Coefficient bar chart (exclude constant)
                 plot_df = coef_df[coef_df["Variable"] != "const"].copy()
@@ -521,6 +522,7 @@ with col_right:
                     )
                     fig.add_vline(x=0, line_dash="dash", line_color="gray", line_width=1)
                     st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+                    chart_download_button(fig, "workbench_coefficient_plot.png")
 
             # Formula
             formula_str = result.get("formula_str", "")
@@ -587,6 +589,7 @@ with col_right:
                     yaxis_title="Residuals",
                 )
                 st.plotly_chart(fig_rvf, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig_rvf, "workbench_residuals_vs_fitted.png")
 
                 diag_c1, diag_c2 = st.columns(2)
 
@@ -620,6 +623,7 @@ with col_right:
                             yaxis_title="Sample Quantiles",
                         )
                         st.plotly_chart(fig_qq, use_container_width=True, config=PLOTLY_CONFIG)
+                        chart_download_button(fig_qq, "workbench_qq_plot.png")
 
                 # Residual Histogram
                 with diag_c2:
@@ -636,6 +640,7 @@ with col_right:
                         yaxis_title="Frequency",
                     )
                     st.plotly_chart(fig_hist, use_container_width=True, config=PLOTLY_CONFIG)
+                    chart_download_button(fig_hist, "workbench_residual_histogram.png")
 
                 # VIF Table
                 st.markdown("**Variance Inflation Factors (VIF)**")
@@ -689,6 +694,7 @@ with col_right:
                     yaxis_title="Predicted",
                 )
                 st.plotly_chart(fig_pva, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig_pva, "workbench_predicted_vs_actual.png")
             else:
                 st.caption("Predicted vs actual plot not available.")
 

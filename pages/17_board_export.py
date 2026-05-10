@@ -15,6 +15,7 @@ import db
 from helpers import (
     ensure_session_state, require_role, plotly_layout,
     PLOTLY_CONFIG, STAGE_COLORS, render_interpretation, new_badge,
+    df_download_button, chart_download_button,
 )
 from models.board_export import TOPIC_BUILDERS, TOPIC_LABELS
 import models.pptx_generator as pptx_generator
@@ -200,12 +201,14 @@ if st.session_state.get("deck_previewed"):
             with st.spinner(f"Building Topic {tid}…"):
                 topic_data = builder(company_df, company_info, peers_df, full_panel, stage_summary)
 
-            for fig in topic_data.get("figs", []):
+            for _fig_idx, fig in enumerate(topic_data.get("figs", [])):
                 st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig, f"board_topic{tid}_chart{_fig_idx + 1}.png")
 
-            for tbl in topic_data.get("tables", []):
+            for _tbl_idx, tbl in enumerate(topic_data.get("tables", [])):
                 if tbl is not None and not tbl.empty:
                     st.dataframe(tbl, use_container_width=True, hide_index=True)
+                    df_download_button(tbl, f"board_topic{tid}_table{_tbl_idx + 1}.csv")
 
             insights = topic_data.get("insights", [])
             actions  = topic_data.get("actions", [])

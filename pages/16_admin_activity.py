@@ -6,7 +6,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import db
-from helpers import ensure_session_state, require_role, plotly_layout, PLOTLY_CONFIG
+from helpers import ensure_session_state, require_role, plotly_layout, PLOTLY_CONFIG, df_download_button, chart_download_button
 
 ensure_session_state()
 db.log_page_visit("Admin Activity Log")
@@ -64,6 +64,7 @@ else:
         "ts": "Time (UTC)", "who": "User", "role": "Role", "session_id": "Session ID"
     })
     st.dataframe(_login_show, use_container_width=True, hide_index=True)
+    df_download_button(_login_show, "login_events.csv")
 st.divider()
 
 # ── 3-column chart row ────────────────────────────────────────────────────
@@ -79,6 +80,7 @@ with c1:
                        yaxis={"categoryorder": "total ascending"},
                        coloraxis_showscale=False)
     st.plotly_chart(fig1, config=PLOTLY_CONFIG, use_container_width=True)
+    chart_download_button(fig1, "admin_page_popularity.png")
 
 with c2:
     st.markdown("**Visits by User**")
@@ -87,6 +89,7 @@ with c2:
     fig2 = px.pie(_uc, names="User", values="Visits", hole=0.45)
     fig2.update_layout(**plotly_layout("", height=360))
     st.plotly_chart(fig2, config=PLOTLY_CONFIG, use_container_width=True)
+    chart_download_button(fig2, "admin_visits_by_user.png")
 
 with c3:
     st.markdown("**Activity Over Time**")
@@ -95,6 +98,7 @@ with c3:
                   labels={"date": "Date", "who": "User"})
     fig3.update_layout(**plotly_layout("", height=360))
     st.plotly_chart(fig3, config=PLOTLY_CONFIG, use_container_width=True)
+    chart_download_button(fig3, "admin_activity_over_time.png")
 
 # ── Heatmap: hour x day-of-week ───────────────────────────────────────────
 st.markdown("**Usage Heatmap — Hour of Day x Day of Week**")
@@ -112,6 +116,7 @@ fig4 = px.density_heatmap(
 )
 fig4.update_layout(**plotly_layout("", height=300))
 st.plotly_chart(fig4, config=PLOTLY_CONFIG, use_container_width=True)
+chart_download_button(fig4, "admin_usage_heatmap.png")
 st.divider()
 
 # ── Model run history ─────────────────────────────────────────────────────
@@ -145,6 +150,7 @@ else:
 
 if not _runs_df.empty:
     st.dataframe(_runs_df, use_container_width=True, hide_index=True)
+    df_download_button(_runs_df, "model_run_history.csv")
 else:
     st.caption("No model runs recorded yet.")
 st.divider()

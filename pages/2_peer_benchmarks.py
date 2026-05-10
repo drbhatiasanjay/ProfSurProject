@@ -12,6 +12,7 @@ from helpers import (
     winsorize, plotly_layout, event_bands, ensure_session_state, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     _render_insight_box, interpret_company_vs_industry, interpret_radar_profile,
+    df_download_button, chart_download_button,
 )
 
 ensure_session_state()
@@ -89,6 +90,7 @@ with left:
     fig.update_layout(**plotly_layout(height=380, year_range=filters.get("year_range")))
     fig = event_bands(fig)
     st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig, "peer_leverage_comparison.png")
     insights, actions = interpret_company_vs_industry(selected, company_df, industry_df, "leverage")
     _render_insight_box("Leverage Comparison — Company vs Industry", insights, actions)
 
@@ -111,6 +113,7 @@ with right:
     fig2.update_layout(**plotly_layout(height=380, year_range=filters.get("year_range")))
     fig2 = event_bands(fig2)
     st.plotly_chart(fig2, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig2, "peer_profitability_comparison.png")
     insights, actions = interpret_company_vs_industry(selected, company_df, industry_df, "profitability")
     _render_insight_box("Profitability Comparison", insights, actions)
 
@@ -144,6 +147,7 @@ with left2:
 
     fig_box.update_layout(**plotly_layout(height=420))
     st.plotly_chart(fig_box, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_box, "peer_leverage_distribution.png")
 
 with right2:
     st.markdown("#### Multi-Determinant Profile (Radar)")
@@ -196,6 +200,7 @@ with right2:
         legend=dict(orientation="h", y=-0.15),
     )
     st.plotly_chart(fig_radar, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_radar, "peer_radar_profile.png")
     insights, actions = interpret_radar_profile(selected, comp_vals, ind_vals, stage_vals, labels)
     _render_insight_box("Multi-Determinant Profile — Strategic Assessment", insights, actions,
         "Identifies where the firm diverges from industry and life-stage peers across 6 dimensions.")

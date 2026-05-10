@@ -13,6 +13,7 @@ from helpers import (
     plotly_layout, format_pct, ensure_session_state, panel_label, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_ml_comparison, render_interpretation,
+    df_download_button, chart_download_button,
 )
 from models.base import DEFAULT_X_COLS
 from models.ml_predict import (
@@ -169,6 +170,7 @@ Then explore the other tabs:
                 "RMSE": st.column_config.NumberColumn("RMSE", format="%.2f"),
             },
         )
+        df_download_button(comparison, "ml_model_comparison.csv")
         st.success(f"**Best model: {best_name}** (R² = {comparison.iloc[0]['R-squared']:.4f})")
 
         # Comparison bar chart
@@ -183,6 +185,7 @@ Then explore the other tabs:
             fig_r2.update_layout(**plotly_layout("Model R² Comparison", height=350))
             fig_r2.update_layout(showlegend=False)
             st.plotly_chart(fig_r2, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_r2, "ml_r2_comparison.png")
 
         with cc2:
             fig_rmse = px.bar(
@@ -193,6 +196,7 @@ Then explore the other tabs:
             fig_rmse.update_layout(**plotly_layout("Model RMSE Comparison", height=350))
             fig_rmse.update_layout(showlegend=False)
             st.plotly_chart(fig_rmse, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_rmse, "ml_rmse_comparison.png")
 
         # Actual vs Predicted scatter for best model
         st.markdown(f"#### Actual vs Predicted ({best_name})")
@@ -210,6 +214,7 @@ Then explore the other tabs:
         ))
         fig_ap.update_layout(**plotly_layout(height=400))
         st.plotly_chart(fig_ap, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_ap, "ml_actual_vs_predicted.png")
 
         # Warning for low R²
         if comparison.iloc[0]["R-squared"] < 0.15:
@@ -254,6 +259,8 @@ with tab2:
             fig_imp.update_layout(**plotly_layout(height=350))
             fig_imp.update_layout(showlegend=False, coloraxis_showscale=False)
             st.plotly_chart(fig_imp, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_imp, "ml_feature_importance.png")
+            df_download_button(imp_df, "ml_feature_importance.csv")
 
         with fi2:
             # SHAP values
@@ -271,6 +278,8 @@ with tab2:
                 fig_shap.update_layout(**plotly_layout(height=350))
                 fig_shap.update_layout(showlegend=False, coloraxis_showscale=False)
                 st.plotly_chart(fig_shap, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig_shap, "ml_shap_importance.png")
+                df_download_button(shap_df, "ml_shap_importance.csv")
             else:
                 st.caption("SHAP not available — showing native importance")
 
@@ -309,6 +318,7 @@ with tab2:
                 )
                 fig_heat.update_layout(**plotly_layout("Feature Importance Heatmap by Stage", height=400))
                 st.plotly_chart(fig_heat, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig_heat, "ml_stage_importance_heatmap.png")
 
                 # Auto-generated insight
                 st.markdown("**Key Insights:**")

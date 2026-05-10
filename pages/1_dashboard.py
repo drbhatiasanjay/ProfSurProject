@@ -15,6 +15,7 @@ from helpers import (
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     _render_insight_box, interpret_kpi_cards, interpret_leverage_trend,
     interpret_lifecycle_distribution, interpret_top_leveraged, interpret_event_impact,
+    df_download_button, chart_download_button,
 )
 
 ensure_session_state()
@@ -138,6 +139,7 @@ fig_overall.update_layout(**plotly_layout("Average Financial Leverage Over Time 
 fig_overall = event_bands(fig_overall)
 fig_overall.update_yaxes(title="Leverage (%)")
 st.plotly_chart(fig_overall, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(fig_overall, "leverage_over_time.png")
 
 # Interpretation
 _f, _a = [], []
@@ -218,6 +220,7 @@ _fig52_combined = event_bands(_fig52_combined)
 _fig52_combined.update_yaxes(title="Relative Level (0 = lowest, 100 = highest)")
 _fig52_combined.update_xaxes(title="Year")
 st.plotly_chart(_fig52_combined, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(_fig52_combined, "determinants_normalized.png")
 
 # ── B: 2×2 grid — actual levels ──────────────────────────────────────────
 _fig52_grid = _make_subplots(
@@ -263,6 +266,7 @@ for _x0, _x1, _fc, _lbl in _evt52:
 _grid_layout = plotly_layout("Year-wise Averages — Actual Levels", height=600)
 _fig52_grid.update_layout(**_grid_layout, showlegend=False)
 st.plotly_chart(_fig52_grid, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(_fig52_grid, "determinants_actual_levels.png")
 st.caption("Shaded bands: GFC (2008-09, red) · IBC 2016+ (indigo) · COVID (2020-21, amber)")
 
 # Interpretation
@@ -320,6 +324,7 @@ with stage_left:
         fig_trend = event_bands(fig_trend)
         fig_trend.update_traces(line_width=2.5)
         st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_trend, "leverage_by_stage_trend.png")
 
 with stage_right:
     # ANOVA test result
@@ -416,6 +421,7 @@ _fig_pw.update_layout(
 _fig_pw.update_xaxes(tickfont=dict(size=10))
 _fig_pw.update_yaxes(tickfont=dict(size=10))
 st.plotly_chart(_fig_pw, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(_fig_pw, "pairwise_significance_matrix.png")
 
 # ── Figure 5.1 — Capital Structure Variables by Life Stage ──
 st.markdown("#### Capital Structure Variables by Life Stage (Figure 5.1)")
@@ -462,6 +468,7 @@ _fig51_combined.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1
 _fig51_combined.update_yaxes(title="Relative Level (0 = lowest, 100 = highest)")
 _fig51_combined.update_xaxes(title="Corporate Life Stage")
 st.plotly_chart(_fig51_combined, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(_fig51_combined, "capital_structure_by_stage_normalized.png")
 
 # Chart B: 2×2 subplot grid — raw values per variable
 from plotly.subplots import make_subplots as _make_subplots51
@@ -488,6 +495,7 @@ _fig51_grid.update_layout(**_grid51_layout, showlegend=False)
 for (_r, _c) in _rc51:
     _fig51_grid.update_xaxes(tickangle=-30, tickfont=dict(size=9), row=_r, col=_c)
 st.plotly_chart(_fig51_grid, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(_fig51_grid, "capital_structure_by_stage_raw.png")
 
 # Significant-pair callout badges
 if _sig_pairs:
@@ -569,6 +577,7 @@ fig_heat = px.imshow(
 )
 fig_heat.update_layout(**plotly_layout("Determinant Profiles by Life Stage (Normalized)", height=380))
 st.plotly_chart(fig_heat, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(fig_heat, "determinant_profiles_heatmap.png")
 
 # Interpretation
 _f3, _a3 = [], []
@@ -621,6 +630,7 @@ with macro_left:
     )
     fig_ir = event_bands(fig_ir)
     st.plotly_chart(fig_ir, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_ir, "leverage_vs_interest_rate.png")
 
 with macro_right:
     # Leverage vs Market P/E
@@ -643,6 +653,7 @@ with macro_right:
         )
         fig_pe = event_bands(fig_pe)
         st.plotly_chart(fig_pe, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_pe, "leverage_vs_market_pe.png")
 
 # Interpretation
 _fm, _am = [], []
@@ -719,6 +730,7 @@ if _india:
                 )
                 fig_idx = event_bands(fig_idx)
                 st.plotly_chart(fig_idx, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig_idx, "leverage_vs_index.png")
 
 st.divider()
 
@@ -756,6 +768,7 @@ with evt_left:
         fig_es.add_hline(y=0, line_dash="dash", line_color="#9CA3AF")
         fig_es.update_layout(**plotly_layout("Leverage Change During Events vs Normal (by Stage)", height=400))
         st.plotly_chart(fig_es, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_es, "event_stage_leverage_change.png")
 
 with evt_right:
     # Event impact summary cards
@@ -807,6 +820,7 @@ with bottom_left:
     fig_pie.update_layout(**plotly_layout(height=400))
     fig_pie.update_traces(textinfo="percent+label", textposition="outside")
     st.plotly_chart(fig_pie, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_pie, "lifecycle_distribution.png")
 
 with bottom_right:
     st.markdown("### Top 10 Most Leveraged Companies")
@@ -825,3 +839,4 @@ with bottom_right:
         )
         fig_bar.update_layout(**plotly_layout(height=400))
         st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_bar, "top10_leveraged_companies.png")

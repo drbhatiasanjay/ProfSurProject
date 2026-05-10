@@ -20,7 +20,7 @@ from helpers import (
     plotly_layout, format_pvalue, format_coef_table,
     ensure_session_state, panel_label,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
-    render_interpretation, new_badge,
+    render_interpretation, new_badge, df_download_button, chart_download_button,
 )
 from models.interaction import run_cross_term_ols, simple_slopes, run_stage_moderation_ols
 
@@ -119,11 +119,13 @@ with tab_cross:
 
         # ── Coefficient Table ─────────────────────────────────────────────────
         st.markdown("#### Coefficient Estimates (HC1 Robust SEs)")
+        _ct_formatted = format_coef_table(ct["coef_table"])
         st.dataframe(
-            format_coef_table(ct["coef_table"]),
+            _ct_formatted,
             use_container_width=True,
             hide_index=True,
         )
+        df_download_button(_ct_formatted, "cross_term_coefficients.csv")
 
         # ── Simple Slopes Plot ────────────────────────────────────────────────
         st.markdown("#### Simple Slopes Plot")
@@ -159,6 +161,7 @@ with tab_cross:
         })
         fig_ss.update_layout(**layout_ss)
         st.plotly_chart(fig_ss, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_ss, "cross_term_simple_slopes.png")
 
         # ── Interpretation ────────────────────────────────────────────────────
         int_row = ct["coef_table"][
@@ -221,11 +224,13 @@ with tab_stage:
 
         # ── Full Coefficient Table (collapsible) ──────────────────────────────
         with st.expander("Full Coefficient Table (all interaction terms)"):
+            _sm_ct_formatted = format_coef_table(sm_res["coef_table"])
             st.dataframe(
-                format_coef_table(sm_res["coef_table"]),
+                _sm_ct_formatted,
                 use_container_width=True,
                 hide_index=True,
             )
+            df_download_button(_sm_ct_formatted, "stage_moderation_coefficients.csv")
 
         # ── Marginal Effects Heatmap ──────────────────────────────────────────
         st.markdown("#### Marginal Effects Heatmap")
@@ -272,6 +277,8 @@ with tab_stage:
         layout_hm = plotly_layout("Marginal Effects of Profitability & Tangibility by Life Stage", height=400)
         fig_hm.update_layout(**layout_hm)
         st.plotly_chart(fig_hm, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_hm, "stage_moderation_heatmap.png")
+        df_download_button(mdf, "stage_moderation_marginal_effects.csv")
 
         # ── Per-variable bar charts ───────────────────────────────────────────
         for var_name in ["Profitability", "Tangibility"]:
@@ -310,6 +317,7 @@ with tab_stage:
             })
             fig_bar.update_layout(**layout_bar)
             st.plotly_chart(fig_bar, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_bar, f"marginal_effect_{var_name.lower()}_by_stage.png")
 
         # ── Interpretation ────────────────────────────────────────────────────
         prof_df = mdf[mdf["variable"] == "Profitability"]

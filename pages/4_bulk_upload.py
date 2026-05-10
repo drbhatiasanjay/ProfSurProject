@@ -8,7 +8,7 @@ import tempfile
 import pandas as pd
 import streamlit as st
 import db
-from helpers import require_role
+from helpers import require_role, df_download_button, chart_download_button
 
 require_role("admin", "researcher")
 db.log_page_visit("Bulk Upload")
@@ -179,6 +179,7 @@ with tab1:
                 "NCFf": ["+", "+", "-", "-", "+", "-", "+", "-"],
             })
             st.dataframe(rules, hide_index=True, use_container_width=True)
+            df_download_button(rules, "dickinson_classification_rules.csv")
 
         st.divider()
 
@@ -196,6 +197,7 @@ with tab1:
                 "leverage": st.column_config.NumberColumn("Leverage (%)", format="%.1f"),
             },
         )
+        df_download_button(df[display_cols], "classified_results_preview.csv")
 
         # ── Export ──
         st.markdown("#### Export Results")
@@ -306,6 +308,7 @@ with tab2:
         # ── Step 5: Data preview ──
         st.markdown("##### Data Preview (first 20 rows)")
         st.dataframe(ing_df.head(20), use_container_width=True, hide_index=True)
+        df_download_button(ing_df, "ingested_dataset.csv")
         st.divider()
 
         # ── Step 6: Store dataset ──
@@ -406,7 +409,7 @@ with tab3:
                 
                 st.markdown("##### Mapping CMIE Indicators")
                 # NOTE: Adjust this mapping based on the actual CMIE API response headers
-                cmie_mapping = {
+                cmie_mapping = {  # noqa: E501
                     "Company Code": "company_code",
                     "Company Name": "company_name",
                     "Year": "year",
@@ -422,6 +425,7 @@ with tab3:
                 
                 df = df.rename(columns=cmie_mapping)
                 st.dataframe(df.head(), use_container_width=True)
+                df_download_button(df, "cmie_api_data.csv")
                 
                 if all(col in df.columns for col in ["ncfo", "ncfi", "ncff"]):
                     st.markdown("##### Life Stage Classification")

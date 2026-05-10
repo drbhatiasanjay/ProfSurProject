@@ -12,7 +12,7 @@ import db
 from helpers import (
     plotly_layout, format_pvalue, significance_stars, format_coef_table, ensure_session_state, panel_label,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
-    render_interpretation,
+    render_interpretation, df_download_button, chart_download_button,
 )
 from models.econometric import (
     run_system_gmm, run_delta_leverage_all, run_delta_leverage_by_stage,
@@ -100,6 +100,7 @@ with tab_gmm:
             st.markdown("#### Coefficient Estimates")
             ct = format_coef_table(gmm["coef_table"])
             st.dataframe(ct, use_container_width=True, hide_index=True)
+            df_download_button(ct, "gmm_coefficients.csv")
 
             # ── Citation Generator ──
             _cite_yr = filters.get("year_range", (2001, 2024))
@@ -190,6 +191,7 @@ with tab_delta:
             st.markdown("#### Coefficient Estimates (Recommended Model)")
             ct = format_coef_table(rec["coef_table"])
             st.dataframe(ct, use_container_width=True, hide_index=True)
+            df_download_button(ct, "delta_leverage_coefficients.csv")
 
             # ── Citation Generator ──
             _cite_yr = filters.get("year_range", (2001, 2024))
@@ -223,7 +225,9 @@ with tab_delta:
                     "R-squared": f"{r['r_squared']:.4f}",
                     "N Obs": r["n_obs"],
                 })
-            st.dataframe(pd.DataFrame(comp_rows), use_container_width=True, hide_index=True)
+            _delta_comp_df = pd.DataFrame(comp_rows)
+            st.dataframe(_delta_comp_df, use_container_width=True, hide_index=True)
+            df_download_button(_delta_comp_df, "delta_leverage_model_comparison.csv")
 
             insights = [
                 "Delta-leverage models show what drives **changes** in leverage, complementing level regressions.",
@@ -253,7 +257,9 @@ with tab_delta:
                             "R-sq": f"{r['r_squared']:.4f}", "N Obs": r["n_obs"],
                         })
 
-            st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
+            _stage_summary_df = pd.DataFrame(summary_rows)
+            st.dataframe(_stage_summary_df, use_container_width=True, hide_index=True)
+            df_download_button(_stage_summary_df, "delta_leverage_by_stage_summary.csv")
 
             # Detail per stage
             for stage in STAGE_ORDER:
@@ -261,6 +267,7 @@ with tab_delta:
                     with st.expander(f"{stage} — Delta-Leverage Coefficients"):
                         ct = format_coef_table(results[stage]["coef_table"])
                         st.dataframe(ct, use_container_width=True, hide_index=True)
+                        df_download_button(ct, f"delta_leverage_{stage.lower().replace(' ', '_')}.csv")
 
 
 # ══════════════════════════════════════════════
@@ -313,6 +320,7 @@ with tab_compare:
                         comp[p_col] = comp[p_col].apply(format_pvalue)
 
                 st.dataframe(comp, use_container_width=True, hide_index=True)
+                df_download_button(comp, "stage_comparison_coefficients.csv")
 
                 # ── Citation Generator ──
                 _cite_yr = filters.get("year_range", (2001, 2024))
@@ -349,6 +357,7 @@ with tab_compare:
                                                   f"{stage_b} Coef": STAGE_COLORS.get(stage_b, SECONDARY)})
                 fig.update_layout(**plotly_layout(f"{stage_a} vs {stage_b} — Coefficient Comparison", height=400))
                 st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig, "stage_comparison_coefficients.png")
 
                 # Interpretation
                 insights = []
@@ -471,6 +480,7 @@ residuals).
                 st.markdown("#### IV / 2SLS Coefficients")
                 ct = format_coef_table(iv["coef_table"])
                 st.dataframe(ct, hide_index=True, use_container_width=True)
+                df_download_button(ct, "iv_2sls_coefficients.csv")
 
                 # Interpretation
                 insights = []

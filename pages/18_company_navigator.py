@@ -19,6 +19,7 @@ import db
 from helpers import (
     ensure_session_state, require_role, plotly_layout,
     PLOTLY_CONFIG, STAGE_COLORS, STAGE_ORDER, new_badge,
+    chart_download_button,
 )
 from graph_builder import (
     build_knowledge_graph,
@@ -260,6 +261,7 @@ with col_graph:
                         st.session_state["navigator_drill_stage"] = stage_label
         except ImportError:
             st.plotly_chart(fig, config=PLOTLY_CONFIG, use_container_width=True)
+            chart_download_button(fig, "stage_map.png")
             st.caption("Install streamlit-plotly-events for click-to-drill navigation.")
 
         stage_options = [nd.get("label", n) for n, nd in G_stage.nodes(data=True) if nd.get("node_type") == "life_stage"]
@@ -340,6 +342,7 @@ with col_panel:
                     layout.update(showlegend=False, margin=dict(l=0, r=0, t=25, b=40))
                     fig_mini.update_layout(**layout)
                     st.plotly_chart(fig_mini, config=PLOTLY_CONFIG, use_container_width=True)
+                    chart_download_button(fig_mini, "peer_leverage_comparison.png")
 
             st.write("")
             if detail_code and _username:

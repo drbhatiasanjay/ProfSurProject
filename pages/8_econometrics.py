@@ -13,6 +13,7 @@ from helpers import (
     format_coef_table, format_pvalue, significance_stars,
     plotly_layout, ensure_session_state, panel_label, is_india_panel, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_econometric, render_interpretation, _render_insight_box,
+    df_download_button, chart_download_button,
 )
 from models.econometric import (
     run_pooled_ols, run_fixed_effects, run_random_effects, run_robust_regression,
@@ -153,6 +154,7 @@ with col_right:
         with ac2:
             st.markdown("**Group Means**")
             st.dataframe(anova["group_stats"], hide_index=True, use_container_width=True)
+            df_download_button(anova["group_stats"], "anova_group_stats.csv")
 
         # Box plot
         fig = px.box(
@@ -164,6 +166,7 @@ with col_right:
         )
         fig.update_layout(**plotly_layout("Leverage Distribution by Life Stage", height=400))
         st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig, "anova_leverage_distribution.png")
 
         # ── Pairwise Comparison (Table 5.9) ──
         st.divider()
@@ -220,6 +223,7 @@ with col_right:
         pw_layout["margin"] = dict(l=120, r=20, t=30, b=80)
         fig_pw.update_layout(**pw_layout)
         st.plotly_chart(fig_pw, use_container_width=True, config=PLOTLY_CONFIG)
+        chart_download_button(fig_pw, "pairwise_heatmap.png")
 
         # Significant pairs table
         if pw["significant_pairs"]:
@@ -230,10 +234,12 @@ with col_right:
             sig_df["Mean Diff"] = sig_df["Mean Diff"].round(2)
             sig_df["CI Lower"] = sig_df["CI Lower"].round(2)
             sig_df["CI Upper"] = sig_df["CI Upper"].round(2)
+            _sig_display = sig_df[["Stage A", "Stage B", "Mean Diff", "p-value", "Stars", "CI Lower", "CI Upper"]]
             st.dataframe(
-                sig_df[["Stage A", "Stage B", "Mean Diff", "p-value", "Stars", "CI Lower", "CI Upper"]],
+                _sig_display,
                 use_container_width=True, hide_index=True,
             )
+            df_download_button(_sig_display, "significant_pairs.csv")
 
         # ── Detailed Explanation ──
         st.divider()
@@ -369,6 +375,7 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
         # Model comparison table
         st.markdown("#### Model Comparison")
         st.dataframe(results["comparison"], hide_index=True, use_container_width=True)
+        df_download_button(results["comparison"], "model_comparison.csv")
 
         # Show the recommended model's coefficients
         best_key = "fe" if rec == "Fixed Effects" else ("re" if rec == "Random Effects" else "ols")
@@ -419,6 +426,7 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
     st.markdown("**Coefficient Table**")
     display_coefs = format_coef_table(best["coef_table"])
     st.dataframe(display_coefs, hide_index=True, use_container_width=True)
+    df_download_button(display_coefs, "coefficient_table.csv")
 
     # ── Citation Generator ──
     _cite_yr = filters.get("year_range", (2001, 2024))
@@ -465,6 +473,7 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
     fig_coef.add_vline(x=0, line_dash="dash", line_color="#9CA3AF")
     fig_coef.update_layout(**plotly_layout(height=320))
     st.plotly_chart(fig_coef, use_container_width=True, config=PLOTLY_CONFIG)
+    chart_download_button(fig_coef, "coefficient_plot.png")
 
     # ── Dynamic Interpretation ──
     st.divider()
@@ -487,12 +496,14 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
                 fig_rf.add_hline(y=0, line_dash="dash", line_color="#9CA3AF")
                 fig_rf.update_layout(**plotly_layout("Residuals vs Fitted", height=300))
                 st.plotly_chart(fig_rf, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig_rf, "residuals_vs_fitted.png")
             with rd2:
                 fig_hist = px.histogram(x=resid_vals, nbins=50, opacity=0.7,
                                         labels={"x": "Residuals"})
                 fig_hist.update_layout(**plotly_layout("Residual Distribution", height=300))
                 fig_hist.update_traces(marker_color=PRIMARY)
                 st.plotly_chart(fig_hist, use_container_width=True, config=PLOTLY_CONFIG)
+                chart_download_button(fig_hist, "residual_distribution.png")
 
     # ── Stage-Specific Regression Comparison ──
     st.divider()
@@ -541,6 +552,7 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
             )
             fig_sc.update_layout(**plotly_layout("Coefficient Comparison Across Life Stages", height=400))
             st.plotly_chart(fig_sc, use_container_width=True, config=PLOTLY_CONFIG)
+            chart_download_button(fig_sc, "stage_coefficients.png")
 
             # Interpretation
             _sf, _sa = [], []
