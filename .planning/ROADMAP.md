@@ -47,8 +47,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 02-01: System GMM estimation function with AR tests and Sargan/Hansen in econometric.py
-- [ ] 02-02: GMM unit tests + full TEST-01 validation (all new model functions tested)
+- [x] 02-01: IVGMM implementation (linearmodels) + hardened unit tests (38e1574)
+- [x] 02-02: Page 13 integration smoke test + full suite gate (61ddf6e)
 
 ### Phase 3: Stage Comparisons
 **Goal**: Researchers can directly compare leverage determinants between specific life stage pairs
@@ -157,7 +157,7 @@ Phases 1-5 execute in numeric order (thesis gap closure); Phase 6 is independent
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Delta-Leverage & Diagnostics | 2/2 | ✅ Complete | 2026-05-10 |
-| 2. System GMM | 0/2 | Not started | - |
+| 2. System GMM | 2/2 | ✅ Complete | 2026-05-10 |
 | 3. Stage Comparisons | 0/1 | Not started | - |
 | 4. Advanced Econometrics Page | 0/2 | Not started | - |
 | 5. Post-COVID Cohort Analysis | 0/2 | Not started | - |
