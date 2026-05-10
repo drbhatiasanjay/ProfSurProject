@@ -653,6 +653,98 @@ def chart_download_button(fig, filename: str = "chart.png", label: str = "Downlo
         pass
 
 
+def build_audit_json(
+    page: str,
+    filters: dict,
+    model_spec: dict,
+    n_obs: int,
+    n_firms: int,
+    username: str = "",
+) -> str:
+    """Build a reproducibility audit trail JSON string.
+
+    Args:
+        page: Page name, e.g. "Scenarios", "Econometrics", "ML Models", "Advanced Econometrics".
+        filters: The session filters dict (company_codes, year_range, life_stages,
+                 industry_groups, events, panel_mode).
+        model_spec: Page-specific dict describing the analysis that was run.
+                    Examples:
+                    - Scenarios: {"estimator": "OLS", "dep_var": "leverage",
+                                  "indep_vars": [...], "r_squared": 0.42}
+                    - Econometrics: {"estimator": "Fixed Effects", "dep_var": "leverage",
+                                     "indep_vars": [...]}
+                    - ML Models: {"model_type": "Random Forest", "features": [...]}
+                    - Advanced Econometrics: {"active_tab": "System GMM",
+                                             "estimator": "System GMM", "dep_var": "leverage",
+                                             "indep_vars": [...]}
+        n_obs: Number of observations used in the analysis.
+        n_firms: Number of unique firms in the filtered panel.
+        username: Logged-in username (empty string if guest/not logged in).
+
+    Returns:
+        JSON string (utf-8 safe) suitable for st.download_button data= argument.
+    """
+    import json
+    from datetime import datetime, timezone
+
+    panel_mode = filters.get("panel_mode", "unknown")
+    year_range = filters.get("year_range", [None, None])
+
+    payload = {
+        "page": page,
+        "panel": panel_mode,
+        "year_range": list(year_range),
+        "filters": {
+            "company_codes": filters.get("company_codes", []),
+            "life_stages": filters.get("life_stages", []),
+            "industry_groups": filters.get("industry_groups", []),
+            "events": filters.get("events", {}),
+        },
+        "model_spec": model_spec,
+        "n_obs": n_obs,
+        "n_firms": n_firms,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "username": username,
+    }
+    return json.dumps(payload, indent=2, default=str)
+
+
+def audit_trail_download_button(
+    page: str,
+    filters: dict,
+    model_spec: dict,
+    n_obs: int,
+    n_firms: int,
+    username: str = "",
+    label: str = "Download Audit Trail",
+) -> None:
+    """Render a st.download_button that downloads the reproducibility audit JSON.
+
+    Combines build_audit_json + st.download_button in one call. Place this
+    wherever the "Download Audit Trail" button should appear on the page.
+
+    The download filename is: audit_{page_slug}_{panel}_{year_start}-{year_end}.json
+
+    Args: same as build_audit_json, plus label for button display text.
+    """
+    import streamlit as st
+
+    json_str = build_audit_json(page, filters, model_spec, n_obs, n_firms, username)
+    panel_mode = filters.get("panel_mode", "unknown")
+    year_range = filters.get("year_range", [0, 0])
+    page_slug = page.lower().replace(" ", "_")
+    filename = f"audit_{page_slug}_{panel_mode}_{year_range[0]}-{year_range[1]}.json"
+
+    st.download_button(
+        label=label,
+        data=json_str.encode("utf-8"),
+        file_name=filename,
+        mime="application/json",
+        key=f"audit_dl_{page_slug}",
+        help="Download a JSON file capturing the exact analysis spec — panel, filters, model, n_obs — for reproducibility.",
+    )
+
+
 # ── Dickinson life stage classifier ──
 
 def classify_life_stage(ncfo, ncfi, ncff):
