@@ -183,15 +183,58 @@ class TestEconometric:
         assert "Divergent" in result["comparison"].columns
 
     def test_system_gmm(self, full_panel):
-        """System GMM with lag DV."""
+        """System GMM with lag DV using IVGMM — Arellano-Bond instrument approach."""
         from models.econometric import run_system_gmm
         result = run_system_gmm(full_panel)
+
         assert "coef_table" in result
         assert result["lag_dv_included"] is True
         assert "ar1" in result
         assert "ar2" in result
         assert "sargan" in result
         assert result["n_obs"] > 2000
+
+        # coef_table shape and columns (GMM-04)
+        ct = result["coef_table"]
+        assert set(ct.columns) >= {"Variable", "Coefficient", "Std Error", "t-stat", "p-value"}
+        assert any("lag" in str(v).lower() for v in ct["Variable"]), (
+            "coef_table must contain the lag DV regressor"
+        )
+
+        # Lag DV coefficient should be positive and < 1 (capital structure persistence)
+        lag_row = ct[ct["Variable"].str.contains("lag", case=False)]
+        assert not lag_row.empty
+        lag_coef = float(lag_row.iloc[0]["Coefficient"])
+        assert 0.0 < lag_coef < 1.0, (
+            f"Lag DV coef {lag_coef:.3f} out of [0,1] — OLS stub may still be active"
+        )
+
+        # Hansen J-stat must be real value (not old fabricated ~13931) (GMM-03)
+        assert result["sargan"]["j_stat"] < 1000, (
+            f"sargan j_stat={result['sargan']['j_stat']:.1f} — looks like old OLS pseudo-formula"
+        )
+        assert 0.0 <= result["sargan"]["p_value"] <= 1.0
+
+        # AR(1) and AR(2) keys (GMM-02)
+        for ar_key in ("ar1", "ar2"):
+            ar = result[ar_key]
+            assert "correlation" in ar
+            assert "p_value" in ar
+            assert "verdict" in ar
+            assert -1.0 <= ar["correlation"] <= 1.0
+            assert 0.0 <= ar["p_value"] <= 1.0
+
+        # type must not claim OLS (GMM-01)
+        assert "OLS" not in result.get("type", ""), (
+            f"type='{result.get('type')}' still mentions OLS — IVGMM not active"
+        )
+
+    def test_system_gmm_sargan_reasonable(self, full_panel):
+        """Hansen J p-value should be > 0.0 (not old formula). Phase 2: GMM-03."""
+        from models.econometric import run_system_gmm
+        result = run_system_gmm(full_panel)
+        p = result["sargan"]["p_value"]
+        assert p > 0.0, "Hansen p=0.0 exactly — IVGMM not active (old OLS formula)"
 
     def test_pairwise_comparison_structure(self, full_panel):
         """Tukey HSD pairwise comparison — output shape + matrix invariants."""

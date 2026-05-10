@@ -741,87 +741,100 @@ def run_iv_regression(df, y_col=DEFAULT_Y_COL, x_endog="profitability", x_exog=N
 
 def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", time="year"):
     """
-    System GMM estimation with lagged dependent variable.
-    Uses linearmodels IVGMM or falls back to manual 2SLS.
+    System GMM estimation with lagged dependent variable (Arellano-Bond instrument approach).
+    Uses linearmodels.iv.IVGMM with lag2 and lag3 of DV as excluded instruments.
     Matches thesis Table 5.12.
+    Phase 2 requirement: GMM-01, GMM-02, GMM-03, GMM-04.
+
+    Returns dict with keys:
+        type, coef_table, r_squared, adj_r_squared, n_obs, n_firms,
+        lag_dv_included (always True), ar1, ar2, sargan, result_obj
     """
+    from linearmodels.iv import IVGMM
+
     if x_cols is None:
         x_cols = DEFAULT_X_COLS
 
-    # Prepare panel with lag
-    panel, y_col_clean, x_cols_with_lag = prepare_panel(
-        df, y_col, x_cols, entity, time, add_lag=True
-    )
+    work = df.sort_values([entity, time]).copy()
+    for lag in (1, 2, 3):
+        work[f"{y_col}_lag{lag}"] = work.groupby(entity)[y_col].shift(lag)
 
-    y = panel[y_col_clean]
-    X = sm.add_constant(panel[x_cols_with_lag])
+    low, high = work[y_col].quantile(0.01), work[y_col].quantile(0.99)
+    work[y_col] = work[y_col].clip(lower=low, upper=high)
 
-    # Use 2SLS as GMM approximation (linearmodels IVGMM requires instrument spec)
-    # Instruments: second lag of dependent variable + exogenous regressors
-    panel_sorted = df.sort_values([entity, time]).copy()
-    panel_sorted[f"{y_col}_lag2"] = panel_sorted.groupby(entity)[y_col].shift(2)
-    panel_sorted["delta_leverage"] = panel_sorted.groupby(entity)[y_col].diff()
+    needed = [y_col, f"{y_col}_lag1", f"{y_col}_lag2", f"{y_col}_lag3"] + list(x_cols)
+    work = work.dropna(subset=needed).set_index([entity, time])
 
-    clean = panel_sorted.dropna(subset=[y_col, f"{y_col}_lag2", "delta_leverage"] + x_cols)
-    if len(clean) < 100:
-        return {"error": f"Too few observations for GMM ({len(clean)}). Need 100+."}
+    if len(work) < 100:
+        return {"error": f"Too few observations for GMM ({len(work)}). Need 100+."}
 
-    clean = clean.set_index([entity, time])
-    y_gmm = clean[y_col]
-    x_gmm_cols = x_cols + [f"{y_col}_lag1"] if f"{y_col}_lag1" in clean.columns else x_cols
+    y     = work[y_col]
+    exog  = work[list(x_cols)].copy()
+    exog.insert(0, "const", 1.0)
+    endog = work[[f"{y_col}_lag1"]]
+    instr = work[[f"{y_col}_lag2", f"{y_col}_lag3"]]
 
-    # Rebuild with proper lag columns
-    panel_gmm, _, x_final = prepare_panel(df, y_col, x_cols, entity, time, add_lag=True)
-    y_gmm = panel_gmm[y_col]
-    X_gmm = sm.add_constant(panel_gmm[x_final])
-
-    # OLS with lag DV as proxy for GMM (true GMM needs IV specification)
-    model = sm.OLS(y_gmm, X_gmm)
-    result = model.fit(cov_type="HC1")
+    model = IVGMM(y, exog, endog, instr)
+    result = model.fit(cov_type="robust")
 
     coef_table = pd.DataFrame({
-        "Variable": result.params.index,
+        "Variable":    result.params.index.tolist(),
         "Coefficient": result.params.values,
-        "Std Error": result.bse.values,
-        "t-stat": result.tvalues.values,
-        "p-value": result.pvalues.values,
+        "Std Error":   result.std_errors.values,
+        "t-stat":      result.tstats.values,
+        "p-value":     result.pvalues.values,
     })
 
-    # Arellano-Bond AR tests (approximate via residual autocorrelation)
-    resid = result.resid
-    resid_df = resid.reset_index()
+    # AR(1)/AR(2) tests via Pearson correlation on IVGMM residuals
+    resid_df = result.resids.reset_index()
     resid_df.columns = [entity, time, "resid"]
     resid_df = resid_df.sort_values([entity, time])
     resid_df["resid_lag1"] = resid_df.groupby(entity)["resid"].shift(1)
     resid_df["resid_lag2"] = resid_df.groupby(entity)["resid"].shift(2)
 
-    ar1_clean = resid_df.dropna(subset=["resid", "resid_lag1"])
-    ar2_clean = resid_df.dropna(subset=["resid", "resid_lag2"])
+    ar1_df = resid_df.dropna(subset=["resid", "resid_lag1"])
+    ar2_df = resid_df.dropna(subset=["resid", "resid_lag2"])
 
-    ar1_corr, ar1_p = stats.pearsonr(ar1_clean["resid"], ar1_clean["resid_lag1"]) if len(ar1_clean) > 10 else (0, 1)
-    ar2_corr, ar2_p = stats.pearsonr(ar2_clean["resid"], ar2_clean["resid_lag2"]) if len(ar2_clean) > 10 else (0, 1)
+    ar1_corr, ar1_p = (
+        stats.pearsonr(ar1_df["resid"], ar1_df["resid_lag1"])
+        if len(ar1_df) > 10 else (0.0, 1.0)
+    )
+    ar2_corr, ar2_p = (
+        stats.pearsonr(ar2_df["resid"], ar2_df["resid_lag2"])
+        if len(ar2_df) > 10 else (0.0, 1.0)
+    )
 
-    # Sargan/Hansen test (J-statistic approximation)
-    n = result.nobs
-    k = len(result.params)
-    ssr = np.sum(resid ** 2)
-    j_stat = n * (1 - ssr / np.sum((y_gmm - y_gmm.mean()) ** 2))
-    j_df = max(1, k - len(x_cols))
-    j_p = float(1 - stats.chi2.cdf(abs(j_stat), j_df))
+    # Hansen J overidentification test (built into IVGMM result)
+    j = result.j_stat  # WaldTestStatistic with .stat, .pval, .df
 
     return {
-        "type": "System GMM (OLS with Lag DV)",
+        "type": "System GMM",
         "coef_table": coef_table,
-        "r_squared": result.rsquared,
-        "adj_r_squared": result.rsquared_adj,
+        "r_squared": float(result.rsquared),
+        "adj_r_squared": float(getattr(result, "rsquared_adj", result.rsquared)),
         "n_obs": int(result.nobs),
-        "n_firms": panel_gmm.index.get_level_values(0).nunique(),
+        "n_firms": int(work.index.get_level_values(0).nunique()),
         "lag_dv_included": True,
-        "ar1": {"correlation": float(ar1_corr), "p_value": float(ar1_p),
-                "verdict": "AR(1) expected significant" if ar1_p < 0.05 else "AR(1) not significant"},
-        "ar2": {"correlation": float(ar2_corr), "p_value": float(ar2_p),
-                "verdict": "AR(2) not significant (good)" if ar2_p > 0.05 else "AR(2) significant (instruments may be invalid)"},
-        "sargan": {"j_stat": float(abs(j_stat)), "df": j_df, "p_value": float(j_p),
-                   "verdict": "Instruments valid (cannot reject H0)" if j_p > 0.05 else "Instruments may be invalid (reject H0)"},
+        "ar1": {
+            "correlation": float(ar1_corr),
+            "p_value":     float(ar1_p),
+            "verdict":     ("AR(1) expected significant"
+                            if ar1_p < 0.05 else "AR(1) not significant"),
+        },
+        "ar2": {
+            "correlation": float(ar2_corr),
+            "p_value":     float(ar2_p),
+            "verdict":     ("AR(2) not significant (good)"
+                            if ar2_p > 0.05 else
+                            "AR(2) significant (instruments may be invalid)"),
+        },
+        "sargan": {
+            "j_stat":  float(j.stat),
+            "df":      int(j.df),
+            "p_value": float(j.pval),
+            "verdict": ("Instruments valid (cannot reject H0)"
+                        if j.pval > 0.05 else
+                        "Instruments may be invalid (reject H0)"),
+        },
         "result_obj": result,
     }
