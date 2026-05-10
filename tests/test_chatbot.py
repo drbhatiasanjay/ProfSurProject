@@ -183,9 +183,8 @@ class TestStreamAnthropic:
 
     def test_missing_api_key_yields_message(self, monkeypatch):
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-        # Also block streamlit secrets path
-        import sys
-        sys.modules.pop("streamlit", None)
+        # Block streamlit secrets path — use monkeypatch so the module is restored after the test
+        monkeypatch.delitem(__import__("sys").modules, "streamlit", raising=False)
         from models.llm_adapters import stream_anthropic
         chunks = list(stream_anthropic([{"role": "user", "content": "hi"}]))
         # Either "not configured" (no key) or "not installed" (no SDK) — both acceptable graceful paths
