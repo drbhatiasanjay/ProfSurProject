@@ -32,9 +32,38 @@ except ImportError:
 
 
 GROUNDING_FOOTER = (
-    "\n\nAnswer ONLY from the data above. If asked about something not in "
-    "the context, say 'This data is not available in my current context.' "
-    "Cite specific figures by their exact values. Never fabricate numbers."
+    "\n\nINSTRUCTIONS: Answer ONLY from the three knowledge blocks above.\n"
+    "For every factual claim or interpretive point, append a citation in brackets "
+    "using one of these three tags:\n"
+    "  [Source: THESIS] — for theory, methodology, Dickinson classification, hypotheses\n"
+    "  [Source: DATA] — for panel statistics, stage means, company KPIs, peer metrics\n"
+    "  [Source: ANALYSIS] — for OLS/regression coefficients, R², model outputs\n"
+    "If asked about something not in the context, say exactly: "
+    "'This data is not available in my current context.'\n"
+    "Never fabricate numbers. Cite exact values from the context."
+)
+
+# ── Static thesis knowledge block (A) — injected into every context ───────────
+# Covers: Dickinson life-stage classification, core theories, thesis scope,
+# and directional hypotheses. Token cost ~160 tokens — well within 900 budget.
+_THESIS_BLOCK = (
+    "## [SOURCE: THESIS] Theoretical & Methodological Framework\n"
+    "**Life Stage Classification (Dickinson 2011) — cash-flow sign patterns:**\n"
+    "- Startup: OCF−, ICF−, FCF+ → high external financing dependency, higher leverage expected\n"
+    "- Growth: OCF+, ICF−, FCF− → heavy reinvestment, moderate-high leverage\n"
+    "- Maturity: OCF+, ICF−, FCF− → internally self-funded, lower leverage expected\n"
+    "- Shakeout (1/2/3): mixed OCF/ICF/FCF patterns → transitional instability\n"
+    "- Decline: OCF−, ICF+ → disinvestment, leverage rises from distress\n"
+    "- Decay: deeply negative OCF, ICF+ → severe deterioration, high distress risk\n\n"
+    "**Theories & Hypothesised Directions:**\n"
+    "- Pecking Order Theory (POT, Myers & Majluf 1984): firms prefer internal > debt > equity "
+    "→ H: profitability ↑ = leverage ↓ (negative coef expected)\n"
+    "- Trade-off Theory (ToT): balance tax shield vs distress costs "
+    "→ H: tangibility ↑ = leverage ↑ (positive coef, collateral value)\n"
+    "- Agency Theory (Jensen & Meckling 1976): debt disciplines free cash flow "
+    "→ effect varies by life stage\n\n"
+    "**Thesis Scope:** 401 Indian listed firms, panel 2001–2024 (thesis vintage); "
+    "402 firms to 2025 (latest vintage). Dependent variable: leverage (debt/total assets %).\n"
 )
 
 CONTEXT_BUDGET_TOKENS = 900
@@ -108,17 +137,18 @@ def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
             peer_mean_lev = peer_med_lev = peer_mean_roa = peer_med_roa = float("nan")
         delta_lev = float(latest["leverage"]) - peer_med_lev if peer_n else float("nan")
         md = (
-            f"## COMPANY: {latest['company_name']} (code: {int(company_code)})\n"
+            _THESIS_BLOCK
+            + f"## [SOURCE: DATA] Company: {latest['company_name']} (code: {int(company_code)})\n"
             f"- Industry: {latest['industry_group']} | Life Stage: {latest['life_stage']} | Size Decile: {latest['size_decile']}\n"
             f"- Latest Year ({int(latest['year'])}): Leverage={float(latest['leverage']):.3f}, "
             f"Profitability={float(latest['profitability']):.3f}, "
             f"Tangibility={float(latest['tangibility']):.3f}, "
             f"FirmSize={float(latest['firm_size']):.3f}\n"
-            f"- 5-Year Trend (leverage): {trend_csv}\n\n"
-            f"## PEER GROUP ({peer_n} firms, same industry_group + life_stage, year {int(latest['year'])})\n"
-            f"- Peer Mean Leverage: {peer_mean_lev:.3f} | Median: {peer_med_lev:.3f}\n"
-            f"- Peer Mean Profitability: {peer_mean_roa:.3f} | Median: {peer_med_roa:.3f}\n"
-            f"- Company vs Peer Median (leverage): {delta_lev:+.3f}\n"
+            f"- 5-Year Leverage Trend: {trend_csv}\n\n"
+            f"## [SOURCE: DATA] Peer Group ({peer_n} firms, same industry + life_stage, {int(latest['year'])})\n"
+            f"- Peer Mean Leverage: {peer_mean_lev:.3f} | Peer Median: {peer_med_lev:.3f}\n"
+            f"- Peer Mean Profitability: {peer_mean_roa:.3f} | Peer Median: {peer_med_roa:.3f}\n"
+            f"- Company vs Peer Median (leverage delta): {delta_lev:+.3f}\n"
         )
         text = md + GROUNDING_FOOTER
         # Token-budget guard — drop trend line, then peer detail, if over budget
@@ -182,27 +212,29 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
             "tax_shield": "tax_shield",
             "dividend": "dvnd",
         }
-        # By-stage leverage means
+        # By-stage leverage means — use actual stage names from the DB
         stage_means = df.groupby("life_stage")["leverage"].mean().to_dict()
-        order = ["Birth", "Growth", "Mature", "Decline"]
+        order = ["Startup", "Growth", "Maturity", "Shakeout1", "Shakeout2", "Shakeout3", "Decline", "Decay"]
+        present = [s for s in order if s in stage_means]
         stage_line = ", ".join(
-            f"{s}={float(stage_means.get(s, float('nan'))):.3f}" for s in order
+            f"{s}={float(stage_means[s]):.3f}" for s in present
         )
         coef_lines = "\n".join(
             f"- {p}: coef={float(coefs.get(p, 0.0)):+.3f} (sample mean={float(means.get(_means_key_map.get(p, p), 0.0)):+.3f})"
             for p in PREDICTORS
         )
         md = (
-            f"## PANEL OVERVIEW (mode={panel_mode})\n"
+            _THESIS_BLOCK
+            + f"## [SOURCE: DATA] Panel Statistics (mode={panel_mode})\n"
             f"- {total_firms} firms, "
             f"{total_obs} firm-year observations, "
             f"{year_min}-{year_max}\n"
             f"- Overall mean leverage: {float(df['leverage'].mean()):.3f}\n"
             f"- By Life Stage (mean leverage): {stage_line}\n\n"
-            f"## OLS BASELINE (DV: leverage)\n"
+            f"## [SOURCE: ANALYSIS] OLS Baseline (DV: leverage)\n"
             f"- intercept: {float(coefs.get('intercept', 0.0)):+.3f}\n"
             f"{coef_lines}\n"
-            f"R^2 = {float(coefs.get('r_squared', 0.0)):.3f}, N = {int(coefs.get('n_obs', 0))}\n"
+            f"R²={float(coefs.get('r_squared', 0.0)):.3f}, N={int(coefs.get('n_obs', 0))}\n"
         )
         text = md + GROUNDING_FOOTER
         if count_tokens(text) > CONTEXT_BUDGET_TOKENS:
