@@ -130,6 +130,34 @@ with res_left:
         eq_parts.append(f"{sign}{coefs[p]:.3f}*{labels_map[p]}")
     st.code("Lev = " + " ".join(eq_parts), language=None)
 
+    # ── Citation Generator ──
+    _cite_yr = filters.get("year_range", (2001, 2024))
+    _cite_panel = panel_label(_panel)
+    _cite_obs = coefs.get("n_obs", 0)
+    _cite_r2 = coefs.get("r_squared", 0)
+    _cite_url = "https://lifecycle-leverage-779655496440.us-east1.run.app"
+
+    _apa_text = (
+        f"Kumar, S. (2024). Scenario analysis of capital structure determinants "
+        f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
+        f"(OLS Pooled regression; panel: {_cite_panel}, "
+        f"{_cite_yr[0]}–{_cite_yr[1]}, {_cite_obs:,} obs, R²={_cite_r2:.3f}; "
+        f"predicted leverage: {predicted:.1f}%)"
+    )
+    _latex_text = (
+        r"\cite{kumar2024lifecycle} scenario analysis, OLS, "
+        f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
+        f"${_cite_obs:,}$ obs, $R^2={_cite_r2:.3f}$, "
+        r"$\hat{\text{Lev}}=" + f"{predicted:.1f}" + r"\%$."
+    )
+
+    with st.expander("📋 Cite this result"):
+        st.caption("Copy the citation in your preferred format:")
+        st.markdown("**APA**")
+        st.code(_apa_text, language=None)
+        st.markdown("**LaTeX**")
+        st.code(_latex_text, language=None)
+
 with res_right:
     st.markdown("#### Contribution Waterfall")
     names = list(contributions.keys()) + ["Predicted"]

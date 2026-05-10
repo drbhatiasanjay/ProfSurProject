@@ -419,6 +419,34 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
     display_coefs = format_coef_table(best["coef_table"])
     st.dataframe(display_coefs, hide_index=True, use_container_width=True)
 
+    # ── Citation Generator ──
+    _cite_yr = filters.get("year_range", (2001, 2024))
+    _cite_panel = panel_label(_panel)
+    _cite_n = best.get("n_firms", "N")
+    _cite_obs = best.get("n_obs", 0)
+    _cite_r2 = best.get("r_squared", 0)
+    _cite_model = best.get("type", "OLS")
+    _cite_url = "https://lifecycle-leverage-779655496440.us-east1.run.app"
+
+    _apa_text = (
+        f"Kumar, S. (2024). Capital structure determinants across corporate life stages "
+        f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
+        f"(Estimated via {_cite_model}; panel: {_cite_panel}, "
+        f"{_cite_yr[0]}–{_cite_yr[1]}, N={_cite_n} firms, {_cite_obs:,} obs, R²={_cite_r2:.3f})"
+    )
+    _latex_text = (
+        r"\cite{kumar2024lifecycle} estimated via " + f"{_cite_model}, "
+        f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
+        f"$N={_cite_n}$ firms, $R^2={_cite_r2:.3f}$."
+    )
+
+    with st.expander("📋 Cite this result"):
+        st.caption("Copy the citation in your preferred format:")
+        st.markdown("**APA**")
+        st.code(_apa_text, language=None)
+        st.markdown("**LaTeX**")
+        st.code(_latex_text, language=None)
+
     # Coefficient plot — full width below
     st.markdown("**Coefficient Plot**")
     ct = best["coef_table"]

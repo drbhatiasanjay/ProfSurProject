@@ -101,6 +101,29 @@ with tab_gmm:
             ct = format_coef_table(gmm["coef_table"])
             st.dataframe(ct, use_container_width=True, hide_index=True)
 
+            # ── Citation Generator ──
+            _cite_yr = filters.get("year_range", (2001, 2024))
+            _cite_panel = panel_label(_panel)
+            _cite_url = "https://lifecycle-leverage-779655496440.us-east1.run.app"
+            _apa_text = (
+                f"Kumar, S. (2024). Capital structure determinants across corporate life stages "
+                f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
+                f"(Estimated via System GMM; panel: {_cite_panel}, "
+                f"{_cite_yr[0]}–{_cite_yr[1]}, N={gmm.get('n_firms', 'N'):,} firms, "
+                f"{gmm.get('n_obs', 0):,} obs, R²={gmm.get('r_squared', 0):.3f})"
+            )
+            _latex_text = (
+                r"\cite{kumar2024lifecycle} estimated via System GMM, "
+                f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
+                f"$N={gmm.get('n_firms', 'N')}$ firms, $R^2={gmm.get('r_squared', 0):.3f}$."
+            )
+            with st.expander("📋 Cite this result"):
+                st.caption("Copy the citation in your preferred format:")
+                st.markdown("**APA**")
+                st.code(_apa_text, language=None)
+                st.markdown("**LaTeX**")
+                st.code(_latex_text, language=None)
+
             # Diagnostic tests
             st.markdown("#### Diagnostic Tests")
             dc1, dc2, dc3 = st.columns(3)
@@ -167,6 +190,28 @@ with tab_delta:
             st.markdown("#### Coefficient Estimates (Recommended Model)")
             ct = format_coef_table(rec["coef_table"])
             st.dataframe(ct, use_container_width=True, hide_index=True)
+
+            # ── Citation Generator ──
+            _cite_yr = filters.get("year_range", (2001, 2024))
+            _cite_panel = panel_label(_panel)
+            _cite_url = "https://lifecycle-leverage-779655496440.us-east1.run.app"
+            _apa_text = (
+                f"Kumar, S. (2024). Capital structure determinants across corporate life stages "
+                f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
+                f"(Estimated via Delta-Leverage OLS; panel: {_cite_panel}, "
+                f"{_cite_yr[0]}–{_cite_yr[1]}, {rec.get('n_obs', 0):,} obs, R²={rec.get('r_squared', 0):.3f})"
+            )
+            _latex_text = (
+                r"\cite{kumar2024lifecycle} estimated via Delta-Leverage OLS, "
+                f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
+                f"$R^2={rec.get('r_squared', 0):.3f}$."
+            )
+            with st.expander("📋 Cite this result"):
+                st.caption("Copy the citation in your preferred format:")
+                st.markdown("**APA**")
+                st.code(_apa_text, language=None)
+                st.markdown("**LaTeX**")
+                st.code(_latex_text, language=None)
 
             # Compare all three
             st.markdown("#### Model Comparison")
@@ -267,6 +312,32 @@ with tab_compare:
                         comp[p_col] = comp[p_col].apply(format_pvalue)
 
                 st.dataframe(comp, use_container_width=True, hide_index=True)
+
+                # ── Citation Generator ──
+                _cite_yr = filters.get("year_range", (2001, 2024))
+                _cite_panel = panel_label(_panel)
+                _cite_url = "https://lifecycle-leverage-779655496440.us-east1.run.app"
+                _cmp_label = "delta-leverage" if compare_delta else "leverage levels"
+                _apa_text = (
+                    f"Kumar, S. (2024). Capital structure determinants across corporate life stages "
+                    f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
+                    f"(Stage Comparison OLS — {stage_a} vs {stage_b}, {_cmp_label}; "
+                    f"panel: {_cite_panel}, {_cite_yr[0]}–{_cite_yr[1]}, "
+                    f"{stage_a}: R²={result['result_a']['r_squared']:.3f}, "
+                    f"{stage_b}: R²={result['result_b']['r_squared']:.3f})"
+                )
+                _latex_text = (
+                    r"\cite{kumar2024lifecycle} Stage Comparison OLS, "
+                    f"{stage_a} vs {stage_b}, {_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
+                    f"$R^2_{{{stage_a}}}={result['result_a']['r_squared']:.3f}$, "
+                    f"$R^2_{{{stage_b}}}={result['result_b']['r_squared']:.3f}$."
+                )
+                with st.expander("📋 Cite this result"):
+                    st.caption("Copy the citation in your preferred format:")
+                    st.markdown("**APA**")
+                    st.code(_apa_text, language=None)
+                    st.markdown("**LaTeX**")
+                    st.code(_latex_text, language=None)
 
                 # Visual: coefficient comparison bar chart
                 plot_data = result["comparison"][["Variable", f"{stage_a} Coef", f"{stage_b} Coef"]].melt(
