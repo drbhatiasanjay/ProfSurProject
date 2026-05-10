@@ -1,25 +1,67 @@
-name: Test
+name: Test and Deploy
 
 on:
   push:
     branches: [master]
-  workflow_dispatch:
+  pull_request:
+    branches: [master]
 
 jobs:
   test:
+    name: Run pytest (Python 3.11)
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
+          # Install torch CPU-only first (matches Dockerfile pattern, avoids 2GB GPU wheel)
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
           pip install pytest
 
       - name: Run tests
-        run: python -m pytest tests/ -v --tb=short
+        run: |
+          python -m pytest tests/ \
+            --ignore=tests/smoke_auth.py \
+            --ignore=tests/smoke_phase1.py \
+            -v --tb=short
+        env:
+          # Disable CMIE so tests don't need secrets.toml
+          ENABLE_CMIE: "false"
+
+  deploy:
+    name: Deploy to Cloud Run
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy lifecycle-leverage \
+            --source . \
+            --region us-east1 \
+            --project tempproject-462219 \
+            --port 8501 \
+            --memory 2Gi \
+            --allow-unauthenticated \
+            --quiet
