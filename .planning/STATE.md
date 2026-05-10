@@ -11,9 +11,9 @@ See: .planning/PROJECT.md
 ## Current Position
 
 Phase: Phase 7 (07-wave2-tier1-ux)
-Plan: 4 of 5 in current phase
+Plan: 2 of 5 in current phase (07-02 just completed; 07-04 also done out-of-order)
 Status: In progress
-Last activity: 2026-05-10 - Completed 07-04-PLAN.md (APA + LaTeX citation expanders on pages 3, 8, 13)
+Last activity: 2026-05-10 - Completed 07-02-PLAN.md (plotly_layout year_range param + Advanced options expanders on 5 pages)
 
 Progress: [██████████] Pages 1-18 complete; Phase 7 plan 4/5 done
 
@@ -42,7 +42,7 @@ Progress: [██████████] Pages 1-18 complete; Phase 7 plan 4/5
 **Graph layer**: graph_builder.py (NetworkX MultiGraph) + graph_viz.py (Plotly + pyvis renderers)
   - CFO graph functions: build_cfo_ego_graph, build_peer_cluster_graph, build_stage_map_graph, get_cfo_node_panel
   - pyvis renderer: build_pyvis_html()
-**Helpers**: helpers.py — plotly_layout(), STAGE_COLORS, STAGE_ORDER, render_interpretation(), require_role(), new_badge()
+**Helpers**: helpers.py — plotly_layout(title, height, year_range=None), STAGE_COLORS, STAGE_ORDER, render_interpretation(), require_role(), new_badge()
 **Session state keys in use**: filters, panel_mode, theme, user, guest_display_name
 **Session state keys reserved for Phase 6**: chat_history, chat_mode, chat_backend, chat_open, ai_recommendations
 
@@ -89,6 +89,6 @@ Progress: [██████████] Pages 1-18 complete; Phase 7 plan 4/5
 
 ## Session Continuity
 
-Last session: 2026-05-10T00:15:00Z
-Stopped at: Completed 07-04-PLAN.md — APA + LaTeX citation expanders on pages 3, 8, 13 (commit 851a73a)
-Resume file: None — clean stopping point. Next action: execute 06-03-PLAN.md (floating chat bubble)
+Last session: 2026-05-10T04:14:57Z
+Stopped at: Completed 07-02-PLAN.md — plotly_layout year_range param + Advanced options expanders (commit 732c012)
+Resume file: None — clean stopping point. Next action: execute 07-03-PLAN.md or 07-05-PLAN.md
