@@ -6,16 +6,16 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** Phase 2 — System GMM (Phase 1 complete; 02-01 next)
+**Current focus:** Phase 8 — CI/CD Pipeline (v1.3 milestone start)
 
 ## Current Position
 
-Phase: All phases complete
-Plan: All plans done
-Status: Complete
-Last activity: 2026-05-10 - Completed Phases 1-5 (3ff9a46)
+Phase: Phase 8 — CI/CD Pipeline
+Plan: 08-01 (Task 1 of 3 complete; Tasks 2-3 are human checkpoints)
+Status: In progress — awaiting human: GCP service account + GCP_SA_KEY GitHub secret
+Last activity: 2026-05-10 — 08-01 Task 1 complete (2d68601) — .github/workflows/deploy.yml created
 
-Progress: [██████████] ALL PHASES COMPLETE (1-7)
+Progress: [██████████░] Phases 1-7 complete; Phase 8 in progress
 
 ## App State (as of 2026-05-10)
 
