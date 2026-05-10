@@ -58,9 +58,16 @@ Researchers and analysts can interactively explore how leverage determinants dif
 - **SQLite only**: No external DB — all data in capital_structure.db
 - **Existing pages must not break**: 12 pages deployed and working
 
-## Current Milestone: v1.2 Thesis Gap Closure
+## Current Milestone: v1.3 Automation & Analytical Depth
 
-**Goal:** Add missing econometric methods from the thesis that don't require new data — Dynamic GMM, change-in-leverage models, Breusch-Pagan LM test, Growth vs Maturity comparison, post-COVID cohort analysis.
+**Goal:** Automate CI/CD deployment, add per-company life-stage timeline view, reproducibility audit trail for academic use, smoke test coverage for pages 17-19, and fix 8 US firms with NULL tangibility.
+
+**Target features:**
+- GitHub Actions CI/CD — push to master → tests → auto-deploy to Cloud Run
+- Company timeline view — per-company life-stage trajectory + leverage overlay on page 18
+- Reproducibility audit trail JSON — panel/filters/model spec download on 4 analytics pages
+- Smoke test coverage — Playwright smoke tests extended to pages 17, 18, 19
+- Data quality fix — 8 US firms NULL tangibility reloaded in models/data_ingest.py
 
 ## Key Decisions
 

@@ -1,100 +1,73 @@
-# Requirements: LifeCycle Leverage Dashboard v1.2
+# Requirements: LifeCycle Leverage Dashboard v1.3
 
-**Defined:** 2026-03-28
-**Core Value:** Rigorous econometric models matching thesis methodology for capital structure analysis across life stages
+**Defined:** 2026-05-10
+**Core Value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-## v1.2 Requirements
+## v1.3 Requirements
 
-### Dynamic Panel GMM
+### CI/CD Automation
 
-- [ ] **GMM-01**: System GMM estimation with lag dependent variable for full panel
-- [ ] **GMM-02**: Arellano-Bond AR(1)/AR(2) serial correlation test results displayed
-- [ ] **GMM-03**: Sargan/Hansen overidentification test results displayed
-- [ ] **GMM-04**: GMM results table with coefficients, std errors, p-values matching thesis Table 5.12 format
+- [ ] **CICD-01**: Pushing to master triggers automated pytest run on GitHub Actions (Python 3.11, ignores smoke tests)
+- [ ] **CICD-02**: Deployment to Cloud Run fires only when all tests pass (green gate)
+- [ ] **CICD-03**: GitHub Actions secrets hold GCP service account credentials (no secrets in code)
 
-### Delta-Leverage Models
+### Company Timeline View
 
-- [ ] **DLV-01**: OLS/FE/RE regressions with CHANGE in leverage as dependent variable (first-difference)
-- [ ] **DLV-02**: Hausman test for delta-leverage FE vs RE selection
-- [ ] **DLV-03**: Stage-specific delta-leverage regressions (Startup, Growth, Maturity, Decline, Decay)
-- [ ] **DLV-04**: Results displayed with coefficient comparison across stages
+- [ ] **TMLN-01**: User can view per-company life-stage trajectory as horizontal timeline (year × stage) on page 18 Company Navigator
+- [ ] **TMLN-02**: Timeline overlays leverage ratio as a line on secondary y-axis so stage transitions and leverage moves are visible together
+- [ ] **TMLN-03**: Timeline is filterable by company via existing company selector on page 18
 
-### Diagnostic Tests
+### Reproducibility Audit Trail
 
-- [ ] **TST-01**: Breusch-Pagan LM test for Pooled OLS vs RE model selection
-- [ ] **TST-02**: Test results displayed with interpretation (chi-sq statistic, p-value, recommendation)
+- [ ] **REPRO-01**: Researcher can download a JSON audit trail from Econometrics (8), ML Models (9), Scenarios (3), and Advanced Econometrics (13) pages
+- [ ] **REPRO-02**: Audit JSON contains: page, panel vintage, year range, active filters, model spec (estimator/variables), n_obs, n_firms, timestamp, username
 
-### Stage Comparisons
+### Quality & Data Carry-forwards
 
-- [ ] **CMP-01**: Growth vs Maturity direct subset regression with pooled data
-- [ ] **CMP-02**: Decline vs Decay comparison showing distinct determinants
-- [ ] **CMP-03**: Side-by-side coefficient comparison table with significance indicators
-
-### Post-COVID Cohort Analysis
-
-- [ ] **COH-01**: Identify firms that entered Decline/Decay AFTER COVID (2022+) vs already in decline before
-- [ ] **COH-02**: COVID resilience tracker — firms that improved stage post-COVID vs deteriorated
-- [ ] **COH-03**: Leverage/profitability comparison between resilient and deteriorated cohorts
-
-### UI & Integration
-
-- [ ] **UI-01**: New page 13 "Advanced Econometrics" for GMM, delta-leverage, diagnostics, stage comparisons
-- [ ] **UI-02**: COVID cohort analysis added to Knowledge Graph page (Tab 2: Event Impact) or new section
-- [ ] **UI-03**: Dynamic interpretation boxes on all new outputs
-
-### Testing
-
-- [ ] **TEST-01**: Unit tests for GMM, delta-leverage, BP-LM model functions
-- [ ] **TEST-02**: Existing 40 tests still pass (no regressions)
+- [ ] **QUAL-01**: Playwright smoke_auth.py covers pages 17 (Board Export), 18 (Company Navigator), 19 (AI Assistant) with login + render checks
+- [ ] **QUAL-02**: 8 US DJIA firms with NULL tangibility have values reloaded via models/data_ingest.py; tangibility column is non-null for all us_av_2024 vintage rows
 
 ## v2 Requirements
 
 ### Deferred
 
-- **MULTI-01**: Multi-country comparison — requires external datasets
-- **COLL-01**: Collateral/security analysis — data not available
-- **QUANT-01**: Cash flow magnitude analysis (not just +/- direction)
+- **SVDV-01**: Saved views / bookmarks — name and restore filter sets (DB layer ready, UX design deferred)
+- **SCEN-01**: Scenario comparison overlay — compare N saved OLS scenarios on one chart (needs wireframe)
+- **PEER-01**: Custom peer groups — user-defined named sets reusable across pages (UX placement TBD)
+- **ANNO-01**: Chart annotation layer — per-user notes on time-series points (scope: per-user vs shared TBD)
+- **WLIST-01**: Watchlist + stage-change email alerts (requires sending domain setup)
 
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Neo4j migration | networkx sufficient for 401 firms |
-| Real-time data feeds | Thesis is historical panel data |
-| PyTorch in Docker | 2GB+ dependency, graceful fallback exists |
-| New data ingestion | All data already in SQLite |
+| Share / email export | Not required (user decision 2026-05-10) |
+| CMIE live API integration | External blocker — API service not activated |
+| PostgreSQL migration | SQLite sufficient for current user base; defer until concurrent write pressure |
+| FastAPI backend layer | No API consumer today; defer until PostgreSQL migration |
+| Full US S&P 500 panel | Depends on WRDS access via University of Delhi (unknown) |
+| Mobile-responsive UI | Desktop-first; defer |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TST-01 | Phase 1 | Pending |
-| TST-02 | Phase 1 | Pending |
-| DLV-01 | Phase 1 | Pending |
-| DLV-02 | Phase 1 | Pending |
-| DLV-03 | Phase 1 | Pending |
-| DLV-04 | Phase 1 | Pending |
-| GMM-01 | Phase 2 | Pending |
-| GMM-02 | Phase 2 | Pending |
-| GMM-03 | Phase 2 | Pending |
-| GMM-04 | Phase 2 | Pending |
-| TEST-01 | Phase 2 | Pending |
-| CMP-01 | Phase 3 | Pending |
-| CMP-02 | Phase 3 | Pending |
-| CMP-03 | Phase 3 | Pending |
-| UI-01 | Phase 4 | Pending |
-| UI-03 | Phase 4 | Pending |
-| TEST-02 | Phase 4 | Pending |
-| COH-01 | Phase 5 | Pending |
-| COH-02 | Phase 5 | Pending |
-| COH-03 | Phase 5 | Pending |
-| UI-02 | Phase 5 | Pending |
+| CICD-01 | Phase 8 | Pending |
+| CICD-02 | Phase 8 | Pending |
+| CICD-03 | Phase 8 | Pending |
+| TMLN-01 | Phase 9 | Pending |
+| TMLN-02 | Phase 9 | Pending |
+| TMLN-03 | Phase 9 | Pending |
+| REPRO-01 | Phase 10 | Pending |
+| REPRO-02 | Phase 10 | Pending |
+| QUAL-01 | Phase 11 | Pending |
+| QUAL-02 | Phase 11 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 21 total
-- Mapped to phases: 21/21
-- Unmapped: 0
+- v1.3 requirements: 10 total
+- Mapped to phases: 10/10
+- Unmapped: 0 ✓
 
 ---
-*Requirements defined: 2026-03-28*
-*Last updated: 2026-03-27 after roadmap creation*
+*Requirements defined: 2026-05-10*
+*Last updated: 2026-05-10 after milestone v1.3 start*
