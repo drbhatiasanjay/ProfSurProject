@@ -12,6 +12,9 @@ Checks:
   4. skumar (researcher)   → Workbench blocked, other pages accessible
   5. guest (viewer)        → Bulk Upload + Workbench blocked, Dashboard accessible
 
+Panel selector moved to navbar <select> (query_params approach) — no sidebar radio.
+Panel switching is tested via URL ?panel=<value> reload, not via sidebar widget click.
+
 Runs against GCP live URL by default.
 Override: BASE=http://localhost:8501 py -3.12 tests/smoke_auth.py
 """
