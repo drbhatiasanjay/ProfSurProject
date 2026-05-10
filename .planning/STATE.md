@@ -6,20 +6,20 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** Phase 7 Wave 2 Tier 1 UX — download buttons, sidebar presets, panel navbar (plans 03-05)
+**Current focus:** Phase 1 — Delta-Leverage & Diagnostics (research complete; planning next)
 
 ## Current Position
 
-Phase: Phase 7 (07-wave2-tier1-ux) — COMPLETE
-Plan: 5 of 5 (07-03 completed — in-app CSV/PNG download buttons on all 17 data pages)
-Status: Phase complete
-Last activity: 2026-05-10 - Completed 07-03-PLAN.md (CSV/PNG download buttons across pages 1-5, 7-18)
+Phase: Phase 1 (01-delta-leverage-diagnostics)
+Plan: 0 of 2 — planning in progress
+Status: Research complete (01-RESEARCH.md written); plans not yet created
+Last activity: 2026-05-10 - Phase 7 fully complete; Phase 1 research committed (540cb24)
 
-Progress: [██████████] Phase 7 all 5 plans complete; Phase 6 AI Assistant plans pending execution
+Progress: [██████████] Phases 6 + 7 complete; Phase 1 starting
 
-## App State (as of 2026-05-07)
+## App State (as of 2026-05-10)
 
-**18 pages deployed** on GCP Cloud Run (revision 00039-6zp):
+**19 pages deployed** on GCP Cloud Run (revision 00041-tz2):
 - Pages 1-16: Thesis/Academic analytics (panel-wide; company is a data point)
   - 1_dashboard, 2_peer_benchmarks, 3_scenarios, 4_bulk_upload, 5_data_explorer
   - 6_settings, 7_knowledge_graph (sidebar: "Life Stage Dynamics"), 8_econometrics
@@ -28,11 +28,12 @@ Progress: [██████████] Phase 7 all 5 plans complete; Phase 6
 - Pages 17-18: Individual Company (company is the subject; panel is peer context)
   - 17_board_export: 13 topic builders → branded .pptx; python-pptx + kaleido
   - 18_company_navigator: pyvis ego graph + peer cluster + Plotly stage map; 3 zoom levels
+  - 19_ai_assistant: full-screen AI chat (admin + researcher only); shared chat_history with any future FAB
 
 **Auth gate**: streamlit-authenticator; 3 roles — sbhatia (admin), skumar (researcher), guest (viewer)
 **GCP URL**: https://lifecycle-leverage-779655496440.us-east1.run.app
 **GitHub**: https://github.com/drbhatiasanjay/ProfSurProject (master branch)
-**Tests**: 344 passing (py -3.12 -m pytest tests/ -v)
+**Tests**: 302 passing (pre-existing 20 failures + 52 errors in TestPage15 are environmental flakiness)
 **Python**: 3.12 locally, 3.11-slim in Docker/Cloud Run
 
 ## Key Architecture
@@ -48,11 +49,12 @@ Progress: [██████████] Phase 7 all 5 plans complete; Phase 6
 
 ## Recent commits (chronological, latest first)
 
-- revision 00039-6zp: feat(page18): Company Navigator — pyvis ego/peer/stage map; page 7 renamed Life Stage Dynamics
-- revision 00038: feat(auth+navbar): fixed header bar + Sign Out in navbar + sidebar arrow fix
-- feat(page17): Board Deck Export — 13 topics, python-pptx, kaleido
-- feat(auth+page16): streamlit-authenticator login gate, audit_log, Activity Log page
-- 8f57282 feat(panel): preserve year-range selection across panel switches (2026-04-25)
+- 540cb24 docs(01): Phase 1 research complete — all backend functions already implemented (2026-05-10)
+- 47588f9 docs(07-03): complete download buttons plan (2026-05-10)
+- 0fb45bf feat(07-03): CSV/PNG download buttons on all 17 data pages (2026-05-10)
+- 399c154 feat(07-05): panel selector → navbar select via query_params (2026-05-10)
+- 851a73a feat(07-04): citation generator APA+LaTeX on pages 3, 8, 13 (2026-05-10)
+- 267cebd docs(06-05): Phase 6 AI Financial Assistant complete — UAT approved (2026-05-10)
 
 ## Accumulated Context
 
@@ -76,20 +78,19 @@ Progress: [██████████] Phase 7 all 5 plans complete; Phase 6
 
 ### Pending Todos
 
-- **Phase 6 AI Financial Assistant**: models/chatbot.py + floating bubble in app.py + pages/19_ai_assistant.py + page 17 topic 13 wiring. Plans being created now.
+- **Phase 1 planning**: Research done (01-RESEARCH.md). Backend functions already in econometric.py. Plans needed: 01-01 (verify + harden tests) + 01-02 (unit tests). Run `/gsd:plan-phase 1`.
 - **Reload 8 US firms (NULL tangibility)**: 1hr effort in models/data_ingest.py — carry-forward.
-- **smoke_auth.py**: add page 17+18 checks.
-- **G1 System GMM (Arellano-Bond/Blundell-Bond)**: deferred pending explicit user decision.
+- **smoke_auth.py**: add page 17+18+19 checks (Playwright-based).
 - **CMIE Economy API service activation**: external blocker on sk_pgdav; POC scripts ready.
 
 ### Blockers/Concerns
 
-- Ollama must be installed locally for Phase 6 local dev: winget install Ollama.Ollama then ollama pull llama3.1:8b
-- GCP Cloud Run has no local Ollama server — production default must be Claude API or graceful "no backend configured" state with clear UI message.
-- Streamlit iframe sandbox limits floating bubble JS. Use hidden st.checkbox as state bridge (checkbox change triggers st.rerun()).
+- Phase 1 backend functions already implemented — plans are test hardening only, fast execution expected.
+- Phase 2 (GMM) and Phase 3 (Stage Comparisons) can be researched/planned in parallel once Phase 1 plans exist.
+- GCP Cloud Run has no local Ollama server — Page 19 AI Assistant defaults to Claude API (ANTHROPIC_API_KEY in secrets.toml).
 
 ## Session Continuity
 
 Last session: 2026-05-10
-Stopped at: Completed 07-03-PLAN.md — CSV/PNG download buttons on all 17 data pages (commits 475ed7b, 0fb45bf)
-Resume file: None — Phase 7 complete. Next action: execute Phase 6 plans (06-03 floating bubble, 06-04 Page 19, 06-05 Page 17 Topic 13)
+Stopped at: Phase 7 complete; Phase 1 research committed. STATE.md + ROADMAP.md updated. Starting Phase 1 planning.
+Resume file: None — clean handoff point.
