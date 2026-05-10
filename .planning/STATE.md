@@ -6,16 +6,16 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** Phase 6 — AI Financial Assistant (floating chat widget + Page 19 + Board Deck Topic 13 AI Recommendations)
+**Current focus:** Phase 7 — Wave 2 Tier-1 UX (citation generator, export polish, navigation improvements)
 
 ## Current Position
 
-Phase: Phase 6 (06-ai-financial-assistant)
-Plan: 2 of 5 in current phase
+Phase: Phase 7 (07-wave2-tier1-ux)
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-05-07 - Completed 06-02-PLAN.md (25 unit tests for llm_adapters.py)
+Last activity: 2026-05-10 - Completed 07-04-PLAN.md (APA + LaTeX citation expanders on pages 3, 8, 13)
 
-Progress: [██████████] Pages 1-18 complete; Phase 6 plan 2/5 done
+Progress: [██████████] Pages 1-18 complete; Phase 7 plan 4/5 done
 
 ## App State (as of 2026-05-07)
 
@@ -89,6 +89,6 @@ Progress: [██████████] Pages 1-18 complete; Phase 6 plan 2/5
 
 ## Session Continuity
 
-Last session: 2026-05-07T04:51:15Z
-Stopped at: Completed 06-02-PLAN.md — 25 unit tests for llm_adapters.py (test_chatbot.py + conftest fixtures)
+Last session: 2026-05-10T00:15:00Z
+Stopped at: Completed 07-04-PLAN.md — APA + LaTeX citation expanders on pages 3, 8, 13 (commit 851a73a)
 Resume file: None — clean stopping point. Next action: execute 06-03-PLAN.md (floating chat bubble)
