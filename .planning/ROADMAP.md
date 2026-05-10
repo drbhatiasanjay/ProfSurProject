@@ -1,165 +1,93 @@
-# Roadmap: LifeCycle Leverage Dashboard v1.2 — Thesis Gap Closure
+# Roadmap: LifeCycle Leverage Dashboard v1.3 — Automation & Analytical Depth
 
 ## Overview
 
-This milestone adds five missing econometric methods from the thesis that require no new data: Breusch-Pagan LM test, delta-leverage models, System GMM, stage comparison regressions, and post-COVID cohort analysis. Backend model functions are built first with tests alongside, then surfaced through a new Advanced Econometrics page and Knowledge Graph integration. Every phase is independently deployable without breaking the existing 12 pages or 40 tests.
+Four independent improvements: GitHub Actions CI/CD so every push auto-deploys, a company timeline view on page 18 showing life-stage trajectory with leverage overlay, a reproducibility audit trail JSON on the four core analytics pages, and two quality carry-forwards (smoke tests for pages 17-19, 8 US firms NULL tangibility fix). All phases are independent and execute in parallel.
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3, 4, 5): Planned milestone work
-- Decimal phases (e.g., 2.1): Urgent insertions (marked with INSERTED)
-
-- [ ] **Phase 1: Delta-Leverage & Diagnostics** - BP-LM test and change-in-leverage models extending econometric.py
-- [ ] **Phase 2: System GMM** - Dynamic panel GMM with Arellano-Bond and Sargan/Hansen tests
-- [ ] **Phase 3: Stage Comparisons** - Growth vs Maturity and Decline vs Decay subset regressions
-- [ ] **Phase 4: Advanced Econometrics Page** - New page 13 surfacing all Phase 1-3 models with interpretation
-- [ ] **Phase 5: Post-COVID Cohort Analysis** - COVID cohort identification and Knowledge Graph integration
-- [ ] **Phase 6: AI Financial Assistant** - Floating global chat widget + Page 19 dedicated screen; Ollama local backend; context-aware CFO/Researcher modes; Page 17 Topic 13 AI Recommendations wired
-- [ ] **Phase 7: Wave 2 Tier 1 UX Quick Wins** - 8 UX improvements: download buttons on all charts/tables, loading spinners, error states, progressive disclosure (expanders), chart zoom defaults, citation generator, navbar >> arrow fix, panel selector in navbar dropdown
+- [ ] **Phase 8: CI/CD Pipeline** — GitHub Actions test-gate + Cloud Run auto-deploy on push to master
+- [ ] **Phase 9: Company Timeline View** — Per-company life-stage trajectory + leverage overlay on page 18
+- [ ] **Phase 10: Reproducibility Audit Trail** — JSON audit export on pages 3, 8, 9, 13
+- [ ] **Phase 11: Quality Carry-forwards** — smoke_auth.py pages 17-19 + 8 US firms NULL tangibility fix
 
 ## Phase Details
 
-### Phase 1: Delta-Leverage & Diagnostics
-**Goal**: Researchers can run change-in-leverage regressions and Breusch-Pagan LM tests through backend functions with full test coverage
-**Depends on**: Nothing (extends existing models/econometric.py)
-**Requirements**: TST-01, TST-02, DLV-01, DLV-02, DLV-03, DLV-04
+### Phase 8: CI/CD Pipeline
+**Goal**: Every push to master automatically runs the full test suite and deploys to Cloud Run only when tests pass — eliminating manual deploy commands
+**Depends on**: Nothing (infra-only, no app code changes)
+**Requirements**: CICD-01, CICD-02, CICD-03
 **Success Criteria** (what must be TRUE):
-  1. Breusch-Pagan LM test function returns chi-sq statistic, p-value, and model recommendation (Pooled OLS vs RE)
-  2. Delta-leverage regressions (OLS/FE/RE) run with first-differenced dependent variable and return coefficient tables
-  3. Hausman test works on delta-leverage FE vs RE models and returns correct selection
-  4. Stage-specific delta-leverage regressions return separate results for each Dickinson life stage
-**Plans**: 2 plans
+  1. `.github/workflows/deploy.yml` exists and defines test + deploy jobs
+  2. Test job runs `pytest tests/ --ignore=tests/smoke_auth.py --ignore=tests/smoke_phase1.py` on Python 3.11
+  3. Deploy job runs only after test job succeeds (needs: test)
+  4. GCP service account credentials are stored as GitHub secret `GCP_SA_KEY`, not in code
+  5. Pushing a commit to master triggers the workflow (verified via GitHub Actions UI or workflow run log)
+**Plans**: 1 plan
 
 Plans:
-- [x] 01-01-PLAN.md — Contract docstrings on 6 econometric.py functions (b7dd02d)
-- [x] 01-02-PLAN.md — Harden 4 unit test assertions in tests/test_models.py (b97ea43)
+- [ ] 08-01: GitHub Actions workflow file + GCP service account setup instructions
 
-### Phase 2: System GMM
-**Goal**: Researchers can estimate dynamic panel models with proper instrument validity diagnostics
-**Depends on**: Phase 1 (confirmed no regressions in model layer)
-**Requirements**: GMM-01, GMM-02, GMM-03, GMM-04, TEST-01
+---
+
+### Phase 9: Company Timeline View
+**Goal**: A user on page 18 Company Navigator can select any company and see its full life-stage trajectory year-by-year, with leverage ratio overlaid, revealing how leverage moves through stage transitions
+**Depends on**: Nothing (new tab on existing page 18)
+**Requirements**: TMLN-01, TMLN-02, TMLN-03
 **Success Criteria** (what must be TRUE):
-  1. System GMM estimation runs with lagged dependent variable as regressor and returns coefficient table
-  2. Arellano-Bond AR(1) and AR(2) test results are computed and returned with p-values
-  3. Sargan/Hansen overidentification test result is computed and returned with test statistic and p-value
-  4. All new model functions (GMM + Phase 1) have passing unit tests in test_models.py
-**Plans**: TBD
+  1. Page 18 has a "Timeline" tab alongside existing Ego Graph / Peer Cluster / Stage Map tabs
+  2. Timeline renders a Plotly figure with years on x-axis and life stage on y-axis (color-coded by STAGE_COLORS)
+  3. Leverage ratio appears as a line on secondary y-axis (right side)
+  4. Selecting a different company from the sidebar updates the timeline
+  5. Page loads without errors for at least 3 test companies (e.g., 22859, 10000, 15000)
+**Plans**: 1 plan
 
 Plans:
-- [x] 02-01: IVGMM implementation (linearmodels) + hardened unit tests (38e1574)
-- [x] 02-02: Page 13 integration smoke test + full suite gate (61ddf6e)
+- [ ] 09-01: Timeline tab on page 18 — stage trajectory + leverage overlay
 
-### Phase 3: Stage Comparisons
-**Goal**: Researchers can directly compare leverage determinants between specific life stage pairs
-**Depends on**: Phase 1 (uses regression infrastructure)
-**Requirements**: CMP-01, CMP-02, CMP-03
+---
+
+### Phase 10: Reproducibility Audit Trail
+**Goal**: A researcher on any of the four core analytics pages can download a JSON file that fully specifies the analysis they just ran — panel vintage, filters, model spec, observation count — enabling exact reproduction
+**Depends on**: Nothing (additive widget on existing pages)
+**Requirements**: REPRO-01, REPRO-02
 **Success Criteria** (what must be TRUE):
-  1. Growth vs Maturity subset regression runs on pooled data and returns separate coefficient sets
-  2. Decline vs Decay comparison regression shows distinct determinant patterns
-  3. Side-by-side coefficient table displays both stage pairs with significance stars and highlights divergent coefficients
-**Plans**: TBD
+  1. Pages 3 (Scenarios), 8 (Econometrics), 9 (ML Models), and 13 (Advanced Econometrics) each have a "Download Audit Trail" button
+  2. Clicking the button downloads a `.json` file
+  3. JSON contains: `page`, `panel`, `year_range`, `filters`, `model_spec`, `n_obs`, `n_firms`, `timestamp`, `username`
+  4. `model_spec` captures the relevant estimator/variables for that page (e.g., FE with profitability/tangibility/size for page 8)
+  5. File downloads without error on all four pages
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: Stage comparison functions and coefficient table formatter
+- [ ] 10-01: Audit trail JSON download button on pages 3, 8, 9, 13
 
-### Phase 4: Advanced Econometrics Page
-**Goal**: All Phase 1-3 econometric models are accessible through an interactive Streamlit page with thesis-quality output
-**Depends on**: Phases 1, 2, 3 (all backend models complete)
-**Requirements**: UI-01, UI-03, TEST-02
+---
+
+### Phase 11: Quality Carry-forwards
+**Goal**: Smoke test coverage extended to pages 17-19 so regressions are caught automatically, and the 8 US DJIA firms with NULL tangibility have correct values so peer benchmarks using the us_av_2024 vintage are accurate
+**Depends on**: Nothing (test file + data fix, independent of app pages)
+**Requirements**: QUAL-01, QUAL-02
 **Success Criteria** (what must be TRUE):
-  1. Page 13 "Advanced Econometrics" loads in sidebar and renders without errors
-  2. User can run GMM, delta-leverage, BP-LM, and stage comparisons from the page and see formatted results
-  3. Every output section has a dynamic interpretation box explaining the result in plain language
-  4. All 40 existing tests plus new tests pass (no regressions in any page)
-**Plans**: TBD
+  1. `tests/smoke_auth.py` includes login + page-load checks for page 17 (Board Export), 18 (Company Navigator), and 19 (AI Assistant)
+  2. Smoke tests for pages 17-19 use the researcher role (skumar) which has access to all three pages
+  3. `SELECT COUNT(*) FROM financials WHERE vintage='us_av_2024' AND tangibility IS NULL` returns 0 after the fix
+  4. All existing 369+ pytest tests still pass (no regressions from data fix)
+**Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: Page 13 layout with GMM and delta-leverage tabs
-- [ ] 04-02: Stage comparison tab, interpretation boxes, full regression test suite
+- [ ] 11-01: smoke_auth.py pages 17-19 + NULL tangibility fix for 8 US firms
 
-### Phase 5: Post-COVID Cohort Analysis
-**Goal**: Researchers can identify and compare firms affected by COVID through cohort analysis integrated into Knowledge Graph
-**Depends on**: Phase 4 (UI patterns established, interpretation engine validated)
-**Requirements**: COH-01, COH-02, COH-03, UI-02
-**Success Criteria** (what must be TRUE):
-  1. Post-COVID decline cohort (entered Decline/Decay after 2022) is identified and separated from pre-COVID decline firms
-  2. COVID resilience tracker shows firms that improved vs deteriorated in life stage after COVID
-  3. Leverage and profitability comparison between resilient and deteriorated cohorts is displayed with statistical tests
-  4. Cohort analysis is accessible from the Knowledge Graph page (Event Impact section or new tab)
-**Plans**: TBD
-
-Plans:
-- [ ] 05-01: COVID cohort identification and comparison functions
-- [ ] 05-02: Knowledge Graph page integration with cohort visualizations
-
-### Phase 6: AI Financial Assistant
-**Goal**: A CFO or researcher can ask natural-language questions about any company or the full panel from any page in the app, and receive grounded, data-driven answers via a floating chat widget; a dedicated Page 19 supports deep multi-turn research sessions; Page 17 Board Deck Topic 13 (AI Recommendations) is powered by the same backend.
-**Depends on**: Nothing (self-contained new module; integrates with existing db.py, graph_builder.py, models/)
-**Requirements**: CHAT-01 through CHAT-08 (see below)
-**Success Criteria** (what must be TRUE):
-  1. Floating 💬 bubble is visible in the bottom-right corner on every page; clicking opens a slide-in chat panel without full page reload
-  2. Chat panel auto-detects context: CFO mode on pages 17-18 (company + peer metrics injected), Researcher mode on pages 1-16 (panel OLS outputs injected)
-  3. Ollama backend answers questions using only the injected context — no hallucinated financial data
-  4. Claude API backend is selectable in Settings; switching backend mid-session preserves conversation history
-  5. Page 19 "AI Financial Assistant" renders as a full-screen dedicated chat with multi-turn history, mode selector, and backend toggle
-  6. Page 17 Topic 13 AI Recommendations calls the context builder and LLM adapter and returns ≥1 non-empty recommendation bullet per sub-topic (13.1-13.4)
-  7. tests/test_chatbot.py passes with mocked LLM: context builder produces correct token-bounded output for both modes
-  8. 344 + N tests pass with zero regressions
-
-**Requirements:**
-- CHAT-01: Context builder produces ≤900 token grounded context block from db.py queries (no hallucination surface)
-- CHAT-02: Query classifier routes factual SQL questions vs analytical/explanatory questions vs hybrid
-- CHAT-03: Ollama adapter streams responses using ollama Python SDK (local, zero data egress)
-- CHAT-04: Claude API adapter streams via anthropic SDK; key in .streamlit/secrets.toml
-- CHAT-05: Floating bubble injected in app.py via st.html() custom CSS/JS; no per-page modification needed
-- CHAT-06: Chat state (history, mode, backend) stored in st.session_state["chat_*"] keys
-- CHAT-07: Every query logged to audit_log table (existing) with llm_backend and token_count fields
-- CHAT-08: "Add to Board Deck" action in chat appends narrative to st.session_state["ai_recommendations"]
-
-**Plans**:
-- [ ] 06-01: models/chatbot.py — context builder + query classifier + LLM adapters (Ollama + Claude)
-- [ ] 06-02: tests/test_chatbot.py — context builder + classifier unit tests with mock LLM
-- [ ] 06-03: Floating chat widget injected in app.py (HTML/CSS/JS bubble + slide-in panel)
-- [ ] 06-04: pages/19_ai_assistant.py — full-screen dedicated page
-- [ ] 06-05: Page 17 Topic 13 AI Recommendations wired to chatbot backend + app.py registration
-
-### Phase 7: Wave 2 Tier 1 UX Quick Wins
-
-**Goal**: All 8 UX improvement items shipped with zero regressions in existing 344 tests and Playwright smoke tests updated for any moved widgets.
-
-**Depends on**: Nothing (independent UX layer, no model changes)
-
-**Success Criteria** (what must be TRUE):
-
-1. Every `st.dataframe()` and Plotly chart in all 18 pages has a download button (CSV/PNG)
-2. Every `db.*` call outside a cache hit is wrapped in `st.spinner()`
-3. No raw Python tracebacks on any page — all `db.*` calls wrapped in try/except with `st.error()` + `st.stop()`
-4. Advanced options on Econometrics, ML, Clustering, Advanced Econometrics, Interaction Effects pages are in `st.expander("Advanced options", expanded=False)`
-5. All time-series Plotly charts default x-axis range to `[year_range[0], year_range[1]]` from active filter
-6. Citation generator (APA + LaTeX) available on Econometrics, Scenarios, Advanced Econometrics pages
-7. Sidebar `>>` expand arrow has explicit `left: 0.5rem !important` CSS in `app.py`
-8. Panel selector moved from sidebar radio to navbar HTML `<select>` via `st.query_params`; all 18 pages read from `st.session_state.filters["panel_mode"]` unchanged
-
-**Plans**:
-
-- [ ] 07-01: Foundational fixes — >> arrow CSS, spinners, error states (W2-07, W2-02, W2-03)
-- [ ] 07-02: helpers.py chart zoom + progressive disclosure expanders (W2-05, W2-04)
-- [ ] 07-03: Download buttons — systematic pass all 18 pages (W2-01)
-- [ ] 07-04: Citation generator on 3 pages (W2-06)
-- [ ] 07-05: Panel selector → navbar dropdown via query_params (W2-08)
+---
 
 ## Progress
 
 **Execution Order:**
-Phases 1-5 execute in numeric order (thesis gap closure); Phase 6 is independent and can execute any time. Phase 7 is independent UX work — can execute in parallel with any phase.
+All phases (8-11) are independent — execute in parallel.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Delta-Leverage & Diagnostics | 2/2 | ✅ Complete | 2026-05-10 |
-| 2. System GMM | 2/2 | ✅ Complete | 2026-05-10 |
-| 3. Stage Comparisons | 1/1 | ✅ Complete | 2026-05-10 |
-| 4. Advanced Econometrics Page | 1/1 | ✅ Complete | 2026-05-10 |
-| 5. Post-COVID Cohort Analysis | 2/2 | ✅ Complete | 2026-05-10 |
-| 6. AI Financial Assistant | 5/5 | ✅ Complete | 2026-05-10 |
-| 7. Wave 2 Tier 1 UX Quick Wins | 5/5 | ✅ Complete | 2026-05-10 |
+| 8. CI/CD Pipeline | 0/1 | ○ Pending | — |
+| 9. Company Timeline View | 0/1 | ○ Pending | — |
+| 10. Reproducibility Audit Trail | 0/1 | ○ Pending | — |
+| 11. Quality Carry-forwards | 0/1 | ○ Pending | — |
