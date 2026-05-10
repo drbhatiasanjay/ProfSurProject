@@ -265,8 +265,28 @@ def run_hausman_test(fe_result, re_result):
 def run_breusch_pagan_lm(ols_result):
     """
     Breusch-Pagan Lagrange Multiplier test: Pooled OLS vs Random Effects.
-    H0: No panel effects (OLS is adequate).
-    H1: Panel effects exist (use RE or FE).
+    Phase 1 requirement: TST-01, TST-02.
+
+    Args:
+        ols_result: dict from run_pooled_ols with keys 'result_obj' and 'residuals'.
+
+    Returns dict with EXACT keys (page-13 contract):
+        - lm_stat:   float, BP chi-squared statistic, > 0
+        - lm_pvalue: float in [0, 1], p-value of the chi-squared stat
+        - f_stat:    float, F-statistic form of the BP test
+        - f_pvalue:  float in [0, 1]
+        - verdict:   str, one of:
+            "Panel effects detected (reject Pooled OLS at 5% level)"
+            "No significant panel effects (Pooled OLS adequate)"
+
+    Verdict logic (locked):
+        if lm_pvalue < 0.05:
+            verdict = "Panel effects detected (reject Pooled OLS at 5% level)"
+        else:
+            verdict = "No significant panel effects (Pooled OLS adequate)"
+
+    Note: this function does NOT return a 'recommended' key. The verdict string IS
+    the contract. Page 8 reads lm_stat and lm_pvalue directly for display.
     """
     resid = ols_result["residuals"]
     result_obj = ols_result["result_obj"]
@@ -430,8 +450,19 @@ def _compute_delta_leverage(df, y_col=DEFAULT_Y_COL, entity="company_code", time
 
 def run_delta_leverage_ols(df, x_cols=None, entity="company_code", time="year"):
     """
-    Pooled OLS with delta-leverage as dependent variable.
+    Pooled OLS with first-differenced delta_leverage as dependent variable.
+    Phase 1 requirement: DLV-01.
     Matches thesis Tables 5.11, 6.5, 7.2, 7.4, 8.4, 8.5.
+
+    Returns the run_pooled_ols result dict (page-13 contract):
+        - type:       'Pooled OLS'
+        - coef_table: pd.DataFrame with Variable, Coefficient, Std Err, t, p-value
+        - r_squared:  float
+        - n_obs:      int, < input panel n_obs (first-differencing drops first obs per firm)
+        - n_firms:    int
+        - ... (full run_pooled_ols contract)
+
+    Note: passes through run_pooled_ols. The 'type' string is 'Pooled OLS', not 'OLS'.
     """
     if x_cols is None:
         x_cols = DEFAULT_X_COLS
@@ -442,7 +473,10 @@ def run_delta_leverage_ols(df, x_cols=None, entity="company_code", time="year"):
 
 
 def run_delta_leverage_fe(df, x_cols=None, entity="company_code", time="year"):
-    """Fixed Effects with delta-leverage as dependent variable."""
+    """Fixed Effects on first-differenced delta_leverage. Phase 1: DLV-01.
+    Returns run_fixed_effects dict; type == 'Fixed Effects'.
+    Page-13 contract keys read: coef_table, r_squared, n_obs.
+    """
     if x_cols is None:
         x_cols = DEFAULT_X_COLS
 
@@ -452,7 +486,10 @@ def run_delta_leverage_fe(df, x_cols=None, entity="company_code", time="year"):
 
 
 def run_delta_leverage_re(df, x_cols=None, entity="company_code", time="year"):
-    """Random Effects with delta-leverage as dependent variable."""
+    """Random Effects on first-differenced delta_leverage. Phase 1: DLV-01.
+    Returns run_random_effects dict; type == 'Random Effects'.
+    Page-13 contract keys read: coef_table, r_squared, n_obs.
+    """
     if x_cols is None:
         x_cols = DEFAULT_X_COLS
 
@@ -463,7 +500,20 @@ def run_delta_leverage_re(df, x_cols=None, entity="company_code", time="year"):
 
 def run_delta_leverage_all(df, x_cols=None, entity="company_code", time="year"):
     """
-    Run OLS, FE, RE on delta-leverage + Hausman test. Auto-recommend best model.
+    Run OLS + FE + RE on delta-leverage and select via Hausman test.
+    Phase 1 requirement: DLV-02.
+
+    Returns dict with EXACT keys (page-13 contract):
+        - ols:         result dict from run_delta_leverage_ols
+        - fe:          result dict from run_delta_leverage_fe
+        - re:          result dict from run_delta_leverage_re
+        - hausman:     dict with chi2, p_value, verdict, recommended
+        - recommended: str, one of 'Fixed Effects' or 'Random Effects'
+                       (mirrors hausman['recommended'])
+
+    Note: 'recommended' at the top level MUST equal hausman['recommended'].
+    Page 13 reads result['recommended'], result['hausman'], result['fe'],
+    result['re'], result['ols'] (r_squared, n_obs, coef_table).
     """
     ols = run_delta_leverage_ols(df, x_cols, entity, time)
     fe = run_delta_leverage_fe(df, x_cols, entity, time)
@@ -480,8 +530,21 @@ def run_delta_leverage_all(df, x_cols=None, entity="company_code", time="year"):
 def run_delta_leverage_by_stage(df, x_cols=None, entity="company_code", time="year",
                                  stage_col="life_stage"):
     """
-    Run delta-leverage regressions separately for each life stage.
-    Returns dict {stage_name: result_dict}.
+    Run delta-leverage Pooled OLS separately for each Dickinson life stage.
+    Phase 1 requirements: DLV-03, DLV-04.
+
+    Returns dict mapping stage name (str) to:
+        - run_pooled_ols result dict (keys: type, coef_table, r_squared, n_obs, ...)
+          for stages with >= 30 observations after first-differencing, OR
+        - {'error': 'Too few observations (N)'} where N is the actual count,
+          for sparse stages (typically Shakeout1 with ~31 raw obs that drop below
+          30 after first-difference).
+
+    Note: a try/except wraps the regression call so any per-stage failure surfaces
+    as {'error': str(exception)} rather than aborting the whole sweep. Page 13
+    iterates results and skips stages where 'error' in result.
+    Page-13 contract keys read (ok stages): r_squared, n_obs, coef_table.
+    Page-13 contract keys read (error stages): 'error' (string for display).
     """
     if x_cols is None:
         x_cols = DEFAULT_X_COLS
