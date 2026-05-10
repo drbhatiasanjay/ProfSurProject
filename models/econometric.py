@@ -574,16 +574,28 @@ def run_stage_comparison(df, stage_a, stage_b, y_col=DEFAULT_Y_COL, x_cols=None,
     """
     Run OLS on subset of two stages and return separate coefficient sets.
     Matches thesis Table 7.5 (Growth vs Maturity) and Tables 8.7-8.8.
+    Phase 3 requirements: CMP-01, CMP-02, CMP-03.
+
+    Returns dict with keys: stage_a, stage_b, result_a, result_b, comparison (DataFrame).
+    comparison columns: Variable, {A} Coef, {A} p, {B} Coef, {B} p, Divergent.
+    Divergent is False for the 'const' row.
+    Returns {'error': str} if either stage has < 30 obs or stage_a == stage_b.
     """
     if x_cols is None:
         x_cols = DEFAULT_X_COLS
 
-    subset = df[df[stage_col].isin([stage_a, stage_b])]
-    if len(subset) < 50:
-        return {"error": f"Too few observations for {stage_a} vs {stage_b} ({len(subset)})"}
+    if stage_a == stage_b:
+        return {"error": f"stage_a and stage_b must be different (got '{stage_a}' for both)"}
 
-    result_a = run_pooled_ols(df[df[stage_col] == stage_a], y_col, x_cols, entity, time)
-    result_b = run_pooled_ols(df[df[stage_col] == stage_b], y_col, x_cols, entity, time)
+    subset_a = df[df[stage_col] == stage_a]
+    subset_b = df[df[stage_col] == stage_b]
+    if len(subset_a) < 30:
+        return {"error": f"Too few observations for {stage_a} ({len(subset_a)}). Need 30+."}
+    if len(subset_b) < 30:
+        return {"error": f"Too few observations for {stage_b} ({len(subset_b)}). Need 30+."}
+
+    result_a = run_pooled_ols(subset_a, y_col, x_cols, entity, time)
+    result_b = run_pooled_ols(subset_b, y_col, x_cols, entity, time)
 
     # Build comparison table
     coef_a = result_a["coef_table"].set_index("Variable")
@@ -596,16 +608,34 @@ def run_stage_comparison(df, stage_a, stage_b, y_col=DEFAULT_Y_COL, x_cols=None,
         f"{stage_b} Coef": coef_b.loc[common_vars, "Coefficient"],
         f"{stage_b} p": coef_b.loc[common_vars, "p-value"],
     })
+    # Exclude 'const' row from sign-flip divergence flagging
+    not_const = comparison.index.map(lambda v: v != "const")
     comparison["Divergent"] = (
         (comparison[f"{stage_a} Coef"] * comparison[f"{stage_b} Coef"] < 0) |
         (comparison[f"{stage_a} p"].lt(0.05) != comparison[f"{stage_b} p"].lt(0.05))
-    )
+    ) & not_const
 
     return {
         "stage_a": stage_a, "stage_b": stage_b,
         "result_a": result_a, "result_b": result_b,
         "comparison": comparison.reset_index(),
     }
+
+
+def format_stage_comparison_table(comparison_df, stage_a, stage_b):
+    """
+    Add significance star columns to a comparison DataFrame from run_stage_comparison.
+    Returns a display-ready copy with '{stage} Sig' columns and formatted p-value strings.
+    Pure function — no Streamlit dependency. Phase 3: CMP-03.
+    """
+    from helpers import significance_stars, format_pvalue
+    out = comparison_df.copy()
+    for s in [stage_a, stage_b]:
+        p_col = f"{s} p"
+        if p_col in out.columns:
+            out[f"{s} Sig"] = out[p_col].apply(significance_stars)
+            out[p_col] = out[p_col].apply(format_pvalue)
+    return out
 
 
 # ── IV / 2SLS (endogeneity correction) ──

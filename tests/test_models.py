@@ -362,6 +362,69 @@ class TestEconometric:
                 "ANOVA significant but Tukey HSD found no significant pairs"
 
 
+class TestStageComparisons:
+    """Tests for run_stage_comparison and format_stage_comparison_table. Phase 3: CMP-01/02/03."""
+
+    def test_growth_vs_maturity_structure(self, full_panel):
+        """Return dict has required keys and comparison columns (CMP-01 / CMP-03)."""
+        from models.econometric import run_stage_comparison
+        result = run_stage_comparison(full_panel, "Growth", "Maturity")
+        assert "error" not in result, f"Unexpected error: {result.get('error')}"
+        assert result["stage_a"] == "Growth"
+        assert result["stage_b"] == "Maturity"
+        for key in ("result_a", "result_b", "comparison"):
+            assert key in result, f"Missing key: {key}"
+        comp = result["comparison"]
+        expected_cols = {"Variable", "Growth Coef", "Growth p", "Maturity Coef", "Maturity p", "Divergent"}
+        assert expected_cols.issubset(set(comp.columns)), f"Missing columns: {expected_cols - set(comp.columns)}"
+
+    def test_growth_vs_maturity_separate_coefs(self, full_panel):
+        """Each stage produces independent OLS coefficients (CMP-01)."""
+        from models.econometric import run_stage_comparison
+        result = run_stage_comparison(full_panel, "Growth", "Maturity")
+        assert result["result_a"]["n_obs"] >= 100
+        assert result["result_b"]["n_obs"] >= 100
+        coef_a = result["result_a"]["coef_table"].set_index("Variable")["Coefficient"]
+        coef_b = result["result_b"]["coef_table"].set_index("Variable")["Coefficient"]
+        common = coef_a.index.intersection(coef_b.index)
+        assert not coef_a[common].equals(coef_b[common]), "Growth and Maturity OLS coefs should differ"
+
+    def test_decline_vs_decay_structure(self, full_panel):
+        """Decline vs Decay returns valid dict (CMP-02)."""
+        from models.econometric import run_stage_comparison
+        result = run_stage_comparison(full_panel, "Decline", "Decay")
+        assert "error" not in result, f"Unexpected error: {result.get('error')}"
+        assert len(result["comparison"]) >= 6
+
+    def test_divergent_flag_excludes_const(self, full_panel):
+        """The 'const' row must never be flagged Divergent (CMP-03)."""
+        from models.econometric import run_stage_comparison
+        result = run_stage_comparison(full_panel, "Growth", "Maturity")
+        comp = result["comparison"]
+        const_rows = comp[comp["Variable"] == "const"]
+        if not const_rows.empty:
+            assert not const_rows["Divergent"].any(), "'const' row should not be Divergent"
+
+    def test_same_stage_returns_error(self, full_panel):
+        """Passing the same stage for both A and B returns an error dict."""
+        from models.econometric import run_stage_comparison
+        result = run_stage_comparison(full_panel, "Growth", "Growth")
+        assert "error" in result
+
+    def test_format_stage_comparison_table(self, full_panel):
+        """format_stage_comparison_table adds Sig columns and formats p-values (CMP-03)."""
+        from models.econometric import run_stage_comparison, format_stage_comparison_table
+        result = run_stage_comparison(full_panel, "Growth", "Maturity")
+        assert "error" not in result
+        formatted = format_stage_comparison_table(result["comparison"], "Growth", "Maturity")
+        assert "Growth Sig" in formatted.columns
+        assert "Maturity Sig" in formatted.columns
+        assert formatted["Growth p"].dtype == object, "Growth p should be formatted string"
+        valid_stars = {"***", "**", "*", ".", ""}
+        for v in formatted["Growth Sig"].dropna():
+            assert v in valid_stars, f"Unexpected star value: {v!r}"
+
+
 class TestMLModels:
     def test_cross_validate_rf(self, small_panel):
         from models.ml_predict import cross_validate_model

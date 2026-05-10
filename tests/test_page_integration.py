@@ -726,3 +726,27 @@ class TestUIHelpers:
                 title = m.group(1)
                 violations.append(f"{fname}: '{title[:70]}' ({len(title)} chars)")
         assert not violations, "Chart titles >65 chars:\n" + "\n".join(violations)
+
+
+class TestPage13StageComparisons:
+    """Smoke tests for the Stage Comparisons tab in page 13. Phase 3: CMP-01/02."""
+
+    def test_growth_vs_maturity_e2e(self, thesis_panel):
+        """Growth vs Maturity runs without error on the full thesis panel (CMP-01)."""
+        from models.econometric import run_stage_comparison
+        result = run_stage_comparison(thesis_panel, "Growth", "Maturity")
+        assert "error" not in result, f"Unexpected error: {result.get('error')}"
+        assert result["result_a"]["n_obs"] >= 100
+        assert result["result_b"]["n_obs"] >= 100
+        assert result["comparison"]["Divergent"].dtype == bool
+
+    def test_decline_vs_decay_e2e(self, thesis_panel):
+        """Decline vs Decay returns distinct coefficient sets on thesis panel (CMP-02)."""
+        from models.econometric import run_stage_comparison
+        result = run_stage_comparison(thesis_panel, "Decline", "Decay")
+        assert "error" not in result, f"Unexpected error: {result.get('error')}"
+        comp = result["comparison"]
+        assert "profitability" in comp["Variable"].values
+        prof_row = comp[comp["Variable"] == "profitability"].iloc[0]
+        assert not pd.isna(prof_row["Decline Coef"])
+        assert not pd.isna(prof_row["Decay Coef"])
