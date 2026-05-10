@@ -18,9 +18,11 @@ import pandas as pd
 import db
 from helpers import (
     ensure_session_state, require_role, plotly_layout,
-    PLOTLY_CONFIG, STAGE_COLORS, STAGE_ORDER, new_badge,
+    PLOTLY_CONFIG, STAGE_COLORS, STAGE_ORDER, STAGE_RANK, new_badge,
     chart_download_button,
 )
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 from graph_builder import (
     build_knowledge_graph,
     build_cfo_ego_graph,
@@ -113,9 +115,9 @@ with col_co:
 with col_view:
     view_mode = st.radio(
         "View",
-        options=["Ego Graph", "Peer Cluster", "Stage Map"],
+        options=["Ego Graph", "Peer Cluster", "Stage Map", "Timeline"],
         horizontal=True,
-        index=["Ego Graph", "Peer Cluster", "Stage Map"].index(
+        index=["Ego Graph", "Peer Cluster", "Stage Map", "Timeline"].index(
             st.session_state.get("navigator_view", "Ego Graph")
         ),
         key="nav_view",
@@ -135,8 +137,8 @@ company_row  = companies_df[companies_df["company_name"] == selected_name].iloc[
 company_code = int(company_row["company_code"])
 st.session_state["active_company_cin"] = company_code  # enables CFO mode in chat bubble
 
-# Year slider (hidden for Stage Map)
-if view_mode != "Stage Map":
+# Year slider (hidden for Stage Map and Timeline)
+if view_mode not in ("Stage Map", "Timeline"):
     years_available = sorted(full_panel["year"].unique().tolist()) if "year" in full_panel.columns else list(range(2001, 2025))
     selected_year = st.slider(
         "Year",
@@ -280,6 +282,95 @@ with col_graph:
                 del st.session_state["navigator_drill_stage"]
                 st.rerun()
 
+    elif view_mode == "Timeline":
+        company_df = db.get_company_detail(company_code)
+        if company_df.empty or "life_stage" not in company_df.columns:
+            st.info("No timeline data available for this company.")
+        else:
+            tl = (
+                company_df[["year", "life_stage", "leverage"]]
+                .dropna(subset=["life_stage"])
+                .sort_values("year")
+            )
+            tl["leverage_num"] = pd.to_numeric(tl["leverage"], errors="coerce")
+
+            # Assign ordinal y-position using STAGE_RANK so the axis reads
+            # Startup → Decay (ascending rank = more mature / distressed)
+            tl["stage_rank"] = tl["life_stage"].map(STAGE_RANK).fillna(0).astype(int)
+            bar_colors = [STAGE_COLORS.get(s, "#9CA3AF") for s in tl["life_stage"]]
+
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+            # Stage bars on primary y-axis
+            fig.add_trace(
+                go.Bar(
+                    x=tl["year"],
+                    y=tl["stage_rank"],
+                    marker_color=bar_colors,
+                    name="Life Stage",
+                    text=tl["life_stage"],
+                    textposition="inside",
+                    hovertemplate="<b>%{text}</b><br>Year: %{x}<extra></extra>",
+                ),
+                secondary_y=False,
+            )
+
+            # Leverage line on secondary y-axis
+            fig.add_trace(
+                go.Scatter(
+                    x=tl["year"],
+                    y=tl["leverage_num"],
+                    mode="lines+markers",
+                    line=dict(color="#6366F1", width=2),
+                    marker=dict(size=5),
+                    name="Leverage",
+                    hovertemplate="Leverage: %{y:.3f}<br>Year: %{x}<extra></extra>",
+                ),
+                secondary_y=True,
+            )
+
+            # Apply project chart theme as base then override for dual-axis needs
+            base_layout = plotly_layout(f"{selected_name} — Life Stage & Leverage", 420)
+            fig.update_layout(**base_layout)
+            fig.update_layout(
+                barmode="overlay",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(l=60, r=80, t=60, b=60),
+            )
+
+            # Primary y-axis: stage rank ticks
+            tick_vals = list(STAGE_RANK.values())
+            tick_text = list(STAGE_RANK.keys())
+            fig.update_yaxes(
+                title_text="Life Stage",
+                tickvals=tick_vals,
+                ticktext=tick_text,
+                range=[0, max(tick_vals) + 0.5],
+                secondary_y=False,
+            )
+            fig.update_yaxes(
+                title_text="Leverage (Total Debt / Total Assets)",
+                secondary_y=True,
+                showgrid=False,
+            )
+            fig.update_xaxes(title_text="Year", dtick=1)
+
+            st.plotly_chart(fig, config=PLOTLY_CONFIG, use_container_width=True)
+            chart_download_button(fig, f"timeline_{company_code}.png")
+
+            # Stage transition summary below chart
+            transitions = (
+                tl[["year", "life_stage"]]
+                .assign(prev_stage=tl["life_stage"].shift(1))
+                .dropna(subset=["prev_stage"])
+                .query("life_stage != prev_stage")
+                [["year", "prev_stage", "life_stage"]]
+                .rename(columns={"year": "Year", "prev_stage": "From", "life_stage": "To"})
+            )
+            if not transitions.empty:
+                with st.expander("Stage Transitions", expanded=False):
+                    st.dataframe(transitions, hide_index=True, use_container_width=True)
+
 # ── Legend ────────────────────────────────────────────────────────────────────
 with col_graph:
     st.markdown(
@@ -327,7 +418,6 @@ with col_panel:
             if detail_code:
                 detail_peers = db.get_company_peers(detail_code, full_panel, n=5)
                 if not detail_peers.empty and "leverage" in detail_peers.columns:
-                    import plotly.graph_objects as go
                     peer_levs = pd.to_numeric(detail_peers["leverage"], errors="coerce").dropna()
                     peer_names = detail_peers["company_name"].tolist()[:len(peer_levs)]
                     fig_mini = go.Figure(go.Bar(
