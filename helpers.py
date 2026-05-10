@@ -604,6 +604,55 @@ def export_excel(df):
     return buf.getvalue()
 
 
+def df_download_button(df, filename: str = "data.csv", label: str = "Download CSV") -> None:
+    """Render a st.download_button for a DataFrame as CSV.
+
+    Call immediately after st.dataframe() with the same DataFrame.
+    Lazy-imports streamlit so helpers stays importable from tests/scripts.
+
+    Args:
+        df: The pandas DataFrame to export.
+        filename: Suggested download filename (include .csv extension).
+        label: Button label shown to user.
+    """
+    import streamlit as st
+    csv_bytes = df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label=label,
+        data=csv_bytes,
+        file_name=filename,
+        mime="text/csv",
+        key=f"dl_csv_{filename}_{id(df)}",
+    )
+
+
+def chart_download_button(fig, filename: str = "chart.png", label: str = "Download PNG") -> None:
+    """Render a st.download_button for a Plotly figure as PNG.
+
+    Call immediately after st.plotly_chart() with the same figure.
+    kaleido must be installed (it is in this project's requirements.txt).
+    Lazy-imports streamlit so helpers stays importable from tests/scripts.
+
+    Args:
+        fig: The plotly.graph_objects.Figure or plotly.express figure to export.
+        filename: Suggested download filename (include .png extension).
+        label: Button label shown to user.
+    """
+    import streamlit as st
+    try:
+        png_bytes = fig.to_image(format="png", scale=2)
+        st.download_button(
+            label=label,
+            data=png_bytes,
+            file_name=filename,
+            mime="image/png",
+            key=f"dl_png_{filename}_{id(fig)}",
+        )
+    except Exception:
+        # kaleido not available in test environment — silently skip
+        pass
+
+
 # ── Dickinson life stage classifier ──
 
 def classify_life_stage(ncfo, ncfi, ncff):
