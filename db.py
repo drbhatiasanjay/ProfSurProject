@@ -156,6 +156,33 @@ def get_model_runs(username: str, page: str, limit: int = 20) -> "pd.DataFrame":
     )
 
 
+def ensure_app_tables():
+    """Create audit_log, user_preferences, user_model_runs if missing (idempotent)."""
+    conn = get_connection()
+    try:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                username TEXT, role TEXT, page_name TEXT,
+                action_type TEXT, details TEXT, session_id TEXT
+            );
+            CREATE TABLE IF NOT EXISTS user_preferences (
+                username TEXT NOT NULL, page TEXT NOT NULL,
+                prefs_json TEXT, updated_at TEXT,
+                PRIMARY KEY (username, page)
+            );
+            CREATE TABLE IF NOT EXISTS user_model_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                username TEXT, page TEXT, params TEXT, summary TEXT
+            );
+        """)
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def ensure_cmie_tables():
     """
     Create versioned CMIE import tables if missing.

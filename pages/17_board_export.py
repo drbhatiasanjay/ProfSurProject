@@ -63,6 +63,8 @@ if _username:
     db.save_user_pref(_username, "board_deck", {"selected_company": selected_name})
 company_row = companies_df[companies_df["company_name"] == selected_name].iloc[0]
 company_code = int(company_row["company_code"])
+panel_mode = "thesis"  # page 17 is always thesis-pinned
+st.session_state["active_company_cin"] = company_code
 
 
 # ── STEP 2: Load data ─────────────────────────────────────────────────────────
@@ -212,6 +214,24 @@ if st.session_state.get("deck_previewed"):
 
         except Exception as exc:
             st.error(f"Topic {tid} could not render: {exc}")
+
+    # ── Topic 13 AI: LLM-powered recommendations ──────────────────────────────
+    st.markdown("---")
+    with st.expander("Topic 13: AI Recommendations", expanded=False):
+        backend = st.session_state.get("chat_backend", "ollama")
+        with st.spinner(f"Generating AI recommendations via {backend}..."):
+            from models import board_export as _be
+            _t13 = _be.build_topic_13_ai(company_code, panel_mode=panel_mode, backend=backend)
+        if _t13.get("ai_offline"):
+            st.warning("AI backend offline — showing rule-based recommendations.")
+        for _label, _bullets in _t13.get("insights", []):
+            st.markdown(f"**{_label}**")
+            for _b in _bullets:
+                st.markdown(f"- {_b}")
+        if _t13.get("actions"):
+            st.markdown("**13.4 Three actions**")
+            for _a in _t13.get("actions", []):
+                st.markdown(f"- {_a}")
 
 # ── STEP 7: PPTX generation & download ───────────────────────────────────────
 if download_clicked:

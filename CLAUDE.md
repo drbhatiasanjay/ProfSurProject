@@ -4,11 +4,11 @@
 Streamlit dashboard analyzing capital structure determinants across corporate life stages for 401 Indian companies. Based on PhD thesis by Prof Surendra Kumar, University of Delhi. Thesis panel covers 2001–2024; CMIE 2025 rollforward is available on the Latest panel (`panel_mode='latest'`).
 
 ## Architecture
-- **Frontend**: Streamlit multipage app (17 pages)
+- **Frontend**: Streamlit multipage app (18 pages)
 - **Database**: SQLite (`capital_structure.db`) — vintage-tagged (thesis + cmie_2025 + run3 + us_av_2024 vintages coexist)
 - **Models**: `models/` package (econometric + ML + advanced + scenario_regression + data_ingest + workbench + interaction)
 - **CMIE integration**: `cmie/` package (CmieClient, load_vintage, pipeline, normalize — all transports implemented)
-- **Tests**: `tests/` with pytest (299 tests — DB + models + 7 CMIE suites + scenario_regression + page integration + board export)
+- **Tests**: `tests/` with pytest (316 tests — DB + models + 7 CMIE suites + scenario_regression + page integration + board export + CFO graph)
 - **Deployment**: Docker (Python 3.11-slim) → Google Cloud Run
 
 ## Key Commands
@@ -110,7 +110,7 @@ pages/
   4_bulk_upload.py         - Bulk upload + CMIE API Sync tab
   5_data_explorer.py       - Raw panel explorer (vintage-aware)
   6_settings.py            - Appearance (theme toggle) + CMIE lab UI
-  7_knowledge_graph.py     - Determinants graph
+  7_knowledge_graph.py     - Life Stage Dynamics: Markov transitions, stickiness, event impact, COVID cohorts, multi-hop profiling (sidebar title: "Life Stage Dynamics")
   8_econometrics.py        - OLS/FE/RE/Hausman (pinned: thesis)
   9_ml_models.py           - RF/XGB/LGBM + SHAP (pinned: thesis)
   10_forecasting.py        - LSTM/GRU (pinned: thesis)
@@ -121,13 +121,14 @@ pages/
   15_interaction_effects.py - Cross-term (Prof×Tang) + stage moderation + simple slopes (pinned: thesis)
   16_admin_activity.py     - Admin audit log viewer (role: admin only)
   17_board_export.py       - Individual company board deck: 13 topics, preview + .pptx download (role: admin/researcher)
+  18_company_navigator.py  - Interactive graph explorer: Ego Graph / Peer Cluster / Stage Map, pyvis + Plotly (role: admin/researcher)
 scripts/
   cmie_stage1_reliance_diagnostic.py  - wapicall E2E probe (§E.5)
   cmie_stage1_queryphp_probe.py       - query.php E2E probe (§E.5.3)
 tests/
   test_database.py, test_models.py, test_scenario_regression.py,
   test_cmie_*.py (7 files), test_bulk_upload_cmie_parse.py,
-  test_page_integration.py, test_board_export.py   (299 tests total)
+  test_page_integration.py, test_board_export.py, test_cfo_graph.py   (344 tests total)
 cmie_validation/    - Per-run CMIE API artifacts (gitignored)
 DataV2/             - Raw CMIE pipe-delimited extracts (gitignored)
 ```

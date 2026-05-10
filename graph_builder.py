@@ -782,3 +782,296 @@ def _stage_color(stage):
         "Decline": "#EF4444", "Decay": "#991B1B",
     }
     return colors.get(stage, "#94A3B8")
+
+
+# ── CFO-facing graph builders ─────────────────────────────────────────────────
+
+def build_cfo_ego_graph(G_full, company_code, peers_df, company_df, stage_summary):
+    """
+    Company-centred ego graph for CFO Navigator.
+    Nodes: focal company + peers + life_stage + industry + stage_norm + events experienced.
+    Returns nx.Graph (simple, not MultiGraph) — pyvis-compatible.
+    """
+    G = nx.Graph()
+    focal_id = f"company:{company_code}"
+
+    # ── Focal company attributes ──
+    focal_name = str(company_code)
+    focal_stage = None
+    focal_industry = None
+    focal_leverage = None
+    focal_prof = None
+
+    if company_df is not None and not company_df.empty:
+        latest = company_df.sort_values("year").iloc[-1]
+        focal_name = latest.get("company_name", str(company_code)) if hasattr(latest, "get") else str(company_code)
+        focal_stage = latest.get("life_stage") if hasattr(latest, "get") else None
+        focal_industry = latest.get("industry_group") if hasattr(latest, "get") else None
+        lev = latest.get("leverage") if hasattr(latest, "get") else None
+        prof = latest.get("profitability") if hasattr(latest, "get") else None
+        focal_leverage = float(lev) if lev is not None and pd.notna(lev) else None
+        focal_prof = float(prof) if prof is not None and pd.notna(prof) else None
+    elif G_full.has_node(focal_id):
+        nd = G_full.nodes[focal_id]
+        focal_name = nd.get("label", str(company_code))
+        focal_industry = nd.get("industry", "")
+
+    G.add_node(focal_id, node_type="company", label=focal_name,
+               company_code=company_code, stage=focal_stage,
+               industry=focal_industry, leverage=focal_leverage,
+               profitability=focal_prof, is_focal=True, color="#0D9488")
+
+    # ── Peer nodes ──
+    if peers_df is not None and not peers_df.empty:
+        peer_latest = (peers_df.sort_values("year").groupby("company_code").last().reset_index()
+                       if "year" in peers_df.columns else peers_df)
+        for _, row in peer_latest.head(20).iterrows():
+            peer_code = int(row["company_code"])
+            if peer_code == company_code:
+                continue
+            peer_id = f"company:{peer_code}"
+            peer_lev_raw = row.get("leverage") if hasattr(row, "get") else None
+            peer_lev = float(peer_lev_raw) if peer_lev_raw is not None and pd.notna(peer_lev_raw) else None
+            sim = max(0.1, 1.0 - abs((focal_leverage or 0) - (peer_lev or 0)))
+            peer_name = row.get("company_name", str(peer_code)) if hasattr(row, "get") else str(peer_code)
+            G.add_node(peer_id, node_type="company", label=peer_name,
+                       company_code=peer_code,
+                       stage=row.get("life_stage") if hasattr(row, "get") else None,
+                       leverage=peer_lev, is_focal=False, color="#5EEAD4")
+            G.add_edge(focal_id, peer_id, relation="IS_PEER_OF", similarity_score=round(sim, 3))
+
+    # ── Life stage node ──
+    if focal_stage:
+        stage_id = f"stage:{focal_stage}"
+        G.add_node(stage_id, node_type="life_stage", label=focal_stage,
+                   color=_stage_color(focal_stage))
+        G.add_edge(focal_id, stage_id, relation="IN_STAGE")
+
+    # ── Industry node ──
+    if focal_industry:
+        ind_id = f"industry:{focal_industry}"
+        G.add_node(ind_id, node_type="industry", label=focal_industry, color="#374151")
+        G.add_edge(focal_id, ind_id, relation="IN_INDUSTRY")
+
+    # ── Stage norm node (p25/p50/p75 from full_panel via stage_summary) ──
+    if focal_stage and stage_summary is not None and not stage_summary.empty:
+        p25, p50, p75 = None, None, None
+        if "life_stage" in stage_summary.columns and "leverage" in stage_summary.columns:
+            # stage_summary is per-year; aggregate to percentiles
+            stage_rows = stage_summary[stage_summary["life_stage"] == focal_stage]
+            if not stage_rows.empty:
+                lev_series = pd.to_numeric(stage_rows["leverage"], errors="coerce").dropna()
+                if len(lev_series) > 0:
+                    p25 = round(float(lev_series.quantile(0.25)), 3)
+                    p50 = round(float(lev_series.quantile(0.50)), 3)
+                    p75 = round(float(lev_series.quantile(0.75)), 3)
+        elif "life_stage" in stage_summary.columns and "avg_leverage" in stage_summary.columns:
+            stage_rows = stage_summary[stage_summary["life_stage"] == focal_stage]
+            if not stage_rows.empty:
+                avg_lev = pd.to_numeric(stage_rows["avg_leverage"], errors="coerce").mean()
+                p50 = round(float(avg_lev), 3) if pd.notna(avg_lev) else None
+        norm_id = f"stage_norm:{focal_stage}"
+        label = f"Norm: {focal_stage}" + (f" | p50={p50:.2f}" if p50 is not None else "")
+        G.add_node(norm_id, node_type="stage_norm", label=label,
+                   p25=p25, p50=p50, p75=p75, stage=focal_stage, color="#6366F1")
+        G.add_edge(focal_id, norm_id, relation="HAS_NORM")
+
+    # ── Event nodes the company experienced ──
+    if company_df is not None and not company_df.empty:
+        for event_name, meta in EVENT_PERIODS.items():
+            col = meta["col"]
+            if col in company_df.columns and pd.to_numeric(company_df[col], errors="coerce").sum() > 0:
+                event_id = f"event:{event_name}"
+                G.add_node(event_id, node_type="event", label=event_name,
+                           years=meta["years"], color=meta["color"])
+                G.add_edge(focal_id, event_id, relation="EXPERIENCED_EVENT")
+
+    return G
+
+
+def build_peer_cluster_graph(G_full, stage_name, full_panel, focal_code=None, n=40):
+    """
+    All same-stage firms as nodes with IS_SIMILAR edges to 3 nearest leverage neighbours.
+    Focal company (if given) has is_focal=True. Colour-coded by leverage quartile.
+    Returns nx.Graph.
+    """
+    G = nx.Graph()
+    if full_panel is None or full_panel.empty or "life_stage" not in full_panel.columns:
+        return G
+
+    stage_firms = full_panel[full_panel["life_stage"] == stage_name].copy()
+    if stage_firms.empty:
+        return G
+
+    if "year" in stage_firms.columns:
+        latest = stage_firms.sort_values("year").groupby("company_code").last().reset_index()
+    else:
+        latest = stage_firms.groupby("company_code").last().reset_index()
+
+    # Always include focal; cap others at n
+    if focal_code is not None:
+        focal_rows = latest[latest["company_code"] == focal_code]
+        other_rows = latest[latest["company_code"] != focal_code].head(n - len(focal_rows))
+        latest = pd.concat([focal_rows, other_rows], ignore_index=True)
+    else:
+        latest = latest.head(n)
+
+    lev_vals = pd.to_numeric(latest.get("leverage", pd.Series(dtype=float)), errors="coerce").dropna()
+    q1 = float(lev_vals.quantile(0.25)) if len(lev_vals) > 3 else None
+    q2 = float(lev_vals.quantile(0.50)) if len(lev_vals) > 3 else None
+    q3 = float(lev_vals.quantile(0.75)) if len(lev_vals) > 3 else None
+
+    def _lev_color(lev):
+        if lev is None or q1 is None:
+            return "#0D9488"
+        if lev <= q1:
+            return "#22C55E"
+        if lev <= q2:
+            return "#86EFAC"
+        if lev <= q3:
+            return "#FCA5A5"
+        return "#EF4444"
+
+    lev_map = {}
+    for _, row in latest.iterrows():
+        code = int(row["company_code"])
+        lev_raw = row.get("leverage") if hasattr(row, "get") else None
+        lev_map[code] = float(lev_raw) if lev_raw is not None and pd.notna(lev_raw) else None
+
+        is_focal = (focal_code is not None and code == focal_code)
+        lev = lev_map[code]
+        prof_raw = row.get("profitability") if hasattr(row, "get") else None
+        G.add_node(f"company:{code}",
+                   node_type="company",
+                   label=row.get("company_name", str(code)) if hasattr(row, "get") else str(code),
+                   company_code=code, stage=stage_name,
+                   leverage=lev,
+                   profitability=float(prof_raw) if prof_raw is not None and pd.notna(prof_raw) else None,
+                   is_focal=is_focal,
+                   color=_lev_color(lev))
+
+    codes = list(lev_map.keys())
+    for c1 in codes:
+        lev1 = lev_map.get(c1)
+        if lev1 is None:
+            continue
+        dists = sorted(
+            [(abs(lev1 - lev_map[c2]), c2) for c2 in codes
+             if c2 != c1 and lev_map.get(c2) is not None]
+        )
+        for dist, c2 in dists[:3]:
+            id1, id2 = f"company:{c1}", f"company:{c2}"
+            if not G.has_edge(id1, id2):
+                G.add_edge(id1, id2, relation="IS_SIMILAR", distance=round(dist, 4))
+
+    return G
+
+
+def build_stage_map_graph(G_full, full_panel):
+    """
+    8 life-stage nodes with TRANSITIONS edges weighted by probability.
+    Node size attr = company_count. Used for Stage Map view.
+    Returns nx.Graph.
+    """
+    from helpers import STAGE_ORDER, STAGE_COLORS
+
+    G = nx.Graph()
+
+    counts_df, prob_df = compute_transition_matrix(G_full)
+
+    company_counts = {}
+    if full_panel is not None and not full_panel.empty and "life_stage" in full_panel.columns:
+        if "year" in full_panel.columns:
+            latest = full_panel.sort_values("year").groupby("company_code").last()
+        else:
+            latest = full_panel.groupby("company_code").last()
+        company_counts = latest["life_stage"].value_counts().to_dict()
+
+    for stage in STAGE_ORDER:
+        stage_id = f"stage:{stage}"
+        G.add_node(stage_id, node_type="life_stage", label=stage,
+                   company_count=company_counts.get(stage, 0),
+                   color=STAGE_COLORS.get(stage, "#6B7280"))
+
+    for from_s in STAGE_ORDER:
+        for to_s in STAGE_ORDER:
+            if from_s == to_s:
+                continue
+            prob = float(prob_df.loc[from_s, to_s]) if from_s in prob_df.index and to_s in prob_df.columns else 0.0
+            count = int(counts_df.loc[from_s, to_s]) if from_s in counts_df.index and to_s in counts_df.columns else 0
+            if prob > 0.01:
+                id1, id2 = f"stage:{from_s}", f"stage:{to_s}"
+                if not G.has_edge(id1, id2):
+                    G.add_edge(id1, id2, relation="TRANSITIONS",
+                               probability=round(prob, 3), n_obs=count)
+
+    return G
+
+
+def get_cfo_node_panel(G, node_id, full_panel):
+    """
+    Return a dict for CFO detail panel display when a node is selected.
+    Company: leverage/profitability + percentile rank vs panel.
+    Stage: p25/p50/p75 norm band + company count.
+    Industry: avg metrics + count.
+    Unknown node: empty dict.
+    """
+    if node_id not in G:
+        return {}
+
+    node_data = dict(G.nodes[node_id])
+    node_type = node_data.get("node_type", node_data.get("type", ""))
+    panel = {"node_id": node_id, "node_type": node_type, "label": node_data.get("label", node_id)}
+
+    if node_type == "company":
+        lev = node_data.get("leverage")
+        prof = node_data.get("profitability")
+        panel.update({
+            "leverage": lev,
+            "profitability": prof,
+            "stage": node_data.get("stage"),
+            "is_focal": node_data.get("is_focal", False),
+            "company_code": node_data.get("company_code"),
+        })
+        if full_panel is not None and not full_panel.empty:
+            if "year" in full_panel.columns:
+                latest_panel = full_panel.sort_values("year").groupby("company_code").last().reset_index()
+            else:
+                latest_panel = full_panel
+            if lev is not None and "leverage" in latest_panel.columns:
+                lev_s = pd.to_numeric(latest_panel["leverage"], errors="coerce").dropna()
+                if len(lev_s) > 0:
+                    panel["leverage_pct"] = round(float((lev_s < lev).mean() * 100), 1)
+            if prof is not None and "profitability" in latest_panel.columns:
+                prof_s = pd.to_numeric(latest_panel["profitability"], errors="coerce").dropna()
+                if len(prof_s) > 0:
+                    panel["profitability_pct"] = round(float((prof_s < prof).mean() * 100), 1)
+
+    elif node_type == "life_stage":
+        stage_name = node_data.get("label")
+        p25, p50, p75 = node_data.get("p25"), node_data.get("p50"), node_data.get("p75")
+        if (p25 is None or p50 is None) and full_panel is not None and not full_panel.empty:
+            if "life_stage" in full_panel.columns and "leverage" in full_panel.columns:
+                stage_lev = pd.to_numeric(
+                    full_panel[full_panel["life_stage"] == stage_name]["leverage"], errors="coerce"
+                ).dropna()
+                if len(stage_lev) > 0:
+                    p25 = round(float(stage_lev.quantile(0.25)), 3)
+                    p50 = round(float(stage_lev.quantile(0.50)), 3)
+                    p75 = round(float(stage_lev.quantile(0.75)), 3)
+        panel.update({
+            "p25": p25, "p50": p50, "p75": p75,
+            "company_count": node_data.get("company_count", 0),
+            "stage": stage_name,
+        })
+
+    elif node_type == "industry":
+        industry_name = node_data.get("label")
+        panel["industry"] = industry_name
+        if full_panel is not None and not full_panel.empty and "industry_group" in full_panel.columns:
+            ind_rows = full_panel[full_panel["industry_group"] == industry_name]
+            panel["company_count"] = int(ind_rows["company_code"].nunique()) if "company_code" in ind_rows.columns else 0
+            if "leverage" in ind_rows.columns and not ind_rows.empty:
+                panel["avg_leverage"] = round(float(pd.to_numeric(ind_rows["leverage"], errors="coerce").mean()), 3)
+
+    return panel

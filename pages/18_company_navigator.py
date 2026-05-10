@@ -132,6 +132,7 @@ st.session_state["navigator_view"] = view_mode
 # Resolve company
 company_row  = companies_df[companies_df["company_name"] == selected_name].iloc[0]
 company_code = int(company_row["company_code"])
+st.session_state["active_company_cin"] = company_code  # enables CFO mode in chat bubble
 
 # Year slider (hidden for Stage Map)
 if view_mode != "Stage Map":

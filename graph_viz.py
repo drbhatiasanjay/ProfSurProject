@@ -168,3 +168,94 @@ def build_drill_down_figure(G, center_node, depth=1, show_observations=False):
         highlight_node=center_node,
         show_observations=show_observations,
     )
+
+
+def build_pyvis_html(G, focal_node=None, height="600px"):
+    """
+    Convert NetworkX graph to a pyvis self-contained HTML string.
+    Render via streamlit.components.v1.html(html_str, height=...).
+
+    Focal node (is_focal=True or matching focal_node param) gets orange border + larger size.
+    Node shapes: company=dot, life_stage=diamond, industry=square, event=triangle, stage_norm=ellipse.
+    Physics: forceAtlas2Based spring layout.
+
+    Returns HTML string, or error HTML string if pyvis not installed.
+    """
+    try:
+        from pyvis.network import Network
+    except ImportError:
+        return ("<html><body style='font-family:sans-serif;padding:20px'>"
+                "<p><b>pyvis not installed.</b> Run: <code>pip install pyvis&gt;=0.3.2</code></p>"
+                "</body></html>")
+
+    _NODE_COLOR = {
+        "company": "#0D9488", "life_stage": "#22C55E", "industry": "#374151",
+        "event": "#F97316", "stage_norm": "#6366F1",
+    }
+    _NODE_SIZE = {
+        "company": 20, "life_stage": 35, "industry": 25,
+        "event": 20, "stage_norm": 30,
+    }
+    _NODE_SHAPE = {
+        "company": "dot", "life_stage": "diamond", "industry": "square",
+        "event": "triangle", "stage_norm": "ellipse",
+    }
+    _EDGE_COLOR = {
+        "IS_PEER_OF": "#5EEAD4", "IN_STAGE": "#22C55E", "IN_INDUSTRY": "#374151",
+        "HAS_NORM": "#6366F1", "EXPERIENCED_EVENT": "#F97316",
+        "IS_SIMILAR": "#94A3B8", "TRANSITIONS": "#22C55E",
+    }
+
+    net = Network(height=height, width="100%", notebook=False,
+                  directed=False, bgcolor="#ffffff", font_color="#374151")
+    net.set_options("""{
+      "physics": {
+        "forceAtlas2Based": {
+          "springLength": 120,
+          "gravitationalConstant": -50,
+          "springConstant": 0.05,
+          "damping": 0.4
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {"iterations": 150}
+      },
+      "interaction": {"hover": true, "tooltipDelay": 100}
+    }""")
+
+    for node_id, data in G.nodes(data=True):
+        node_type = data.get("node_type", data.get("type", "company"))
+        label = data.get("label", str(node_id))
+        is_focal = data.get("is_focal", False) or (node_id == focal_node)
+        color = data.get("color", _NODE_COLOR.get(node_type, "#9CA3AF"))
+        size = _NODE_SIZE.get(node_type, 20)
+        shape = _NODE_SHAPE.get(node_type, "dot")
+
+        if is_focal:
+            size = 45
+            border = "#F97316"
+            label = f"★ {label}"
+        else:
+            border = color
+
+        parts = [f"<b>{data.get('label', node_id)}</b>", f"Type: {node_type}"]
+        for k in ("stage", "leverage", "profitability", "p50", "company_count"):
+            v = data.get(k)
+            if v is not None:
+                parts.append(f"{k.replace('_', ' ').title()}: {v:.3f}" if isinstance(v, float) else f"{k.replace('_', ' ').title()}: {v}")
+        title = "<br>".join(parts)
+
+        net.add_node(
+            node_id, label=label, title=title, shape=shape, size=size,
+            color={"background": color, "border": border,
+                   "highlight": {"background": "#FEF3C7", "border": "#F97316"}},
+            font={"size": 11},
+        )
+
+    for u, v, data in G.edges(data=True):
+        relation = data.get("relation", "")
+        weight = data.get("similarity_score", data.get("probability", 1.0)) or 1.0
+        width = max(1.0, min(5.0, float(weight) * 3))
+        edge_color = _EDGE_COLOR.get(relation, "#D1D5DB")
+        net.add_edge(u, v, color=edge_color, width=width, title=relation)
+
+    return net.generate_html(notebook=False)

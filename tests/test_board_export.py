@@ -441,3 +441,59 @@ def test_log_page_visit_called_in_page_17():
     import pathlib
     src = pathlib.Path("pages/17_board_export.py").read_text(encoding="utf-8")
     assert "log_page_visit" in src, "db.log_page_visit() not called in page 17"
+
+
+# ── Topic 13 AI Recommendations ──────────────────────────────────────────────
+
+class TestTopic13AIRecommendations:
+    def test_uses_llm_when_available(self, monkeypatch, sample_company_code):
+        from models import board_export
+        import models.llm_adapters as la
+
+        def fake_stream(messages, **kw):
+            yield "- Bullet one citing leverage 0.412.\n"
+            yield "- Bullet two citing profitability 0.085.\n"
+
+        monkeypatch.setattr(la, "stream_ollama", fake_stream)
+        monkeypatch.setattr(la, "stream_anthropic", fake_stream)
+        monkeypatch.setattr(la, "build_company_context", lambda cc, panel_mode="thesis": "## COMPANY data\nGROUNDING_FOOTER")
+
+        out = board_export.build_topic_13_ai(sample_company_code, panel_mode="thesis", backend="ollama")
+        assert out["ai_offline"] is False
+        assert len(out["insights"]) == 3
+        for label, bullets in out["insights"]:
+            assert label.startswith("13.")
+            assert len(bullets) >= 1
+            assert all(isinstance(b, str) and b.strip() for b in bullets)
+        assert len(out["actions"]) >= 1
+
+    def test_falls_back_when_llm_offline(self, monkeypatch, sample_company_code):
+        from models import board_export
+        import models.llm_adapters as la
+
+        def fake_offline(*a, **kw):
+            yield "[Ollama backend not installed. Run: pip install ollama]"
+
+        monkeypatch.setattr(la, "stream_ollama", fake_offline)
+        monkeypatch.setattr(la, "stream_anthropic", fake_offline)
+        monkeypatch.setattr(la, "build_company_context", lambda cc, panel_mode="thesis": "ctx")
+
+        out = board_export.build_topic_13_ai(sample_company_code, panel_mode="thesis", backend="ollama")
+        assert out["ai_offline"] is True
+        assert len(out["insights"]) >= 1
+        for _label, bullets in out["insights"]:
+            assert len(bullets) >= 1
+        assert len(out["actions"]) >= 1
+
+    def test_handles_unknown_company_code(self, monkeypatch):
+        from models import board_export
+        import models.llm_adapters as la
+
+        monkeypatch.setattr(la, "stream_ollama", lambda *a, **kw: iter(["[error]"]))
+        monkeypatch.setattr(la, "stream_anthropic", lambda *a, **kw: iter(["[error]"]))
+        monkeypatch.setattr(la, "build_company_context", lambda cc, panel_mode="thesis": "ctx")
+
+        out = board_export.build_topic_13_ai(-99999, panel_mode="thesis", backend="ollama")
+        assert isinstance(out, dict)
+        assert "insights" in out and "actions" in out
+        assert out["ai_offline"] is True
