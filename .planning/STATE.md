@@ -10,12 +10,12 @@ See: .planning/PROJECT.md
 
 ## Current Position
 
-Phase: Phase 3 (03-stage-comparisons)
-Plan: 0 of 1 — Phase 2 complete
-Status: In progress
-Last activity: 2026-05-10 - Completed Phase 2 (IVGMM + integration tests, 61ddf6e)
+Phase: All phases complete
+Plan: All plans done
+Status: Complete
+Last activity: 2026-05-10 - Completed Phases 1-5 (3ff9a46)
 
-Progress: [██████████] Phases 1 + 2 + 6 + 7 complete; Phase 3 next
+Progress: [██████████] ALL PHASES COMPLETE (1-7)
 
 ## App State (as of 2026-05-10)
 
@@ -78,7 +78,7 @@ Progress: [██████████] Phases 1 + 2 + 6 + 7 complete; Phase 
 
 ### Pending Todos
 
-- **Phase 3 plan 03-01**: Harden `run_stage_comparison` — add per-stage min-obs guard, fix `const` row exclusion from Divergent column, validate same-stage inputs. Plan at `.planning/phases/03-stage-comparisons/03-01-PLAN.md`.
+- **Deploy to GCP**: All phases 1-5 complete locally; deploy to Cloud Run when ready.
 - **Reload 8 US firms (NULL tangibility)**: 1hr effort in models/data_ingest.py — carry-forward.
 - **smoke_auth.py**: add page 17+18+19 checks (Playwright-based).
 - **CMIE Economy API service activation**: external blocker on sk_pgdav; POC scripts ready.

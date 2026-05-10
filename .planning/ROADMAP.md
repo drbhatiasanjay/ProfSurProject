@@ -158,8 +158,8 @@ Phases 1-5 execute in numeric order (thesis gap closure); Phase 6 is independent
 |-------|----------------|--------|-----------|
 | 1. Delta-Leverage & Diagnostics | 2/2 | ✅ Complete | 2026-05-10 |
 | 2. System GMM | 2/2 | ✅ Complete | 2026-05-10 |
-| 3. Stage Comparisons | 0/1 | Not started | - |
-| 4. Advanced Econometrics Page | 0/2 | Not started | - |
-| 5. Post-COVID Cohort Analysis | 0/2 | Not started | - |
+| 3. Stage Comparisons | 1/1 | ✅ Complete | 2026-05-10 |
+| 4. Advanced Econometrics Page | 1/1 | ✅ Complete | 2026-05-10 |
+| 5. Post-COVID Cohort Analysis | 2/2 | ✅ Complete | 2026-05-10 |
 | 6. AI Financial Assistant | 5/5 | ✅ Complete | 2026-05-10 |
 | 7. Wave 2 Tier 1 UX Quick Wins | 5/5 | ✅ Complete | 2026-05-10 |
