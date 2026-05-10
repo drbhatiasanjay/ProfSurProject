@@ -28,10 +28,14 @@ if os.path.exists(css_path):
 # ── Authentication ────────────────────────────────────────────────────────────
 import streamlit_authenticator as stauth
 
-_creds = {"usernames": {
-    k: dict(v) for k, v in st.secrets.get("credentials", {}).get("usernames", {}).items()
-}}
-_cookie = st.secrets.get("cookie", {})
+try:
+    _creds = {"usernames": {
+        k: dict(v) for k, v in st.secrets.get("credentials", {}).get("usernames", {}).items()
+    }}
+    _cookie = st.secrets.get("cookie", {})
+except Exception:
+    _creds = {"usernames": {}}
+    _cookie = {}
 authenticator = stauth.Authenticate(
     _creds,
     _cookie.get("name", "lclev_auth"),
