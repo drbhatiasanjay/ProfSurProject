@@ -6,16 +6,16 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** Phase 1 — Delta-Leverage & Diagnostics (research complete; planning next)
+**Current focus:** Phase 1 — Delta-Leverage & Diagnostics (01-01 complete; 01-02 next)
 
 ## Current Position
 
 Phase: Phase 1 (01-delta-leverage-diagnostics)
-Plan: 0 of 2 — planning in progress
-Status: Research complete (01-RESEARCH.md written); plans not yet created
-Last activity: 2026-05-10 - Phase 7 fully complete; Phase 1 research committed (540cb24)
+Plan: 1 of 2 — 01-01 complete
+Status: In progress
+Last activity: 2026-05-10 - Completed 01-01-PLAN.md (contract docstrings, b7dd02d)
 
-Progress: [██████████] Phases 6 + 7 complete; Phase 1 starting
+Progress: [██████████] Phases 6 + 7 complete; Phase 1 plan 01-01 done
 
 ## App State (as of 2026-05-10)
 
@@ -78,7 +78,7 @@ Progress: [██████████] Phases 6 + 7 complete; Phase 1 starti
 
 ### Pending Todos
 
-- **Phase 1 planning**: Research done (01-RESEARCH.md). Backend functions already in econometric.py. Plans needed: 01-01 (verify + harden tests) + 01-02 (unit tests). Run `/gsd:plan-phase 1`.
+- **Phase 1 plan 01-02**: Contract docstrings done (01-01). Next: unit test hardening in tests/test_models.py — assert exact return-dict shapes, verdict strings, recommended==hausman['recommended'] invariant, and error-dict format for sparse stages.
 - **Reload 8 US firms (NULL tangibility)**: 1hr effort in models/data_ingest.py — carry-forward.
 - **smoke_auth.py**: add page 17+18+19 checks (Playwright-based).
 - **CMIE Economy API service activation**: external blocker on sk_pgdav; POC scripts ready.
@@ -91,6 +91,6 @@ Progress: [██████████] Phases 6 + 7 complete; Phase 1 starti
 
 ## Session Continuity
 
-Last session: 2026-05-10
-Stopped at: Phase 7 complete; Phase 1 research committed. STATE.md + ROADMAP.md updated. Starting Phase 1 planning.
+Last session: 2026-05-10T11:35:00Z
+Stopped at: Completed 01-01-PLAN.md — contract docstrings + backend smoke verified. Ready for 01-02 unit test hardening.
 Resume file: None — clean handoff point.
