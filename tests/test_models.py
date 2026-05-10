@@ -68,39 +68,110 @@ class TestEconometric:
 
 
     def test_breusch_pagan_lm(self, full_panel):
-        """BP-LM test: Pooled OLS vs Random Effects."""
+        """BP-LM test: Pooled OLS vs Random Effects. Phase 1: TST-01, TST-02."""
         from models.econometric import run_pooled_ols, run_breusch_pagan_lm
         ols = run_pooled_ols(full_panel)
         bp = run_breusch_pagan_lm(ols)
-        assert "lm_stat" in bp
-        assert "lm_pvalue" in bp
-        assert bp["lm_stat"] > 0
+
+        # TST-02: full contract per 01-01 docstring
+        assert "lm_stat" in bp and "lm_pvalue" in bp
+        assert "f_stat" in bp and "f_pvalue" in bp
         assert "verdict" in bp
 
+        # Statistical sanity
+        assert bp["lm_stat"] > 0, f"lm_stat must be positive, got {bp['lm_stat']}"
+        assert 0.0 <= bp["lm_pvalue"] <= 1.0, f"lm_pvalue out of [0,1]: {bp['lm_pvalue']}"
+        assert 0.0 <= bp["f_pvalue"] <= 1.0
+
+        # TST-01: exact verdict string contract (locked in models/econometric.py docstring)
+        assert bp["verdict"] in (
+            "Panel effects detected (reject Pooled OLS at 5% level)",
+            "No significant panel effects (Pooled OLS adequate)",
+        ), f"Unexpected BP-LM verdict: {bp['verdict']!r}"
+
     def test_delta_leverage_ols(self, full_panel):
-        """Delta-leverage OLS regression."""
-        from models.econometric import run_delta_leverage_ols
+        """Delta-leverage OLS regression. Phase 1: DLV-01."""
+        from models.econometric import run_pooled_ols, run_delta_leverage_ols
+        baseline = run_pooled_ols(full_panel)
         result = run_delta_leverage_ols(full_panel)
+
+        # DLV-01: type contract from 01-01 docstring
         assert result["type"] == "Pooled OLS"
-        assert result["n_obs"] > 3000
+
+        # DLV-01: full result-dict contract
+        assert "coef_table" in result and len(result["coef_table"]) > 0
+        assert "r_squared" in result
+        assert "n_obs" in result and result["n_obs"] > 0
+
+        # DLV-01: first-difference reduces n_obs (drops first obs per firm)
+        assert result["n_obs"] < baseline["n_obs"], (
+            f"delta n_obs ({result['n_obs']}) must be < baseline ({baseline['n_obs']}) "
+            f"because first-differencing drops obs[0] per firm"
+        )
+        assert result["n_obs"] > 3000, f"delta panel too small: {result['n_obs']}"
 
     def test_delta_leverage_all(self, full_panel):
-        """Delta-leverage with FE/RE + Hausman."""
+        """Delta-leverage with FE/RE + Hausman. Phase 1: DLV-02."""
         from models.econometric import run_delta_leverage_all
         result = run_delta_leverage_all(full_panel)
-        assert result["recommended"] in ("Fixed Effects", "Random Effects")
+
+        # DLV-02: top-level contract from 01-01 docstring
         assert "ols" in result
         assert "fe" in result
         assert "re" in result
+        assert "hausman" in result
+        assert "recommended" in result
+        assert result["recommended"] in ("Fixed Effects", "Random Effects")
+
+        # DLV-02: Hausman sub-dict contract
+        h = result["hausman"]
+        assert "chi2" in h and "p_value" in h and "verdict" in h and "recommended" in h
+        assert h["chi2"] >= 0, f"hausman chi2 must be non-negative, got {h['chi2']}"
+        assert 0.0 <= h["p_value"] <= 1.0
+
+        # DLV-02: top-level recommended mirrors Hausman recommendation (per 01-01 docstring)
+        assert result["recommended"] == h["recommended"], (
+            f"top-level recommended ({result['recommended']}) must equal "
+            f"hausman.recommended ({h['recommended']})"
+        )
+
+        # FE and RE share the same first-differenced panel
+        assert result["fe"]["n_obs"] == result["re"]["n_obs"], (
+            f"FE n_obs ({result['fe']['n_obs']}) != RE n_obs ({result['re']['n_obs']})"
+        )
 
     def test_delta_leverage_by_stage(self, full_panel):
-        """Stage-specific delta-leverage regressions."""
+        """Stage-specific delta-leverage regressions. Phase 1: DLV-03, DLV-04."""
         from models.econometric import run_delta_leverage_by_stage
         results = run_delta_leverage_by_stage(full_panel)
-        assert len(results) >= 3  # At least Growth, Maturity, Startup
-        for stage, res in results.items():
-            if "error" not in res:
-                assert "coef_table" in res
+
+        # DLV-03: shape — dict mapping stage name to result-or-error
+        assert isinstance(results, dict)
+        assert len(results) >= 3, f"expected at least 3 stages, got {len(results)}"
+
+        ok = {s: r for s, r in results.items() if "error" not in r}
+        errors = {s: r for s, r in results.items() if "error" in r}
+
+        # DLV-03: at least one stage produced a real regression
+        assert len(ok) >= 1, "At least one stage must produce a coef_table (DLV-03)"
+
+        # DLV-04: every ok stage has the documented run_pooled_ols contract
+        for stage, res in ok.items():
+            assert "coef_table" in res, f"{stage}: missing coef_table"
+            assert len(res["coef_table"]) > 0, f"{stage}: empty coef_table"
+            assert "n_obs" in res and res["n_obs"] > 0, f"{stage}: bad n_obs"
+            assert "r_squared" in res, f"{stage}: missing r_squared"
+
+        # Every error dict uses the 'Too few observations (N)' string format
+        for stage, res in errors.items():
+            assert isinstance(res["error"], str)
+            assert "Too few observations" in res["error"], (
+                f"{stage}: unexpected error string {res['error']!r}"
+            )
+
+        # Diagnostic (printed only with pytest -s)
+        print(f"\n[DLV-03/04] ok_stages={list(ok.keys())}")
+        print(f"[DLV-03/04] error_stages={list(errors.keys())}")
 
     def test_stage_comparison(self, full_panel):
         """Growth vs Maturity comparison regression."""
