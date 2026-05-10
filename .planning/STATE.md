@@ -6,16 +6,16 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** v1.3 Milestone COMPLETE — All phases 8-11 shipped
+**Current focus:** v1.3 archived — planning next milestone
 
 ## Current Position
 
-Phase: Phase 11 (quality-carry-forwards) — COMPLETE
-Plan: 11-01 complete
-Status: Milestone v1.3 complete — ready for next milestone
-Last activity: 2026-05-10 - Phase 8 CI/CD verified green: pytest (Python 3.11) ✓ + Cloud Run deploy ✓. All 4 phases complete.
+Phase: Not started (between milestones)
+Plan: —
+Status: Ready to plan v1.4
+Last activity: 2026-05-10 — v1.3 milestone archived; ROADMAP + REQUIREMENTS reset for next milestone
 
-Progress: [████████████] Phases 1-11 complete — v1.3 milestone done
+Progress: [████████████] 11 phases complete across 3 milestones (v1.1/v1.2/v1.3)
 
 ## App State (as of 2026-05-10)
 

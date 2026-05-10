@@ -1,93 +1,61 @@
-# Roadmap: LifeCycle Leverage Dashboard v1.3 — Automation & Analytical Depth
+# Roadmap: LifeCycle Leverage Dashboard
 
-## Overview
+## Milestones
 
-Four independent improvements: GitHub Actions CI/CD so every push auto-deploys, a company timeline view on page 18 showing life-stage trajectory with leverage overlay, a reproducibility audit trail JSON on the four core analytics pages, and two quality carry-forwards (smoke tests for pages 17-19, 8 US firms NULL tangibility fix). All phases are independent and execute in parallel.
+- ✅ **v1.1 Advanced Analytics** — Phases 1–5 (shipped ~2026-04-22)
+- ✅ **v1.2 Individual Company Intelligence** — Phases 6–7 (shipped 2026-05-10)
+- ✅ **v1.3 Automation & Analytical Depth** — Phases 8–11 (shipped 2026-05-10)
+- 📋 **v1.4** — To be defined
 
 ## Phases
 
-- [ ] **Phase 8: CI/CD Pipeline** — GitHub Actions test-gate + Cloud Run auto-deploy on push to master
-- [ ] **Phase 9: Company Timeline View** — Per-company life-stage trajectory + leverage overlay on page 18
-- [ ] **Phase 10: Reproducibility Audit Trail** — JSON audit export on pages 3, 8, 9, 13
-- [ ] **Phase 11: Quality Carry-forwards** — smoke_auth.py pages 17-19 + 8 US firms NULL tangibility fix
+<details>
+<summary>✅ v1.1 Advanced Analytics (Phases 1–5) — SHIPPED ~2026-04-22</summary>
 
-## Phase Details
+- [x] Phase 1: Delta-Leverage Diagnostics (1/1 plans) — completed 2026-04-22
+- [x] Phase 2: System GMM (2/2 plans) — completed 2026-04-22
+- [x] Phase 3: Stage Comparisons (1/1 plans) — completed 2026-04-22
+- [x] Phase 4: Advanced Econometrics Page (1/1 plans) — completed 2026-04-22
+- [x] Phase 5: Post-COVID Cohort Analysis (1/1 plans) — completed 2026-04-22
 
-### Phase 8: CI/CD Pipeline
-**Goal**: Every push to master automatically runs the full test suite and deploys to Cloud Run only when tests pass — eliminating manual deploy commands
-**Depends on**: Nothing (infra-only, no app code changes)
-**Requirements**: CICD-01, CICD-02, CICD-03
-**Success Criteria** (what must be TRUE):
-  1. `.github/workflows/deploy.yml` exists and defines test + deploy jobs
-  2. Test job runs `pytest tests/ --ignore=tests/smoke_auth.py --ignore=tests/smoke_phase1.py` on Python 3.11
-  3. Deploy job runs only after test job succeeds (needs: test)
-  4. GCP service account credentials are stored as GitHub secret `GCP_SA_KEY`, not in code
-  5. Pushing a commit to master triggers the workflow (verified via GitHub Actions UI or workflow run log)
-**Plans**: 1 plan
+</details>
 
-Plans:
-- [ ] 08-01: GitHub Actions workflow file + GCP service account setup instructions
+<details>
+<summary>✅ v1.2 Individual Company Intelligence (Phases 6–7) — SHIPPED 2026-05-10</summary>
 
----
+- [x] Phase 6: AI Financial Assistant (5/5 plans) — completed 2026-05-10
+- [x] Phase 7: Wave 2 Tier-1 UX (5/5 plans) — completed 2026-05-10
 
-### Phase 9: Company Timeline View
-**Goal**: A user on page 18 Company Navigator can select any company and see its full life-stage trajectory year-by-year, with leverage ratio overlaid, revealing how leverage moves through stage transitions
-**Depends on**: Nothing (new tab on existing page 18)
-**Requirements**: TMLN-01, TMLN-02, TMLN-03
-**Success Criteria** (what must be TRUE):
-  1. Page 18 has a "Timeline" tab alongside existing Ego Graph / Peer Cluster / Stage Map tabs
-  2. Timeline renders a Plotly figure with years on x-axis and life stage on y-axis (color-coded by STAGE_COLORS)
-  3. Leverage ratio appears as a line on secondary y-axis (right side)
-  4. Selecting a different company from the sidebar updates the timeline
-  5. Page loads without errors for at least 3 test companies (e.g., 22859, 10000, 15000)
-**Plans**: 1 plan
+</details>
 
-Plans:
-- [ ] 09-01: Timeline tab on page 18 — stage trajectory + leverage overlay
+<details>
+<summary>✅ v1.3 Automation & Analytical Depth (Phases 8–11) — SHIPPED 2026-05-10</summary>
 
----
+- [x] Phase 8: CI/CD Pipeline (1/1 plans) — completed 2026-05-10
+- [x] Phase 9: Company Timeline View (1/1 plans) — completed 2026-05-10
+- [x] Phase 10: Reproducibility Audit Trail (1/1 plans) — completed 2026-05-10
+- [x] Phase 11: Quality Carry-forwards (1/1 plans) — completed 2026-05-10
 
-### Phase 10: Reproducibility Audit Trail
-**Goal**: A researcher on any of the four core analytics pages can download a JSON file that fully specifies the analysis they just ran — panel vintage, filters, model spec, observation count — enabling exact reproduction
-**Depends on**: Nothing (additive widget on existing pages)
-**Requirements**: REPRO-01, REPRO-02
-**Success Criteria** (what must be TRUE):
-  1. Pages 3 (Scenarios), 8 (Econometrics), 9 (ML Models), and 13 (Advanced Econometrics) each have a "Download Audit Trail" button
-  2. Clicking the button downloads a `.json` file
-  3. JSON contains: `page`, `panel`, `year_range`, `filters`, `model_spec`, `n_obs`, `n_firms`, `timestamp`, `username`
-  4. `model_spec` captures the relevant estimator/variables for that page (e.g., FE with profitability/tangibility/size for page 8)
-  5. File downloads without error on all four pages
-**Plans**: 1 plan
+Full archive: `.planning/milestones/v1.3-ROADMAP.md`
 
-Plans:
-- [ ] 10-01: Audit trail JSON download button on pages 3, 8, 9, 13
+</details>
 
----
+### 📋 v1.4 (To Be Defined)
 
-### Phase 11: Quality Carry-forwards
-**Goal**: Smoke test coverage extended to pages 17-19 so regressions are caught automatically, and the 8 US DJIA firms with NULL tangibility have correct values so peer benchmarks using the us_av_2024 vintage are accurate
-**Depends on**: Nothing (test file + data fix, independent of app pages)
-**Requirements**: QUAL-01, QUAL-02
-**Success Criteria** (what must be TRUE):
-  1. `tests/smoke_auth.py` includes login + page-load checks for page 17 (Board Export), 18 (Company Navigator), and 19 (AI Assistant)
-  2. Smoke tests for pages 17-19 use the researcher role (skumar) which has access to all three pages
-  3. `SELECT COUNT(*) FROM financials WHERE vintage='us_av_2024' AND tangibility IS NULL` returns 0 after the fix
-  4. All existing 369+ pytest tests still pass (no regressions from data fix)
-**Plans**: 1 plan
-
-Plans:
-- [ ] 11-01: smoke_auth.py pages 17-19 + NULL tangibility fix for 8 US firms
-
----
+Run `/gsd:new-milestone` to define phases 12+.
 
 ## Progress
 
-**Execution Order:**
-All phases (8-11) are independent — execute in parallel.
-
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 8. CI/CD Pipeline | 1/1 | ✅ Complete | 2026-05-10 |
-| 9. Company Timeline View | 1/1 | ✅ Complete | 2026-05-10 |
-| 10. Reproducibility Audit Trail | 1/1 | ✅ Complete | 2026-05-10 |
-| 11. Quality Carry-forwards | 1/1 | ✅ Complete | 2026-05-10 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Delta-Leverage Diagnostics | v1.1 | 1/1 | ✅ Complete | 2026-04-22 |
+| 2. System GMM | v1.1 | 2/2 | ✅ Complete | 2026-04-22 |
+| 3. Stage Comparisons | v1.1 | 1/1 | ✅ Complete | 2026-04-22 |
+| 4. Advanced Econometrics Page | v1.1 | 1/1 | ✅ Complete | 2026-04-22 |
+| 5. Post-COVID Cohort Analysis | v1.1 | 1/1 | ✅ Complete | 2026-04-22 |
+| 6. AI Financial Assistant | v1.2 | 5/5 | ✅ Complete | 2026-05-10 |
+| 7. Wave 2 Tier-1 UX | v1.2 | 5/5 | ✅ Complete | 2026-05-10 |
+| 8. CI/CD Pipeline | v1.3 | 1/1 | ✅ Complete | 2026-05-10 |
+| 9. Company Timeline View | v1.3 | 1/1 | ✅ Complete | 2026-05-10 |
+| 10. Reproducibility Audit Trail | v1.3 | 1/1 | ✅ Complete | 2026-05-10 |
+| 11. Quality Carry-forwards | v1.3 | 1/1 | ✅ Complete | 2026-05-10 |

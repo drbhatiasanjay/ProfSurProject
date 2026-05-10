@@ -26,14 +26,18 @@ Researchers and analysts can interactively explore how leverage determinants dif
 - ✓ Dynamic interpretation engine on all charts — v1.1
 - ✓ Docker deployment + Cloud Run — v1.1
 - ✓ 40 pytest tests (14 DB + 26 model) — v1.1
+- ✓ Board Export page (17): 13 topic builders → branded .pptx (python-pptx + kaleido) — v1.2
+- ✓ Company Navigator page (18): pyvis ego graph + peer cluster + Plotly stage map + Timeline (dual-axis) — v1.2/v1.3
+- ✓ AI Financial Assistant page (19): full-screen chat (Ollama/Anthropic), grounded context injection — v1.2
+- ✓ Wave 2 UX: CSV/PNG downloads on 17 pages, citation generator (pages 3/8/13), navbar panel selector — v1.2
+- ✓ CI/CD: GitHub Actions pytest gate (Python 3.11) → Cloud Run auto-deploy on green master push — v1.3
+- ✓ Reproducibility Audit Trail: `build_audit_json` + download button on pages 3, 8, 9, 13 — v1.3
+- ✓ Playwright smoke tests covering all 19 pages (pages 17-19 added in v1.3) — v1.3
+- ✓ us_av_2024 tangibility: 166 NULL rows filled via industry-mean imputation — v1.3
 
 ### Active
 
-- [ ] Dynamic Panel GMM (System GMM with lag dependent variable) — thesis Table 5.12
-- [ ] Determinants of CHANGES in capital structure (delta-leverage models) — thesis Tables 5.11, 6.5, 7.2, 7.4, 8.4, 8.5
-- [ ] Breusch-Pagan LM test (Pooled OLS vs RE selection) — thesis section 4.8.3
-- [ ] Growth vs Maturity direct comparison (subset regression) — thesis Table 7.5
-- [ ] Post-COVID cohort analysis — thesis limitation #4
+_(To be defined for v1.4 via `/gsd:new-milestone`)_
 
 ### Out of Scope
 
@@ -45,11 +49,13 @@ Researchers and analysts can interactively explore how leverage determinants dif
 
 ## Context
 
-- Data: CMIE Prowess, 8,677 firm-year observations, 5 SQLite tables
-- Stack: Streamlit, Plotly, pandas, networkx, statsmodels, scikit-learn, linearmodels
+- Data: CMIE Prowess, 8,677 firm-year observations, 5 SQLite tables; us_av_2024 vintage (10 US DJIA comparators, tangibility clean as of v1.3)
+- Stack: Streamlit, Plotly, pandas, networkx, statsmodels, scikit-learn, linearmodels, python-pptx, kaleido, Ollama/Anthropic (Page 19)
 - Thesis methodology: OLS, FE, RE, Hausman, Breusch-Pagan, System GMM, ANOVA
-- Deploy: Docker (Python 3.11-slim) → Google Cloud Run (us-east1)
+- Deploy: Docker (Python 3.11-slim) → Google Cloud Run (us-east1); CI/CD via GitHub Actions (pytest gate + auto-deploy)
 - Live URL: https://lifecycle-leverage-779655496440.us-east1.run.app
+- Pages: 19 deployed (1-16 academic/panel, 17-19 individual company)
+- Tests: ~302 passing in CI (Python 3.11); pre-existing TestPage15 environmental flakiness excluded
 
 ## Constraints
 
@@ -58,16 +64,9 @@ Researchers and analysts can interactively explore how leverage determinants dif
 - **SQLite only**: No external DB — all data in capital_structure.db
 - **Existing pages must not break**: 12 pages deployed and working
 
-## Current Milestone: v1.3 Automation & Analytical Depth
+## Current Milestone
 
-**Goal:** Automate CI/CD deployment, add per-company life-stage timeline view, reproducibility audit trail for academic use, smoke test coverage for pages 17-19, and fix 8 US firms with NULL tangibility.
-
-**Target features:**
-- GitHub Actions CI/CD — push to master → tests → auto-deploy to Cloud Run
-- Company timeline view — per-company life-stage trajectory + leverage overlay on page 18
-- Reproducibility audit trail JSON — panel/filters/model spec download on 4 analytics pages
-- Smoke test coverage — Playwright smoke tests extended to pages 17, 18, 19
-- Data quality fix — 8 US firms NULL tangibility reloaded in models/data_ingest.py
+v1.3 shipped 2026-05-10. Next milestone to be defined via `/gsd:new-milestone`.
 
 ## Key Decisions
 
@@ -78,6 +77,11 @@ Researchers and analysts can interactively explore how leverage determinants dif
 | PyTorch optional (not in Docker) | 2GB+ dependency, graceful fallback | ✓ Good |
 | Plotly legends below chart | Prevents modebar overlap globally | ✓ Good |
 | All test commands run in background | Prevents session freezes | ✓ Good |
+| CI/CD: JSON SA key over Workload Identity Federation | Fastest unblocked path; WIF needs extra GCP setup | ✓ Good (v1.3) |
+| `build_audit_json` zero Streamlit deps | Importable in plain Python/pytest | ✓ Good (v1.3) |
+| Torch CPU wheel in CI | Avoids 2GB GPU download that times out runners | ✓ Good (v1.3) |
+| `st.cache_data.clear()` autouse fixture in conftest | Prevents serialization corruption across tests in same process | ✓ Good (v1.3) |
+| Industry-mean imputation for NULL tangibility | Closest peer reference; global mean fallback for Energy sector | ✓ Good (v1.3) |
 
 ---
-*Last updated: 2026-03-28 after thesis gap analysis*
+*Last updated: 2026-05-10 after v1.3 milestone — Automation & Analytical Depth*
