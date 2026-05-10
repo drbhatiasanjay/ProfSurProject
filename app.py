@@ -95,54 +95,28 @@ if "login_logged" not in st.session_state:
 # ── Initialize session state defaults (shared with every page) ──
 ensure_session_state()
 
+# ── Panel from query params (set by navbar <select>) ──
+_panel_options = ["latest", "thesis", "run3", "us_av_2024"]
+_qp_panel = st.query_params.get("panel", "latest")
+if _qp_panel not in _panel_options:
+    _qp_panel = "latest"
+st.session_state.panel_mode = _qp_panel
+st.session_state.filters["panel_mode"] = _qp_panel
+# Reset year range only when panel changes (not on every page load)
+if st.session_state.filters.get("year_range") is None or st.session_state.filters.get("_last_panel") != _qp_panel:
+    _yr_min_qp, _yr_max_qp = db.get_year_range(_qp_panel)
+    st.session_state.filters["year_range"] = (_yr_min_qp, _yr_max_qp)
+    st.session_state.filters["_last_panel"] = _qp_panel
+
 # ── Sidebar: Global filters ──
+from helpers import PANEL_LABELS as panel_label_map
 with st.sidebar:
     st.markdown("# LifeCycle Leverage")
 
-    # Panel mode: switches the entire read-path across three independent vintage groups.
-    # - latest = production panel (thesis 2001-2024 + cmie_2025 rollforward)
-    # - thesis = frozen reproducibility panel (2001-2024 only)
-    # - run3   = Stata replication panel (2001-2025, 400 firms; standalone — does NOT
-    #            union with thesis or cmie_2025 because years overlap)
-    vintages_df = db.get_data_vintages()
-    from helpers import PANEL_LABELS as panel_label_map
-    panel_options = ["latest", "thesis", "run3", "us_av_2024"]
-    current_panel = st.session_state.get("panel_mode", "latest")
-    if current_panel not in panel_options:
-        current_panel = "latest"
-    chosen_panel = st.radio(
-        "Panel",
-        options=panel_options,
-        index=panel_options.index(current_panel),
-        format_func=lambda m: panel_label_map.get(m, m),
-        help=(
-            "**Latest** — production panel (thesis + CMIE 2025 rollforward).\n\n"
-            "**Thesis** — frozen 2001-2024 panel for reproducing published thesis tables.\n\n"
-            "**Run 3** — Stata replication panel from initialResults.do (25 Apr 2026), "
-            "9,031 obs × 400 firms × 2001-2025.\n\n"
-            "**US S&P Sample** — 25 DJIA / S&P blue-chip firms via Alpha Vantage API; "
-            "Dickinson life-stages from cash-flow signs. Load with "
-            "`scripts/load_us_av_panel.py`."
-        ),
-    )
-    if chosen_panel != current_panel:
-        # Panel changed: reset to the new panel's full year range, then rerun so every
-        # page's cached query recomputes with the new vintage predicate.
-        # We intentionally do NOT carry over the prior selection because each panel has a
-        # different natural start year (India: 2001, US: 2006) and a selection shaped by
-        # one panel misleads the user on another.
-        st.session_state.panel_mode = chosen_panel
-        st.session_state.filters["panel_mode"] = chosen_panel
-        yr_min_new, yr_max_new = db.get_year_range(chosen_panel)
-        st.session_state.filters["year_range"] = (yr_min_new, yr_max_new)
-        st.rerun()
-    st.session_state.panel_mode = chosen_panel
-    st.session_state.filters["panel_mode"] = chosen_panel
-
-    companies_df = db.get_companies(chosen_panel)
+    companies_df = db.get_companies(_qp_panel)
     all_stages = db.get_life_stages()
-    all_industries = db.get_industry_groups(chosen_panel)
-    yr_min, yr_max = db.get_year_range(chosen_panel)
+    all_industries = db.get_industry_groups(_qp_panel)
+    yr_min, yr_max = db.get_year_range(_qp_panel)
 
     # Company search
     selected_companies = st.multiselect(
@@ -192,7 +166,7 @@ with st.sidebar:
     # Event period toggles
     st.markdown("**Event Periods**")
     gfc = st.checkbox("GFC (2008-09)", value=False, help="Global Financial Crisis")
-    if is_india_panel(chosen_panel):
+    if is_india_panel(_qp_panel):
         ibc = st.checkbox("IBC (2016+)", value=False, help="Insolvency & Bankruptcy Code")
     else:
         ibc = False
@@ -201,10 +175,10 @@ with st.sidebar:
     st.session_state.filters["events"] = {"gfc": gfc, "ibc": ibc, "covid": covid}
 
     st.divider()
-    meta = db.get_db_metadata(chosen_panel)
-    if chosen_panel == "latest":
+    meta = db.get_db_metadata(_qp_panel)
+    if _qp_panel == "latest":
         panel_suffix = " • includes CMIE 2025"
-    elif chosen_panel == "us_av_2024":
+    elif _qp_panel == "us_av_2024":
         panel_suffix = " • US S&P Sample"
     else:
         panel_suffix = " • thesis only"
@@ -284,7 +258,27 @@ st.markdown(f"""
     font-family: inherit;
 ">
     <span style="font-weight:700; color:#0D9488; font-size:18px; white-space:nowrap;">LifeCycle Leverage</span>
-    <span style="color:{_header_sub}; white-space:nowrap;">Dataset:&nbsp;<strong style="color:{_header_text};">{_panel_display}</strong></span>
+    <span style="color:{_header_sub}; white-space:nowrap; display:flex; align-items:center; gap:0.4rem;">
+        Dataset:
+        <select id="lc-panel-sel"
+            onchange="(function(v){{var p=new URLSearchParams(window.location.search);p.set('panel',v);window.location.href='?'+p.toString();}})(this.value)"
+            style="
+                border: 1px solid #D1D5DB;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-size: 13px;
+                font-weight: 600;
+                background: {_header_bg};
+                color: {_header_text};
+                cursor: pointer;
+            "
+        >
+            <option value="latest" {"selected" if st.session_state.get("panel_mode","latest") == "latest" else ""}>Latest (2001&#8211;present)</option>
+            <option value="thesis" {"selected" if st.session_state.get("panel_mode","latest") == "thesis" else ""}>Thesis (2001&#8211;2024)</option>
+            <option value="run3" {"selected" if st.session_state.get("panel_mode","latest") == "run3" else ""}>Run 3 &#8212; Stata</option>
+            <option value="us_av_2024" {"selected" if st.session_state.get("panel_mode","latest") == "us_av_2024" else ""}>US S&amp;P Sample</option>
+        </select>
+    </span>
     <span style="white-space:nowrap;"><strong>{_display_name}</strong>&nbsp;&middot;&nbsp;{_role_display}</span>
     <span style="margin-left:auto; color:{_header_sub}; font-size:14px; white-space:nowrap;">{_now_str}</span>
     <button
