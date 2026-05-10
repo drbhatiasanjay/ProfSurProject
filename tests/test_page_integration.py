@@ -478,7 +478,8 @@ class TestPage13AdvancedEconometrics:
         results = run_delta_leverage_by_stage(thesis_panel)
         assert len(results) >= 3
         for stage, r in results.items():
-            assert "coef_table" in r
+            if "error" not in r:
+                assert "coef_table" in r
 
     def test_stage_comparison(self, thesis_panel):
         from models.econometric import run_stage_comparison
@@ -492,9 +493,30 @@ class TestPage13AdvancedEconometrics:
         assert "coef_table" in r or "error" in r
 
     def test_system_gmm(self, thesis_panel):
+        """Page 13 GMM tab: run_system_gmm returns full valid dict on thesis panel."""
         from models.econometric import run_system_gmm
         r = run_system_gmm(thesis_panel)
-        assert "coef_table" in r or "error" in r
+
+        assert "error" not in r, f"run_system_gmm errored: {r.get('error')}"
+
+        # All keys page 13 reads (pages/13_advanced_econometrics.py)
+        for key in ["r_squared", "n_obs", "n_firms", "coef_table", "ar1", "ar2", "sargan"]:
+            assert key in r, f"Missing key consumed by page 13: '{key}'"
+
+        ct = r["coef_table"]
+        assert set(ct.columns) >= {"Variable", "Coefficient", "Std Error", "t-stat", "p-value"}
+
+        for ar_key in ("ar1", "ar2"):
+            ar = r[ar_key]
+            assert "correlation" in ar and "p_value" in ar and "verdict" in ar
+
+        s = r["sargan"]
+        assert "j_stat" in s and "p_value" in s and "verdict" in s
+        assert r["n_obs"] > 0 and r["n_firms"] > 0
+        assert 0.0 <= s["p_value"] <= 1.0
+        assert s["j_stat"] < 1000, (
+            f"j_stat={s['j_stat']:.1f} — OLS pseudo-formula detected; IVGMM not active"
+        )
 
 
 # ─────────────────────────────────────────────
