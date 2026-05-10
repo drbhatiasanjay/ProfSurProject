@@ -6,16 +6,16 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** Phase 7 — Wave 2 Tier-1 UX (citation generator, export polish, navigation improvements)
+**Current focus:** Phase 6 — AI Financial Assistant (chatbot, floating bubble, Page 19, Page 17 Topic 13 wiring)
 
 ## Current Position
 
-Phase: Phase 7 (07-wave2-tier1-ux)
-Plan: 2 of 5 in current phase (07-02 just completed; 07-04 also done out-of-order)
-Status: In progress
-Last activity: 2026-05-10 - Completed 07-02-PLAN.md (plotly_layout year_range param + Advanced options expanders on 5 pages)
+Phase: Phase 7 (07-wave2-tier1-ux) — COMPLETE
+Plan: 5 of 5 (07-05 completed — panel selector moved to navbar)
+Status: Phase complete
+Last activity: 2026-05-10 - Completed 07-05-PLAN.md (Panel selector moved to navbar select element via query_params)
 
-Progress: [██████████] Pages 1-18 complete; Phase 7 plan 4/5 done
+Progress: [██████████] Phase 7 all 5 plans complete; Phase 6 AI Assistant plans pending execution
 
 ## App State (as of 2026-05-07)
 
@@ -72,6 +72,7 @@ Progress: [██████████] Pages 1-18 complete; Phase 7 plan 4/5
 - **company_name/industry_group in companies table**: These columns are NOT in financials; any raw SQL needing them must JOIN companies c ON c.company_code = f.company_code.
 - **leverage_predictor_sample_means key mapping**: Returns abbreviated keys (prof/tang/dvnd); PREDICTORS uses full names (profitability/tangibility/dividend). Use _means_key_map in llm_adapters.py as reference.
 - **llm_adapters module import rule**: No streamlit at module level; all 9 public exports importable in plain Python/pytest; lazy st import only inside stream_anthropic function.
+- **Panel selector via query_params (UX-08)**: Panel moved from sidebar st.radio to navbar HTML select driven by st.query_params.get('panel','latest'). URLSearchParams JS used in onchange to preserve other query params. _last_panel sentinel gates year-range reset to panel-change events only.
 
 ### Pending Todos
 
@@ -89,6 +90,6 @@ Progress: [██████████] Pages 1-18 complete; Phase 7 plan 4/5
 
 ## Session Continuity
 
-Last session: 2026-05-10T04:14:57Z
-Stopped at: Completed 07-02-PLAN.md — plotly_layout year_range param + Advanced options expanders (commit 732c012)
-Resume file: None — clean stopping point. Next action: execute 07-03-PLAN.md or 07-05-PLAN.md
+Last session: 2026-05-10T04:45:45Z
+Stopped at: Completed 07-05-PLAN.md — panel selector to navbar select via query_params (commit 8cadf60)
+Resume file: None — Phase 7 complete. Next action: execute Phase 6 plans (06-03 floating bubble, 06-04 Page 19, 06-05 Page 17 Topic 13)
