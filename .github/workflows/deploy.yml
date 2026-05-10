@@ -30,9 +30,15 @@ jobs:
 
       - name: Run tests
         run: |
+          # Main suite — excludes files with Streamlit-cache ordering sensitivity
           python -m pytest tests/ \
             --ignore=tests/smoke_auth.py \
             --ignore=tests/smoke_phase1.py \
+            --ignore=tests/test_covid_cohorts.py \
+            --ignore=tests/test_cmie_feature_gate.py \
+            -v --tb=short
+          # Run ordering-sensitive files in isolation (pass when not preceded by full suite)
+          python -m pytest tests/test_covid_cohorts.py tests/test_cmie_feature_gate.py \
             -v --tb=short
         env:
           # Disable CMIE so tests don't need secrets.toml
