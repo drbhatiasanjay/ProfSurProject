@@ -12,7 +12,7 @@ import db
 from helpers import (
     plotly_layout, format_pvalue, significance_stars, format_coef_table, ensure_session_state, panel_label,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
-    render_interpretation, df_download_button, chart_download_button,
+    render_interpretation, df_download_button, chart_download_button, audit_trail_download_button,
 )
 from models.econometric import (
     run_system_gmm, run_delta_leverage_all, run_delta_leverage_by_stage,
@@ -67,6 +67,23 @@ except Exception as _e:
 if panel_df.empty:
     st.warning("No data. Adjust filters.")
     st.stop()
+
+_username = (st.session_state.get("user") or {}).get("username", "")
+_n_obs_adv = len(panel_df)
+_n_firms_adv = panel_df["company_code"].nunique()
+audit_trail_download_button(
+    page="Advanced Econometrics",
+    filters=filters,
+    model_spec={
+        "active_tab": "System GMM / Delta-Leverage / Stage Comparisons / IV-2SLS",
+        "estimator": "GMM / OLS delta / Stage OLS / IV",
+        "dep_var": "leverage",
+        "indep_vars": DEFAULT_X_COLS,
+    },
+    n_obs=_n_obs_adv,
+    n_firms=_n_firms_adv,
+    username=_username,
+)
 
 tab_gmm, tab_delta, tab_compare, tab_iv = st.tabs([
     "System GMM",

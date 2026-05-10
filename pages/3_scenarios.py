@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import db
-from helpers import plotly_layout, format_pct, ensure_session_state, panel_label, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box, df_download_button, chart_download_button
+from helpers import plotly_layout, format_pct, ensure_session_state, panel_label, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box, df_download_button, chart_download_button, audit_trail_download_button
 from models.scenario_regression import compute_leverage_ols_coefs, leverage_predictor_sample_means
 
 ensure_session_state()
@@ -157,6 +157,22 @@ with res_left:
         st.code(_apa_text, language=None)
         st.markdown("**LaTeX**")
         st.code(_latex_text, language=None)
+
+    st.divider()
+    audit_trail_download_button(
+        page="Scenarios",
+        filters=filters,
+        model_spec={
+            "estimator": "OLS",
+            "dep_var": "leverage",
+            "indep_vars": ["profitability", "tangibility", "tax", "log_size", "tax_shield", "dividend"],
+            "r_squared": coefs.get("r_squared", 0),
+            "coefficients": {k: coefs[k] for k in ["intercept", "profitability", "tangibility", "tax", "log_size", "tax_shield", "dividend"] if k in coefs},
+        },
+        n_obs=coefs.get("n_obs", 0),
+        n_firms=0,
+        username=_username,
+    )
 
 with res_right:
     st.markdown("#### Contribution Waterfall")

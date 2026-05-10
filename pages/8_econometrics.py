@@ -13,7 +13,7 @@ from helpers import (
     format_coef_table, format_pvalue, significance_stars,
     plotly_layout, ensure_session_state, panel_label, is_india_panel, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_econometric, render_interpretation, _render_insight_box,
-    df_download_button, chart_download_button,
+    df_download_button, chart_download_button, audit_trail_download_button,
 )
 from models.econometric import (
     run_pooled_ols, run_fixed_effects, run_random_effects, run_robust_regression,
@@ -136,6 +136,18 @@ with col_right:
     n_firms = panel_df["company_code"].nunique()
     n_obs = len(panel_df)
     st.caption(f"Panel: {n_firms} firms, {n_obs:,} observations, {panel_df['year'].min()}-{panel_df['year'].max()}")
+    audit_trail_download_button(
+        page="Econometrics",
+        filters=filters,
+        model_spec={
+            "estimator": model_choice,
+            "dep_var": "leverage",
+            "indep_vars": selected_x,
+        },
+        n_obs=n_obs,
+        n_firms=n_firms,
+        username=_username,
+    )
 
     # ── ANOVA (separate path) ──
     if model_choice == "ANOVA":

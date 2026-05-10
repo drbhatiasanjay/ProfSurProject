@@ -13,7 +13,7 @@ from helpers import (
     plotly_layout, format_pct, ensure_session_state, panel_label, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_ml_comparison, render_interpretation,
-    df_download_button, chart_download_button,
+    df_download_button, chart_download_button, audit_trail_download_button,
 )
 from models.base import DEFAULT_X_COLS
 from models.ml_predict import (
@@ -100,6 +100,25 @@ if panel_df.empty or len(panel_df) < 100:
 
 n_firms = panel_df["company_code"].nunique()
 st.caption(f"Panel: {n_firms} firms, {len(panel_df):,} obs")
+
+_best_model = ""
+if st.session_state.get("ml_comparison") is not None:
+    try:
+        _best_model = st.session_state.ml_comparison.iloc[0]["Model"]
+    except Exception:
+        pass
+audit_trail_download_button(
+    page="ML Models",
+    filters=filters,
+    model_spec={
+        "model_type": _best_model or "RF + XGBoost + LightGBM",
+        "features": selected_x,
+        "dep_var": "leverage",
+    },
+    n_obs=len(panel_df),
+    n_firms=n_firms,
+    username=_username,
+)
 
 # ── Tabs ──
 tab1, tab2, tab3 = st.tabs(["Train & Compare", "Feature Importance", "Predict"])
