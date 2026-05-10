@@ -32,8 +32,8 @@ This milestone adds five missing econometric methods from the thesis that requir
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Harden assertions on existing 4 delta-leverage / BP-LM tests in tests/test_models.py
-- [ ] 01-02-PLAN.md — Add page-13 integration smoke test + full 345-test suite gate
+- [x] 01-01-PLAN.md — Contract docstrings on 6 econometric.py functions (b7dd02d)
+- [x] 01-02-PLAN.md — Harden 4 unit test assertions in tests/test_models.py (b97ea43)
 
 ### Phase 2: System GMM
 **Goal**: Researchers can estimate dynamic panel models with proper instrument validity diagnostics
@@ -156,7 +156,7 @@ Phases 1-5 execute in numeric order (thesis gap closure); Phase 6 is independent
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Delta-Leverage & Diagnostics | 0/2 | Planning | - |
+| 1. Delta-Leverage & Diagnostics | 2/2 | ✅ Complete | 2026-05-10 |
 | 2. System GMM | 0/2 | Not started | - |
 | 3. Stage Comparisons | 0/1 | Not started | - |
 | 4. Advanced Econometrics Page | 0/2 | Not started | - |

@@ -6,16 +6,16 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** Phase 1 — Delta-Leverage & Diagnostics (01-01 complete; 01-02 next)
+**Current focus:** Phase 2 — System GMM (Phase 1 complete; 02-01 next)
 
 ## Current Position
 
-Phase: Phase 1 (01-delta-leverage-diagnostics)
-Plan: 1 of 2 — 01-01 complete
+Phase: Phase 2 (02-system-gmm)
+Plan: 0 of 2 — Phase 1 complete
 Status: In progress
-Last activity: 2026-05-10 - Completed 01-01-PLAN.md (contract docstrings, b7dd02d)
+Last activity: 2026-05-10 - Completed Phase 1 (01-02 test hardening, b97ea43)
 
-Progress: [██████████] Phases 6 + 7 complete; Phase 1 plan 01-01 done
+Progress: [██████████] Phases 1 + 6 + 7 complete; Phase 2 next
 
 ## App State (as of 2026-05-10)
 
@@ -78,7 +78,7 @@ Progress: [██████████] Phases 6 + 7 complete; Phase 1 plan 0
 
 ### Pending Todos
 
-- **Phase 1 plan 01-02**: Contract docstrings done (01-01). Next: unit test hardening in tests/test_models.py — assert exact return-dict shapes, verdict strings, recommended==hausman['recommended'] invariant, and error-dict format for sparse stages.
+- **Phase 2 plan 02-01**: Replace `run_system_gmm` OLS stub with real `linearmodels.iv.IVGMM` (Arellano-Bond instruments). Return dict contract must be preserved exactly (page 13 + tests read coef_table, ar1, ar2, sargan, n_obs, n_firms, r_squared, lag_dv_included).
 - **Reload 8 US firms (NULL tangibility)**: 1hr effort in models/data_ingest.py — carry-forward.
 - **smoke_auth.py**: add page 17+18+19 checks (Playwright-based).
 - **CMIE Economy API service activation**: external blocker on sk_pgdav; POC scripts ready.
