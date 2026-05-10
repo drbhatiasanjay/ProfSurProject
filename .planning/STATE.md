@@ -6,16 +6,16 @@ See: .planning/PROJECT.md
 
 **Core value:** CFOs and researchers can explore capital structure determinants, benchmark peers, export board decks, and navigate their company's position in an interactive knowledge graph — all grounded in the PhD thesis panel of 401 Indian firms (2001–2024).
 
-**Current focus:** Phase 10 — Reproducibility Audit Trail (complete) + Phase 11 — Quality Carry-forwards
+**Current focus:** v1.3 Milestone COMPLETE — All phases 8-11 shipped
 
 ## Current Position
 
-Phase: Phase 10 (reproducibility-audit-trail) — COMPLETE
-Plan: 10-01 complete
-Status: In progress (Phase 11 ongoing)
-Last activity: 2026-05-10 - Completed 10-01-PLAN.md — build_audit_json + audit_trail_download_button + wired on pages 3, 8, 9, 13
+Phase: Phase 11 (quality-carry-forwards) — COMPLETE
+Plan: 11-01 complete
+Status: Milestone v1.3 complete — ready for next milestone
+Last activity: 2026-05-10 - Phase 8 CI/CD verified green: pytest (Python 3.11) ✓ + Cloud Run deploy ✓. All 4 phases complete.
 
-Progress: [██████████░] Phases 1-9 complete + Phase 10-01 done + Phase 11-01 done
+Progress: [████████████] Phases 1-11 complete — v1.3 milestone done
 
 ## App State (as of 2026-05-10)
 
