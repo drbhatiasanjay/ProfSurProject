@@ -102,6 +102,16 @@ if user_q:
         {"role": "assistant", "content": full or ""}
     )
 
+    # CFO mode: offer to add reply to board deck
+    if mode == "CFO" and full:
+        if "ai_recommendations" not in st.session_state:
+            st.session_state["ai_recommendations"] = []
+        if st.button("➕ Add to Board Deck", key=f"brd_{len(st.session_state['chat_history'])}"):
+            st.session_state["ai_recommendations"].append(
+                {"question": user_q, "answer": full}
+            )
+            st.toast("Added to Board Deck ✓")
+
     _u = st.session_state.get("user", {}) or {}
     log_chat_query(
         username=_u.get("username", "anonymous"),
