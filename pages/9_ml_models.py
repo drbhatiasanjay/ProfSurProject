@@ -74,16 +74,17 @@ all_predictors = [
 ]
 
 with st.sidebar:
-    st.markdown("**ML Features**")
-    _saved_ml_x = _mprefs.get("ml_features", DEFAULT_X_COLS)
-    selected_x = st.multiselect(
-        "Predictors",
-        options=all_predictors,
-        default=[v for v in _saved_ml_x if v in all_predictors] or DEFAULT_X_COLS,
-        key="ml_features",
-    )
-    if not selected_x:
-        selected_x = DEFAULT_X_COLS
+    with st.expander("Advanced options", expanded=False):
+        st.markdown("**ML Features**")
+        _saved_ml_x = _mprefs.get("ml_features", DEFAULT_X_COLS)
+        selected_x = st.multiselect(
+            "Predictors",
+            options=all_predictors,
+            default=[v for v in _saved_ml_x if v in all_predictors] or DEFAULT_X_COLS,
+            key="ml_features",
+        )
+        if not selected_x:
+            selected_x = DEFAULT_X_COLS
 
 # ── Load data ──
 try:

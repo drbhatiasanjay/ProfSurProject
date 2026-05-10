@@ -92,31 +92,32 @@ predictor_labels = {
 col_left, col_right = st.columns([1, 3])
 
 with col_left:
-    st.markdown("#### Variables")
-    _saved_x = _eprefs.get("selected_x", DEFAULT_X_COLS)
-    selected_x = st.multiselect(
-        "Determinants",
-        options=all_predictors,
-        default=[v for v in _saved_x if v in all_predictors] or DEFAULT_X_COLS,
-        format_func=lambda x: predictor_labels.get(x, x),
-    )
-    if not selected_x:
-        selected_x = DEFAULT_X_COLS
+    with st.expander("Advanced options", expanded=False):
+        st.markdown("#### Variables")
+        _saved_x = _eprefs.get("selected_x", DEFAULT_X_COLS)
+        selected_x = st.multiselect(
+            "Determinants",
+            options=all_predictors,
+            default=[v for v in _saved_x if v in all_predictors] or DEFAULT_X_COLS,
+            format_func=lambda x: predictor_labels.get(x, x),
+        )
+        if not selected_x:
+            selected_x = DEFAULT_X_COLS
 
-    _model_opts = ["Auto-Suggest", "Pooled OLS", "Fixed Effects", "Random Effects",
-                   "Robust (Huber M)", "ANOVA"]
-    _saved_model = _eprefs.get("model_choice", "Auto-Suggest")
-    model_choice = st.radio(
-        "Model",
-        _model_opts,
-        index=_model_opts.index(_saved_model) if _saved_model in _model_opts else 0,
-        help=(
-            "**Robust (Huber M)** — outlier-resistant OLS via iteratively-reweighted "
-            "least squares (statsmodels.RLM). Down-weights extreme leverage values "
-            "rather than fixing only the standard errors. Use this to test whether "
-            "thesis findings hold under outlier downweighting."
-        ),
-    )
+        _model_opts = ["Auto-Suggest", "Pooled OLS", "Fixed Effects", "Random Effects",
+                       "Robust (Huber M)", "ANOVA"]
+        _saved_model = _eprefs.get("model_choice", "Auto-Suggest")
+        model_choice = st.radio(
+            "Model",
+            _model_opts,
+            index=_model_opts.index(_saved_model) if _saved_model in _model_opts else 0,
+            help=(
+                "**Robust (Huber M)** — outlier-resistant OLS via iteratively-reweighted "
+                "least squares (statsmodels.RLM). Down-weights extreme leverage values "
+                "rather than fixing only the standard errors. Use this to test whether "
+                "thesis findings hold under outlier downweighting."
+            ),
+        )
 
 with col_right:
     # ── Load data ──

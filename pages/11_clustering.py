@@ -54,18 +54,20 @@ firm_df, X_scaled, scaler, feat_names = prepare_firm_features(panel_df)
 st.caption(f"Clustering {len(firm_df)} firms on {len(feat_names)} features")
 
 # Find optimal K
-col_k, col_chart = st.columns([1, 2])
-with col_k:
-    auto_k, scores_df = find_optimal_k(X_scaled)
-    st.metric("Optimal K (silhouette)", auto_k)
-    k = st.slider("Number of clusters", 3, 12, auto_k)
+auto_k, scores_df = find_optimal_k(X_scaled)
 
-with col_chart:
-    fig_sil = px.line(scores_df, x="k", y="silhouette", markers=True,
-                      labels={"k": "K", "silhouette": "Silhouette Score"})
-    fig_sil.add_vline(x=k, line_dash="dash", line_color=ACCENT)
-    fig_sil.update_layout(**plotly_layout("Silhouette Score by K", height=280))
-    st.plotly_chart(fig_sil, use_container_width=True, config=PLOTLY_CONFIG)
+with st.expander("Advanced options", expanded=False):
+    col_k, col_chart = st.columns([1, 2])
+    with col_k:
+        st.metric("Optimal K (silhouette)", auto_k)
+        k = st.slider("Number of clusters", 3, 12, auto_k)
+
+    with col_chart:
+        fig_sil = px.line(scores_df, x="k", y="silhouette", markers=True,
+                          labels={"k": "K", "silhouette": "Silhouette Score"})
+        fig_sil.add_vline(x=k, line_dash="dash", line_color=ACCENT)
+        fig_sil.update_layout(**plotly_layout("Silhouette Score by K", height=280))
+        st.plotly_chart(fig_sil, use_container_width=True, config=PLOTLY_CONFIG)
 
 # Run K-Means
 labels, clustered_df, profiles, km = run_kmeans(X_scaled, k, firm_df)

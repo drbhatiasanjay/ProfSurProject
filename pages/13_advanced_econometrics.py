@@ -270,13 +270,14 @@ with tab_compare:
     st.subheader("Stage Comparison Regressions")
     st.caption("Compare leverage determinants between two life stages — side-by-side coefficient analysis")
 
-    col_a, col_b = st.columns(2)
-    with col_a:
-        stage_a = st.selectbox("Stage A", STAGE_ORDER, index=1, key="cmp_a")  # Growth
-    with col_b:
-        stage_b = st.selectbox("Stage B", STAGE_ORDER, index=2, key="cmp_b")  # Maturity
+    with st.expander("Advanced options", expanded=False):
+        col_a, col_b = st.columns(2)
+        with col_a:
+            stage_a = st.selectbox("Stage A", STAGE_ORDER, index=1, key="cmp_a")  # Growth
+        with col_b:
+            stage_b = st.selectbox("Stage B", STAGE_ORDER, index=2, key="cmp_b")  # Maturity
 
-    compare_delta = st.checkbox("Compare delta-leverage (changes) instead of levels", key="cmp_delta")
+        compare_delta = st.checkbox("Compare delta-leverage (changes) instead of levels", key="cmp_delta")
 
     if st.button("Run Comparison", type="primary", key="run_cmp"):
         if stage_a == stage_b:
@@ -398,18 +399,19 @@ residuals).
     iv_col_left, iv_col_right = st.columns([1, 3])
 
     with iv_col_left:
-        iv_endog = st.selectbox(
-            "Endogenous regressor",
-            options=DEFAULT_X_COLS,
-            index=DEFAULT_X_COLS.index("profitability"),
-            help="The regressor to instrument. Profitability is the canonical endogenous variable in capital structure.",
-        )
-        iv_lags = st.multiselect(
-            "Instruments (lags of the endogenous regressor)",
-            options=[1, 2, 3],
-            default=[1, 2],
-            format_func=lambda n: f"{iv_endog}_lag{n}",
-        )
+        with st.expander("Advanced options", expanded=False):
+            iv_endog = st.selectbox(
+                "Endogenous regressor",
+                options=DEFAULT_X_COLS,
+                index=DEFAULT_X_COLS.index("profitability"),
+                help="The regressor to instrument. Profitability is the canonical endogenous variable in capital structure.",
+            )
+            iv_lags = st.multiselect(
+                "Instruments (lags of the endogenous regressor)",
+                options=[1, 2, 3],
+                default=[1, 2],
+                format_func=lambda n: f"{iv_endog}_lag{n}",
+            )
         run_iv_btn = st.button("Run 2SLS", type="primary", key="run_iv")
 
     with iv_col_right:

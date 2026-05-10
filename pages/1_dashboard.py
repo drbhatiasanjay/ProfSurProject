@@ -134,7 +134,7 @@ fig_overall.add_trace(go.Scatter(
     mode="lines", name="Median Leverage",
     line=dict(color=SECONDARY, width=2, dash="dash"),
 ))
-fig_overall.update_layout(**plotly_layout("Average Financial Leverage Over Time (All Firms)", height=380))
+fig_overall.update_layout(**plotly_layout("Average Financial Leverage Over Time (All Firms)", height=380, year_range=filters.get("year_range")))
 fig_overall = event_bands(fig_overall)
 fig_overall.update_yaxes(title="Leverage (%)")
 st.plotly_chart(fig_overall, use_container_width=True, config=PLOTLY_CONFIG)
@@ -212,7 +212,7 @@ for _var in _f52_keys:
         ),
     ))
 _fig52_combined.update_layout(
-    **plotly_layout("All Determinants — Normalized Trends (0–100)", height=400)
+    **plotly_layout("All Determinants — Normalized Trends (0–100)", height=400, year_range=filters.get("year_range"))
 )
 _fig52_combined = event_bands(_fig52_combined)
 _fig52_combined.update_yaxes(title="Relative Level (0 = lowest, 100 = highest)")
@@ -316,7 +316,7 @@ with stage_left:
             category_orders={"life_stage": STAGE_ORDER},
             labels={"avg_leverage": "Avg Leverage (%)", "year": "Year", "life_stage": "Life Stage"},
         )
-        fig_trend.update_layout(**plotly_layout("Leverage Over Time by Life Stage", height=420))
+        fig_trend.update_layout(**plotly_layout("Leverage Over Time by Life Stage", height=420, year_range=filters.get("year_range")))
         fig_trend = event_bands(fig_trend)
         fig_trend.update_traces(line_width=2.5)
         st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
@@ -616,7 +616,7 @@ with macro_left:
             yaxis="y2",
         ))
     fig_ir.update_layout(
-        **plotly_layout("Leverage vs Interest Rate Over Time", height=380),
+        **plotly_layout("Leverage vs Interest Rate Over Time", height=380, year_range=filters.get("year_range")),
         yaxis2=dict(title="Interest Rate (%)", overlaying="y", side="right", showgrid=False),
     )
     fig_ir = event_bands(fig_ir)
@@ -638,7 +638,7 @@ with macro_right:
             yaxis="y2",
         ))
         fig_pe.update_layout(
-            **plotly_layout("Leverage vs Market P/E Ratio", height=380),
+            **plotly_layout("Leverage vs Market P/E Ratio", height=380, year_range=filters.get("year_range")),
             yaxis2=dict(title="P/E Ratio", overlaying="y", side="right", showgrid=False),
         )
         fig_pe = event_bands(fig_pe)
@@ -714,7 +714,7 @@ if _india:
                     yaxis="y2",
                 ))
                 fig_idx.update_layout(
-                    **plotly_layout(f"Leverage vs {chosen_name}", height=380),
+                    **plotly_layout(f"Leverage vs {chosen_name}", height=380, year_range=filters.get("year_range")),
                     yaxis2=dict(title=f"{chosen_name} closing", overlaying="y", side="right", showgrid=False),
                 )
                 fig_idx = event_bands(fig_idx)

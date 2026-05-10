@@ -512,9 +512,9 @@ def _current_theme() -> str:
         return "light"
 
 
-def plotly_layout_light(title="", height=400):
+def plotly_layout_light(title="", height=400, year_range=None):
     _t = 65 if title else 30
-    return dict(
+    layout = dict(
         title=dict(text=title, font=dict(size=15, color=NEUTRAL), x=0, xanchor="left", pad=dict(l=4)),
         font=dict(family="Inter, system-ui, sans-serif", size=12, color=NEUTRAL),
         plot_bgcolor=BG_LIGHT,
@@ -526,10 +526,18 @@ def plotly_layout_light(title="", height=400):
                      activecolor=PRIMARY, color=NEUTRAL),
         hovermode="x unified",
     )
+    if year_range is not None and len(year_range) == 2:
+        layout["xaxis"] = {"range": [year_range[0], year_range[1]]}
+    return layout
 
 
-def plotly_layout_dark(title="", height=400):
+def plotly_layout_dark(title="", height=400, year_range=None):
     _t = 65 if title else 30
+    xaxis_cfg = dict(gridcolor=BORDER_DARK, zerolinecolor=BORDER_DARK,
+                     tickcolor=MUTED_DARK, tickfont=dict(color=MUTED_DARK),
+                     title=dict(font=dict(color=TEXT_DARK)))
+    if year_range is not None and len(year_range) == 2:
+        xaxis_cfg["range"] = [year_range[0], year_range[1]]
     return dict(
         title=dict(text=title, font=dict(size=15, color="#ffffff"), x=0, xanchor="left", pad=dict(l=4)),
         font=dict(family="Inter, system-ui, sans-serif", size=12, color=TEXT_DARK),
@@ -541,9 +549,7 @@ def plotly_layout_dark(title="", height=400):
                     font=dict(color=TEXT_DARK)),
         modebar=dict(orientation="h", bgcolor="rgba(26,29,36,0.7)",
                      activecolor=ACCENT, color=MUTED_DARK),
-        xaxis=dict(gridcolor=BORDER_DARK, zerolinecolor=BORDER_DARK,
-                   tickcolor=MUTED_DARK, tickfont=dict(color=MUTED_DARK),
-                   title=dict(font=dict(color=TEXT_DARK))),
+        xaxis=xaxis_cfg,
         yaxis=dict(gridcolor=BORDER_DARK, zerolinecolor=BORDER_DARK,
                    tickcolor=MUTED_DARK, tickfont=dict(color=MUTED_DARK),
                    title=dict(font=dict(color=TEXT_DARK))),
@@ -551,11 +557,19 @@ def plotly_layout_dark(title="", height=400):
     )
 
 
-def plotly_layout(title="", height=400):
-    """Theme-aware layout dispatcher. Callers get the right palette automatically."""
+def plotly_layout(title="", height=400, year_range=None):
+    """Theme-aware layout dispatcher. Callers get the right palette automatically.
+
+    Args:
+        title: Chart title string.
+        height: Chart height in pixels.
+        year_range: Optional (yr_min, yr_max) tuple. When provided, sets the x-axis
+            range so time-series charts default to the session year filter range.
+            Pass st.session_state.filters.get("year_range") for automatic tracking.
+    """
     if _current_theme() == "dark":
-        return plotly_layout_dark(title, height)
-    return plotly_layout_light(title, height)
+        return plotly_layout_dark(title, height, year_range=year_range)
+    return plotly_layout_light(title, height, year_range=year_range)
 
 
 def event_bands(fig, year_col="year"):

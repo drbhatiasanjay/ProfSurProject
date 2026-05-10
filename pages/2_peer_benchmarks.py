@@ -86,7 +86,7 @@ with left:
         name=f"Industry Avg ({company_industry})",
         mode="lines", line=dict(color=ACCENT, width=2, dash="dash"),
     ))
-    fig.update_layout(**plotly_layout(height=380))
+    fig.update_layout(**plotly_layout(height=380, year_range=filters.get("year_range")))
     fig = event_bands(fig)
     st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
     insights, actions = interpret_company_vs_industry(selected, company_df, industry_df, "leverage")
@@ -108,7 +108,7 @@ with right:
         name=f"Industry Avg",
         mode="lines", line=dict(color=ACCENT, width=2, dash="dash"),
     ))
-    fig2.update_layout(**plotly_layout(height=380))
+    fig2.update_layout(**plotly_layout(height=380, year_range=filters.get("year_range")))
     fig2 = event_bands(fig2)
     st.plotly_chart(fig2, use_container_width=True, config=PLOTLY_CONFIG)
     insights, actions = interpret_company_vs_industry(selected, company_df, industry_df, "profitability")

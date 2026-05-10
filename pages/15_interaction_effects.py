@@ -90,6 +90,21 @@ with tab_cross:
         "Variables are mean-centred; HC1 robust standard errors."
     )
 
+    with st.expander("Advanced options", expanded=False):
+        st.markdown("**Interaction specification**")
+        st.caption(
+            "This model regresses leverage on: Profitability (mean-centred), "
+            "Tangibility (mean-centred), their cross-term (Prof x Tang), and the "
+            "base controls (log_size, tax_shield, dividend). Mean-centring is always "
+            "applied to reduce multicollinearity and keep main-effect coefficients "
+            "interpretable at the sample mean."
+        )
+        st.info(
+            "Cross-term interaction: Profitability x Tangibility (fixed specification — "
+            "see Stage Moderation tab for per-stage marginal effects).",
+            icon="ℹ️",
+        )
+
     if st.button("Run Cross-Term OLS", type="primary", key="run_cross"):
         with st.spinner("Fitting cross-term model…"):
             ct = run_cross_term_ols(panel_df)
