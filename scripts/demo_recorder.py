@@ -6,24 +6,31 @@ Records SCREEN + YOUR VOICE section by section.
 Playwright navigates automatically while you speak the narration shown on screen.
 Whisper auto-transcribes your voice → SRT captions burned into video.
 
+Output layout:
+    demo_output/          intermediate files (raw video, SRT, section FINALs)
+    videos/               final stitched demos named by date + time
+      lifecycle_leverage_demo_YYYY-MM-DD_HH-MM-SS.mp4
+
 Usage:
-    py -3.12 scripts/demo_recorder.py [--section 03]   # record one section only
-    py -3.12 scripts/demo_recorder.py --concat-only    # stitch existing sections
+    py -3.12 scripts/demo_recorder.py               # record all 16 sections
+    py -3.12 scripts/demo_recorder.py --section 03  # record one section only
+    py -3.12 scripts/demo_recorder.py --concat-only # stitch existing sections → videos/
 
 Controls during recording:
-    ENTER   → confirm and start recording next section
+    ENTER   → start recording / stop early when done
     S       → skip current section (move to next)
     Q       → quit after finishing current section
 """
 
 import os, sys, time, subprocess, threading, re, ctypes, argparse
 from pathlib import Path
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 BASE_URL      = "http://localhost:8501"
 MIC_DEVICE    = "Microphone (2- Brio 100)"   # change to "Microphone Array (Realtek(R) Audio)" if needed
-OUTPUT_DIR    = Path("demo_output")
+OUTPUT_DIR    = Path("demo_output")   # intermediate files: raw video, SRT, section FINALs
+VIDEOS_DIR    = Path("videos")        # final stitched demos, named by date+time
 WHISPER_MODEL = "small"    # tiny=fastest, base=good balance, small=more accurate for Indian-accented English
 FPS           = 30
 LOGIN_USER    = "sbhatia"
@@ -35,6 +42,7 @@ SCREEN_W = _user32.GetSystemMetrics(0)
 SCREEN_H = _user32.GetSystemMetrics(1)
 
 OUTPUT_DIR.mkdir(exist_ok=True)
+VIDEOS_DIR.mkdir(exist_ok=True)
 
 
 # ── Narration Script ──────────────────────────────────────────────────────────
@@ -697,9 +705,9 @@ def main():
     if args.concat_only:
         existing = sorted(OUTPUT_DIR.glob("*_FINAL.mp4"))
         if not existing:
-            print("  ❌ No *_FINAL.mp4 files found in demo_output/")
+            print("  ❌ No *_FINAL.mp4 files found in demo_output/ — run a recording session first.")
             sys.exit(1)
-        print(f"  Found {len(existing)} section files to stitch.")
+        print(f"  Found {len(existing)} section files to stitch → videos/")
         _stitch_with_bookends(existing)
         return
 
@@ -717,6 +725,7 @@ def main():
         _stitch_with_bookends(completed)
     elif len(completed) == 1:
         print(f"\n  ✅ Single section recorded: {completed[0].resolve()}")
+        print(f"     Run --concat-only to stitch all sections into videos/ when ready.")
 
     print("\n  Recording session complete.\n")
 
@@ -754,8 +763,10 @@ def _stitch_with_bookends(section_files: list) -> None:
     if outro:
         all_files.append(outro)
 
-    final_demo = OUTPUT_DIR / "demo_FULL.mp4"
-    print(f"  🎬 Stitching {len(all_files)} clips → demo_FULL.mp4")
+    ts        = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    fname     = f"lifecycle_leverage_demo_{ts}.mp4"
+    final_demo = VIDEOS_DIR / fname
+    print(f"  🎬 Stitching {len(all_files)} clips → {fname}")
     concat_all_sections(all_files, final_demo)
     size_mb = final_demo.stat().st_size / 1024 / 1024
     print(f"  ✅ DONE!  {final_demo.resolve()}")
