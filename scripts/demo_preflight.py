@@ -12,8 +12,12 @@ Exit codes:
     1  — one or more checks failed
 """
 
-import subprocess, sys, socket
+import subprocess, sys, socket, io
 from pathlib import Path
+
+# Force UTF-8 output on Windows terminals (avoids cp1252 UnicodeEncodeError)
+if hasattr(sys.stdout, "buffer"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 MIC_DEVICE = "Microphone (2- Brio 100)"
 STREAMLIT_PORT = 8501
