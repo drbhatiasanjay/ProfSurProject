@@ -347,6 +347,66 @@ def extract_audio(video_path: Path, audio_path: Path) -> None:
     )
 
 
+def get_video_duration(path: Path) -> float:
+    """Return duration in seconds via ffprobe JSON."""
+    result = subprocess.run(
+        ["ffprobe", "-v", "quiet", "-print_format", "json",
+         "-show_format", str(path)],
+        capture_output=True, text=True,
+    )
+    try:
+        import json as _json
+        return float(_json.loads(result.stdout)["format"]["duration"])
+    except Exception:
+        return 0.0
+
+
+def normalise_audio(path: Path) -> None:
+    """Loudness-normalise audio in-place using ffmpeg loudnorm (single-pass, I=-16 LUFS)."""
+    tmp = path.parent / f"_norm_{path.name}"
+    result = subprocess.run(
+        ["ffmpeg", "-y", "-i", str(path),
+         "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+         "-c:v", "copy",
+         "-c:a", "aac", "-ar", "44100", "-b:a", "192k",
+         str(tmp)],
+        capture_output=True,
+    )
+    if result.returncode == 0 and tmp.exists():
+        path.unlink(missing_ok=True)
+        tmp.rename(path)
+    else:
+        tmp.unlink(missing_ok=True)
+        print(f"  ⚠ loudnorm failed — keeping original audio")
+
+
+def add_fades(path: Path, fade_duration: float = 0.5) -> None:
+    """Add video + audio fade-in and fade-out in-place."""
+    dur = get_video_duration(path)
+    if dur <= fade_duration * 3:
+        return  # clip too short to fade
+    fade_out_start = dur - fade_duration
+    vf = (f"fade=t=in:st=0:d={fade_duration},"
+          f"fade=t=out:st={fade_out_start:.3f}:d={fade_duration}")
+    af = (f"afade=t=in:st=0:d={fade_duration},"
+          f"afade=t=out:st={fade_out_start:.3f}:d={fade_duration}")
+    tmp = path.parent / f"_fade_{path.name}"
+    result = subprocess.run(
+        ["ffmpeg", "-y", "-i", str(path),
+         "-vf", vf, "-af", af,
+         "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+         "-c:a", "aac", "-b:a", "192k",
+         str(tmp)],
+        capture_output=True,
+    )
+    if result.returncode == 0 and tmp.exists():
+        path.unlink(missing_ok=True)
+        tmp.rename(path)
+    else:
+        tmp.unlink(missing_ok=True)
+        print(f"  ⚠ fade failed — keeping original")
+
+
 def burn_captions(video_path: Path, srt_path: Path, output_path: Path) -> None:
     # Escape path for ffmpeg subtitles filter (Windows backslashes + colon)
     srt_str = str(srt_path.resolve()).replace("\\", "\\\\").replace(":", "\\:")
@@ -668,6 +728,14 @@ def record_section(section: dict) -> Path | None:
     print(f"  🖊  Burning captions into video...")
     burn_captions(raw_video, srt_file, captioned)
 
+    # Normalise audio levels (I=-16 LUFS)
+    print(f"  🔊 Normalising audio levels...")
+    normalise_audio(captioned)
+
+    # Add fade in/out transitions
+    print(f"  🎞  Adding fade transitions...")
+    add_fades(captioned)
+
     # Add title card
     print(f"  🎬 Adding title card...")
     add_title_card(captioned, title, final_out)
@@ -730,8 +798,73 @@ def main():
     print("\n  Recording session complete.\n")
 
 
+def embed_chapters(video_path: Path, chapter_list: list) -> None:
+    """Embed chapter markers into video_path in-place.
+
+    chapter_list: [(title, start_ms, end_ms), ...]
+    """
+    meta_path = video_path.parent / "_chapters.txt"
+    lines = [
+        ";FFMETADATA1",
+        "title=LifeCycle Leverage Dashboard Demo",
+        "artist=Dr. Sanjay Bhatia · Prof. Surendra Kumar",
+        "comment=Capital Structure Analytics — 401 Indian Firms · 24 Years · 8 Life Stages",
+        "",
+    ]
+    for title, start_ms, end_ms in chapter_list:
+        lines += [
+            "[CHAPTER]",
+            "TIMEBASE=1/1000",
+            f"START={int(start_ms)}",
+            f"END={int(end_ms)}",
+            f"title={title}",
+            "",
+        ]
+    meta_path.write_text("\n".join(lines), encoding="utf-8")
+
+    tmp = video_path.parent / f"_ch_{video_path.name}"
+    result = subprocess.run(
+        ["ffmpeg", "-y",
+         "-i", str(video_path),
+         "-i", str(meta_path),
+         "-map_metadata", "1",
+         "-codec", "copy",
+         str(tmp)],
+        capture_output=True,
+    )
+    meta_path.unlink(missing_ok=True)
+    if result.returncode == 0 and tmp.exists():
+        video_path.unlink(missing_ok=True)
+        tmp.rename(video_path)
+    else:
+        tmp.unlink(missing_ok=True)
+        print(f"  ⚠ Chapter embedding failed — video kept without chapters")
+
+
+def _print_post_production_report(clip_info: list, final_path: Path) -> None:
+    """Print a post-production summary table.
+
+    clip_info: [(label, duration_s, size_bytes), ...]
+    """
+    print(f"\n  {'─'*58}")
+    print(f"  {'Section':<34}  {'Duration':>8}  {'Size':>7}")
+    print(f"  {'─'*34}  {'─'*8}  {'─'*7}")
+    total_s = 0
+    total_b = 0
+    for label, dur_s, size_b in clip_info:
+        m, s = divmod(int(dur_s), 60)
+        print(f"  {label:<34}  {m}:{s:02d}     {size_b/1024/1024:>5.1f} MB")
+        total_s += dur_s
+        total_b += size_b
+    print(f"  {'─'*34}  {'─'*8}  {'─'*7}")
+    tm, ts_ = divmod(int(total_s), 60)
+    print(f"  {'TOTAL':<34}  {tm}:{ts_:02d}     {total_b/1024/1024:>5.1f} MB")
+    print(f"  {'─'*58}")
+    print(f"\n  Final: {final_path.resolve()}")
+
+
 def _stitch_with_bookends(section_files: list) -> None:
-    """Generate intro + outro cards, prepend/append, stitch to demo_FULL.mp4."""
+    """Generate intro + outro cards, stitch, embed chapters, print report."""
     print(f"\n{'='*64}")
     print(f"  🎬 Building intro + outro cards...")
 
@@ -763,14 +896,49 @@ def _stitch_with_bookends(section_files: list) -> None:
     if outro:
         all_files.append(outro)
 
-    ts        = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    fname     = f"lifecycle_leverage_demo_{ts}.mp4"
+    ts         = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    fname      = f"lifecycle_leverage_demo_{ts}.mp4"
     final_demo = VIDEOS_DIR / fname
     print(f"  🎬 Stitching {len(all_files)} clips → {fname}")
     concat_all_sections(all_files, final_demo)
-    size_mb = final_demo.stat().st_size / 1024 / 1024
-    print(f"  ✅ DONE!  {final_demo.resolve()}")
-    print(f"     {len(section_files)} sections + intro + outro · {size_mb:.1f} MB")
+
+    # ── Chapter markers ───────────────────────────────────────────
+    print(f"  📑 Embedding chapter markers...")
+    clip_info   = []
+    chapter_list = []
+    cursor_ms    = 0.0
+
+    clip_labels = (
+        ["Introduction"] +
+        [_section_label(f) for f in section_files] +
+        (["Closing"] if outro else [])
+    )
+
+    for clip_path, label in zip(all_files, clip_labels):
+        dur_s  = get_video_duration(clip_path)
+        size_b = clip_path.stat().st_size
+        clip_info.append((label, dur_s, size_b))
+        end_ms = cursor_ms + dur_s * 1000
+        chapter_list.append((label, cursor_ms, end_ms))
+        cursor_ms = end_ms
+
+    embed_chapters(final_demo, chapter_list)
+
+    # ── Post-production report ────────────────────────────────────
+    # Replace clip sizes with final proportional sizes from the stitched file
+    final_size = final_demo.stat().st_size
+    _print_post_production_report(clip_info, final_demo)
+    print(f"\n  ✅ DONE — {len(section_files)} sections + intro + outro")
+
+
+def _section_label(path: Path) -> str:
+    """Extract human-readable label from section FINAL filename."""
+    stem = path.stem.replace("_FINAL", "").replace("_", " ")
+    # Match against SECTIONS list for exact title
+    for sec in SECTIONS:
+        if path.stem.startswith(sec["id"]):
+            return sec["title"]
+    return stem.title()
 
 
 if __name__ == "__main__":

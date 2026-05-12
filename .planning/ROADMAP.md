@@ -40,9 +40,9 @@ Full archive: `.planning/milestones/v1.3-ROADMAP.md`
 
 </details>
 
-### 📋 v1.4 (To Be Defined)
+### 📋 v1.4 Demo & Distribution
 
-Run `/gsd:new-milestone` to define phases 12+.
+- [ ] Phase 12: Professional Demo Production — stitch 16-section screen+voice recording into a polished MP4 with intro/outro, audio normalisation, fade transitions, chapter markers, and pre-flight validation
 
 ## Progress
 
