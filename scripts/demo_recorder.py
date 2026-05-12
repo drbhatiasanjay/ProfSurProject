@@ -24,7 +24,7 @@ from datetime import timedelta
 BASE_URL      = "http://localhost:8501"
 MIC_DEVICE    = "Microphone (2- Brio 100)"   # change to "Microphone Array (Realtek(R) Audio)" if needed
 OUTPUT_DIR    = Path("demo_output")
-WHISPER_MODEL = "base"     # tiny=fastest, base=good balance, small=more accurate
+WHISPER_MODEL = "small"    # tiny=fastest, base=good balance, small=more accurate for Indian-accented English
 FPS           = 30
 LOGIN_USER    = "sbhatia"
 LOGIN_PASS    = "UzBGwQ0DuH_Wgo0S"
@@ -73,7 +73,7 @@ SECTIONS = [
         "id":       "03_peer_benchmarks",
         "title":    "Peer Benchmarks — Stage-Aware Comparison",
         "url":      "/Peer_Benchmarks",
-        "actions":  ["scroll_down", "scroll_up"],
+        "actions":  ["select_company:Reliance", "wait:2", "scroll_down", "scroll_up"],
         "duration": 42,
         "narration": (
             "Unlike traditional tools that benchmark by industry sector alone, "
@@ -115,7 +115,7 @@ SECTIONS = [
         "id":       "06_life_stage_dynamics",
         "title":    "Life Stage Dynamics — Markov Transitions & Survival",
         "url":      "/Knowledge_Graph",
-        "actions":  ["scroll_down", "scroll_up"],
+        "actions":  ["scroll_slow", "click_tab:1", "wait:2", "scroll_down", "click_tab:4", "wait:2", "scroll_down"],
         "duration": 50,
         "narration": (
             "This is one of the most analytically distinctive pages in the platform. "
@@ -131,7 +131,7 @@ SECTIONS = [
         "id":       "07_econometrics",
         "title":    "Econometrics — Fixed Effects & Hausman Test",
         "url":      "/Econometrics",
-        "actions":  ["scroll_down", "scroll_up"],
+        "actions":  ["scroll_down", "click_primary_button", "wait:3", "scroll_down", "scroll_up"],
         "duration": 50,
         "narration": (
             "The econometrics page runs O L S, Fixed Effects, and Random Effects regressions interactively. "
@@ -145,7 +145,7 @@ SECTIONS = [
         "id":       "08_ml_models",
         "title":    "Machine Learning — XGBoost + SHAP Explainability",
         "url":      "/ML_Models",
-        "actions":  ["scroll_down", "scroll_up"],
+        "actions":  ["scroll_down", "click_primary_button", "wait:5", "scroll_down", "scroll_up"],
         "duration": 45,
         "narration": (
             "The machine learning page trains Random Forest, XGBoost, and LightGBM models "
@@ -201,7 +201,7 @@ SECTIONS = [
         "id":       "12_advanced_econometrics",
         "title":    "Advanced Econometrics — System GMM & Speed of Adjustment",
         "url":      "/Advanced_Econometrics",
-        "actions":  ["scroll_down", "scroll_up"],
+        "actions":  ["scroll_down", "click_primary_button", "wait:4", "scroll_down", "scroll_up"],
         "duration": 50,
         "narration": (
             "System GMM estimation handles endogeneity in dynamic panel models "
@@ -246,7 +246,7 @@ SECTIONS = [
         "id":       "15_board_export",
         "title":    "Board Export — One-Click Company Board Deck",
         "url":      "/Board_Export",
-        "actions":  ["scroll_down", "scroll_up"],
+        "actions":  ["select_company:Reliance", "wait:2", "click_primary_button", "wait:4", "scroll_slow", "scroll_up"],
         "duration": 52,
         "narration": (
             "Select any of the 401 companies and generate a complete board presentation in one click. "
@@ -261,7 +261,7 @@ SECTIONS = [
         "id":       "16_company_navigator",
         "title":    "Company Navigator — Interactive Network Explorer",
         "url":      "/Company_Navigator",
-        "actions":  ["scroll_down"],
+        "actions":  ["scroll_down", "click_tab:1", "wait:2", "scroll_down"],
         "duration": 38,
         "narration": (
             "The Company Navigator renders an interactive network graph of all 401 firms. "
@@ -343,7 +343,7 @@ def burn_captions(video_path: Path, srt_path: Path, output_path: Path) -> None:
     # Escape path for ffmpeg subtitles filter (Windows backslashes + colon)
     srt_str = str(srt_path.resolve()).replace("\\", "\\\\").replace(":", "\\:")
     style = (
-        "FontSize=22,FontName=Arial,"
+        "FontSize=28,FontName=Arial,"
         "PrimaryColour=&Hffffff,"
         "BackColour=&HCC000000,"   # 80% opaque black
         "BorderStyle=4,"           # opaque background box
@@ -396,6 +396,44 @@ def add_title_card(video_path: Path, title: str, output_path: Path) -> None:
     )
     title_tmp.unlink(missing_ok=True)
     concat_txt.unlink(missing_ok=True)
+
+
+def make_bookend_card(lines: list[str], duration: int, output_path: Path) -> Path | None:
+    """Generate a full-screen title card with multiple lines of text centred on dark background."""
+    if output_path.exists():
+        return output_path
+    # Build drawtext chain for each line, spaced 80px apart, centred vertically as a group
+    line_h  = 70
+    total_h = len(lines) * line_h
+    start_y = f"(h-{total_h})/2"
+    filters = []
+    for i, text in enumerate(lines):
+        safe = text.replace("'", "\\'").replace(":", "\\:")
+        font_size = 54 if i == 0 else (36 if i == 1 else 28)
+        color = "white" if i == 0 else ("#94A3B8" if i > 1 else "#CBD5E1")
+        y_expr = f"{start_y}+{i * line_h}" if i > 0 else start_y
+        filters.append(
+            f"drawtext=text='{safe}':fontcolor={color}:fontsize={font_size}:"
+            f"x=(w-text_w)/2:y={y_expr}:"
+            f"box=0"
+        )
+    vf = ",".join(filters)
+    result = subprocess.run(
+        ["ffmpeg", "-y",
+         "-f", "lavfi", "-i",
+         f"color=c=0x0f1117:size={SCREEN_W}x{SCREEN_H}:duration={duration}:rate={FPS}",
+         "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
+         "-vf", vf,
+         "-t", str(duration),
+         "-c:v", "libx264", "-preset", "ultrafast",
+         "-c:a", "aac", "-shortest",
+         str(output_path)],
+        capture_output=True,
+    )
+    if result.returncode != 0:
+        print(f"  ⚠ Bookend card error: {result.stderr.decode()[-200:]}")
+        return None
+    return output_path
 
 
 def concat_all_sections(section_files: list, output_path: Path) -> None:
@@ -453,11 +491,56 @@ def _playwright_navigate(section: dict, stop_event: threading.Event):
                     page.wait_for_timeout(2500)
                     page.evaluate("window.scrollBy({top: 600, behavior: 'smooth'})")
                     page.wait_for_timeout(2500)
+                elif action == "scroll_slow":
+                    for _ in range(4):
+                        page.evaluate("window.scrollBy({top: 280, behavior: 'smooth'})")
+                        page.wait_for_timeout(1800)
                 elif action == "scroll_up":
                     page.evaluate("window.scrollTo({top: 0, behavior: 'smooth'})")
                     page.wait_for_timeout(2000)
                 elif action == "login":
                     pass  # already handled above
+                elif action.startswith("click_tab:"):
+                    # click_tab:N — clicks the Nth tab (0-indexed)
+                    tab_idx = int(action.split(":")[1])
+                    try:
+                        tabs = page.locator('button[role="tab"]').all()
+                        if tab_idx < len(tabs):
+                            tabs[tab_idx].click()
+                            page.wait_for_timeout(3000)
+                    except Exception as _te:
+                        print(f"\n  ⚠ click_tab:{tab_idx} — {_te}")
+                elif action == "click_primary_button":
+                    # Click the first visible primary Streamlit button
+                    try:
+                        page.locator(
+                            'button[data-testid="baseButton-primary"], '
+                            'button[kind="primary"]'
+                        ).first.click()
+                        page.wait_for_timeout(5000)
+                    except Exception as _be:
+                        print(f"\n  ⚠ click_primary_button — {_be}")
+                elif action.startswith("click_button:"):
+                    btn_text = action.split(":", 1)[1]
+                    try:
+                        page.locator(f'button:has-text("{btn_text}")').first.click()
+                        page.wait_for_timeout(4000)
+                    except Exception as _be:
+                        print(f"\n  ⚠ click_button:{btn_text} — {_be}")
+                elif action.startswith("select_company:"):
+                    company_query = action.split(":", 1)[1]
+                    try:
+                        page.locator('[data-testid="stSelectbox"]').first.click()
+                        page.wait_for_timeout(800)
+                        page.keyboard.type(company_query, delay=80)
+                        page.wait_for_timeout(1200)
+                        page.locator('[data-testid="stSelectboxVirtualDropdown"] li').first.click()
+                        page.wait_for_timeout(2500)
+                    except Exception as _se:
+                        print(f"\n  ⚠ select_company:{company_query} — {_se}")
+                elif action.startswith("wait:"):
+                    secs = int(action.split(":")[1])
+                    page.wait_for_timeout(secs * 1000)
 
             # Hold the page open until stop_event
             while not stop_event.is_set():
@@ -503,8 +586,8 @@ def record_section(section: dict) -> Path | None:
     if line:
         print(f"     {line}")
 
-    print(f"\n  ⏱  Duration: {duration}s  |  Mic: {MIC_DEVICE}")
-    print(f"\n  Press ENTER to START recording  (S=skip, Q=quit after this)")
+    print(f"\n  ⏱  Target duration: {duration}s  |  Mic: {MIC_DEVICE}")
+    print(f"\n  Press ENTER to START  |  S = skip  |  Q = quit after this")
     key = input("  > ").strip().lower()
     if key == "s":
         print("  ↩ Skipped.")
@@ -512,6 +595,12 @@ def record_section(section: dict) -> Path | None:
     if key == "q":
         print("  🛑 Quit requested.")
         sys.exit(0)
+
+    # 3-2-1 countdown before recording
+    for cnt in [3, 2, 1]:
+        print(f"\r  Starting in {cnt}...   ", end="", flush=True)
+        time.sleep(1)
+    print(f"\r                        ", end="")
 
     # Start Playwright in background thread
     stop_evt = threading.Event()
@@ -522,14 +611,25 @@ def record_section(section: dict) -> Path | None:
     time.sleep(2)  # give browser time to open
 
     # Start ffmpeg recording
-    print(f"\n  🔴 RECORDING — speak your narration now!\n")
+    print(f"\n  🔴 RECORDING — speak your narration now!")
+    print(f"  Press ENTER to stop early, or wait {duration}s\n")
     ffmpeg_proc = start_recording(raw_video)
     time.sleep(1)  # ffmpeg warm-up
 
-    # Countdown timer
+    # Background thread catches ENTER press to stop early
+    manual_stop = threading.Event()
+    def _wait_enter():
+        try:
+            input()
+        except Exception:
+            pass
+        manual_stop.set()
+    threading.Thread(target=_wait_enter, daemon=True).start()
+
+    # Progress bar — stops at duration OR when user presses ENTER
     t0 = time.time()
     try:
-        while True:
+        while not manual_stop.is_set():
             elapsed   = time.time() - t0
             remaining = duration - elapsed
             if remaining <= 0:
@@ -537,6 +637,8 @@ def record_section(section: dict) -> Path | None:
             bar = "█" * int(20 * elapsed / duration) + "░" * int(20 * remaining / duration)
             print(f"\r  [{bar}] {remaining:.0f}s left  ", end="", flush=True)
             time.sleep(0.4)
+        if manual_stop.is_set():
+            print("\n  ⏹ Stopped manually.")
     except KeyboardInterrupt:
         print("\n  ⏹ Stopped early by Ctrl+C")
 
@@ -598,10 +700,7 @@ def main():
             print("  ❌ No *_FINAL.mp4 files found in demo_output/")
             sys.exit(1)
         print(f"  Found {len(existing)} section files to stitch.")
-        final_demo = OUTPUT_DIR / "demo_FULL.mp4"
-        concat_all_sections(existing, final_demo)
-        print(f"\n  ✅ Final demo: {final_demo.resolve()}")
-        print(f"     Size: {final_demo.stat().st_size / 1024 / 1024:.1f} MB")
+        _stitch_with_bookends(existing)
         return
 
     print(f"\n  {len(sections)} section(s) to record. Total ~{sum(s['duration'] for s in sections)//60}min.")
@@ -615,17 +714,52 @@ def main():
             completed.append(result)
 
     if len(completed) > 1:
-        print(f"\n{'='*64}")
-        print(f"  🎬 Stitching {len(completed)} sections → demo_FULL.mp4")
-        final_demo = OUTPUT_DIR / "demo_FULL.mp4"
-        concat_all_sections(completed, final_demo)
-        size_mb = final_demo.stat().st_size / 1024 / 1024
-        print(f"  ✅ DONE!  {final_demo.resolve()}")
-        print(f"     {len(completed)} sections · {size_mb:.1f} MB")
+        _stitch_with_bookends(completed)
     elif len(completed) == 1:
         print(f"\n  ✅ Single section recorded: {completed[0].resolve()}")
 
     print("\n  Recording session complete.\n")
+
+
+def _stitch_with_bookends(section_files: list) -> None:
+    """Generate intro + outro cards, prepend/append, stitch to demo_FULL.mp4."""
+    print(f"\n{'='*64}")
+    print(f"  🎬 Building intro + outro cards...")
+
+    intro = make_bookend_card(
+        lines=[
+            "LifeCycle Leverage Dashboard",
+            "Capital Structure Analytics — 401 Indian Firms · 24 Years · 8 Life Stages",
+            "Dr. Sanjay Bhatia  ·  Prof. Surendra Kumar, University of Delhi",
+            "github.com/drbhatiasanjay/ProfSurProject",
+        ],
+        duration=6,
+        output_path=OUTPUT_DIR / "_intro_card.mp4",
+    )
+    outro = make_bookend_card(
+        lines=[
+            "Thank You",
+            "LifeCycle Leverage Dashboard",
+            "github.com/drbhatiasanjay/ProfSurProject",
+            "Contact: drbhatiasanjay@gmail.com",
+        ],
+        duration=5,
+        output_path=OUTPUT_DIR / "_outro_card.mp4",
+    )
+
+    all_files = []
+    if intro:
+        all_files.append(intro)
+    all_files.extend(section_files)
+    if outro:
+        all_files.append(outro)
+
+    final_demo = OUTPUT_DIR / "demo_FULL.mp4"
+    print(f"  🎬 Stitching {len(all_files)} clips → demo_FULL.mp4")
+    concat_all_sections(all_files, final_demo)
+    size_mb = final_demo.stat().st_size / 1024 / 1024
+    print(f"  ✅ DONE!  {final_demo.resolve()}")
+    print(f"     {len(section_files)} sections + intro + outro · {size_mb:.1f} MB")
 
 
 if __name__ == "__main__":
