@@ -6,6 +6,8 @@ Streamlit multipage app for analyzing capital structure across corporate life st
 import os
 import streamlit as st
 
+_APP_VERSION = open("VERSION").read().strip() if os.path.exists("VERSION") else "dev"
+
 st.set_page_config(
     page_title="LifeCycle Leverage",
     page_icon=":material/analytics:",
@@ -211,6 +213,7 @@ bulk_upload = st.Page("pages/4_bulk_upload.py", title="Bulk Upload", icon=":mate
 data_explorer = st.Page("pages/5_data_explorer.py", title="Data Explorer", icon=":material/table_chart:")
 settings = st.Page("pages/6_settings.py", title="Settings", icon=":material/settings:")
 knowledge_graph     = st.Page("pages/7_knowledge_graph.py",     title="Knowledge Graph",     icon=":material/hub:")
+life_stage_dynamics = st.Page("pages/20_life_stage_dynamics.py", title="Life Stage Dynamics", icon=":material/timeline:")
 econometrics        = st.Page("pages/8_econometrics.py",         title="Econometrics Lab",    icon=":material/functions:")
 ml_models           = st.Page("pages/9_ml_models.py",           title="ML Models",           icon=":material/model_training:")
 forecasting         = st.Page("pages/10_forecasting.py",        title="Forecasting",         icon=":material/trending_up:")
@@ -224,7 +227,7 @@ admin_activity      = st.Page("pages/16_admin_activity.py",    title="Activity L
 board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck",          icon=":material/description:")
 company_navigator   = st.Page("pages/18_company_navigator.py", title="Company Navigator",   icon=":material/explore:")
 ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
-nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, knowledge_graph, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, company_navigator, ai_assistant, settings])
+nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, knowledge_graph, life_stage_dynamics, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, company_navigator, ai_assistant, settings])
 
 # ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
 from datetime import datetime, timezone as _tz
@@ -261,7 +264,7 @@ st.markdown(f"""
     color: {_header_text};
     font-family: inherit;
 ">
-    <span style="font-weight:700; color:#0D9488; font-size:18px; white-space:nowrap;">LifeCycle Leverage</span>
+    <span style="font-weight:700; color:#0D9488; font-size:18px; white-space:nowrap;">LifeCycle Leverage<span style="font-size:11px;color:#6B7280;font-weight:400;margin-left:6px;">v{_APP_VERSION}</span></span>
     <span style="color:{_header_sub}; white-space:nowrap; display:flex; align-items:center; gap:0.4rem;">
         Dataset:
         <select id="lc-panel-sel"

@@ -2,9 +2,12 @@
 Settings — Theme, about section, database metadata.
 """
 
+import os
 import streamlit as st
 import db
 from helpers import ensure_session_state
+
+_APP_VERSION = open("VERSION").read().strip() if os.path.exists("VERSION") else "dev"
 
 ensure_session_state()
 db.log_page_visit("Settings")
@@ -65,6 +68,7 @@ for Indian publicly listed companies, based on research by **Surendra Kumar** (U
 - Panel data regression: Fixed Effects, Random Effects, System GMM
 - Theoretical frameworks: Pecking Order Theory, Trade-off Theory, Agency Cost Theory
 """)
+st.markdown(f"**Version:** `{_APP_VERSION}` &nbsp;·&nbsp; **Released:** 2026-05-12")
 
 st.divider()
 
