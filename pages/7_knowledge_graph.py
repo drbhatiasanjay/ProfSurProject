@@ -38,8 +38,8 @@ from helpers import (
 )
 
 db.log_page_visit("Knowledge Graph")
-st.markdown("### Life Stage Dynamics")
-st.caption("How firms move between life stages, what triggers transitions, and how events reshape patterns")
+st.markdown("### Knowledge Graph")
+st.caption("Interactive network of life stages, industries, events, and companies — with transition dynamics and stage pathway analysis")
 
 
 # ── Build / cache the graph + source data ──
@@ -157,7 +157,9 @@ with tab_graph:
         for ind, cnt in ind_counts.items():
             ind_id = f"industry:{ind}"
             if G.has_node(ind_id):
-                G_agg.add_node(ind_id, **G.nodes[ind_id], label=f"{ind} ({cnt})")
+                node_attrs = dict(G.nodes[ind_id])
+                node_attrs["label"] = f"{ind} ({cnt})"
+                G_agg.add_node(ind_id, **node_attrs)
 
         # Add event nodes
         for n, d in G.nodes(data=True):

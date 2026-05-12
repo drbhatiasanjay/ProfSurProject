@@ -210,7 +210,7 @@ scenarios = st.Page("pages/3_scenarios.py", title="Scenarios", icon=":material/t
 bulk_upload = st.Page("pages/4_bulk_upload.py", title="Bulk Upload", icon=":material/upload_file:")
 data_explorer = st.Page("pages/5_data_explorer.py", title="Data Explorer", icon=":material/table_chart:")
 settings = st.Page("pages/6_settings.py", title="Settings", icon=":material/settings:")
-knowledge_graph     = st.Page("pages/7_knowledge_graph.py",     title="Life Stage Dynamics", icon=":material/hub:")
+knowledge_graph     = st.Page("pages/7_knowledge_graph.py",     title="Knowledge Graph",     icon=":material/hub:")
 econometrics        = st.Page("pages/8_econometrics.py",         title="Econometrics Lab",    icon=":material/functions:")
 ml_models           = st.Page("pages/9_ml_models.py",           title="ML Models",           icon=":material/model_training:")
 forecasting         = st.Page("pages/10_forecasting.py",        title="Forecasting",         icon=":material/trending_up:")
@@ -224,7 +224,7 @@ admin_activity      = st.Page("pages/16_admin_activity.py",    title="Activity L
 board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck",          icon=":material/description:")
 company_navigator   = st.Page("pages/18_company_navigator.py", title="Company Navigator",   icon=":material/explore:")
 ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
-nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, company_navigator, ai_assistant, knowledge_graph, settings])
+nav = st.navigation([dashboard, benchmarks, scenarios, bulk_upload, data_explorer, knowledge_graph, econometrics, ml_models, forecasting, clustering, transitions, advanced_econ, workbench, interaction_effects, admin_activity, board_deck, company_navigator, ai_assistant, settings])
 
 # ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
 from datetime import datetime, timezone as _tz
