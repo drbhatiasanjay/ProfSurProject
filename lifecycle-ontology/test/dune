@@ -1,0 +1,31 @@
+(test
+ (name test_domain)
+ (libraries domain alcotest))
+
+(test
+ (name test_analytics_meta)
+ (libraries domain analytics_meta alcotest))
+
+(test
+ (name test_json)
+ (libraries domain analytics_meta yojson alcotest))
+
+(test
+ (name test_normative)
+ (libraries domain analytics_meta normative yojson alcotest))
+
+(test
+ (name test_scenario)
+ (libraries domain analytics_meta scenario yojson alcotest))
+
+(test
+ (name test_graph_export)
+ (libraries domain analytics_meta normative graph_export yojson alcotest))
+
+(test
+ (name test_api)
+ (libraries domain analytics_meta normative scenario graph_export api yojson alcotest))
+
+(test
+ (name test_provenance)
+ (libraries domain analytics_meta provenance yojson alcotest))

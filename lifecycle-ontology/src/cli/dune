@@ -1,0 +1,7 @@
+(executable
+ (name main)
+ (public_name lifecycle-ontology)
+ (libraries
+  domain analytics_meta normative scenario graph_export api
+  yojson cmdliner dream lwt lwt.unix)
+ (preprocess (pps lwt_ppx)))

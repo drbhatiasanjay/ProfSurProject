@@ -1,0 +1,3 @@
+(library
+ (name scenario)
+ (libraries domain analytics_meta yojson))

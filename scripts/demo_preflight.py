@@ -3,6 +3,7 @@
 LifeCycle Leverage Dashboard — Demo Pre-flight Check
 =====================================================
 Run this BEFORE starting demo_recorder.py to catch environment issues early.
+Recording is fully automated (TTS narration, no microphone needed).
 
 Usage:
     py -3.12 scripts/demo_preflight.py
@@ -19,7 +20,6 @@ from pathlib import Path
 if hasattr(sys.stdout, "buffer"):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-MIC_DEVICE = "Microphone (2- Brio 100)"
 STREAMLIT_PORT = 8501
 
 GREEN  = "\033[92m"
@@ -58,23 +58,15 @@ def check_ffprobe():
                         "Included with ffmpeg — verify ffmpeg installation"))
 
 
-# ── Check 3: Microphone device ───────────────────────────────────────────────
+# ── Check 3: edge-tts (TTS narration) ────────────────────────────────────────
 def check_microphone():
-    r = subprocess.run(
-        ["ffmpeg", "-list_devices", "true", "-f", "dshow", "-i", "dummy"],
-        capture_output=True, text=True,
-    )
-    combined = r.stdout + r.stderr
-    if MIC_DEVICE.lower() in combined.lower():
-        checks.append(("microphone", "pass", f"Found: {MIC_DEVICE}"))
-    else:
-        # Show what was detected
-        device_lines = [l.strip() for l in combined.splitlines()
-                        if "Microphone" in l or "Audio" in l or "dshow" in l.lower()]
-        found = "; ".join(device_lines[:4]) if device_lines else "none detected"
-        checks.append(("microphone", "fail",
-                        f'Expected "{MIC_DEVICE}" — detected: {found}\n'
-                        f'         Fix: edit MIC_DEVICE in scripts/demo_recorder.py'))
+    try:
+        import edge_tts
+        checks.append(("edge-tts", "pass",
+                        f"v{edge_tts.__version__ if hasattr(edge_tts, '__version__') else 'installed'} — TTS narration ready"))
+    except ImportError:
+        checks.append(("edge-tts", "fail",
+                        "pip install edge-tts"))
 
 
 # ── Check 4: Streamlit running ───────────────────────────────────────────────

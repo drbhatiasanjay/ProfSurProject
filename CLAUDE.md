@@ -4,10 +4,11 @@
 Streamlit dashboard analyzing capital structure determinants across corporate life stages for 401 Indian companies. Based on PhD thesis by Prof Surendra Kumar, University of Delhi. Thesis panel covers 2001–2024; CMIE 2025 rollforward is available on the Latest panel (`panel_mode='latest'`).
 
 ## Architecture
-- **Frontend**: Streamlit multipage app (18 pages)
+- **Frontend**: Streamlit multipage app (21 pages — KG1 stack pages 1–20 retained; KG2 added as page 21)
 - **Database**: SQLite (`capital_structure.db`) — vintage-tagged (thesis + cmie_2025 + run3 + us_av_2024 vintages coexist)
 - **Models**: `models/` package (econometric + ML + advanced + scenario_regression + data_ingest + workbench + interaction)
 - **CMIE integration**: `cmie/` package (CmieClient, load_vintage, pipeline, normalize — all transports implemented)
+- **KG2 / OCaml layer**: `lifecycle-ontology/` OCaml service + `graph_bridge.py` Python stub (separate from KG1; never touches graph_builder.py)
 - **Tests**: `tests/` with pytest (316 tests — DB + models + 7 CMIE suites + scenario_regression + page integration + board export + CFO graph)
 - **Deployment**: Docker (Python 3.11-slim) → Google Cloud Run
 
@@ -110,7 +111,7 @@ pages/
   4_bulk_upload.py         - Bulk upload + CMIE API Sync tab
   5_data_explorer.py       - Raw panel explorer (vintage-aware)
   6_settings.py            - Appearance (theme toggle) + CMIE lab UI
-  7_knowledge_graph.py     - Life Stage Dynamics: Markov transitions, stickiness, event impact, COVID cohorts, multi-hop profiling (sidebar title: "Life Stage Dynamics")
+  7_knowledge_graph.py     - Life Stage Dynamics: Markov transitions, stickiness, event impact, COVID cohorts, multi-hop profiling (sidebar title: "Life Stage Dynamics") [KG1 — do not modify]
   8_econometrics.py        - OLS/FE/RE/Hausman (pinned: thesis)
   9_ml_models.py           - RF/XGB/LGBM + SHAP (pinned: thesis)
   10_forecasting.py        - LSTM/GRU (pinned: thesis)
@@ -121,7 +122,23 @@ pages/
   15_interaction_effects.py - Cross-term (Prof×Tang) + stage moderation + simple slopes (pinned: thesis)
   16_admin_activity.py     - Admin audit log viewer (role: admin only)
   17_board_export.py       - Individual company board deck: 13 topics, preview + .pptx download (role: admin/researcher)
-  18_company_navigator.py  - Interactive graph explorer: Ego Graph / Peer Cluster / Stage Map, pyvis + Plotly (role: admin/researcher)
+  18_company_navigator.py  - Interactive graph explorer: Ego Graph / Peer Cluster / Stage Map, pyvis + Plotly (role: admin/researcher) [KG1 — do not modify]
+  19_ai_assistant.py       - AI assistant chat interface
+  20_life_stage_dynamics.py - Life stage dynamics explorer
+  21_knowledge_graph2.py   - KG2: OCaml-ontology-backed semantic graph (Macro/Meso/Micro, personas, Explain This) [KG2 — separate stack]
+graph_bridge.py     - KG2 Python stub: generates Macro/Meso/Micro JSON matching OCaml contract;
+                      swap for OCaml HTTP call once lifecycle-ontology service is live
+lifecycle-ontology/ - OCaml semantic + analytics meta-layer (KG2 backend)
+  dune-project
+  src/
+    domain/         - stage, period, metric, company types + smart constructors
+    analytics_meta/ - model, model_run, statistic, normative_band, scenario, explanation, persona
+    normative/      - band computation + anomaly flags
+    scenario/       - scenario DSL + validation
+    graph_export/   - ocamlgraph Macro/Meso/Micro → JSON/DOT
+    api/            - Dream HTTP: /lifecycle_query /explain_stat /scenario_runner
+    cli/            - cmdliner entry point
+  test/             - alcotest unit tests
 scripts/
   cmie_stage1_reliance_diagnostic.py  - wapicall E2E probe (§E.5)
   cmie_stage1_queryphp_probe.py       - query.php E2E probe (§E.5.3)
@@ -129,13 +146,36 @@ tests/
   test_database.py, test_models.py, test_scenario_regression.py,
   test_cmie_*.py (7 files), test_bulk_upload_cmie_parse.py,
   test_page_integration.py, test_board_export.py, test_cfo_graph.py   (344 tests total)
+  test_kg2_bridge.py  - KG2 graph_bridge JSON contract tests
 cmie_validation/    - Per-run CMIE API artifacts (gitignored)
 DataV2/             - Raw CMIE pipe-delimited extracts (gitignored)
+docs/
+  KG2_ARCHITECTURE.md - KG2 entry-point doc (cross-references all four OCaml spec files)
+```
+
+## Key Commands (KG2)
+```bash
+# OCaml toolchain (one-time setup)
+opam switch create 5.2.0 && eval $(opam env)
+opam install dune base core eio_main yojson ocamlgraph cmdliner dream alcotest
+
+# Build OCaml service
+cd lifecycle-ontology && dune build && dune runtest
+
+# Run OCaml service locally (port 8080)
+dune exec src/cli/main.exe -- serve --port 8080
+
+# Test Python bridge contract
+py -3.12 -c "from graph_bridge import get_graph_json; import json; print(json.dumps(get_graph_json('macro'), indent=2))"
+
+# Run KG2 bridge tests
+py -3.12 -m pytest tests/test_kg2_bridge.py -v
 ```
 
 ## Important Notes
 - **Python 3.11 required** in prod (3.14 breaks ML packages). Project tests target Python 3.12 locally; CI validates.
 - **Torch is optional** — behind `HAS_TORCH` gate in `models/timeseries.py`. Streamlit Cloud builds without torch by default.
+- **KG2 isolation** — `pages/21_knowledge_graph2.py` and `graph_bridge.py` must **never** import from `pages/7_knowledge_graph.py`, `pages/18_company_navigator.py`, or `graph_builder.py`. KG2 reads from `db.py` directly. The KG1 stack (pages 7, 18, graph_builder.py) is frozen.
 - **Every chart** has a dynamic interpretation expander below it.
 - **Sidebar filters** apply globally across all pages via `st.session_state.filters`.
 - **Vintage drift** is captured in `data_vintages` table (see migration `001_datav2_vintage.sql`).

@@ -1,0 +1,3 @@
+(library
+ (name normative)
+ (libraries domain analytics_meta yojson))

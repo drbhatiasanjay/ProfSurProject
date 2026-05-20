@@ -38,10 +38,36 @@ jobs:
           # Disable CMIE so tests don't need secrets.toml
           ENABLE_CMIE: "false"
 
+  ocaml:
+    name: OCaml build + tests (lifecycle-ontology)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up OCaml 5.2
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.2"
+
+      - name: Install OCaml dependencies
+        run: |
+          cd lifecycle-ontology
+          opam install --deps-only -y .
+
+      - name: Build
+        run: |
+          cd lifecycle-ontology
+          opam exec -- dune build
+
+      - name: Run tests
+        run: |
+          cd lifecycle-ontology
+          opam exec -- dune runtest
+
   deploy:
     name: Deploy to Cloud Run
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, ocaml]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
     steps:

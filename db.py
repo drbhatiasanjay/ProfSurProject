@@ -973,3 +973,53 @@ def filters_to_tuple(filters):
             tuple(sorted(v.items())) if isinstance(v, dict) else v)
         for k, v in sorted(filters.items())
     )
+
+
+# ── KG2 data access (used exclusively by graph_bridge.py) ─────────────────────
+
+@st.cache_data(ttl=3600)
+def get_kg2_company_snapshot(panel_mode: str = "latest"):
+    """Latest-year row per company for KG2 graph building.
+
+    Returns one row per company: the most recent year in the active panel.
+    Used only by graph_bridge.py — not by KG1.
+    """
+    vintage_sql_raw, vintage_params = _vintage_predicate(panel_mode)
+    vintage_sql_f, _ = _vintage_predicate(panel_mode, "f")
+    sql = f"""
+        WITH max_years AS (
+            SELECT company_code, MAX(year) AS max_year
+            FROM financials
+            WHERE {vintage_sql_raw}
+            GROUP BY company_code
+        )
+        SELECT f.company_code, c.company_name, c.industry_group,
+               f.year, f.life_stage,
+               f.leverage, f.profitability, f.tangibility, f.firm_size,
+               f.gfc, f.ibc_2016, f.covid_dummy
+        FROM financials f
+        JOIN companies c ON f.company_code = c.company_code
+        JOIN max_years m ON f.company_code = m.company_code
+                        AND f.year = m.max_year
+        WHERE {vintage_sql_f}
+        ORDER BY c.company_name
+    """
+    return _query(sql, vintage_params + vintage_params)
+
+
+@st.cache_data(ttl=3600)
+def get_kg2_company_history(company_code, panel_mode: str = "latest"):
+    """Full year-by-year history for one company for KG2 Micro graph.
+
+    Used only by graph_bridge.py — not by KG1.
+    """
+    vintage_sql, vintage_params = _vintage_predicate(panel_mode)
+    sql = f"""
+        SELECT year, life_stage, leverage, profitability, tangibility,
+               gfc, ibc_2016, covid_dummy
+        FROM financials
+        WHERE company_code = ?
+          AND {vintage_sql}
+        ORDER BY year
+    """
+    return _query(sql, [company_code] + vintage_params)

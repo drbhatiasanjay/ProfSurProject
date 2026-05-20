@@ -1,0 +1,3 @@
+(library
+ (name analytics_meta)
+ (libraries domain yojson))

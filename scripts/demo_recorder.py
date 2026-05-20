@@ -2,44 +2,50 @@
 """
 LifeCycle Leverage Dashboard — Automated Demo Recorder
 =======================================================
-Records SCREEN + YOUR VOICE section by section.
-Playwright navigates automatically while you speak the narration shown on screen.
-Whisper auto-transcribes your voice → SRT captions burned into video.
+Fully automated: Playwright navigates, edge-tts narrates, captions generated
+from script text.  No microphone required.
 
 Output layout:
-    demo_output/          intermediate files (raw video, SRT, section FINALs)
+    demo_output/          intermediate files (raw video, TTS audio, SRT, FINALs)
     videos/               final stitched demos named by date + time
       lifecycle_leverage_demo_YYYY-MM-DD_HH-MM-SS.mp4
 
 Usage:
-    py -3.12 scripts/demo_recorder.py               # record all 16 sections
-    py -3.12 scripts/demo_recorder.py --section 03  # record one section only
-    py -3.12 scripts/demo_recorder.py --concat-only # stitch existing sections → videos/
-
-Controls during recording:
-    ENTER   → start recording / stop early when done
-    S       → skip current section (move to next)
-    Q       → quit after finishing current section
+    py -3.12 scripts/demo_recorder.py               # record all sections
+    py -3.12 scripts/demo_recorder.py --section 03  # record one section
+    py -3.12 scripts/demo_recorder.py --concat-only # stitch existing FINALs
 """
 
-import os, sys, time, subprocess, threading, re, ctypes, argparse
+import asyncio, os, sys, time, subprocess, threading, json, argparse
 from pathlib import Path
 from datetime import timedelta, datetime
 
-# ── Configuration ─────────────────────────────────────────────────────────────
-BASE_URL      = "http://localhost:8501"
-MIC_DEVICE    = "Microphone (2- Brio 100)"   # change to "Microphone Array (Realtek(R) Audio)" if needed
-OUTPUT_DIR    = Path("demo_output")   # intermediate files: raw video, SRT, section FINALs
-VIDEOS_DIR    = Path("videos")        # final stitched demos, named by date+time
-WHISPER_MODEL = "small"    # tiny=fastest, base=good balance, small=more accurate for Indian-accented English
-FPS           = 30
-LOGIN_USER    = "sbhatia"
-LOGIN_PASS    = "UzBGwQ0DuH_Wgo0S"
+# Force UTF-8 output on Windows terminals
+import io
+if hasattr(sys.stdout, "buffer"):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-# Detect primary screen resolution
-_user32  = ctypes.windll.user32
-SCREEN_W = _user32.GetSystemMetrics(0)
-SCREEN_H = _user32.GetSystemMetrics(1)
+# ── Configuration ─────────────────────────────────────────────────────────────
+BASE_URL   = "http://localhost:8501"
+OUTPUT_DIR = Path("demo_output")
+VIDEOS_DIR = Path("videos")
+FPS        = 30
+LOGIN_USER = "sbhatia"
+LOGIN_PASS = "UzBGwQ0DuH_Wgo0S"
+TTS_VOICE  = "en-IN-NeerjaNeural"   # Indian English — clear, professional
+TTS_RATE   = "+0%"                  # normal speed
+TTS_BUFFER = 3                      # extra seconds of screen recording after TTS ends
+CAPTION_WORDS_PER_LINE = 10         # words per subtitle chunk
+
+# Recording viewport dimensions — match screen resolution
+# H.264 requires even dimensions; detect via ctypes on Windows
+try:
+    import ctypes as _ct
+    _u32     = _ct.windll.user32
+    SCREEN_W = _u32.GetSystemMetrics(0) & ~1
+    SCREEN_H = _u32.GetSystemMetrics(1) & ~1
+except Exception:
+    SCREEN_W, SCREEN_H = 1920, 1080
 
 OUTPUT_DIR.mkdir(exist_ok=True)
 VIDEOS_DIR.mkdir(exist_ok=True)
@@ -52,7 +58,6 @@ SECTIONS = [
         "title":    "Welcome & Login",
         "url":      "/",
         "actions":  ["login"],
-        "duration": 28,
         "narration": (
             "Welcome to the LifeCycle Leverage Dashboard — "
             "the only analytics platform that classifies listed Indian firms across "
@@ -65,11 +70,12 @@ SECTIONS = [
         "id":       "02_dashboard",
         "title":    "Dashboard — 401 Firms · 24 Years · 8 Life Stages",
         "url":      "/Dashboard",
+        "nav_title": "Dashboard",
+        "page_url": "/",
         "actions":  ["scroll_down", "scroll_up"],
-        "duration": 45,
         "narration": (
             "The main dashboard gives an instant overview of our panel: "
-            "401 B S E listed Indian firms, 8,677 firm-year observations, "
+            "401 BSE-listed Indian firms, 8,677 firm-year observations, "
             "across 24 years from 2001 to 2024, classified into 8 Dickinson life-cycle stages. "
             "The stage distribution shows that Maturity firms carry the lowest leverage at 17 percent, "
             "while Decline firms carry the highest at 38 percent — "
@@ -81,8 +87,9 @@ SECTIONS = [
         "id":       "03_peer_benchmarks",
         "title":    "Peer Benchmarks — Stage-Aware Comparison",
         "url":      "/Peer_Benchmarks",
+        "nav_title": "Peer Benchmarks",
+        "page_url": "/peer_benchmarks",
         "actions":  ["select_company:Reliance", "wait:2", "scroll_down", "scroll_up"],
-        "duration": 42,
         "narration": (
             "Unlike traditional tools that benchmark by industry sector alone, "
             "this platform benchmarks your company against peers in the SAME life-cycle stage. "
@@ -96,8 +103,9 @@ SECTIONS = [
         "id":       "04_scenarios",
         "title":    "Scenario Analysis — What-If OLS Modelling",
         "url":      "/Scenarios",
+        "nav_title": "Scenarios",
+        "page_url": "/scenarios",
         "actions":  ["scroll_down", "scroll_up"],
-        "duration": 40,
         "narration": (
             "The scenario analysis page runs live OLS regressions. "
             "Adjust profitability, tangibility, firm size, or dividend payout "
@@ -110,8 +118,9 @@ SECTIONS = [
         "id":       "05_data_explorer",
         "title":    "Data Explorer — Vintage-Tagged Panel",
         "url":      "/Data_Explorer",
+        "nav_title": "Data Explorer",
+        "page_url": "/data_explorer",
         "actions":  ["scroll_down"],
-        "duration": 28,
         "narration": (
             "The data explorer gives raw access to the full panel with vintage filtering. "
             "Switch between the original thesis panel from 2001 to 2024, "
@@ -123,8 +132,9 @@ SECTIONS = [
         "id":       "06_life_stage_dynamics",
         "title":    "Life Stage Dynamics — Markov Transitions & Survival",
         "url":      "/Knowledge_Graph",
+        "nav_title": "Life Stage Dynamics",
+        "page_url": "/life_stage_dynamics",
         "actions":  ["scroll_slow", "click_tab:1", "wait:2", "scroll_down", "click_tab:4", "wait:2", "scroll_down"],
-        "duration": 50,
         "narration": (
             "This is one of the most analytically distinctive pages in the platform. "
             "The Markov transition matrix shows the probability of a firm moving "
@@ -139,13 +149,14 @@ SECTIONS = [
         "id":       "07_econometrics",
         "title":    "Econometrics — Fixed Effects & Hausman Test",
         "url":      "/Econometrics",
+        "nav_title": "Econometrics Lab",
+        "page_url": "/econometrics",
         "actions":  ["scroll_down", "click_primary_button", "wait:3", "scroll_down", "scroll_up"],
-        "duration": 50,
         "narration": (
-            "The econometrics page runs O L S, Fixed Effects, and Random Effects regressions interactively. "
+            "The econometrics page runs OLS, Fixed Effects, and Random Effects regressions interactively. "
             "The Hausman test with a Chi-squared statistic of 225.53 and p-value of zero "
             "confirms Fixed Effects as the preferred specification. "
-            "The key finding: profitability shows a NEGATIVE coefficient across all 8 life-cycle stages — "
+            "The key finding: profitability shows a negative coefficient across all 8 life-cycle stages — "
             "universal confirmation of Myers' Pecking Order Theory for Indian listed firms."
         ),
     },
@@ -153,8 +164,9 @@ SECTIONS = [
         "id":       "08_ml_models",
         "title":    "Machine Learning — XGBoost + SHAP Explainability",
         "url":      "/ML_Models",
+        "nav_title": "ML Models",
+        "page_url": "/ml_models",
         "actions":  ["scroll_down", "click_primary_button", "wait:5", "scroll_down", "scroll_up"],
-        "duration": 45,
         "narration": (
             "The machine learning page trains Random Forest, XGBoost, and LightGBM models "
             "on the same panel data using stage-stratified cross-validation. "
@@ -167,8 +179,9 @@ SECTIONS = [
         "id":       "09_forecasting",
         "title":    "LSTM Forecasting — Firm-Level Leverage Trajectories",
         "url":      "/Forecasting",
+        "nav_title": "Forecasting",
+        "page_url": "/forecasting",
         "actions":  ["scroll_down"],
-        "duration": 35,
         "narration": (
             "The forecasting page applies LSTM and GRU deep learning networks "
             "trained on individual company leverage time series. "
@@ -180,8 +193,9 @@ SECTIONS = [
         "id":       "10_clustering",
         "title":    "Clustering — Validating the Dickinson Taxonomy",
         "url":      "/Clustering",
+        "nav_title": "Clustering",
+        "page_url": "/clustering",
         "actions":  ["scroll_down"],
-        "duration": 32,
         "narration": (
             "Does the Dickinson cash-flow rule actually recover meaningful financial archetypes? "
             "K-Means clustering on the full panel, compared against Dickinson stage labels, "
@@ -194,8 +208,9 @@ SECTIONS = [
         "id":       "11_transitions",
         "title":    "Stage Transitions — 24-Year Heatmap",
         "url":      "/Transitions",
+        "nav_title": "Transitions",
+        "page_url": "/transitions",
         "actions":  ["scroll_down"],
-        "duration": 32,
         "narration": (
             "The transitions heatmap visualises how firms move across life-cycle stages year by year "
             "across the full 24-year panel. "
@@ -209,8 +224,9 @@ SECTIONS = [
         "id":       "12_advanced_econometrics",
         "title":    "Advanced Econometrics — System GMM & Speed of Adjustment",
         "url":      "/Advanced_Econometrics",
+        "nav_title": "Advanced Econometrics",
+        "page_url": "/advanced_econometrics",
         "actions":  ["scroll_down", "click_primary_button", "wait:4", "scroll_down", "scroll_up"],
-        "duration": 50,
         "narration": (
             "System GMM estimation handles endogeneity in dynamic panel models "
             "using Blundell-Bond instrumentation. "
@@ -225,8 +241,9 @@ SECTIONS = [
         "id":       "13_interaction_effects",
         "title":    "Interaction Effects — Stage Moderation Analysis",
         "url":      "/Interaction_Effects",
+        "nav_title": "Interaction Effects",
+        "page_url": "/interaction_effects",
         "actions":  ["scroll_down", "scroll_up"],
-        "duration": 40,
         "narration": (
             "This page estimates how life-cycle stage moderates "
             "the profitability-leverage and tangibility-leverage relationships. "
@@ -240,8 +257,9 @@ SECTIONS = [
         "id":       "14_admin_activity",
         "title":    "Admin Activity — Full Audit Trail",
         "url":      "/Admin_Activity",
+        "nav_title": "Activity Log",
+        "page_url": "/admin_activity",
         "actions":  ["scroll_down"],
-        "duration": 30,
         "narration": (
             "Administrators see a complete activity log of every page visit, "
             "model run, and export, attributed to each user by role. "
@@ -254,8 +272,9 @@ SECTIONS = [
         "id":       "15_board_export",
         "title":    "Board Export — One-Click Company Board Deck",
         "url":      "/Board_Export",
+        "nav_title": "Board Deck",
+        "page_url": "/board_export",
         "actions":  ["select_company:Reliance", "wait:2", "click_primary_button", "wait:4", "scroll_slow", "scroll_up"],
-        "duration": 52,
         "narration": (
             "Select any of the 401 companies and generate a complete board presentation in one click. "
             "Thirteen topics are covered: life-cycle stage classification, stage-peer benchmarking, "
@@ -269,8 +288,9 @@ SECTIONS = [
         "id":       "16_company_navigator",
         "title":    "Company Navigator — Interactive Network Explorer",
         "url":      "/Company_Navigator",
+        "nav_title": "Company Navigator",
+        "page_url": "/company_navigator",
         "actions":  ["scroll_down", "click_tab:1", "wait:2", "scroll_down"],
-        "duration": 38,
         "narration": (
             "The Company Navigator renders an interactive network graph of all 401 firms. "
             "Ego graph mode shows a firm's direct peers by industry and life-cycle stage. "
@@ -282,47 +302,77 @@ SECTIONS = [
 ]
 
 
-# ── SRT Generator ─────────────────────────────────────────────────────────────
+# ── TTS Narration ─────────────────────────────────────────────────────────────
+def generate_tts_audio(text: str, output_path: Path) -> bool:
+    """Generate speech audio from text using edge-tts. Returns True on success."""
+    import edge_tts
+
+    async def _run():
+        communicate = edge_tts.Communicate(text, TTS_VOICE, rate=TTS_RATE)
+        await communicate.save(str(output_path))
+
+    try:
+        asyncio.run(_run())
+        return output_path.exists() and output_path.stat().st_size > 0
+    except Exception as e:
+        print(f"  [WARN] TTS failed: {e}")
+        return False
+
+
+# ── SRT Generator (script-based, no Whisper) ──────────────────────────────────
 def _fmt_srt_time(seconds: float) -> str:
-    td = timedelta(seconds=seconds)
-    total_s = int(td.total_seconds())
-    ms = int((td.total_seconds() - total_s) * 1000)
+    total_s = int(seconds)
+    ms = int((seconds - total_s) * 1000)
     h, rem = divmod(total_s, 3600)
     m, s   = divmod(rem, 60)
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
 
 
-def transcribe_to_srt(audio_path: Path, srt_path: Path) -> None:
-    from faster_whisper import WhisperModel
-    print(f"  🎙 Transcribing with Whisper '{WHISPER_MODEL}'...")
-    model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8")
-    segments, _ = model.transcribe(str(audio_path), beam_size=5, language="en")
+def text_to_srt(narration: str, tts_duration_s: float, srt_path: Path,
+                audio_offset_s: float = 0.0) -> None:
+    """Build SRT from narration text chunked into subtitle lines.
+
+    Distributes chunks proportionally across the TTS duration.
+    audio_offset_s shifts all timestamps so captions appear in sync with
+    the TTS audio after the preamble delay.
+    """
+    words = narration.split()
+    chunks = []
+    for i in range(0, len(words), CAPTION_WORDS_PER_LINE):
+        chunks.append(" ".join(words[i:i + CAPTION_WORDS_PER_LINE]))
+
+    if not chunks:
+        srt_path.write_text("", encoding="utf-8")
+        return
+
+    chunk_dur = tts_duration_s / len(chunks)
     lines = []
-    for i, seg in enumerate(segments, 1):
-        lines.append(str(i))
-        lines.append(f"{_fmt_srt_time(seg.start)} --> {_fmt_srt_time(seg.end)}")
-        lines.append(seg.text.strip())
+    for i, chunk in enumerate(chunks):
+        start = audio_offset_s + i * chunk_dur
+        end   = audio_offset_s + (i + 1) * chunk_dur - 0.05
+        lines.append(str(i + 1))
+        lines.append(f"{_fmt_srt_time(start)} --> {_fmt_srt_time(end)}")
+        lines.append(chunk)
         lines.append("")
+
     srt_path.write_text("\n".join(lines), encoding="utf-8")
-    print(f"  ✅ SRT: {srt_path.name}")
 
 
 # ── ffmpeg Helpers ────────────────────────────────────────────────────────────
 def start_recording(output_path: Path) -> subprocess.Popen:
+    """Screen-only recording (no microphone). Silent video; TTS mixed in post."""
     cmd = [
         "ffmpeg", "-y",
-        # Screen
         "-f", "gdigrab",
         "-framerate", str(FPS),
         "-video_size", f"{SCREEN_W}x{SCREEN_H}",
         "-offset_x", "0", "-offset_y", "0",
         "-i", "desktop",
-        # Microphone
-        "-f", "dshow",
-        "-i", f"audio={MIC_DEVICE}",
-        # Encoding
+        # Silent audio track so concat doesn't break
+        "-f", "lavfi", "-i", "anullsrc=r=44100:cl=stereo",
         "-c:v", "libx264", "-preset", "ultrafast", "-crf", "20",
-        "-c:a", "aac", "-ar", "44100", "-b:a", "128k",
+        "-c:a", "aac", "-ar", "44100", "-b:a", "64k",
+        "-shortest",
         str(output_path),
     ]
     return subprocess.Popen(cmd, stdin=subprocess.PIPE,
@@ -333,18 +383,10 @@ def stop_recording(proc: subprocess.Popen) -> None:
     try:
         proc.stdin.write(b"q\n")
         proc.stdin.flush()
-        proc.wait(timeout=20)
+        proc.wait(timeout=25)
     except Exception:
         proc.terminate()
         proc.wait()
-
-
-def extract_audio(video_path: Path, audio_path: Path) -> None:
-    subprocess.run(
-        ["ffmpeg", "-y", "-i", str(video_path),
-         "-vn", "-acodec", "pcm_s16le", "-ar", "16000", str(audio_path)],
-        capture_output=True,
-    )
 
 
 def get_video_duration(path: Path) -> float:
@@ -355,14 +397,47 @@ def get_video_duration(path: Path) -> float:
         capture_output=True, text=True,
     )
     try:
-        import json as _json
-        return float(_json.loads(result.stdout)["format"]["duration"])
+        return float(json.loads(result.stdout)["format"]["duration"])
     except Exception:
         return 0.0
 
 
+def mix_tts_into_video(video_path: Path, tts_audio_path: Path, output_path: Path,
+                        audio_delay_s: float = 2.0) -> None:
+    """Replace silent video track with TTS audio (with optional delay)."""
+    # adelay inserts silence before TTS starts, so narration begins after page loads
+    delay_ms = int(audio_delay_s * 1000)
+    tmp = output_path.parent / f"_mix_{output_path.name}"
+    result = subprocess.run(
+        ["ffmpeg", "-y",
+         "-i", str(video_path),
+         "-i", str(tts_audio_path),
+         "-filter_complex",
+         f"[1:a]adelay={delay_ms}|{delay_ms}[delayed];"
+         f"[delayed]apad[padded]",
+         "-map", "0:v",
+         "-map", "[padded]",
+         "-c:v", "copy",
+         "-c:a", "aac", "-ar", "44100", "-b:a", "192k",
+         "-shortest",
+         str(tmp)],
+        capture_output=True,
+    )
+    if result.returncode == 0 and tmp.exists():
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        if output_path.exists():
+            output_path.unlink()
+        tmp.rename(output_path)
+    else:
+        tmp.unlink(missing_ok=True)
+        # Fall back: copy video as-is (silent)
+        import shutil
+        shutil.copy2(str(video_path), str(output_path))
+        print(f"  [WARN] TTS mix failed — video has no audio")
+
+
 def normalise_audio(path: Path) -> None:
-    """Loudness-normalise audio in-place using ffmpeg loudnorm (single-pass, I=-16 LUFS)."""
+    """Loudness-normalise audio in-place (I=-16 LUFS, single-pass)."""
     tmp = path.parent / f"_norm_{path.name}"
     result = subprocess.run(
         ["ffmpeg", "-y", "-i", str(path),
@@ -377,14 +452,14 @@ def normalise_audio(path: Path) -> None:
         tmp.rename(path)
     else:
         tmp.unlink(missing_ok=True)
-        print(f"  ⚠ loudnorm failed — keeping original audio")
+        print(f"  [WARN] loudnorm failed — keeping original audio")
 
 
 def add_fades(path: Path, fade_duration: float = 0.5) -> None:
     """Add video + audio fade-in and fade-out in-place."""
     dur = get_video_duration(path)
     if dur <= fade_duration * 3:
-        return  # clip too short to fade
+        return
     fade_out_start = dur - fade_duration
     vf = (f"fade=t=in:st=0:d={fade_duration},"
           f"fade=t=out:st={fade_out_start:.3f}:d={fade_duration}")
@@ -404,36 +479,43 @@ def add_fades(path: Path, fade_duration: float = 0.5) -> None:
         tmp.rename(path)
     else:
         tmp.unlink(missing_ok=True)
-        print(f"  ⚠ fade failed — keeping original")
+        print(f"  [WARN] fade failed — keeping original")
 
 
 def burn_captions(video_path: Path, srt_path: Path, output_path: Path) -> None:
-    # Escape path for ffmpeg subtitles filter (Windows backslashes + colon)
-    srt_str = str(srt_path.resolve()).replace("\\", "\\\\").replace(":", "\\:")
+    """Burn SRT subtitles into video."""
+    import re
+    # Windows ffmpeg subtitles filter needs C\:/ format (forward slashes, escaped drive colon)
+    srt_str = re.sub(r"([A-Za-z]):", r"\1\\:",
+                     str(srt_path.resolve()).replace("\\", "/"))
     style = (
         "FontSize=28,FontName=Arial,"
         "PrimaryColour=&Hffffff,"
-        "BackColour=&HCC000000,"   # 80% opaque black
-        "BorderStyle=4,"           # opaque background box
-        "Alignment=2,"             # centre-bottom
+        "BackColour=&HCC000000,"
+        "BorderStyle=4,"
+        "Alignment=2,"
         "MarginV=45"
     )
-    subprocess.run(
+    result = subprocess.run(
         ["ffmpeg", "-y", "-i", str(video_path),
          "-vf", f"subtitles='{srt_str}':force_style='{style}'",
          "-c:v", "libx264", "-preset", "medium", "-crf", "18",
          "-c:a", "copy", str(output_path)],
         capture_output=True,
     )
+    if result.returncode != 0:
+        # If subtitle burn fails, copy video without captions
+        import shutil
+        shutil.copy2(str(video_path), str(output_path))
+        print(f"  [WARN] Caption burn failed — video without subtitles")
 
 
 def add_title_card(video_path: Path, title: str, output_path: Path) -> None:
-    """Prepend a 3-second black title card with white text."""
+    """Prepend a 3-second dark title card with white text."""
     safe_title = title.replace("'", "\\'").replace(":", "\\:")
-    title_tmp = output_path.parent / f"_tc_{output_path.stem}.mp4"
-    concat_txt = output_path.parent / f"_cl_{output_path.stem}.txt"
+    title_tmp   = output_path.parent / f"_tc_{output_path.stem}.mp4"
+    concat_txt  = output_path.parent / f"_cl_{output_path.stem}.txt"
 
-    # 1. Generate title card clip
     subprocess.run(
         ["ffmpeg", "-y",
          "-f", "lavfi", "-i",
@@ -451,8 +533,6 @@ def add_title_card(video_path: Path, title: str, output_path: Path) -> None:
          str(title_tmp)],
         capture_output=True,
     )
-
-    # 2. Concat title card + section
     concat_txt.write_text(
         f"file '{title_tmp.resolve()}'\nfile '{video_path.resolve()}'\n",
         encoding="utf-8",
@@ -466,26 +546,25 @@ def add_title_card(video_path: Path, title: str, output_path: Path) -> None:
     concat_txt.unlink(missing_ok=True)
 
 
-def make_bookend_card(lines: list[str], duration: int, output_path: Path) -> Path | None:
-    """Generate a full-screen title card with multiple lines of text centred on dark background."""
+def make_bookend_card(lines: list, duration: int, output_path: Path) -> "Path | None":
+    """Generate a full-screen dark card with multiple centred text lines + TTS narration."""
     if output_path.exists():
         return output_path
-    # Build drawtext chain for each line, spaced 80px apart, centred vertically as a group
     line_h  = 70
     total_h = len(lines) * line_h
     start_y = f"(h-{total_h})/2"
     filters = []
     for i, text in enumerate(lines):
-        safe = text.replace("'", "\\'").replace(":", "\\:")
+        safe = text.replace("'", "\\'").replace(":", "\\:").replace("&", "and")
         font_size = 54 if i == 0 else (36 if i == 1 else 28)
         color = "white" if i == 0 else ("#94A3B8" if i > 1 else "#CBD5E1")
         y_expr = f"{start_y}+{i * line_h}" if i > 0 else start_y
         filters.append(
             f"drawtext=text='{safe}':fontcolor={color}:fontsize={font_size}:"
-            f"x=(w-text_w)/2:y={y_expr}:"
-            f"box=0"
+            f"x=(w-text_w)/2:y={y_expr}:box=0"
         )
     vf = ",".join(filters)
+    # Generate with silent audio; TTS not added to bookend cards
     result = subprocess.run(
         ["ffmpeg", "-y",
          "-f", "lavfi", "-i",
@@ -499,7 +578,7 @@ def make_bookend_card(lines: list[str], duration: int, output_path: Path) -> Pat
         capture_output=True,
     )
     if result.returncode != 0:
-        print(f"  ⚠ Bookend card error: {result.stderr.decode()[-200:]}")
+        print(f"  [WARN] Bookend card error: {result.stderr.decode()[-200:]}")
         return None
     return output_path
 
@@ -517,285 +596,7 @@ def concat_all_sections(section_files: list, output_path: Path) -> None:
     )
     concat_txt.unlink(missing_ok=True)
     if result.returncode != 0:
-        print(f"  ⚠ Concat error: {result.stderr.decode()[-300:]}")
-
-
-# ── Playwright Navigation ─────────────────────────────────────────────────────
-def _playwright_navigate(section: dict, stop_event: threading.Event):
-    """Run in a background thread. Uses sync playwright."""
-    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=False,
-            args=["--start-maximized", "--disable-infobars"],
-        )
-        ctx  = browser.new_context(no_viewport=True)
-        page = ctx.new_page()
-
-        try:
-            # ── Login (first section only / always safe to call) ──────────────
-            page.goto(BASE_URL, wait_until="networkidle", timeout=30000)
-            try:
-                page.wait_for_selector('[data-testid="stTextInput"] input', timeout=8000)
-                page.locator('[data-testid="stTextInput"] input').first.fill(LOGIN_USER)
-                page.locator('input[type="password"]').first.fill(LOGIN_PASS)
-                page.locator('button:has-text("Login")').first.click()
-                page.wait_for_timeout(4000)
-            except PWTimeout:
-                pass  # already logged in or no login form
-
-            # ── Navigate to section URL ───────────────────────────────────────
-            target = BASE_URL + section["url"]
-            page.goto(target, wait_until="networkidle", timeout=30000)
-            page.wait_for_timeout(3000)
-
-            # ── Perform actions ───────────────────────────────────────────────
-            for action in section.get("actions", []):
-                if stop_event.is_set():
-                    break
-                if action == "scroll_down":
-                    page.evaluate("window.scrollBy({top: 600, behavior: 'smooth'})")
-                    page.wait_for_timeout(2500)
-                    page.evaluate("window.scrollBy({top: 600, behavior: 'smooth'})")
-                    page.wait_for_timeout(2500)
-                elif action == "scroll_slow":
-                    for _ in range(4):
-                        page.evaluate("window.scrollBy({top: 280, behavior: 'smooth'})")
-                        page.wait_for_timeout(1800)
-                elif action == "scroll_up":
-                    page.evaluate("window.scrollTo({top: 0, behavior: 'smooth'})")
-                    page.wait_for_timeout(2000)
-                elif action == "login":
-                    pass  # already handled above
-                elif action.startswith("click_tab:"):
-                    # click_tab:N — clicks the Nth tab (0-indexed)
-                    tab_idx = int(action.split(":")[1])
-                    try:
-                        tabs = page.locator('button[role="tab"]').all()
-                        if tab_idx < len(tabs):
-                            tabs[tab_idx].click()
-                            page.wait_for_timeout(3000)
-                    except Exception as _te:
-                        print(f"\n  ⚠ click_tab:{tab_idx} — {_te}")
-                elif action == "click_primary_button":
-                    # Click the first visible primary Streamlit button
-                    try:
-                        page.locator(
-                            'button[data-testid="baseButton-primary"], '
-                            'button[kind="primary"]'
-                        ).first.click()
-                        page.wait_for_timeout(5000)
-                    except Exception as _be:
-                        print(f"\n  ⚠ click_primary_button — {_be}")
-                elif action.startswith("click_button:"):
-                    btn_text = action.split(":", 1)[1]
-                    try:
-                        page.locator(f'button:has-text("{btn_text}")').first.click()
-                        page.wait_for_timeout(4000)
-                    except Exception as _be:
-                        print(f"\n  ⚠ click_button:{btn_text} — {_be}")
-                elif action.startswith("select_company:"):
-                    company_query = action.split(":", 1)[1]
-                    try:
-                        page.locator('[data-testid="stSelectbox"]').first.click()
-                        page.wait_for_timeout(800)
-                        page.keyboard.type(company_query, delay=80)
-                        page.wait_for_timeout(1200)
-                        page.locator('[data-testid="stSelectboxVirtualDropdown"] li').first.click()
-                        page.wait_for_timeout(2500)
-                    except Exception as _se:
-                        print(f"\n  ⚠ select_company:{company_query} — {_se}")
-                elif action.startswith("wait:"):
-                    secs = int(action.split(":")[1])
-                    page.wait_for_timeout(secs * 1000)
-
-            # Hold the page open until stop_event
-            while not stop_event.is_set():
-                page.wait_for_timeout(500)
-
-        except Exception as e:
-            print(f"\n  ⚠ Playwright: {e}")
-        finally:
-            browser.close()
-
-
-# ── Section Recorder ──────────────────────────────────────────────────────────
-def record_section(section: dict) -> Path | None:
-    sid       = section["id"]
-    title     = section["title"]
-    narration = section["narration"]
-    duration  = section["duration"]
-
-    raw_video  = OUTPUT_DIR / f"{sid}_raw.mp4"
-    wav_audio  = OUTPUT_DIR / f"{sid}_audio.wav"
-    srt_file   = OUTPUT_DIR / f"{sid}.srt"
-    captioned  = OUTPUT_DIR / f"{sid}_captioned.mp4"
-    final_out  = OUTPUT_DIR / f"{sid}_FINAL.mp4"
-
-    if final_out.exists():
-        ans = input(f"  ⚠ {final_out.name} exists. Re-record? [y/N]: ").strip().lower()
-        if ans != "y":
-            print(f"  ↩ Skipping — using existing file.")
-            return final_out
-
-    print(f"\n{'═'*64}")
-    print(f"  📽  {title}")
-    print(f"{'═'*64}")
-    print(f"\n  📝 NARRATION — read this aloud after recording starts:\n")
-    # Print narration with word-wrap at 65 chars
-    words, line = narration.split(), ""
-    for w in words:
-        if len(line) + len(w) + 1 > 65:
-            print(f"     {line}")
-            line = w
-        else:
-            line = (line + " " + w).strip()
-    if line:
-        print(f"     {line}")
-
-    print(f"\n  ⏱  Target duration: {duration}s  |  Mic: {MIC_DEVICE}")
-    print(f"\n  Press ENTER to START  |  S = skip  |  Q = quit after this")
-    key = input("  > ").strip().lower()
-    if key == "s":
-        print("  ↩ Skipped.")
-        return None
-    if key == "q":
-        print("  🛑 Quit requested.")
-        sys.exit(0)
-
-    # 3-2-1 countdown before recording
-    for cnt in [3, 2, 1]:
-        print(f"\r  Starting in {cnt}...   ", end="", flush=True)
-        time.sleep(1)
-    print(f"\r                        ", end="")
-
-    # Start Playwright in background thread
-    stop_evt = threading.Event()
-    nav_thread = threading.Thread(
-        target=_playwright_navigate, args=(section, stop_evt), daemon=True
-    )
-    nav_thread.start()
-    time.sleep(2)  # give browser time to open
-
-    # Start ffmpeg recording
-    print(f"\n  🔴 RECORDING — speak your narration now!")
-    print(f"  Press ENTER to stop early, or wait {duration}s\n")
-    ffmpeg_proc = start_recording(raw_video)
-    time.sleep(1)  # ffmpeg warm-up
-
-    # Background thread catches ENTER press to stop early
-    manual_stop = threading.Event()
-    def _wait_enter():
-        try:
-            input()
-        except Exception:
-            pass
-        manual_stop.set()
-    threading.Thread(target=_wait_enter, daemon=True).start()
-
-    # Progress bar — stops at duration OR when user presses ENTER
-    t0 = time.time()
-    try:
-        while not manual_stop.is_set():
-            elapsed   = time.time() - t0
-            remaining = duration - elapsed
-            if remaining <= 0:
-                break
-            bar = "█" * int(20 * elapsed / duration) + "░" * int(20 * remaining / duration)
-            print(f"\r  [{bar}] {remaining:.0f}s left  ", end="", flush=True)
-            time.sleep(0.4)
-        if manual_stop.is_set():
-            print("\n  ⏹ Stopped manually.")
-    except KeyboardInterrupt:
-        print("\n  ⏹ Stopped early by Ctrl+C")
-
-    print(f"\n  ⏹ Stopping recording...")
-    stop_evt.set()
-    stop_recording(ffmpeg_proc)
-    nav_thread.join(timeout=8)
-    print(f"  ✅ Raw video: {raw_video.name} ({raw_video.stat().st_size//1024} KB)")
-
-    # Extract audio for Whisper
-    print(f"  📤 Extracting audio...")
-    extract_audio(raw_video, wav_audio)
-
-    # Transcribe → SRT
-    transcribe_to_srt(wav_audio, srt_file)
-    wav_audio.unlink(missing_ok=True)
-
-    # Burn captions
-    print(f"  🖊  Burning captions into video...")
-    burn_captions(raw_video, srt_file, captioned)
-
-    # Normalise audio levels (I=-16 LUFS)
-    print(f"  🔊 Normalising audio levels...")
-    normalise_audio(captioned)
-
-    # Add fade in/out transitions
-    print(f"  🎞  Adding fade transitions...")
-    add_fades(captioned)
-
-    # Add title card
-    print(f"  🎬 Adding title card...")
-    add_title_card(captioned, title, final_out)
-
-    # Clean intermediates
-    captioned.unlink(missing_ok=True)
-
-    size_mb = final_out.stat().st_size / 1024 / 1024
-    print(f"  ✅ Section complete: {final_out.name}  ({size_mb:.1f} MB)")
-    return final_out
-
-
-# ── Entry Point ───────────────────────────────────────────────────────────────
-def main():
-    parser = argparse.ArgumentParser(description="LifeCycle Leverage Demo Recorder")
-    parser.add_argument("--section", help="Record only this section id prefix (e.g. 03)")
-    parser.add_argument("--concat-only", action="store_true",
-                        help="Skip recording; just stitch existing *_FINAL.mp4 files")
-    args = parser.parse_args()
-
-    print("\n" + "="*64)
-    print("  LifeCycle Leverage Dashboard — Demo Recorder")
-    print(f"  Screen: {SCREEN_W}×{SCREEN_H}  |  Mic: {MIC_DEVICE}")
-    print(f"  Output: {OUTPUT_DIR.resolve()}")
-    print("="*64)
-
-    # Collect which sections to record
-    sections = SECTIONS
-    if args.section:
-        sections = [s for s in SECTIONS if s["id"].startswith(args.section)]
-        if not sections:
-            print(f"  ❌ No section matching '{args.section}'")
-            sys.exit(1)
-
-    if args.concat_only:
-        existing = sorted(OUTPUT_DIR.glob("*_FINAL.mp4"))
-        if not existing:
-            print("  ❌ No *_FINAL.mp4 files found in demo_output/ — run a recording session first.")
-            sys.exit(1)
-        print(f"  Found {len(existing)} section files to stitch → videos/")
-        _stitch_with_bookends(existing)
-        return
-
-    print(f"\n  {len(sections)} section(s) to record. Total ~{sum(s['duration'] for s in sections)//60}min.")
-    print(f"  Make sure Streamlit is running: streamlit run app.py\n")
-    input("  Press ENTER when ready to begin...")
-
-    completed = []
-    for section in sections:
-        result = record_section(section)
-        if result:
-            completed.append(result)
-
-    if len(completed) > 1:
-        _stitch_with_bookends(completed)
-    elif len(completed) == 1:
-        print(f"\n  ✅ Single section recorded: {completed[0].resolve()}")
-        print(f"     Run --concat-only to stitch all sections into videos/ when ready.")
-
-    print("\n  Recording session complete.\n")
+        print(f"  [WARN] Concat error: {result.stderr.decode()[-300:]}")
 
 
 def embed_chapters(video_path: Path, chapter_list: list) -> None:
@@ -807,8 +608,8 @@ def embed_chapters(video_path: Path, chapter_list: list) -> None:
     lines = [
         ";FFMETADATA1",
         "title=LifeCycle Leverage Dashboard Demo",
-        "artist=Dr. Sanjay Bhatia · Prof. Surendra Kumar",
-        "comment=Capital Structure Analytics — 401 Indian Firms · 24 Years · 8 Life Stages",
+        "artist=Dr. Sanjay Bhatia and Prof. Surendra Kumar",
+        "comment=Capital Structure Analytics - 401 Indian Firms 24 Years 8 Life Stages",
         "",
     ]
     for title, start_ms, end_ms in chapter_list:
@@ -838,19 +639,14 @@ def embed_chapters(video_path: Path, chapter_list: list) -> None:
         tmp.rename(video_path)
     else:
         tmp.unlink(missing_ok=True)
-        print(f"  ⚠ Chapter embedding failed — video kept without chapters")
+        print(f"  [WARN] Chapter embedding failed")
 
 
 def _print_post_production_report(clip_info: list, final_path: Path) -> None:
-    """Print a post-production summary table.
-
-    clip_info: [(label, duration_s, size_bytes), ...]
-    """
     print(f"\n  {'─'*58}")
     print(f"  {'Section':<34}  {'Duration':>8}  {'Size':>7}")
     print(f"  {'─'*34}  {'─'*8}  {'─'*7}")
-    total_s = 0
-    total_b = 0
+    total_s, total_b = 0, 0
     for label, dur_s, size_b in clip_info:
         m, s = divmod(int(dur_s), 60)
         print(f"  {label:<34}  {m}:{s:02d}     {size_b/1024/1024:>5.1f} MB")
@@ -864,15 +660,15 @@ def _print_post_production_report(clip_info: list, final_path: Path) -> None:
 
 
 def _stitch_with_bookends(section_files: list) -> None:
-    """Generate intro + outro cards, stitch, embed chapters, print report."""
+    """Generate intro + outro cards, stitch all, embed chapters, print report."""
     print(f"\n{'='*64}")
-    print(f"  🎬 Building intro + outro cards...")
+    print(f"  Building intro + outro cards...")
 
     intro = make_bookend_card(
         lines=[
             "LifeCycle Leverage Dashboard",
-            "Capital Structure Analytics — 401 Indian Firms · 24 Years · 8 Life Stages",
-            "Dr. Sanjay Bhatia  ·  Prof. Surendra Kumar, University of Delhi",
+            "Capital Structure Analytics - 401 Indian Firms 24 Years 8 Life Stages",
+            "Dr. Sanjay Bhatia  and  Prof. Surendra Kumar, University of Delhi",
             "github.com/drbhatiasanjay/ProfSurProject",
         ],
         duration=6,
@@ -899,12 +695,11 @@ def _stitch_with_bookends(section_files: list) -> None:
     ts         = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     fname      = f"lifecycle_leverage_demo_{ts}.mp4"
     final_demo = VIDEOS_DIR / fname
-    print(f"  🎬 Stitching {len(all_files)} clips → {fname}")
+    print(f"  Stitching {len(all_files)} clips → {fname}")
     concat_all_sections(all_files, final_demo)
 
-    # ── Chapter markers ───────────────────────────────────────────
-    print(f"  📑 Embedding chapter markers...")
-    clip_info   = []
+    print(f"  Embedding chapter markers...")
+    clip_info    = []
     chapter_list = []
     cursor_ms    = 0.0
 
@@ -913,7 +708,6 @@ def _stitch_with_bookends(section_files: list) -> None:
         [_section_label(f) for f in section_files] +
         (["Closing"] if outro else [])
     )
-
     for clip_path, label in zip(all_files, clip_labels):
         dur_s  = get_video_duration(clip_path)
         size_b = clip_path.stat().st_size
@@ -923,22 +717,366 @@ def _stitch_with_bookends(section_files: list) -> None:
         cursor_ms = end_ms
 
     embed_chapters(final_demo, chapter_list)
-
-    # ── Post-production report ────────────────────────────────────
-    # Replace clip sizes with final proportional sizes from the stitched file
-    final_size = final_demo.stat().st_size
     _print_post_production_report(clip_info, final_demo)
-    print(f"\n  ✅ DONE — {len(section_files)} sections + intro + outro")
+    print(f"\n  DONE - {len(section_files)} sections + intro + outro")
+    print(f"\n  VIDEO READY: {final_demo.resolve()}\n")
 
 
 def _section_label(path: Path) -> str:
-    """Extract human-readable label from section FINAL filename."""
-    stem = path.stem.replace("_FINAL", "").replace("_", " ")
-    # Match against SECTIONS list for exact title
     for sec in SECTIONS:
         if path.stem.startswith(sec["id"]):
             return sec["title"]
-    return stem.title()
+    return path.stem.replace("_FINAL", "").replace("_", " ").title()
+
+
+# ── Win32 helpers removed — Playwright viewport recording handles capture ─────
+    return set(hwnds)
+
+
+# ── Playwright Navigation + Viewport Recording ────────────────────────────────
+def _playwright_navigate(section: dict, stop_event: threading.Event,
+                          nav_ready: threading.Event,
+                          video_result: list, preamble_result: list):
+    """Run in background thread.
+
+    Uses Playwright's built-in viewport recording — captures browser content
+    directly without gdigrab/HWND tracking.  The recording is independent of
+    window z-order or OS focus, so other windows on screen don't matter.
+    """
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+
+    video_dir = OUTPUT_DIR / "pw_vid_tmp"
+    video_dir.mkdir(exist_ok=True)
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(
+            headless=False,   # headed so user can see progress; recording is viewport-only
+            args=[
+                f"--window-size={SCREEN_W},{SCREEN_H}",
+                "--window-position=0,0",
+                "--disable-infobars",
+                "--noerrdialogs",
+            ],
+        )
+        ctx = browser.new_context(
+            viewport={"width": SCREEN_W, "height": SCREEN_H},
+            record_video_dir=str(video_dir),
+            record_video_size={"width": SCREEN_W, "height": SCREEN_H},
+        )
+        page_created_time = time.time()
+        page = ctx.new_page()
+
+        try:
+            # Login — "load" avoids Streamlit WebSocket networkidle deadlock
+            page.goto(BASE_URL, wait_until="load", timeout=30000)
+            page.wait_for_timeout(2000)
+            try:
+                page.wait_for_selector('[data-testid="stTextInput"] input', timeout=8000)
+                page.locator('[data-testid="stTextInput"] input').first.fill(LOGIN_USER)
+                page.locator('input[type="password"]').first.fill(LOGIN_PASS)
+                page.locator('button:has-text("Login")').first.click()
+                page.wait_for_timeout(4000)
+            except PWTimeout:
+                pass  # already logged in or no login form
+
+            page_path = section.get("page_url", "")
+
+            if not page_path or page_path == "/":
+                # Section 01 (login) or Dashboard — already on root after login
+                page.wait_for_timeout(2000)
+            else:
+                # Navigate directly by URL using file-derived underscore slugs
+                # (Streamlit 1.48.1 st.navigation() uses file names → underscores)
+                target_url = BASE_URL + page_path
+                print(f"\n  [NAV] goto {target_url}")
+                page.goto(target_url, wait_until="load", timeout=30000)
+                page.wait_for_timeout(2000)
+                # Re-login if auth cookie didn't survive new WebSocket session
+                try:
+                    page.wait_for_selector('[data-testid="stTextInput"] input',
+                                           timeout=5000)
+                    page.locator('[data-testid="stTextInput"] input').first.fill(LOGIN_USER)
+                    page.locator('input[type="password"]').first.fill(LOGIN_PASS)
+                    page.locator('button:has-text("Login")').first.click()
+                    page.wait_for_timeout(5000)
+                    # After login Streamlit may redirect to root — go to target again
+                    page.goto(target_url, wait_until="load", timeout=30000)
+                    page.wait_for_timeout(4000)
+                except PWTimeout:
+                    pass  # already authenticated, page loaded directly
+
+            page.wait_for_timeout(2000)  # final render settle
+
+            # Signal ready; record preamble so TTS delay can be aligned
+            preamble_result.append(time.time() - page_created_time)
+            nav_ready.set()
+
+            # Perform actions
+            for action in section.get("actions", []):
+                if stop_event.is_set():
+                    break
+                if action == "scroll_down":
+                    page.evaluate("window.scrollBy({top: 600, behavior: 'smooth'})")
+                    page.wait_for_timeout(2500)
+                    page.evaluate("window.scrollBy({top: 600, behavior: 'smooth'})")
+                    page.wait_for_timeout(2500)
+                elif action == "scroll_slow":
+                    for _ in range(4):
+                        page.evaluate("window.scrollBy({top: 280, behavior: 'smooth'})")
+                        page.wait_for_timeout(1800)
+                elif action == "scroll_up":
+                    page.evaluate("window.scrollTo({top: 0, behavior: 'smooth'})")
+                    page.wait_for_timeout(2000)
+                elif action == "login":
+                    pass
+                elif action.startswith("click_tab:"):
+                    tab_idx = int(action.split(":")[1])
+                    try:
+                        tabs = page.locator('button[role="tab"]').all()
+                        if tab_idx < len(tabs):
+                            tabs[tab_idx].click()
+                            page.wait_for_timeout(3000)
+                    except Exception as e:
+                        print(f"\n  [WARN] click_tab:{tab_idx} — {e}")
+                elif action == "click_primary_button":
+                    try:
+                        page.locator(
+                            'button[data-testid="baseButton-primary"], '
+                            'button[kind="primary"]'
+                        ).first.click()
+                        page.wait_for_timeout(5000)
+                    except Exception as e:
+                        print(f"\n  [WARN] click_primary_button — {e}")
+                elif action.startswith("click_button:"):
+                    btn_text = action.split(":", 1)[1]
+                    try:
+                        page.locator(f'button:has-text("{btn_text}")').first.click()
+                        page.wait_for_timeout(4000)
+                    except Exception as e:
+                        print(f"\n  [WARN] click_button:{btn_text} — {e}")
+                elif action.startswith("select_company:"):
+                    company_query = action.split(":", 1)[1]
+                    try:
+                        page.locator('[data-testid="stSelectbox"]').first.click()
+                        page.wait_for_timeout(800)
+                        page.keyboard.type(company_query, delay=80)
+                        page.wait_for_timeout(1200)
+                        page.locator('[data-testid="stSelectboxVirtualDropdown"] li').first.click()
+                        page.wait_for_timeout(2500)
+                    except Exception as e:
+                        print(f"\n  [WARN] select_company:{company_query} — {e}")
+                elif action.startswith("wait:"):
+                    secs = int(action.split(":")[1])
+                    page.wait_for_timeout(secs * 1000)
+
+            # Hold page open until recording stops
+            while not stop_event.is_set():
+                page.wait_for_timeout(500)
+
+        except Exception as e:
+            print(f"\n  [WARN] Playwright: {e}")
+        finally:
+            vpath = None
+            try:
+                vpath = page.video.path()
+            except Exception:
+                pass
+            ctx.close()   # MUST close context to flush/finalise the video file
+            browser.close()
+            if vpath and Path(vpath).exists():
+                video_result.append(str(vpath))
+
+
+# ── Section Recorder ──────────────────────────────────────────────────────────
+def record_section(section: dict) -> "Path | None":
+    sid       = section["id"]
+    title     = section["title"]
+    narration = section["narration"]
+
+    raw_video  = OUTPUT_DIR / f"{sid}_raw.mp4"
+    tts_audio  = OUTPUT_DIR / f"{sid}_tts.mp3"
+    srt_file   = OUTPUT_DIR / f"{sid}.srt"
+    mixed      = OUTPUT_DIR / f"{sid}_mixed.mp4"
+    captioned  = OUTPUT_DIR / f"{sid}_captioned.mp4"
+    final_out  = OUTPUT_DIR / f"{sid}_FINAL.mp4"
+
+    if final_out.exists():
+        print(f"  [SKIP] {final_out.name} already exists — skipping section.")
+        return final_out
+
+    print(f"\n{'='*64}")
+    print(f"  {title}")
+    print(f"{'='*64}")
+
+    # Step 1: Generate TTS audio
+    print(f"  [1/7] Generating TTS narration ({TTS_VOICE})...")
+    tts_ok = generate_tts_audio(narration, tts_audio)
+    if not tts_ok:
+        print(f"  [ERROR] TTS failed for section {sid} — skipping.")
+        return None
+
+    tts_dur = get_video_duration(tts_audio)
+    total_record_dur = tts_dur + TTS_BUFFER + 2.0  # buffer + nav startup
+    print(f"  TTS duration: {tts_dur:.1f}s  |  Recording: {total_record_dur:.0f}s")
+
+    # Step 2: (SRT generated later, after preamble is known for correct offset)
+
+    # Step 3: Start Playwright viewport recording in background thread
+    print(f"  [3/7] Starting Playwright viewport recording...")
+    stop_evt        = threading.Event()
+    nav_ready       = threading.Event()
+    video_result    = []
+    preamble_result = []
+    nav_thread = threading.Thread(
+        target=_playwright_navigate,
+        args=(section, stop_evt, nav_ready, video_result, preamble_result),
+        daemon=True,
+    )
+    nav_thread.start()
+
+    if not nav_ready.wait(timeout=90):
+        print(f"  [WARN] Browser nav timed out after 90s — aborting section")
+        stop_evt.set()
+        nav_thread.join(timeout=10)
+        return None
+
+    preamble_s    = preamble_result[0] if preamble_result else 8.0
+    audio_delay_s = preamble_s + 1.0
+
+    # Step 2 (deferred): Generate SRT with offset matching the audio delay
+    print(f"  [2/7] Building captions (offset {audio_delay_s:.1f}s)...")
+    text_to_srt(narration, tts_dur, srt_file, audio_offset_s=audio_delay_s)
+
+    # Step 4: Hold open for recording duration (Playwright records in background)
+    print(f"  [4/7] Recording for {total_record_dur:.0f}s (preamble {preamble_s:.1f}s)...")
+    t0 = time.time()
+    while True:
+        elapsed = time.time() - t0
+        if elapsed >= total_record_dur:
+            break
+        remaining = total_record_dur - elapsed
+        bar = ("█" * int(20 * elapsed / total_record_dur) +
+               "░" * int(20 * remaining / total_record_dur))
+        print(f"\r  [{bar}] {remaining:.0f}s left  ", end="", flush=True)
+        time.sleep(0.4)
+    print()
+
+    stop_evt.set()
+    print(f"  Waiting for Playwright to flush video...")
+    nav_thread.join(timeout=30)
+
+    if not video_result:
+        print(f"  [ERROR] Playwright produced no video for {sid}")
+        return None
+
+    webm_path   = Path(video_result[0])
+    raw_size_kb = webm_path.stat().st_size // 1024 if webm_path.exists() else 0
+    print(f"  Playwright WebM: {webm_path.name} ({raw_size_kb} KB)")
+
+    # Convert Playwright WebM → silent MP4 for TTS mixing pipeline
+    # Playwright records video-only WebM; add silent audio so the pipeline works.
+    # Input options (-f lavfi) MUST appear immediately before their -i argument.
+    conv = subprocess.run(
+        ["ffmpeg", "-y",
+         "-i", str(webm_path),               # input 0: WebM (video only)
+         "-f", "lavfi",                       # input 1: silent audio source
+         "-i", "anullsrc=r=44100:cl=stereo",
+         "-map", "0:v", "-map", "1:a",
+         "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+         "-vf", f"scale={SCREEN_W}:{SCREEN_H}:flags=lanczos",
+         "-c:a", "aac", "-ar", "44100", "-b:a", "64k",
+         "-shortest", str(raw_video)],
+        capture_output=True,
+    )
+    webm_path.unlink(missing_ok=True)
+
+    if conv.returncode != 0 or not raw_video.exists():
+        print(f"  [ERROR] WebM→MP4 failed: {conv.stderr.decode()[-300:]}")
+        return None
+
+    print(f"  Raw MP4: {raw_video.name} ({raw_video.stat().st_size // 1024} KB)")
+
+    # Step 5: Mix TTS audio into video (delay matches SRT offset above)
+    print(f"  [5/7] Mixing TTS audio (delay={audio_delay_s:.1f}s)...")
+    mix_tts_into_video(raw_video, tts_audio, mixed, audio_delay_s=audio_delay_s)
+    raw_video.unlink(missing_ok=True)
+    tts_audio.unlink(missing_ok=True)
+
+    # Step 6: Normalise audio + fades
+    print(f"  [6/7] Normalising audio + fades...")
+    normalise_audio(mixed)
+    add_fades(mixed)
+
+    # Step 7: Burn captions + title card
+    print(f"  [7/7] Burning captions + title card...")
+    burn_captions(mixed, srt_file, captioned)
+    mixed.unlink(missing_ok=True)
+    add_title_card(captioned, title, final_out)
+    captioned.unlink(missing_ok=True)
+
+    size_mb = final_out.stat().st_size / 1024 / 1024 if final_out.exists() else 0
+    print(f"  Section complete: {final_out.name}  ({size_mb:.1f} MB)")
+    return final_out if final_out.exists() else None
+
+
+# ── Entry Point ───────────────────────────────────────────────────────────────
+def main():
+    parser = argparse.ArgumentParser(description="LifeCycle Leverage Automated Demo Recorder")
+    parser.add_argument("--section", help="Record only this section id prefix (e.g. 03)")
+    parser.add_argument("--concat-only", action="store_true",
+                        help="Stitch existing *_FINAL.mp4 files → videos/ without recording")
+    args = parser.parse_args()
+
+    total_est = sum(len(s["narration"].split()) / 2.5 for s in SECTIONS)  # ~2.5 words/sec
+
+    print("\n" + "="*64)
+    print("  LifeCycle Leverage Dashboard — Automated Demo Recorder")
+    print(f"  Screen: {SCREEN_W}x{SCREEN_H}  |  Voice: {TTS_VOICE}")
+    print(f"  Output: {OUTPUT_DIR.resolve()}")
+    print(f"  Estimated total: ~{int(total_est)//60}m {int(total_est)%60}s")
+    print("="*64)
+
+    sections = SECTIONS
+    if args.section:
+        sections = [s for s in SECTIONS if s["id"].startswith(args.section)]
+        if not sections:
+            print(f"  ERROR: No section matching '{args.section}'")
+            sys.exit(1)
+
+    if args.concat_only:
+        existing = sorted(OUTPUT_DIR.glob("*_FINAL.mp4"))
+        if not existing:
+            print("  ERROR: No *_FINAL.mp4 files in demo_output/ — record first.")
+            sys.exit(1)
+        print(f"  Found {len(existing)} section files → stitching to videos/")
+        _stitch_with_bookends(existing)
+        return
+
+    print(f"\n  {len(sections)} section(s) to record.")
+    print(f"  Streamlit must be running: streamlit run app.py")
+    print(f"\n  Recording is FULLY AUTOMATED — starting in 3 seconds...")
+    time.sleep(3)
+
+    completed = []
+    for i, section in enumerate(sections, 1):
+        print(f"\n  [{i}/{len(sections)}] {section['id']}")
+        result = record_section(section)
+        if result:
+            completed.append(result)
+        else:
+            print(f"  [WARN] Section {section['id']} produced no output — continuing.")
+
+    print(f"\n  {len(completed)}/{len(sections)} sections completed.")
+
+    if len(completed) > 1:
+        _stitch_with_bookends(completed)
+    elif len(completed) == 1:
+        print(f"\n  Single section: {completed[0].resolve()}")
+        print(f"  Use --concat-only to stitch all sections when ready.")
+    else:
+        print(f"\n  No sections completed — nothing to stitch.")
+
+    print("\n  Recording session complete.\n")
 
 
 if __name__ == "__main__":
