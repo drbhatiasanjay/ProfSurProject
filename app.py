@@ -101,23 +101,37 @@ if "login_logged" not in st.session_state:
 # ── Initialize session state defaults (shared with every page) ──
 ensure_session_state()
 
-# ── Panel from query params (set by navbar <select>) ──
-_panel_options = ["latest", "thesis", "run3", "us_av_2024"]
-_qp_panel = st.query_params.get("panel", "latest")
-if _qp_panel not in _panel_options:
-    _qp_panel = "latest"
-st.session_state.panel_mode = _qp_panel
-st.session_state.filters["panel_mode"] = _qp_panel
-# Reset year range only when panel changes (not on every page load)
-if st.session_state.filters.get("year_range") is None or st.session_state.filters.get("_last_panel") != _qp_panel:
-    _yr_min_qp, _yr_max_qp = db.get_year_range(_qp_panel)
-    st.session_state.filters["year_range"] = (_yr_min_qp, _yr_max_qp)
-    st.session_state.filters["_last_panel"] = _qp_panel
+# ── Panel mode — resolved by sidebar selectbox below ──
+# st.query_params does NOT receive URL params set by window.location.href in Streamlit MPA mode.
+# Panel is now driven directly by a native st.selectbox in the sidebar.
+_qp_panel = st.session_state.get("panel_mode", "latest")
 
 # ── Sidebar: Global filters ──
 from helpers import PANEL_LABELS as panel_label_map
 with st.sidebar:
     st.markdown("# LifeCycle Leverage")
+
+    # ── Dataset / Panel selector ──
+    _panel_opts = ["latest", "thesis", "run3", "us_av_2024"]
+    _panel_labels_map = {
+        "latest":     "Latest (2001–present)",
+        "thesis":     "Thesis (2001–2024)",
+        "run3":       "Run 3 – Stata",
+        "us_av_2024": "US S&P Sample",
+    }
+    _qp_panel = st.selectbox(
+        "Dataset",
+        options=_panel_opts,
+        format_func=_panel_labels_map.get,
+        index=_panel_opts.index(st.session_state.get("panel_mode", "latest")),
+    )
+    st.session_state.panel_mode = _qp_panel
+    st.session_state.filters["panel_mode"] = _qp_panel
+    if st.session_state.filters.get("year_range") is None or st.session_state.filters.get("_last_panel") != _qp_panel:
+        _yr_min_qp, _yr_max_qp = db.get_year_range(_qp_panel)
+        st.session_state.filters["year_range"] = (_yr_min_qp, _yr_max_qp)
+        st.session_state.filters["_last_panel"] = _qp_panel
+    st.divider()
 
     companies_df = db.get_companies(_qp_panel)
     all_stages = db.get_life_stages()
@@ -276,24 +290,15 @@ st.markdown(f"""
     <span style="font-weight:700; color:#0D9488; font-size:18px; white-space:nowrap;">LifeCycle Leverage<span style="font-size:11px;color:#6B7280;font-weight:400;margin-left:6px;">v{_APP_VERSION}</span></span>
     <span style="color:{_header_sub}; white-space:nowrap; display:flex; align-items:center; gap:0.4rem;">
         Dataset:
-        <select id="lc-panel-sel"
-            onchange="(function(v){{var p=new URLSearchParams(window.location.search);p.set('panel',v);window.location.href='?'+p.toString();}})(this.value)"
-            style="
-                border: 1px solid #D1D5DB;
-                border-radius: 6px;
-                padding: 4px 8px;
-                font-size: 13px;
-                font-weight: 600;
-                background: {_header_bg};
-                color: {_header_text};
-                cursor: pointer;
-            "
-        >
-            <option value="latest" {"selected" if st.session_state.get("panel_mode","latest") == "latest" else ""}>Latest (2001&#8211;present)</option>
-            <option value="thesis" {"selected" if st.session_state.get("panel_mode","latest") == "thesis" else ""}>Thesis (2001&#8211;2024)</option>
-            <option value="run3" {"selected" if st.session_state.get("panel_mode","latest") == "run3" else ""}>Run 3 &#8212; Stata</option>
-            <option value="us_av_2024" {"selected" if st.session_state.get("panel_mode","latest") == "us_av_2024" else ""}>US S&amp;P Sample</option>
-        </select>
+        <span style="
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: 600;
+            background: {_header_bg};
+            color: {_header_text};
+        ">{_panel_display}</span>
     </span>
     <span style="white-space:nowrap;"><strong>{_display_name}</strong>&nbsp;&middot;&nbsp;{_role_display}</span>
     <span style="margin-left:auto; color:{_header_sub}; font-size:14px; white-space:nowrap;">{_now_str}</span>
