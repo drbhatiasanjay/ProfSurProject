@@ -106,14 +106,14 @@ _panel_opts = ["latest", "thesis", "run3", "us_av_2024"]
 _panel_labels_map = {
     "latest":     "Latest (2001–present)",
     "thesis":     "Thesis (2001–2024)",
-    "run3":       "Run 3 – Stata",
+    "run3":       "(2001-25)_April26",
     "us_av_2024": "US S&P Sample",
 }
 # URL param takes priority over saved pref so panel changes work identically on all deployments
 _qp_from_url = st.query_params.get("panel", None)
 if _qp_from_url in _panel_opts:
     st.session_state["panel_mode"] = _qp_from_url
-_qp_panel = st.session_state.get("panel_mode", "latest")
+_qp_panel = st.session_state.get("panel_mode", "run3")
 
 # ── Sidebar: Global filters ──
 from helpers import PANEL_LABELS as panel_label_map
@@ -140,7 +140,7 @@ with st.sidebar:
         st.session_state.filters["company_codes"] = []
 
     # Year range — bounds derived from the active panel's vintage range
-    # (Thesis: 2001-2024, Latest: 2001-2025, Run 3: 2001-2025).
+    # (Thesis: 2001-2024, Latest: 2001-2025, (2001-25)_April26: 2001-2025).
     year_range = st.slider(
         "Year Range",
         min_value=yr_min,
@@ -282,7 +282,7 @@ st.markdown(f"""
         style="background:{_header_bg};color:{_header_text};border:1px solid #0D9488;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;min-width:185px;">
         <option value="latest" {'selected' if _qp_panel=='latest' else ''}>Latest (2001–present)</option>
         <option value="thesis" {'selected' if _qp_panel=='thesis' else ''}>Thesis (2001–2024)</option>
-        <option value="run3" {'selected' if _qp_panel=='run3' else ''}>Run 3 – Stata</option>
+        <option value="run3" {'selected' if _qp_panel=='run3' else ''}>(2001-25)_April26</option>
         <option value="us_av_2024" {'selected' if _qp_panel=='us_av_2024' else ''}>US S&amp;P Sample</option>
     </select>
     <span style="white-space:nowrap;"><strong>{_display_name}</strong>&nbsp;&middot;&nbsp;{_role_display}</span>

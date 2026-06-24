@@ -120,7 +120,7 @@ def new_badge(text: str = "NEW") -> str:
 PANEL_LABELS = {
     "latest":    "Latest panel (2001–present)",
     "thesis":    "Thesis panel (2001–2024)",
-    "run3":      "Run 3 — Stata replication (2001–2025)",
+    "run3":      "(2001-25)_April26",
     "us_av_2024": "US S&P Sample (Alpha Vantage)",
 }
 

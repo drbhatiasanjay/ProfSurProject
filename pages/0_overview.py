@@ -14,7 +14,7 @@ _meta = db.get_db_metadata(_panel_mode)
 _panel_label = {
     "thesis":     "Original Thesis Data",
     "latest":     "Latest Panel (CMIE 2025)",
-    "run3":       "Run 3 – Stata",
+    "run3":       "(2001-25)_April26",
     "us_av_2024": "US S&P Sample",
 }.get(_panel_mode, _panel_mode)
 
