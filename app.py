@@ -229,7 +229,7 @@ scenarios = st.Page("pages/3_scenarios.py", title="Scenarios", icon=":material/t
 bulk_upload = st.Page("pages/4_bulk_upload.py", title="Bulk Upload", icon=":material/upload_file:")
 data_explorer = st.Page("pages/5_data_explorer.py", title="Data Explorer", icon=":material/table_chart:")
 settings = st.Page("pages/6_settings.py", title="Settings", icon=":material/settings:")
-knowledge_graph     = st.Page("pages/7_knowledge_graph.py",     title="Know. GraphV1 (WIP)", icon=":material/hub:")
+# knowledge_graph   = st.Page("pages/7_knowledge_graph.py",     title="Know. GraphV1 (WIP)", icon=":material/hub:")  # temporarily hidden
 life_stage_dynamics = st.Page("pages/20_life_stage_dynamics.py", title="Life Stage Dynamics", icon=":material/timeline:")
 econometrics        = st.Page("pages/8_econometrics.py",         title="Econometrics Lab",    icon=":material/functions:")
 ml_models           = st.Page("pages/9_ml_models.py",           title="ML Models",           icon=":material/model_training:")
@@ -244,14 +244,13 @@ admin_activity      = st.Page("pages/16_admin_activity.py",    title="Activity L
 board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck",          icon=":material/description:")
 # company_navigator = st.Page("pages/18_company_navigator.py", title="Company Navigator", icon=":material/explore:")  # temporarily hidden
 ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
-knowledge_graph2    = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")
+# knowledge_graph2  = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")  # temporarily hidden
 nav = st.navigation([
     overview, dashboard, data_explorer, benchmarks,
     life_stage_dynamics, transitions,
     scenarios, econometrics, advanced_econ, interaction_effects,
     ml_models, forecasting, clustering,
     workbench, bulk_upload, ai_assistant, board_deck,
-    knowledge_graph, knowledge_graph2,
     admin_activity, settings,
 ])
 
@@ -353,6 +352,17 @@ button[data-testid="collapsedControl"] {{
 /* Ensure any popover/dropdown appears above the fixed navbar */
 [data-baseweb="popover"] {{
     z-index: 1000010 !important;
+}}
+/* Move our sidebar filter widgets (Dataset, Companies, etc.) ABOVE the nav links */
+[data-testid="stSidebarUserContent"] {{
+    display: flex !important;
+    flex-direction: column !important;
+}}
+[data-testid="stSidebarUserContent"] > div:has(nav) {{
+    order: 100 !important;
+}}
+[data-testid="stSidebarUserContent"] > div:not(:has(nav)) {{
+    order: 1 !important;
 }}
 </style>
 """, unsafe_allow_html=True)
