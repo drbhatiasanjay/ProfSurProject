@@ -232,6 +232,327 @@ st.caption("Shaded bands: GFC (2008-09, red) · IBC 2016+ (indigo) · COVID (202
 st.divider()
 
 # ═══════════════════════════════════════════════
+# Figure 5.1 — Stage-wise Capital Structure Profile
+# Replicates thesis Figure 5.1 (p. 89)
+# ═══════════════════════════════════════════════
+st.markdown("### Figure 5.1 — Stage-wise Capital Structure Profile")
+st.caption(
+    "Mean Leverage, Log Size of Assets, Profitability and Dividend Payout by corporate life stage. "
+    "Replicates thesis Figure 5.1 (p. 89). Switch to **Thesis panel** for published values."
+)
+
+# log_size not in get_active_financials() — compute inline
+_lsm = df["firm_size"].notna() & (df["firm_size"] > 0)
+df = df.copy()
+df.loc[_lsm, "log_size"] = np.log(df.loc[_lsm, "firm_size"])
+
+_FIG51_METRICS = [
+    ("leverage",      "Avg. Leverage (%)"),
+    ("log_size",      "Avg. Log Size"),
+    ("profitability", "Avg. Profitability (%)"),
+    ("dividend",      "Avg. Dividend Payout (%)"),
+]
+_stages51    = [s for s in STAGE_ORDER if s in df["life_stage"].unique()]
+_stage_data51 = (
+    df.groupby("life_stage")[["leverage", "log_size", "profitability", "dividend"]]
+    .mean()
+    .reindex(_stages51)
+)
+
+_fig51 = _make_subplots(
+    rows=4, cols=1, shared_xaxes=True,
+    vertical_spacing=0.09, row_heights=[1, 1, 1, 1],
+)
+for _row51, (_col51, _ylabel51) in enumerate(_FIG51_METRICS, 1):
+    _vals51   = [_stage_data51.loc[s, _col51] if s in _stage_data51.index else float("nan")
+                 for s in _stages51]
+    _colors51 = [STAGE_COLORS.get(s, "#6B7280") for s in _stages51]
+    _fig51.add_trace(go.Bar(
+        x=_stages51, y=_vals51,
+        marker_color=_colors51,
+        text=[f"{v:.2f}" for v in _vals51],
+        textposition="outside",
+        textfont=dict(size=9),
+        cliponaxis=False,
+        showlegend=False,
+        hovertemplate="<b>%{x}</b><br>" + _ylabel51 + ": %{y:.2f}<extra></extra>",
+    ), row=_row51, col=1)
+    _valid51 = [v for v in _vals51 if v == v]  # filter NaN
+    if _valid51:
+        _hi51  = max(_valid51)
+        _lo51  = min(_valid51)
+        _sp51  = (_hi51 - _lo51) or abs(_hi51) or 1
+        _ymin51 = 0.0 if _lo51 >= 0 else _lo51 - _sp51 * 0.15
+        _ymax51 = _hi51 + _sp51 * 0.30
+        _fig51.update_yaxes(range=[_ymin51, _ymax51], row=_row51, col=1)
+    _fig51.update_yaxes(
+        title_text=_ylabel51, title_font=dict(size=9),
+        tickfont=dict(size=8), showgrid=True, gridcolor="#E5E7EB",
+        row=_row51, col=1,
+    )
+_fig51.update_xaxes(tickfont=dict(size=9), tickangle=0, row=4, col=1)
+_fig51.update_layout(**plotly_layout("Stage-wise Capital Structure Profile", height=950))
+_fig51.update_layout(bargap=0.30, showlegend=False)
+st.plotly_chart(_fig51, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(_fig51, "fig51_stage_profile.png")
+
+# Insight box — Fig 5.1
+_f51, _a51 = [], []
+if not _stage_data51.empty and "leverage" in _stage_data51.columns:
+    _max_lev_stage51 = _stage_data51["leverage"].idxmax()
+    _min_lev_stage51 = _stage_data51["leverage"].idxmin()
+    _max_lev51 = _stage_data51.loc[_max_lev_stage51, "leverage"]
+    _min_lev51 = _stage_data51.loc[_min_lev_stage51, "leverage"]
+    _f51.append(f"**{_max_lev_stage51}** carries the highest average leverage at **{_max_lev51:.1f}%**, "
+                f"while **{_min_lev_stage51}** is the lowest at **{_min_lev51:.1f}%**.")
+    if "Decline" in _stage_data51.index and _stage_data51.loc["Decline", "profitability"] < 0:
+        _f51.append("Decline stage shows **negative profitability** — firms in distress are still highly leveraged.")
+    if "Maturity" in _stage_data51.index:
+        _mat_lev = _stage_data51.loc["Maturity", "leverage"]
+        _f51.append(f"Maturity stage exhibits the lowest leverage among growth stages ({_mat_lev:.1f}%), "
+                    f"consistent with Pecking Order theory — mature firms use retained earnings first.")
+    _max_div_stage = _stage_data51["dividend"].idxmax()
+    _f51.append(f"**{_max_div_stage}** pays the highest dividends — typically firms with stable cash flows.")
+    _a51.append("Examine whether high-leverage early-stage firms have access to bank credit vs. capital markets.")
+    _a51.append("Investigate if Decline-stage firms are restructuring under IBC 2016 provisions.")
+_render_insight_box(
+    "Figure 5.1 — Stage-wise Profile: Key Findings", _f51, _a51,
+    "Values computed from the active panel. Switch to Thesis panel (sidebar) to reproduce published figures."
+)
+
+st.divider()
+
+# ═══════════════════════════════════════════════
+# Figure 5.2 — Year-wise Capital Structure Trends
+# Replicates thesis Figure 5.2 (p. 93) — bar chart version
+# ═══════════════════════════════════════════════
+st.markdown("### Figure 5.2 — Year-wise Capital Structure Trends")
+st.caption(
+    "Mean Leverage, Log Size of Assets, Profitability and Dividend Payout by fiscal year. "
+    "Replicates thesis Figure 5.2 (p. 93). Each bar represents one fiscal year."
+)
+
+import plotly.colors as _pc
+_years52b    = sorted(df["year"].dropna().unique().astype(int))
+_year_data52b = (
+    df.groupby("year")[["leverage", "log_size", "profitability", "dividend"]]
+    .mean()
+    .reindex(_years52b)
+)
+_palette52b    = _pc.qualitative.Light24
+_yr_colors52b  = [_palette52b[i % len(_palette52b)] for i, _ in enumerate(_years52b)]
+
+_FIG52B_METRICS = [
+    ("leverage",      "Avg. Leverage (%)"),
+    ("log_size",      "Avg. Log Size"),
+    ("profitability", "Avg. Profitability (%)"),
+    ("dividend",      "Avg. Dividend Payout (%)"),
+]
+
+_fig52b = _make_subplots(
+    rows=4, cols=1, shared_xaxes=True,
+    vertical_spacing=0.09, row_heights=[1, 1, 1, 1],
+)
+for _row52b, (_col52b, _ylabel52b) in enumerate(_FIG52B_METRICS, 1):
+    _vals52b = [_year_data52b.loc[yr, _col52b] for yr in _years52b]
+    _fig52b.add_trace(go.Bar(
+        x=_years52b, y=_vals52b,
+        marker_color=_yr_colors52b,
+        text=[f"{v:.2f}" for v in _vals52b],
+        textposition="outside",
+        textangle=-90,
+        textfont=dict(size=8),
+        cliponaxis=False,
+        showlegend=False,
+        hovertemplate="<b>%{x}</b><br>" + _ylabel52b + ": %{y:.2f}<extra></extra>",
+    ), row=_row52b, col=1)
+    _valid52b = [v for v in _vals52b if v == v]
+    if _valid52b:
+        _hi52b = max(_valid52b)
+        _lo52b = min(_valid52b)
+        _sp52b = (_hi52b - _lo52b) or abs(_hi52b) or 1
+        _ymin52b = 0.0 if _lo52b >= 0 else _lo52b - _sp52b * 0.15
+        _ymax52b = _hi52b + _sp52b * 0.60
+        _fig52b.update_yaxes(range=[_ymin52b, _ymax52b], row=_row52b, col=1)
+    _fig52b.update_yaxes(
+        title_text=_ylabel52b, title_font=dict(size=9),
+        tickfont=dict(size=8), showgrid=True, gridcolor="#E5E7EB",
+        row=_row52b, col=1,
+    )
+_fig52b.update_xaxes(
+    tickmode="array", tickvals=_years52b, ticktext=[str(y) for y in _years52b],
+    tickangle=-45, tickfont=dict(size=8), row=4, col=1,
+)
+_fig52b.update_layout(**plotly_layout("Year-wise Capital Structure Trends", height=1100))
+_fig52b.update_layout(bargap=0.20, showlegend=False)
+st.plotly_chart(_fig52b, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(_fig52b, "fig52_year_trends.png")
+
+# Insight box — Fig 5.2
+_f52b, _a52b = [], []
+if len(_years52b) >= 2:
+    _lev_start = _year_data52b.loc[_years52b[0],  "leverage"]
+    _lev_end   = _year_data52b.loc[_years52b[-1], "leverage"]
+    _lev_delta52b = _lev_end - _lev_start
+    _f52b.append(
+        f"Average leverage **{'fell' if _lev_delta52b < 0 else 'rose'}** from "
+        f"**{_lev_start:.1f}%** ({_years52b[0]}) to **{_lev_end:.1f}%** ({_years52b[-1]}), "
+        f"a change of **{_lev_delta52b:+.1f}pp** over the panel."
+    )
+    _peak_yr52b = _year_data52b["leverage"].idxmax()
+    _peak_lev52b = _year_data52b.loc[_peak_yr52b, "leverage"]
+    _f52b.append(f"Peak leverage was **{_peak_lev52b:.1f}%** in **{int(_peak_yr52b)}** — "
+                 f"likely reflecting post-GFC credit tightening.")
+    if 2016 in _years52b and 2020 in _years52b:
+        _lev_ibc  = _year_data52b.loc[2016, "leverage"]
+        _lev_2020 = _year_data52b.loc[2020, "leverage"]
+        _f52b.append(f"Post-IBC (2016–2020): leverage moved from **{_lev_ibc:.1f}%** to "
+                     f"**{_lev_2020:.1f}%**, suggesting IBC-driven deleveraging pressure.")
+    _a52b.append("Monitor firms still above 40% leverage — they may face IBC proceedings.")
+    _a52b.append("Overlay sector-level data to identify which industries drove peak leverage years.")
+_render_insight_box(
+    "Figure 5.2 — Year-wise Trends: Key Findings", _f52b, _a52b,
+    "Values computed from the active panel. Switch to Thesis panel for published year-wise figures."
+)
+
+st.divider()
+
+# ═══════════════════════════════════════════════
+# Figure 8.3 — Leverage vs Profitability & Tangibility
+# Decline and Decay stages only — Replicates thesis Figure 8.3
+# ═══════════════════════════════════════════════
+st.markdown("### Figure 8.3 — Leverage vs Profitability and Tangibility")
+st.caption(
+    "Individual firm-year observations with OLS regression lines for Decline and Decay stages. "
+    "Replicates thesis Figure 8.3. Y-axis capped at 150% to match thesis view."
+)
+
+_df83 = df[df["life_stage"].isin(["Decline", "Decay"])].dropna(
+    subset=["leverage", "profitability", "tangibility"]
+)
+_n83_decline = int((_df83["life_stage"] == "Decline").sum())
+_n83_decay   = int((_df83["life_stage"] == "Decay").sum())
+
+_STAGE83 = {
+    "Decline": {"color": STAGE_COLORS["Decline"], "label": f"Decline Stage (n={_n83_decline})", "symbol": "circle"},
+    "Decay":   {"color": STAGE_COLORS["Decay"],   "label": f"Decay Stage (n={_n83_decay})",     "symbol": "diamond"},
+}
+_X_PROF83 = [-1.0, 1.0]
+_X_TANG83 = [ 0.0, 1.0]
+_Y_LIM83  = [0, 150]
+
+_fig83d = _make_subplots(
+    rows=1, cols=2, shared_yaxes=True, horizontal_spacing=0.22,
+    subplot_titles=["LEVERAGE vs PROFITABILITY", "LEVERAGE vs TANGIBILITY"],
+)
+_specs83 = [("profitability", _X_PROF83, 1), ("tangibility", _X_TANG83, 2)]
+_ols_slopes83 = {}
+for _xcol83, _xrange83, _col83 in _specs83:
+    for _stage83, _scfg83 in _STAGE83.items():
+        _sub83 = _df83[_df83["life_stage"] == _stage83]
+        _x83 = _sub83[_xcol83].values
+        _y83 = _sub83["leverage"].values
+        _fig83d.add_trace(go.Scatter(
+            x=_x83, y=_y83, mode="markers",
+            name=_scfg83["label"],
+            marker=dict(
+                size=6, color=_scfg83["color"], opacity=0.60,
+                symbol=_scfg83["symbol"],
+                line=dict(width=0.6, color="rgba(0,0,0,0.20)"),
+            ),
+            showlegend=(_col83 == 1),
+            hovertemplate=(
+                f"<b>{_stage83}</b><br>{_xcol83}: %{{x:.3f}}<br>Leverage: %{{y:.1f}}%<extra></extra>"
+            ),
+        ), row=1, col=_col83)
+        if len(_x83) > 1:
+            _sl83, _ic83 = np.polyfit(_x83, _y83, 1)
+            _ols_slopes83[f"{_stage83}_{_xcol83}"] = _sl83
+            _xl83 = np.array(_xrange83)
+            _fig83d.add_trace(go.Scatter(
+                x=_xl83, y=_sl83 * _xl83 + _ic83,
+                mode="lines",
+                line=dict(color=_scfg83["color"], width=2.5, dash="dash"),
+                showlegend=False,
+            ), row=1, col=_col83)
+
+_fig83d.update_yaxes(
+    range=_Y_LIM83, ticksuffix="%", title_text="Leverage %",
+    title_font=dict(size=9), tickfont=dict(size=8),
+    showgrid=True, gridcolor="#E5E7EB",
+    showline=True, linewidth=1.5, linecolor="#9CA3AF", mirror=True,
+    ticks="outside", row=1, col=1,
+)
+_fig83d.update_yaxes(
+    range=_Y_LIM83, ticksuffix="%",
+    showgrid=True, gridcolor="#E5E7EB",
+    showline=True, linewidth=1.5, linecolor="#9CA3AF", mirror=True,
+    row=1, col=2,
+)
+_fig83d.update_xaxes(
+    range=_X_PROF83, dtick=0.2, title_text="Profitability  r",
+    title_font=dict(size=9), tickfont=dict(size=8),
+    showgrid=True, gridcolor="#E5E7EB",
+    zeroline=True, zerolinewidth=1.5, zerolinecolor="#6B7280",
+    showline=True, linewidth=1.5, linecolor="#9CA3AF", mirror=True,
+    ticks="outside", row=1, col=1,
+)
+_fig83d.update_xaxes(
+    range=_X_TANG83, dtick=0.1, title_text="Tangibility",
+    title_font=dict(size=9), tickfont=dict(size=8),
+    showgrid=True, gridcolor="#E5E7EB",
+    showline=True, linewidth=1.5, linecolor="#9CA3AF", mirror=True,
+    ticks="outside", row=1, col=2,
+)
+_fig83d.update_layout(
+    **plotly_layout("Leverage vs Profitability and Tangibility — Decline & Decay", height=540)
+)
+_fig83d.update_layout(
+    legend=dict(
+        x=0.96, y=0.97, xanchor="right", yanchor="top",
+        bgcolor="rgba(255,255,255,0.90)", bordercolor="#9CA3AF", borderwidth=1,
+        font=dict(size=9),
+    ),
+)
+for _ann83 in _fig83d.layout.annotations:
+    _ann83.font = dict(size=9)
+st.plotly_chart(_fig83d, use_container_width=True, config=PLOTLY_CONFIG)
+chart_download_button(_fig83d, "fig83_decline_decay_scatter.png")
+
+# Insight box — Fig 8.3
+_f83, _a83 = [], []
+_f83.append(
+    f"Dataset: **{_n83_decline} Decline** and **{_n83_decay} Decay** firm-year observations "
+    f"from the active panel. Decline = circles · Decay = diamonds; dashed lines = OLS trend."
+)
+_prof_dec_slope = _ols_slopes83.get("Decline_profitability")
+_prof_dec_slope_str = f"{_prof_dec_slope:+.1f}" if _prof_dec_slope is not None else "n/a"
+_tang_dec_slope = _ols_slopes83.get("Decline_tangibility")
+_tang_dec_slope_str = f"{_tang_dec_slope:+.1f}" if _tang_dec_slope is not None else "n/a"
+if _prof_dec_slope is not None and _prof_dec_slope < 0:
+    _f83.append(
+        f"Decline stage: **negative profitability–leverage slope** ({_prof_dec_slope_str}) — "
+        f"consistent with distress financing; firms borrow more as earnings deteriorate."
+    )
+if _tang_dec_slope is not None and _tang_dec_slope > 0:
+    _f83.append(
+        f"Tangibility slope for Decline is positive ({_tang_dec_slope_str}) — "
+        f"asset-heavy firms can collateralise more debt."
+    )
+_f83.append(
+    "Leverage outliers above 150% exist but are clipped from view for readability; "
+    "OLS lines are fitted on the full unclipped data."
+)
+_a83.append("Flag firms in Decline stage with leverage > 60% for IBC early-warning screening.")
+_a83.append("Cross-check Decay firms showing high tangibility + low leverage — potential underleverage candidates.")
+_render_insight_box(
+    "Figure 8.3 — Decline & Decay: Key Findings", _f83, _a83,
+    "Individual data points — not aggregated. Switch to Thesis panel for thesis-era observations."
+)
+
+st.divider()
+
+# ═══════════════════════════════════════════════
 # Pairwise Comparison (Table 5.9)
 # ═══════════════════════════════════════════════
 st.markdown("### Pairwise Significance: Which Stage Pairs Differ?")
