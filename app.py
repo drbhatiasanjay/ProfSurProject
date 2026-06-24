@@ -282,14 +282,15 @@ st.markdown(f"""
     font-family: inherit;
 ">
     <span style="font-weight:700; color:#0D9488; font-size:18px; white-space:nowrap;">LifeCycle Leverage<span style="font-size:11px;color:#6B7280;font-weight:400;margin-left:6px;">v{_APP_VERSION}</span></span>
-    <select id="lc-dataset-sel"
-        onchange="(function(v){{var p=new URLSearchParams(window.location.search);p.set('panel',v);window.location.href='?'+p.toString();}})(this.value)"
-        style="background:{_header_bg};color:{_header_text};border:1px solid #0D9488;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;min-width:185px;">
-        <option value="latest" {'selected' if _qp_panel=='latest' else ''}>Latest (2001–present)</option>
-        <option value="thesis" {'selected' if _qp_panel=='thesis' else ''}>Thesis (2001–2024)</option>
-        <option value="run3" {'selected' if _qp_panel=='run3' else ''}>(2001-25)_April26</option>
-        <option value="us_av_2024" {'selected' if _qp_panel=='us_av_2024' else ''}>US S&amp;P Sample</option>
-    </select>
+    <form method="get" action="" style="display:inline;margin:0;padding:0;">
+        <select name="panel" onchange="this.form.submit()"
+            style="background:{_header_bg};color:{_header_text};border:1px solid #0D9488;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;min-width:185px;">
+            <option value="latest" {'selected' if _qp_panel=='latest' else ''}>Latest (2001–present)</option>
+            <option value="thesis" {'selected' if _qp_panel=='thesis' else ''}>Thesis (2001–2024)</option>
+            <option value="run3" {'selected' if _qp_panel=='run3' else ''}>(2001-25)_April26</option>
+            <option value="us_av_2024" {'selected' if _qp_panel=='us_av_2024' else ''}>US S&amp;P Sample</option>
+        </select>
+    </form>
     <span style="white-space:nowrap;"><strong>{_display_name}</strong>&nbsp;&middot;&nbsp;{_role_display}</span>
     <span style="margin-left:auto; color:{_header_sub}; font-size:14px; white-space:nowrap;">{_now_str}</span>
     <button
@@ -356,9 +357,5 @@ button[data-testid="collapsedControl"] {{
 # Re-affirm panel in session_state and filters after sidebar may have touched year_range.
 st.session_state["panel_mode"] = _qp_panel
 st.session_state.filters["panel_mode"] = _qp_panel
-
-# Write panel param back to URL on every render so it survives Streamlit page
-# navigation and Cloud Run session resets.
-st.query_params["panel"] = _qp_panel
 
 nav.run()
