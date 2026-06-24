@@ -82,16 +82,27 @@ from helpers import ensure_session_state, is_india_panel
 
 db.ensure_app_tables()  # idempotent — creates audit_log / user_preferences / user_model_runs if missing
 
-# ── Restore saved preferences before session state defaults are set ──
+# ── Panel resolution: URL param is always the source of truth ──
+# Read the panel from the URL FIRST, before anything else touches session_state.
+# This prevents DB-loaded stale prefs from overriding the user's dropdown choice.
+_panel_opts = ["latest", "thesis", "run3", "us_av_2024"]
+_panel_labels_map = {
+    "latest":     "Latest (2001–present)",
+    "thesis":     "Thesis (2001–2024)",
+    "run3":       "(2001-25)_April26",
+    "us_av_2024": "US S&P Sample",
+}
+_qp_from_url = st.query_params.get("panel", None)
+if _qp_from_url in _panel_opts:
+    st.session_state["panel_mode"] = _qp_from_url
+elif "panel_mode" not in st.session_state:
+    st.session_state["panel_mode"] = "run3"
+_qp_panel = st.session_state["panel_mode"]
+
+# ── Restore saved preferences (theme only — panel is URL-driven, filters are panel-derived) ──
 if "prefs_loaded" not in st.session_state:
     _saved = db.load_user_prefs(_username, "app")
     if _saved:
-        # Skip "latest" — it was the old system default; users who had it saved
-        # should reset to the new default "run3" rather than keeping the stale pref.
-        if "panel_mode" in _saved and _saved["panel_mode"] != "latest":
-            st.session_state["panel_mode"] = _saved["panel_mode"]
-        if "filters" in _saved:
-            st.session_state["filters"] = _saved["filters"]
         if "theme" in _saved:
             st.session_state["theme"] = _saved["theme"]
     st.session_state["prefs_loaded"] = True
@@ -103,19 +114,13 @@ if "login_logged" not in st.session_state:
 # ── Initialize session state defaults (shared with every page) ──
 ensure_session_state()
 
-# ── Panel selector constants ──
-_panel_opts = ["latest", "thesis", "run3", "us_av_2024"]
-_panel_labels_map = {
-    "latest":     "Latest (2001–present)",
-    "thesis":     "Thesis (2001–2024)",
-    "run3":       "(2001-25)_April26",
-    "us_av_2024": "US S&P Sample",
-}
-# URL param takes priority over saved pref so panel changes work identically on all deployments
-_qp_from_url = st.query_params.get("panel", None)
-if _qp_from_url in _panel_opts:
-    st.session_state["panel_mode"] = _qp_from_url
-_qp_panel = st.session_state.get("panel_mode", "run3")
+# ── Sync year_range and filters to the active panel BEFORE the sidebar slider renders ──
+# Must happen here — after ensure_session_state() creates filters{} but before the slider widget.
+if st.session_state.filters.get("_last_panel") != _qp_panel:
+    _yr_init_min, _yr_init_max = db.get_year_range(_qp_panel)
+    st.session_state.filters["year_range"] = (_yr_init_min, _yr_init_max)
+    st.session_state.filters["_last_panel"] = _qp_panel
+st.session_state.filters["panel_mode"] = _qp_panel
 
 # ── Sidebar: Global filters ──
 from helpers import PANEL_LABELS as panel_label_map
@@ -201,12 +206,10 @@ with st.sidebar:
     # if db.is_cmie_lab_enabled():
     #     render_cmie_sidebar_block(key_prefix="cmie_sidebar")
 
-    # Auto-save sidebar state for this user (panel, filters, theme)
+    # Auto-save theme preference (panel is URL-driven; filters are panel-derived, not saved)
     if _username:
         db.save_user_pref(_username, "app", {
-            "panel_mode": st.session_state.get("panel_mode", "run3"),
-            "filters":    st.session_state.get("filters", {}),
-            "theme":      st.session_state.get("theme", "light"),
+            "theme": st.session_state.get("theme", "light"),
         })
 
 # ── Navigation ──
@@ -350,17 +353,12 @@ button[data-testid="collapsedControl"] {{
 </style>
 """, unsafe_allow_html=True)
 
-# Panel already resolved from ?panel= query param or user pref at top of file.
-_panel_new = _qp_panel
-st.session_state["panel_mode"] = _panel_new
-st.session_state.filters["panel_mode"] = _panel_new
-if st.session_state.filters.get("year_range") is None or st.session_state.filters.get("_last_panel") != _panel_new:
-    _yr_min_qp, _yr_max_qp = db.get_year_range(_panel_new)
-    st.session_state.filters["year_range"] = (_yr_min_qp, _yr_max_qp)
-    st.session_state.filters["_last_panel"] = _panel_new
+# Re-affirm panel in session_state and filters after sidebar may have touched year_range.
+st.session_state["panel_mode"] = _qp_panel
+st.session_state.filters["panel_mode"] = _qp_panel
 
-# Write panel back to URL on every render so the param survives Streamlit page
-# navigation (which may clear query params) and Cloud Run session resets.
-st.query_params["panel"] = _panel_new
+# Write panel param back to URL on every render so it survives Streamlit page
+# navigation and Cloud Run session resets.
+st.query_params["panel"] = _qp_panel
 
 nav.run()
