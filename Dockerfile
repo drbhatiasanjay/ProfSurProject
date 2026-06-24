@@ -4,13 +4,12 @@ WORKDIR /app
 
 # System deps for scientific packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc g++ && \
+    build-essential gcc g++ curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Python deps — install in layers for caching
+# Install all deps except torch (torch is behind HAS_TORCH gate — graceful no-op on Cloud Run)
 COPY requirements.txt .
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir $(grep -v "^torch" requirements.txt | grep -v "^#" | grep -v "^$")
 
 # App code
 COPY . .
