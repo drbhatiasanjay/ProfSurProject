@@ -165,13 +165,6 @@ st.divider()
 # ═══════════════════════════════════════════════
 from plotly.subplots import make_subplots as _make_subplots
 
-st.markdown("### Capital Structure Determinants — Year-wise Trends")
-st.caption(
-    "Panel-average levels for each year across the full sample. "
-    "Replicates thesis Figure 5.2. Top: all four variables on a common normalized scale "
-    "(0 = historical low, 100 = historical high). Bottom: actual levels in separate panels."
-)
-
 _FIG52_VARS = {
     "leverage":      ("Leverage (%)",      PRIMARY),
     "profitability": ("Profitability (%)", SECONDARY),
@@ -189,40 +182,7 @@ _yearly52 = (
     .sort_values("year")
 )
 
-# ── A: Combined normalized chart ─────────────────────────────────────────
-_fig52_combined = go.Figure()
-for _var in _f52_keys:
-    _col = _yearly52[_var].dropna()
-    if _col.empty:
-        continue
-    _mn, _mx = _col.min(), _col.max()
-    _norm = (_yearly52[_var] - _mn) / (_mx - _mn) * 100 if _mx > _mn else _yearly52[_var] * 0 + 50
-    _actuals = _yearly52[_var].round(2).tolist()
-    _fig52_combined.add_trace(go.Scatter(
-        x=_yearly52["year"],
-        y=_norm,
-        mode="lines+markers",
-        name=_f52_labels[_var],
-        line=dict(color=_f52_colors[_var], width=2.5),
-        marker=dict(size=5),
-        customdata=_actuals,
-        hovertemplate=(
-            f"<b>{_f52_labels[_var]}</b><br>"
-            "Year: %{x}<br>"
-            "Actual: %{customdata:.2f}%<br>"
-            "Normalized: %{y:.1f}<extra></extra>"
-        ),
-    ))
-_fig52_combined.update_layout(
-    **plotly_layout("All Determinants — Normalized Trends (0–100)", height=400, year_range=filters.get("year_range"))
-)
-_fig52_combined = event_bands(_fig52_combined)
-_fig52_combined.update_yaxes(title="Relative Level (0 = lowest, 100 = highest)")
-_fig52_combined.update_xaxes(title="Year")
-st.plotly_chart(_fig52_combined, use_container_width=True, config=PLOTLY_CONFIG)
-chart_download_button(_fig52_combined, "determinants_normalized.png")
-
-# ── B: 2×2 grid — actual levels ──────────────────────────────────────────
+# ── Year-wise actual levels — 4 variables (Figure 5.2) ───────────────────
 _fig52_grid = _make_subplots(
     rows=2, cols=2,
     subplot_titles=[_f52_labels[v] for v in _f52_keys],
@@ -268,97 +228,6 @@ _fig52_grid.update_layout(**_grid_layout, showlegend=False)
 st.plotly_chart(_fig52_grid, use_container_width=True, config=PLOTLY_CONFIG)
 chart_download_button(_fig52_grid, "determinants_actual_levels.png")
 st.caption("Shaded bands: GFC (2008-09, red) · IBC 2016+ (indigo) · COVID (2020-21, amber)")
-
-# Interpretation
-_f52i, _a52i = [], []
-for _var in _f52_keys:
-    _col = _yearly52[_var].dropna()
-    if _col.empty:
-        continue
-    _start_yr = int(_yearly52.loc[_col.index[0], "year"])
-    _end_yr   = int(_yearly52.loc[_col.index[-1], "year"])
-    _start_v  = _col.iloc[0]
-    _end_v    = _col.iloc[-1]
-    _change   = _end_v - _start_v
-    _peak_yr  = int(_yearly52.loc[_col.idxmax(), "year"])
-    _f52i.append(
-        f"**{_f52_labels[_var]}**: {_start_v:.1f}% ({_start_yr}) → {_end_v:.1f}% ({_end_yr}), "
-        f"change = **{_change:+.1f}pp**. Peak: {_col.max():.1f}% in {_peak_yr}."
-    )
-_a52i.append(
-    "Leverage and profitability tend to move in opposite directions — consistent with Pecking Order Theory "
-    "(more profitable firms need less external debt)."
-)
-_a52i.append(
-    "Tangibility underpins debt capacity — rising tangibility provides collateral that supports borrowing "
-    "(Trade-off Theory)."
-)
-_render_insight_box(
-    "Figure 5.2 — Determinant Trends Over Time",
-    _f52i, _a52i,
-    "Year-wise panel averages for leverage, profitability, tangibility and dividend. "
-    "Reproduces thesis Figure 5.2 (p. 93).",
-)
-
-st.divider()
-
-# ═══════════════════════════════════════════════
-# CHANGE 2: Leverage by Stage + ANOVA
-# ═══════════════════════════════════════════════
-st.markdown("### Is Leverage Significantly Different Across Life Stages?")
-
-stage_left, stage_right = st.columns([2, 1])
-
-with stage_left:
-    # Stage-level trend lines
-    if not stage_summary.empty:
-        fig_trend = px.line(
-            stage_summary,
-            x="year", y="avg_leverage",
-            color="life_stage",
-            color_discrete_map=STAGE_COLORS,
-            category_orders={"life_stage": STAGE_ORDER},
-            labels={"avg_leverage": "Avg Leverage (%)", "year": "Year", "life_stage": "Life Stage"},
-        )
-        fig_trend.update_layout(**plotly_layout("Leverage Over Time by Life Stage", height=420, year_range=filters.get("year_range")))
-        fig_trend = event_bands(fig_trend)
-        fig_trend.update_traces(line_width=2.5)
-        st.plotly_chart(fig_trend, use_container_width=True, config=PLOTLY_CONFIG)
-        chart_download_button(fig_trend, "leverage_by_stage_trend.png")
-
-with stage_right:
-    # ANOVA test result
-    st.markdown("#### Statistical Test (ANOVA)")
-    stage_groups = [g["leverage"].dropna().values for _, g in df.groupby("life_stage")]
-    stage_groups = [g for g in stage_groups if len(g) >= 5]
-    if len(stage_groups) >= 2:
-        f_stat, p_val = stats.f_oneway(*stage_groups)
-        st.metric("F-statistic", f"{f_stat:.2f}")
-        st.metric("p-value", format_pvalue(p_val))
-        if p_val < 0.05:
-            st.success("**Yes** — leverage is significantly different across stages (p < 0.05)")
-        else:
-            st.info("No significant difference found")
-
-    # stage_means kept for interpretation narrative below
-    stage_means = df.groupby("life_stage")["leverage"].mean().reset_index()
-    stage_means.columns = ["life_stage", "avg_leverage"]
-    stage_means = stage_means.sort_values("avg_leverage", ascending=True)
-    _panel = st.session_state.get("panel_mode", "latest")
-    _has_2025 = bool((df.get("vintage", pd.Series(dtype=str)) == "cmie_2025").any()) if "vintage" in df.columns else (df["year"] == 2025).any()
-
-# Interpretation
-_f2, _a2 = [], []
-if len(stage_groups) >= 2 and p_val < 0.05:
-    highest = stage_means.iloc[-1]
-    lowest = stage_means.iloc[0]
-    _f2.append(f"ANOVA confirms leverage is **significantly different** across stages (F={f_stat:.1f}, p<0.001).")
-    _f2.append(f"**{highest['life_stage']}** firms have the highest avg leverage ({highest['avg_leverage']:.1f}%), while **{lowest['life_stage']}** have the lowest ({lowest['avg_leverage']:.1f}%).")
-    _f2.append(f"The spread is **{highest['avg_leverage'] - lowest['avg_leverage']:.1f}pp** — a substantial difference in capital structure across life stages.")
-    _a2.append("Capital structure advice must be stage-specific. A one-size-fits-all leverage target is inappropriate.")
-    _a2.append("Decline-stage firms may carry high leverage involuntarily (debt overhang) — different from Growth-stage strategic borrowing.")
-_render_insight_box("Stage Comparison — Is Leverage Different?", _f2, _a2,
-    "Tests the thesis's core hypothesis: capital structure varies systematically across corporate life stages.")
 
 st.divider()
 
@@ -423,80 +292,6 @@ _fig_pw.update_yaxes(tickfont=dict(size=10))
 st.plotly_chart(_fig_pw, use_container_width=True, config=PLOTLY_CONFIG)
 chart_download_button(_fig_pw, "pairwise_significance_matrix.png")
 
-# ── Figure 5.1 — Capital Structure Variables by Life Stage ──
-st.markdown("#### Capital Structure Variables by Life Stage (Figure 5.1)")
-st.caption(
-    "Panel-average levels of leverage, profitability, firm size and dividend across corporate "
-    "life stages in lifecycle order. Replicates thesis Figure 5.1 (p. 96)."
-)
-
-_F51_VARS = {
-    "leverage":      ("Leverage (%)",      PRIMARY),
-    "profitability": ("Profitability (%)", SECONDARY),
-    "firm_size":     ("Firm Size (log)",   ACCENT),
-    "dividend":      ("Dividend (%)",      "#8B5CF6"),
-}
-_f51_keys   = list(_F51_VARS.keys())
-_f51_labels = {k: v[0] for k, v in _F51_VARS.items()}
-_f51_colors = {k: v[1] for k, v in _F51_VARS.items()}
-
-_stage51 = (
-    df.groupby("life_stage")[_f51_keys].mean()
-    .reindex([s for s in STAGE_ORDER if s in df["life_stage"].unique()])
-    .reset_index()
-)
-
-# Chart A: combined normalized (0–100) line chart, stages on X-axis
-_fig51_combined = go.Figure()
-for _var in _f51_keys:
-    _col = _stage51[_var].dropna()
-    _mn, _mx = _col.min(), _col.max()
-    _norm = (_stage51[_var] - _mn) / (_mx - _mn) * 100 if _mx > _mn else _stage51[_var] * 0 + 50
-    _actuals = _stage51[_var].round(3).tolist()
-    _fig51_combined.add_trace(go.Scatter(
-        x=_stage51["life_stage"],
-        y=_norm,
-        mode="lines+markers",
-        name=_f51_labels[_var],
-        line=dict(color=_f51_colors[_var], width=2.5),
-        marker=dict(size=7),
-        customdata=_actuals,
-        hovertemplate=f"<b>{_f51_labels[_var]}</b><br>Stage: %{{x}}<br>Actual: %{{customdata:.3f}}<br>Normalised: %{{y:.0f}}<extra></extra>",
-    ))
-_fig51_combined.update_layout(**plotly_layout("Capital Structure by Stage — Normalised (0=min, 100=max)", height=380))
-_fig51_combined.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-_fig51_combined.update_yaxes(title="Relative Level (0 = lowest, 100 = highest)")
-_fig51_combined.update_xaxes(title="Corporate Life Stage")
-st.plotly_chart(_fig51_combined, use_container_width=True, config=PLOTLY_CONFIG)
-chart_download_button(_fig51_combined, "capital_structure_by_stage_normalized.png")
-
-# Chart B: 2×2 subplot grid — raw values per variable
-from plotly.subplots import make_subplots as _make_subplots51
-_rc51 = [(1,1),(1,2),(2,1),(2,2)]
-_fig51_grid = _make_subplots51(
-    rows=2, cols=2,
-    subplot_titles=[_f51_labels[v] for v in _f51_keys],
-    vertical_spacing=0.14, horizontal_spacing=0.1,
-)
-for (_var, (_lbl, _clr)), (_r, _c) in zip(_F51_VARS.items(), _rc51):
-    _fig51_grid.add_trace(
-        go.Bar(
-            x=_stage51["life_stage"],
-            y=_stage51[_var],
-            marker_color=[STAGE_COLORS.get(s, _clr) for s in _stage51["life_stage"]],
-            name=_lbl,
-            showlegend=False,
-            hovertemplate=f"<b>%{{x}}</b><br>{_lbl}: %{{y:.3f}}<extra></extra>",
-        ),
-        row=_r, col=_c,
-    )
-_grid51_layout = plotly_layout("Capital Structure Variables by Stage — Raw Values", height=520)
-_fig51_grid.update_layout(**_grid51_layout, showlegend=False)
-for (_r, _c) in _rc51:
-    _fig51_grid.update_xaxes(tickangle=-30, tickfont=dict(size=9), row=_r, col=_c)
-st.plotly_chart(_fig51_grid, use_container_width=True, config=PLOTLY_CONFIG)
-chart_download_button(_fig51_grid, "capital_structure_by_stage_raw.png")
-
 # Significant-pair callout badges
 if _sig_pairs:
     _pw_cols = st.columns(min(len(_sig_pairs), 5))
@@ -535,12 +330,10 @@ _apw.append(
     "leverage rises sharply as cash generation weakens and debt overhang builds."
 )
 _render_insight_box(
-    "Table 5.9 + Figure 5.1 — Pairwise Comparison & Capital Structure by Stage",
+    "Table 5.9 — Pairwise Stage Comparison",
     _fpw, _apw,
     "Red cells = significantly different mean leverage (Tukey HSD, p < 0.05). "
-    "Diagonal shows each stage's mean leverage. "
-    "Charts below replicate thesis Figure 5.1 (p. 96) — leverage, profitability, firm size and dividend "
-    "by corporate life stage in lifecycle order. Reproduces thesis Table 5.9 (p. 102).",
+    "Diagonal shows each stage's mean leverage. Reproduces thesis Table 5.9 (p. 102).",
 )
 
 st.divider()
