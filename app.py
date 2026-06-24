@@ -86,7 +86,9 @@ db.ensure_app_tables()  # idempotent — creates audit_log / user_preferences / 
 if "prefs_loaded" not in st.session_state:
     _saved = db.load_user_prefs(_username, "app")
     if _saved:
-        if "panel_mode" in _saved:
+        # Skip "latest" — it was the old system default; users who had it saved
+        # should reset to the new default "run3" rather than keeping the stale pref.
+        if "panel_mode" in _saved and _saved["panel_mode"] != "latest":
             st.session_state["panel_mode"] = _saved["panel_mode"]
         if "filters" in _saved:
             st.session_state["filters"] = _saved["filters"]
@@ -202,7 +204,7 @@ with st.sidebar:
     # Auto-save sidebar state for this user (panel, filters, theme)
     if _username:
         db.save_user_pref(_username, "app", {
-            "panel_mode": st.session_state.get("panel_mode", "latest"),
+            "panel_mode": st.session_state.get("panel_mode", "run3"),
             "filters":    st.session_state.get("filters", {}),
             "theme":      st.session_state.get("theme", "light"),
         })
@@ -356,5 +358,9 @@ if st.session_state.filters.get("year_range") is None or st.session_state.filter
     _yr_min_qp, _yr_max_qp = db.get_year_range(_panel_new)
     st.session_state.filters["year_range"] = (_yr_min_qp, _yr_max_qp)
     st.session_state.filters["_last_panel"] = _panel_new
+
+# Write panel back to URL on every render so the param survives Streamlit page
+# navigation (which may clear query params) and Cloud Run session resets.
+st.query_params["panel"] = _panel_new
 
 nav.run()

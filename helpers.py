@@ -152,9 +152,7 @@ def ensure_session_state() -> None:
     import db
 
     if "panel_mode" not in st.session_state:
-        # Dashboard/Benchmarks/Explorer default to 'latest' (incl. CMIE 2025).
-        # Econometrics/Forecasting/ML pages override to 'thesis' at their top.
-        st.session_state.panel_mode = "latest"
+        st.session_state.panel_mode = "run3"
 
     if "filters" not in st.session_state:
         yr_min, yr_max = db.get_year_range(st.session_state.panel_mode)
