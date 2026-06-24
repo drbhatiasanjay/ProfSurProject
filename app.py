@@ -208,7 +208,8 @@ with st.sidebar:
         })
 
 # ── Navigation ──
-dashboard = st.Page("pages/1_dashboard.py", title="Dashboard", icon=":material/dashboard:", default=True)
+overview  = st.Page("pages/0_overview.py",  title="Overview",   icon=":material/info:", default=True)
+dashboard = st.Page("pages/1_dashboard.py", title="Dashboard", icon=":material/dashboard:")
 benchmarks = st.Page("pages/2_peer_benchmarks.py", title="Peer Benchmarks", icon=":material/compare_arrows:")
 scenarios = st.Page("pages/3_scenarios.py", title="Scenarios", icon=":material/tune:")
 bulk_upload = st.Page("pages/4_bulk_upload.py", title="Bulk Upload", icon=":material/upload_file:")
@@ -231,7 +232,7 @@ company_navigator   = st.Page("pages/18_company_navigator.py", title="Company Na
 ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
 knowledge_graph2    = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")
 nav = st.navigation([
-    dashboard, data_explorer, benchmarks, company_navigator,
+    overview, dashboard, data_explorer, benchmarks, company_navigator,
     life_stage_dynamics, transitions,
     scenarios, econometrics, advanced_econ, interaction_effects,
     ml_models, forecasting, clustering,
