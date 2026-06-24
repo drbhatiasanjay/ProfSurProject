@@ -228,11 +228,11 @@ interaction_effects = st.Page("pages/15_interaction_effects.py", title="Interact
 
 admin_activity      = st.Page("pages/16_admin_activity.py",    title="Activity Log",        icon=":material/monitoring:")
 board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck",          icon=":material/description:")
-company_navigator   = st.Page("pages/18_company_navigator.py", title="Company Navigator",   icon=":material/explore:")
+# company_navigator = st.Page("pages/18_company_navigator.py", title="Company Navigator", icon=":material/explore:")  # temporarily hidden
 ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
 knowledge_graph2    = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")
 nav = st.navigation([
-    overview, dashboard, data_explorer, benchmarks, company_navigator,
+    overview, dashboard, data_explorer, benchmarks,
     life_stage_dynamics, transitions,
     scenarios, econometrics, advanced_econ, interaction_effects,
     ml_models, forecasting, clustering,
