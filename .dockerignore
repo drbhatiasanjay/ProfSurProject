@@ -1,12 +1,53 @@
+# Python artifacts
 __pycache__
 *.pyc
-.git
-.cache
-.memsearch
-test_screenshots
-demo
-*.dta
-test_*.py
-demo_*.py
+*.pyo
 .python-version
+
+# Git / IDE
+.git
+.gitignore
+.infisical.json
+.playwright-mcp/
+.memsearch
+.cache
+
+# Large data archives — never needed at runtime
+*.zip
+*.bt
+*.dta
+*.xml
+*.pdf
+
+# Base64 image dumps
+_*_b64.txt
+
+# Debug / screenshot artifacts
+debug_*.png
+gcp_*.png
+verify_frames/
+
+# Build output directories
+batch_result/
+batch_result03/
+unpacked/
+graphify-out/
+demo_output/
+cmie_validation/
+DataV2/
+
+# OCaml service (accessed via HTTP, not needed in Python container)
+lifecycle-ontology/
+
+# Dev / CI files not needed at runtime
+tests/
+docs/
+scripts/
+*.md
 runtime.txt
+docker-compose.yml
+FORK_WORKFLOW.md
+
+# Misc
+data.json
+table*.xml
