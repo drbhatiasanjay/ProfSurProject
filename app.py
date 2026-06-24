@@ -101,36 +101,24 @@ if "login_logged" not in st.session_state:
 # ── Initialize session state defaults (shared with every page) ──
 ensure_session_state()
 
-# ── Panel mode — resolved by sidebar selectbox below ──
-# st.query_params does NOT receive URL params set by window.location.href in Streamlit MPA mode.
-# Panel is now driven directly by a native st.selectbox in the sidebar.
+# ── Panel selector constants ──
+_panel_opts = ["latest", "thesis", "run3", "us_av_2024"]
+_panel_labels_map = {
+    "latest":     "Latest (2001–present)",
+    "thesis":     "Thesis (2001–2024)",
+    "run3":       "Run 3 – Stata",
+    "us_av_2024": "US S&P Sample",
+}
+# URL param takes priority over saved pref so panel changes work identically on all deployments
+_qp_from_url = st.query_params.get("panel", None)
+if _qp_from_url in _panel_opts:
+    st.session_state["panel_mode"] = _qp_from_url
 _qp_panel = st.session_state.get("panel_mode", "latest")
 
 # ── Sidebar: Global filters ──
 from helpers import PANEL_LABELS as panel_label_map
 with st.sidebar:
     st.markdown("# LifeCycle Leverage")
-
-    # ── Dataset / Panel selector ──
-    _panel_opts = ["latest", "thesis", "run3", "us_av_2024"]
-    _panel_labels_map = {
-        "latest":     "Latest (2001–present)",
-        "thesis":     "Thesis (2001–2024)",
-        "run3":       "Run 3 – Stata",
-        "us_av_2024": "US S&P Sample",
-    }
-    _qp_panel = st.selectbox(
-        "Dataset",
-        options=_panel_opts,
-        format_func=_panel_labels_map.get,
-        index=_panel_opts.index(st.session_state.get("panel_mode", "latest")),
-    )
-    st.session_state.panel_mode = _qp_panel
-    st.session_state.filters["panel_mode"] = _qp_panel
-    if st.session_state.filters.get("year_range") is None or st.session_state.filters.get("_last_panel") != _qp_panel:
-        _yr_min_qp, _yr_max_qp = db.get_year_range(_qp_panel)
-        st.session_state.filters["year_range"] = (_yr_min_qp, _yr_max_qp)
-        st.session_state.filters["_last_panel"] = _qp_panel
     st.divider()
 
     companies_df = db.get_companies(_qp_panel)
@@ -288,18 +276,14 @@ st.markdown(f"""
     font-family: inherit;
 ">
     <span style="font-weight:700; color:#0D9488; font-size:18px; white-space:nowrap;">LifeCycle Leverage<span style="font-size:11px;color:#6B7280;font-weight:400;margin-left:6px;">v{_APP_VERSION}</span></span>
-    <span style="color:{_header_sub}; white-space:nowrap; display:flex; align-items:center; gap:0.4rem;">
-        Dataset:
-        <span style="
-            border: 1px solid #D1D5DB;
-            border-radius: 6px;
-            padding: 4px 10px;
-            font-size: 13px;
-            font-weight: 600;
-            background: {_header_bg};
-            color: {_header_text};
-        ">{_panel_display}</span>
-    </span>
+    <select id="lc-dataset-sel"
+        onchange="(function(v){{var p=new URLSearchParams(window.location.search);p.set('panel',v);window.location.href='?'+p.toString();}})(this.value)"
+        style="background:{_header_bg};color:{_header_text};border:1px solid #0D9488;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;min-width:185px;">
+        <option value="latest" {'selected' if _qp_panel=='latest' else ''}>Latest (2001–present)</option>
+        <option value="thesis" {'selected' if _qp_panel=='thesis' else ''}>Thesis (2001–2024)</option>
+        <option value="run3" {'selected' if _qp_panel=='run3' else ''}>Run 3 – Stata</option>
+        <option value="us_av_2024" {'selected' if _qp_panel=='us_av_2024' else ''}>US S&amp;P Sample</option>
+    </select>
     <span style="white-space:nowrap;"><strong>{_display_name}</strong>&nbsp;&middot;&nbsp;{_role_display}</span>
     <span style="margin-left:auto; color:{_header_sub}; font-size:14px; white-space:nowrap;">{_now_str}</span>
     <button
@@ -356,6 +340,20 @@ button[data-testid="collapsedControl"] {{
     z-index: 1000002 !important;
     left: 0.5rem !important;
 }}
+/* Ensure any popover/dropdown appears above the fixed navbar */
+[data-baseweb="popover"] {{
+    z-index: 1000010 !important;
+}}
 </style>
 """, unsafe_allow_html=True)
+
+# Panel already resolved from ?panel= query param or user pref at top of file.
+_panel_new = _qp_panel
+st.session_state["panel_mode"] = _panel_new
+st.session_state.filters["panel_mode"] = _panel_new
+if st.session_state.filters.get("year_range") is None or st.session_state.filters.get("_last_panel") != _panel_new:
+    _yr_min_qp, _yr_max_qp = db.get_year_range(_panel_new)
+    st.session_state.filters["year_range"] = (_yr_min_qp, _yr_max_qp)
+    st.session_state.filters["_last_panel"] = _panel_new
+
 nav.run()
