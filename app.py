@@ -82,22 +82,19 @@ from helpers import ensure_session_state, is_india_panel
 
 db.ensure_app_tables()  # idempotent — creates audit_log / user_preferences / user_model_runs if missing
 
-# ── Panel resolution: URL param is always the source of truth ──
-# Read the panel from the URL FIRST, before anything else touches session_state.
-# This prevents DB-loaded stale prefs from overriding the user's dropdown choice.
-_panel_opts = ["latest", "thesis", "run3", "us_av_2024"]
+# ── Panel options ──
+_panel_opts = ["run3", "latest", "thesis", "us_av_2024"]
 _panel_labels_map = {
+    "run3":       "(2001-25)_April26",
     "latest":     "Latest (2001–present)",
     "thesis":     "Thesis (2001–2024)",
-    "run3":       "(2001-25)_April26",
     "us_av_2024": "US S&P Sample",
 }
-_qp_from_url = st.query_params.get("panel", None)
-if _qp_from_url in _panel_opts:
-    st.session_state["panel_mode"] = _qp_from_url
-elif "panel_mode" not in st.session_state:
-    st.session_state["panel_mode"] = "run3"
-_qp_panel = st.session_state["panel_mode"]
+# Honour ?panel= URL param on first load (shareability); sidebar selectbox owns it after that.
+if "panel_mode" not in st.session_state:
+    _url_panel = st.query_params.get("panel", "run3")
+    st.session_state["panel_mode"] = _url_panel if _url_panel in _panel_opts else "run3"
+# _qp_panel is defined after the sidebar selectbox renders (see sidebar block below)
 
 # ── Restore saved preferences (theme only — panel is URL-driven, filters are panel-derived) ──
 if "prefs_loaded" not in st.session_state:
@@ -114,19 +111,31 @@ if "login_logged" not in st.session_state:
 # ── Initialize session state defaults (shared with every page) ──
 ensure_session_state()
 
-# ── Sync year_range and filters to the active panel BEFORE the sidebar slider renders ──
-# Must happen here — after ensure_session_state() creates filters{} but before the slider widget.
-if st.session_state.filters.get("_last_panel") != _qp_panel:
-    _yr_init_min, _yr_init_max = db.get_year_range(_qp_panel)
-    st.session_state.filters["year_range"] = (_yr_init_min, _yr_init_max)
-    st.session_state.filters["_last_panel"] = _qp_panel
-st.session_state.filters["panel_mode"] = _qp_panel
-
 # ── Sidebar: Global filters ──
 from helpers import PANEL_LABELS as panel_label_map
 with st.sidebar:
     st.markdown("# LifeCycle Leverage")
     st.divider()
+
+    # Dataset selectbox — native Streamlit widget triggers proper rerun + state propagation
+    _panel_display_opts = ["(2001-25)_April26", "Latest (2001–present)", "Thesis (2001–2024)", "US S&P Sample"]
+    _panel_keys         = ["run3",               "latest",                "thesis",              "us_av_2024"]
+    _cur_idx = _panel_keys.index(st.session_state.get("panel_mode", "run3"))
+    _selected_label = st.selectbox(
+        "Dataset",
+        options=_panel_display_opts,
+        index=_cur_idx,
+        key="panel_selectbox",
+    )
+    _qp_panel = _panel_keys[_panel_display_opts.index(_selected_label)]
+    st.session_state["panel_mode"] = _qp_panel
+
+    # Sync year_range BEFORE the year slider (must happen after selectbox sets _qp_panel)
+    if st.session_state.filters.get("_last_panel") != _qp_panel:
+        _yr_init_min, _yr_init_max = db.get_year_range(_qp_panel)
+        st.session_state.filters["year_range"] = (_yr_init_min, _yr_init_max)
+        st.session_state.filters["_last_panel"] = _qp_panel
+    st.session_state.filters["panel_mode"] = _qp_panel
 
     companies_df = db.get_companies(_qp_panel)
     all_stages = db.get_life_stages()
@@ -282,15 +291,9 @@ st.markdown(f"""
     font-family: inherit;
 ">
     <span style="font-weight:700; color:#0D9488; font-size:18px; white-space:nowrap;">LifeCycle Leverage<span style="font-size:11px;color:#6B7280;font-weight:400;margin-left:6px;">v{_APP_VERSION}</span></span>
-    <form method="get" action="" style="display:inline;margin:0;padding:0;">
-        <select name="panel" onchange="this.form.submit()"
-            style="background:{_header_bg};color:{_header_text};border:1px solid #0D9488;border-radius:6px;padding:5px 10px;font-size:14px;cursor:pointer;min-width:185px;">
-            <option value="latest" {'selected' if _qp_panel=='latest' else ''}>Latest (2001–present)</option>
-            <option value="thesis" {'selected' if _qp_panel=='thesis' else ''}>Thesis (2001–2024)</option>
-            <option value="run3" {'selected' if _qp_panel=='run3' else ''}>(2001-25)_April26</option>
-            <option value="us_av_2024" {'selected' if _qp_panel=='us_av_2024' else ''}>US S&amp;P Sample</option>
-        </select>
-    </form>
+    <span style="background:#0D9488;color:white;border-radius:6px;padding:5px 12px;font-size:14px;font-weight:600;white-space:nowrap;">
+        &#128202;&nbsp;{_panel_labels_map.get(_qp_panel, _qp_panel)}
+    </span>
     <span style="white-space:nowrap;"><strong>{_display_name}</strong>&nbsp;&middot;&nbsp;{_role_display}</span>
     <span style="margin-left:auto; color:{_header_sub}; font-size:14px; white-space:nowrap;">{_now_str}</span>
     <button

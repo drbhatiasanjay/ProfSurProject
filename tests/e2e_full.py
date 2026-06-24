@@ -42,7 +42,7 @@ ALL_PAGES = [
     ("Bulk Upload",           ["viewer"]),
     ("Data Explorer",         []),
     ("Settings",              []),
-    ("Knowledge Graph",       []),
+    # Know. GraphV1 and Know. GraphV2 are WIP — excluded from role-access checks
     ("Econometrics Lab",      []),
     ("ML Models",             []),
     ("Forecasting",           []),
@@ -254,7 +254,7 @@ def test_guest_form_submit_shows_dashboard_and_name():
 # ── Group 3: Header bar ───────────────────────────────────────────────────────
 
 def test_header_shows_dataset_label():
-    """Header bar column 1 shows 'Dataset:' with the active panel name."""
+    """Navbar shows active panel name; sidebar has 'Dataset' selectbox label."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         ctx = browser.new_context(viewport={"width": 1480, "height": 900})
@@ -262,7 +262,7 @@ def test_header_shows_dataset_label():
         assert _login(page, "sbhatia", USERS["sbhatia"]["password"])
         body = _body(page)
         browser.close()
-    assert "dataset:" in body, "Header bar should show 'Dataset:' label"
+    assert "dataset" in body, "Sidebar Dataset selectbox label should appear in page"
 
 
 def test_header_sign_out_in_main_not_sidebar():
@@ -339,40 +339,66 @@ def test_role_access_all_16_pages(username, role):
 # ── Group 5: Preference persistence ──────────────────────────────────────────
 
 def test_panel_preference_persists_across_login():
-    """sbhatia switches to Thesis panel → logout → login → header still shows Thesis."""
+    """Panel mode is session-only (not persisted to DB by design — removing DB persistence
+    fixed the stale-pref contamination bug). Verifies: selectbox changes panel within a
+    session; fresh login resets to default run3 panel."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        ctx = browser.new_context(viewport={"width": 1480, "height": 900})
-        page = ctx.new_page()
 
-        assert _login(page, "sbhatia", USERS["sbhatia"]["password"]), "First login failed"
+        # Session 1: login → switch to Thesis → verify it shows
+        ctx1 = browser.new_context(viewport={"width": 1480, "height": 900})
+        page1 = ctx1.new_page()
+        assert _login(page1, "sbhatia", USERS["sbhatia"]["password"]), "First login failed"
 
-        # Click the Thesis panel radio in the sidebar
         try:
-            thesis_opt = page.locator("section[data-testid='stSidebar']").get_by_text(
-                re.compile(r"thesis", re.IGNORECASE)
-            ).first
-            thesis_opt.click()
-            time.sleep(RENDER_WAIT + 3)  # extra time for rerun + DB write
+            sb = page1.locator("section[data-testid='stSidebar']")
+            sb.locator("[data-testid='stSelectbox']").first.click()
+            time.sleep(1)
+            page1.get_by_role("option", name=re.compile(r"thesis", re.IGNORECASE)).click()
+            time.sleep(RENDER_WAIT + 2)
         except Exception as exc:
             browser.close()
-            pytest.skip(f"Could not locate Thesis panel radio: {exc}")
+            pytest.skip(f"Could not locate Dataset selectbox: {exc}")
 
-        body_after_change = _body(page)
-        thesis_visible_before_logout = "thesis" in body_after_change
+        thesis_visible = "thesis" in _body(page1)
+        ctx1.close()  # close context → clears all session cookies
 
-        _logout(page)
-        time.sleep(3)
-
-        # Re-login (new session — prefs should be restored from user_preferences)
-        assert _login(page, "sbhatia", USERS["sbhatia"]["password"]), "Re-login failed"
-        body_after_relogin = _body(page)
-        thesis_restored = "thesis" in body_after_relogin
+        # Session 2: fresh login → default panel should be run3
+        ctx2 = browser.new_context(viewport={"width": 1480, "height": 900})
+        page2 = ctx2.new_page()
+        assert _login(page2, "sbhatia", USERS["sbhatia"]["password"]), "Re-login failed"
+        default_restored = "(2001-25)" in _body(page2)
+        ctx2.close()
 
         browser.close()
 
-    assert thesis_visible_before_logout, "Thesis panel should be reflected in header after clicking"
-    assert thesis_restored, "Thesis panel preference should be restored on next login"
+    assert thesis_visible, "Thesis panel should be reflected in page after selectbox change"
+    assert default_restored, "Default panel (2001-25)_April26 should show on fresh login"
+
+
+def test_panel_switch_refreshes_dashboard_data():
+    """Switching Dataset selectbox to 'US S&P Sample' must change company count on Dashboard."""
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_context(viewport={"width": 1480, "height": 900}).new_page()
+        assert _login(page, "sbhatia", USERS["sbhatia"]["password"]), "Login failed"
+        page.goto(f"{BASE}/dashboard")
+        time.sleep(RENDER_WAIT)
+
+        body_run3 = _body(page)
+        assert "400" in body_run3, f"Expected 400 companies for run3 panel; got: {body_run3[:400]}"
+
+        # Switch panel to US S&P Sample via sidebar Dataset selectbox
+        sb = page.locator("section[data-testid='stSidebar']")
+        sb.locator("[data-testid='stSelectbox']").first.click()
+        time.sleep(1)
+        page.get_by_role("option", name=re.compile(r"us s&p|us.*sample", re.IGNORECASE)).click()
+        time.sleep(RENDER_WAIT + 2)
+
+        body_us = _body(page)
+        assert "400" not in body_us, "Dashboard still shows run3 data after switching to US S&P Sample"
+        assert "24" in body_us, f"Expected 24 companies for US S&P panel; got: {body_us[:400]}"
+        browser.close()
 
 
 # ── Group 6: Activity Log page functionality ──────────────────────────────────
@@ -402,7 +428,7 @@ def test_activity_log_accessible_for_admin_with_kpis():
 
 
 def test_activity_log_charts_and_transaction_log():
-    """Activity Log shows Page Popularity chart and Transaction Log section."""
+    """Activity Log shows Page Popularity chart, login events, and Download CSV."""
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         ctx = browser.new_context(viewport={"width": 1480, "height": 900})
@@ -418,9 +444,9 @@ def test_activity_log_charts_and_transaction_log():
         body = _body(page)
         browser.close()
 
-    assert "page popularity" in body,   "Page Popularity chart section should be present"
-    assert "transaction log" in body,   "Transaction Log section should be present"
-    assert "download csv"    in body,   "Download CSV button should be present"
+    assert "page popularity" in body,    "Page Popularity chart section should be present"
+    assert "recent login events" in body, "Recent Login Events section should be present"
+    assert "download csv"    in body,    "Download CSV button should be present"
 
 
 def test_activity_log_shows_guest_display_name():
