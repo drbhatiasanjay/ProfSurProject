@@ -32,10 +32,10 @@ with st.sidebar:
     )
     backend = st.radio(
         "Backend",
-        ["ollama", "anthropic"],
+        ["anthropic", "ollama"],
         index=0,
         key="p19_backend",
-        help="Ollama: local, zero data egress. Anthropic: cloud API (requires key in secrets.toml).",
+        help="Anthropic: cloud API (default, requires ANTHROPIC_API_KEY in secrets.toml). Ollama: local, zero data egress.",
     )
     if mode == "CFO":
         company_code = st.number_input(
