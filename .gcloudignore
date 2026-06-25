@@ -4,3 +4,46 @@
 # secrets.toml is gitignored to protect it from VCS but must be bundled
 # with the Cloud Run source upload so Streamlit can read st.secrets.
 !.streamlit/secrets.toml
+
+# ── Large files NOT needed at runtime — excluded to speed up source upload ──
+
+# Presentations / Office
+*.pptx
+*.pdf
+
+# Raw data dumps and archives (already compiled into capital_structure.db)
+*.zip
+*.dta
+*.bt
+
+# Debug screenshots and base64 exports
+debug_*.png
+gcp_*.png
+_*_b64.txt
+
+# Batch results, unpacked zips, verification frames
+batch_result/
+batch_result*/
+unpacked/
+verify_frames/
+
+# Knowledge graph rendered output
+graphify-out/
+
+# Playwright browser automation cache
+.playwright-mcp/
+
+# One-off diagnostic/verification scripts
+_probe_db.py
+scripts/
+
+# Large one-off data files
+cmie_data.zip
+data.json
+nf400yrs2001_25.dta
+
+# Extracted XML fragments
+table*.xml
+
+# Planning docs
+docs/plans/

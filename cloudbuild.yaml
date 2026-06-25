@@ -1,0 +1,41 @@
+# cloudbuild.yaml — Docker layer caching for faster Cloud Run deploys.
+# Used automatically by: gcloud run deploy lifecycle-leverage --source . ...
+#
+# Strategy: pull the previous :latest image from Artifact Registry before building.
+# Docker reuses cached layers (especially the pip install layer) when
+# requirements.txt is unchanged — saving 4-5 min on typical app-code-only deploys.
+
+substitutions:
+  _CACHE_IMAGE: 'us-east1-docker.pkg.dev/tempproject-462219/cloud-run-source-deploy/lifecycle-leverage:latest'
+
+steps:
+  # 1. Pull previous image as cache source (safe to fail on first deploy)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args: ['-c', 'docker pull $_CACHE_IMAGE || true']
+
+  # 2. Build — reuse cached layers, tag both with build ID and :latest
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - '--cache-from'
+      - '$_CACHE_IMAGE'
+      - '-t'
+      - '$_IMAGE_NAME'
+      - '-t'
+      - '$_CACHE_IMAGE'
+      - .
+
+  # 3. Push the versioned image (Cloud Run picks this up for deployment)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [push, '$_IMAGE_NAME']
+
+  # 4. Push :latest so next build can use it as cache
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [push, '$_CACHE_IMAGE']
+
+images:
+  - '$_IMAGE_NAME'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
