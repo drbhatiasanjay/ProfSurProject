@@ -1,17 +1,8 @@
-FROM python:3.11-slim
+FROM us-east1-docker.pkg.dev/tempproject-462219/cloud-run-source-deploy/lifecycle-leverage-base:latest
 
 WORKDIR /app
 
-# System deps for scientific packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential gcc g++ curl && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install all deps except torch (torch is behind HAS_TORCH gate — graceful no-op on Cloud Run)
-COPY requirements.txt .
-RUN pip install --no-cache-dir $(grep -v "^torch" requirements.txt | grep -v "^#" | grep -v "^$")
-
-# App code
+# App code only — all Python deps are pre-baked in the base image
 COPY . .
 
 # Streamlit config

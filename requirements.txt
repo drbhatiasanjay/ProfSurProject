@@ -21,7 +21,6 @@ kaleido>=0.2.1
 pyvis>=0.3.2
 streamlit-plotly-events>=0.0.6
 streamlit-agraph>=0.0.45
-pytest>=8.0
 ollama>=0.6.2
 anthropic>=0.25
 tiktoken>=0.5

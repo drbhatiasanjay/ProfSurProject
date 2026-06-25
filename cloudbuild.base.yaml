@@ -1,0 +1,26 @@
+# cloudbuild.base.yaml — builds and pushes the pre-baked dependency image.
+# Run this ONCE, and whenever requirements.txt changes:
+#   gcloud builds submit --config cloudbuild.base.yaml . --project tempproject-462219
+#
+# After this completes, normal deploys skip pip install entirely (~30s build).
+
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - '-f'
+      - 'Dockerfile.base'
+      - '-t'
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/lifecycle-leverage-base:latest'
+      - .
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - push
+      - 'us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/lifecycle-leverage-base:latest'
+
+images:
+  - 'us-east1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/lifecycle-leverage-base:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
