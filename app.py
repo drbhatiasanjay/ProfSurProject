@@ -245,15 +245,19 @@ board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck
 # company_navigator = st.Page("pages/18_company_navigator.py", title="Company Navigator", icon=":material/explore:")  # temporarily hidden
 ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
 # knowledge_graph2  = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")  # temporarily hidden
-nav = st.navigation([
-    overview, dashboard, data_explorer, benchmarks,
-    life_stage_dynamics, transitions,
-    scenarios, econometrics, advanced_econ, interaction_effects,
-    ml_models, forecasting, clustering,
-    ai_assistant, board_deck,
-    admin_activity, settings,
-    workbench, bulk_upload,
-])
+nav = st.navigation({
+    "": [
+        overview, dashboard, data_explorer, benchmarks,
+        life_stage_dynamics, transitions,
+        scenarios, econometrics, advanced_econ, interaction_effects,
+        ml_models, forecasting, clustering,
+        ai_assistant, board_deck,
+    ],
+    "Admin & Tools": [
+        admin_activity, settings,
+        workbench, bulk_upload,
+    ],
+})
 
 # ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
 from datetime import datetime, timezone as _tz
