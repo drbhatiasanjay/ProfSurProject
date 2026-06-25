@@ -20,6 +20,12 @@ def prepare_firm_features(df, feature_cols=None):
         feature_cols = ["leverage", "profitability", "tangibility", "tax",
                         "log_size", "tax_shield", "cash_holdings"]
 
+    # Only use columns that exist in the dataframe and have at least some non-null values
+    feature_cols = [c for c in feature_cols if c in df.columns and df[c].notna().any()]
+
+    if not feature_cols:
+        raise ValueError("No usable feature columns found in this dataset for clustering.")
+
     agg = df.groupby("company_code")[feature_cols].mean().dropna()
 
     # Add stage transition count
@@ -39,6 +45,8 @@ def prepare_firm_features(df, feature_cols=None):
     if "company_name" in df.columns:
         names = df.groupby("company_code")["company_name"].first()
         agg["company_name"] = names
+
+    agg = agg.dropna(subset=feature_cols)
 
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(agg[feature_cols])

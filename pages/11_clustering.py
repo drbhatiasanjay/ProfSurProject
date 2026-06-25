@@ -50,7 +50,19 @@ if panel_df.empty:
     st.stop()
 
 # Prepare firm features
-firm_df, X_scaled, scaler, feat_names = prepare_firm_features(panel_df)
+try:
+    firm_df, X_scaled, scaler, feat_names = prepare_firm_features(panel_df)
+except ValueError as _ve:
+    st.warning(f"Cannot cluster this dataset: {_ve}")
+    st.stop()
+
+if len(firm_df) < 10:
+    st.warning(
+        f"Only {len(firm_df)} firm(s) have complete feature data — not enough to cluster. "
+        "Try switching to the Thesis or (2001-25)_April26 dataset."
+    )
+    st.stop()
+
 st.caption(f"Clustering {len(firm_df)} firms on {len(feat_names)} features")
 
 # Find optimal K
