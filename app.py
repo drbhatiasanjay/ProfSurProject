@@ -250,8 +250,9 @@ nav = st.navigation([
     life_stage_dynamics, transitions,
     scenarios, econometrics, advanced_econ, interaction_effects,
     ml_models, forecasting, clustering,
-    workbench, bulk_upload, ai_assistant, board_deck,
+    ai_assistant, board_deck,
     admin_activity, settings,
+    workbench, bulk_upload,
 ])
 
 # ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
