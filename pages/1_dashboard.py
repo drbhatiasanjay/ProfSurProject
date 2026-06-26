@@ -261,9 +261,13 @@ for _x0, _x1, _fc, _lbl in _evt52:
 
 _grid_layout = plotly_layout("Year-wise Averages — Actual Levels", height=600)
 _fig52_grid.update_layout(**_grid_layout, showlegend=False)
+st.markdown("### Year-wise Averages — Actual Levels")
+st.caption(
+    "Annual mean Leverage, Profitability, Tangibility and Dividend across all firms in the filtered panel. "
+    "Shaded bands: GFC (2008-09, red) · IBC 2016+ (indigo) · COVID (2020-21, amber)"
+)
 st.plotly_chart(_fig52_grid, use_container_width=True, config=PLOTLY_CONFIG)
 chart_download_button(_fig52_grid, "determinants_actual_levels.png")
-st.caption("Shaded bands: GFC (2008-09, red) · IBC 2016+ (indigo) · COVID (2020-21, amber)")
 
 st.divider()
 
@@ -271,7 +275,7 @@ st.divider()
 # Figure 5.1 — Stage-wise Capital Structure Profile
 # Replicates thesis Figure 5.1 (p. 89)
 # ═══════════════════════════════════════════════
-st.markdown("### Figure 5.1 — Stage-wise Capital Structure Profile")
+st.markdown("### Stage-wise Capital Structure Profile")
 st.caption(
     "Mean Leverage, Log Size of Assets, Profitability and Dividend Payout by corporate life stage. "
     "Replicates thesis Figure 5.1 (p. 89). Switch to **Thesis panel** for published values."
@@ -362,7 +366,7 @@ st.divider()
 # Figure 5.2 — Year-wise Capital Structure Trends
 # Replicates thesis Figure 5.2 (p. 93) — bar chart version
 # ═══════════════════════════════════════════════
-st.markdown("### Figure 5.2 — Year-wise Capital Structure Trends")
+st.markdown("### Year-wise Capital Structure Trends")
 st.caption(
     "Mean Leverage, Log Size of Assets, Profitability and Dividend Payout by fiscal year. "
     "Replicates thesis Figure 5.2 (p. 93). Each bar represents one fiscal year."
@@ -457,7 +461,7 @@ st.divider()
 # Figure 8.3 — Leverage vs Profitability & Tangibility
 # Decline and Decay stages only — Replicates thesis Figure 8.3
 # ═══════════════════════════════════════════════
-st.markdown("### Figure 8.3 — Leverage vs Profitability and Tangibility")
+st.markdown("### Leverage vs Profitability and Tangibility")
 st.caption(
     "Individual firm-year observations with OLS regression lines for Decline and Decay stages. "
     "Replicates thesis Figure 8.3. Y-axis capped at 150% to match thesis view."
