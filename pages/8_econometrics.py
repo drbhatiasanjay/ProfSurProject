@@ -505,7 +505,7 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
 
     # ── AI Deep Interpretation ──
     with st.expander("🤖 AI Deep Interpretation", expanded=False):
-        _ai_key = f"econ_ai_{model_choice}_{panel_mode}"
+        _ai_key = f"econ_ai_{model_choice}_{_panel}"
         if st.button("Generate AI Analysis", key="p8_ai_gen"):
             _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
             _citations = st.session_state.get("p19_citations", False)
@@ -515,7 +515,7 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
                         best,
                         model_type=model_choice,
                         hausman=hausman_data,
-                        panel_mode=panel_mode,
+                        panel_mode=_panel,
                         role=_user_role,
                         citations=_citations,
                     )
