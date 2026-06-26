@@ -262,20 +262,37 @@ def classify_query(query: str) -> Literal["factual", "analytical", "hybrid"]:
         One of 'factual', 'analytical', 'hybrid'.
     """
     q = query.lower()
-    factual_keywords = [
-        "what is", "how much", "what's the", "leverage of", "roa of",
-        "value of", "show me", "list", "year",
+
+    # Queries that need data + interpretation (always Sonnet)
+    hybrid_triggers = [
+        "compare", "contrast", "versus", " vs ", "between",
+        "trends ", "trend between", "trend during", "trend in ",
+        "diverge", "divergence", "post-ibc", "post ibc", "gfc", "covid",
+        "driven by", "what drove", "why did", "correlat",
     ]
+    if any(kw in q for kw in hybrid_triggers):
+        return "hybrid"
+
+    # Pure interpretation — no data lookup needed
     analytical_keywords = [
-        "why", "explain", "compare", "analyze", "interpret",
-        "recommend", "should", "would", "suggest",
+        "why", "explain", "analyze", "analyse", "interpret", "significance",
+        "implication", "economic significance", "recommend", "should", "would",
+        "suggest", "mechanism", "theory", "preferred over", "advantage of",
     ]
+
+    # Lookup / counting / retrieval
+    factual_keywords = [
+        "what is", "how much", "what's the", "how many", "which ",
+        "leverage of", "roa of", "value of", "show me", "list",
+        "what year", "when did", "what years",
+    ]
+
     has_factual = any(kw in q for kw in factual_keywords)
     has_analytical = any(kw in q for kw in analytical_keywords)
 
     if has_factual and not has_analytical:
         return "factual"
-    if has_analytical and not has_factual:
+    if has_analytical:
         return "analytical"
     return "hybrid"
 
