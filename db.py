@@ -150,8 +150,8 @@ def save_model_run(username: str, page: str, params: dict, summary: dict) -> Non
 
 def get_model_runs(username: str, page: str, limit: int = 20) -> "pd.DataFrame":
     return _query(
-        "SELECT ts, params, summary FROM user_model_runs"
-        " WHERE username=? AND page=? ORDER BY ts DESC LIMIT ?",
+        "SELECT rowid, ts, params, summary FROM user_model_runs"
+        " WHERE username=? AND page=? ORDER BY ts DESC, rowid DESC LIMIT ?",
         [username, page, limit],
     )
 
