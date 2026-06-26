@@ -114,7 +114,11 @@ if _panel_mode == "latest":
 std_lev = df["leverage"].std()
 pct_rank = stats.percentileofscore(df["leverage"], avg_lev, nan_policy='omit')
 yoy_delta = lev_delta  # from line 53
-peer_gap = avg_lev - df.groupby(lambda i: "all")["leverage"].mean().iloc[0] if len(df) > 0 else None
+try:
+    _full_df = db.get_active_financials(db.filters_to_tuple({**filters, "company_codes": [], "life_stages": [], "industry_groups": []}))
+    peer_gap = avg_lev - _full_df["leverage"].mean() if not _full_df.empty else None
+except Exception:
+    peer_gap = None
 
 insights, actions = interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_prof, dominant_stage, n_obs,
                                         std_lev=std_lev, pct_rank=pct_rank, yoy_delta=yoy_delta, peer_gap=peer_gap)

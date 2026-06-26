@@ -145,13 +145,11 @@ if user_q:
             st.toast("Added to Board Deck ✓")
 
     _u = st.session_state.get("user", {}) or {}
-    # Note: model_to_use is only defined when backend == "anthropic";
-    # for ollama, we don't track specific model in log (implicit llama3.1:8b)
-    _model_logged = model_to_use if backend == "anthropic" else "ollama"
+    _backend_logged = f"anthropic:{model_to_use}" if backend == "anthropic" else "ollama"
     log_chat_query(
         username=_u.get("username", "anonymous"),
         role=_u.get("role", "viewer"),
-        backend=backend,
+        backend=_backend_logged,
         token_count=count_tokens(ctx) + count_tokens(user_q) + count_tokens(full or ""),
         query=user_q,
         session_id=st.session_state.get("session_id", ""),
