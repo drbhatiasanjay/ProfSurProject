@@ -39,12 +39,8 @@ with st.sidebar:
         key="p19_backend",
         help="Anthropic: cloud API (default, requires ANTHROPIC_API_KEY in secrets.toml). Ollama: local, zero data egress.",
     )
-    citations_on = st.checkbox(
-        "Include academic references",
-        value=(mode == "Researcher"),
-        key="p19_citations",
-        help="When on, AI responses cite Rajan & Zingales, Myers, Jensen & Meckling, etc.",
-    )
+    citations_on = st.session_state.get("p19_citations", False)
+    st.caption(f"Academic citations: **{'on' if citations_on else 'off'}** — toggle in sidebar under AI Settings.")
     if mode == "CFO":
         company_code = st.number_input(
             "Company code (int)",

@@ -198,6 +198,14 @@ with st.sidebar:
     covid = st.checkbox("COVID (2020-21)", value=False, help="COVID-19 pandemic")
     st.session_state.filters["events"] = {"gfc": gfc, "ibc": ibc, "covid": covid}
 
+    st.markdown("**AI Settings**")
+    st.session_state["p19_citations"] = st.checkbox(
+        "Academic citations in AI responses",
+        value=st.session_state.get("p19_citations", False),
+        key="global_citations",
+        help="When on, all AI analysis (chat, interpretations, board deck) cites Rajan & Zingales, Myers, Jensen & Meckling, etc.",
+    )
+
     st.divider()
     meta = db.get_db_metadata(_qp_panel)
     if _qp_panel == "latest":
