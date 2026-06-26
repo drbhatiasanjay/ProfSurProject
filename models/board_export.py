@@ -1235,6 +1235,7 @@ def build_topic_ai_narrative(
     using a SHA256 of the topic insights + company_code.
     """
     import hashlib, json as _json
+    import db
     from models.llm_adapters import build_company_context, stream_anthropic
 
     # Build a compact text summary from the topic result
