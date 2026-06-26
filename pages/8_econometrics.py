@@ -490,7 +490,16 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
     # ── Dynamic Interpretation ──
     st.divider()
     hausman_data = results.get("hausman") if model_choice == "Auto-Suggest" else None
-    insights, actions = interpret_econometric(best, hausman=hausman_data)
+
+    # Extract optional enhancement parameters
+    adj_r2 = best.get("adj_r_squared")
+    f_stat = best.get("f_statistic")
+    f_pvalue = best.get("f_pvalue")
+    n_obs = best.get("n_obs")
+
+    insights, actions = interpret_econometric(best, hausman=hausman_data,
+                                              adj_r2=adj_r2, f_stat=f_stat,
+                                              f_pvalue=f_pvalue, n_obs=n_obs)
     render_interpretation(insights, actions, title="Results Interpretation & Call to Action")
 
     # ── Residual diagnostics ──

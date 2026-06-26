@@ -209,10 +209,19 @@ def render_interpretation(insights, actions, title="Results Interpretation & Cal
 
 # ── Dashboard Interpretations (Page 1) ──
 
-def interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_prof, dominant_stage, n_obs):
+def interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_prof, dominant_stage, n_obs,
+                        std_lev=None, pct_rank=None, yoy_delta=None, peer_gap=None):
     """Interpret the KPI card row dynamically."""
     f, a = [], []
-    f.append(f"Across **{n_companies} firms** and **{n_obs:,} observations**, average leverage is **{avg_lev:.1f}%** (median {med_lev:.1f}%).")
+    base_finding = f"Across **{n_companies} firms** and **{n_obs:,} observations**, average leverage is **{avg_lev:.1f}%** (median {med_lev:.1f}%)"
+    if std_lev is not None:
+        base_finding += f", σ={std_lev:.1f}pp"
+    base_finding += "."
+    f.append(base_finding)
+
+    if pct_rank is not None:
+        f.append(f"This cohort ranks at the **{pct_rank:.0f}th percentile** of the full panel — positioning relative to all firms.")
+
     skew = avg_lev - med_lev
     if skew > 5:
         f.append(f"Leverage is **right-skewed** (mean {skew:.1f}pp above median) — a few highly leveraged firms pull the average up.")
@@ -221,6 +230,15 @@ def interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_prof, dominant_st
         f.append(f"Average profitability is **low ({avg_prof:.1%})** — many firms in the sample have thin margins.")
         a.append("Low-profitability environments increase leverage dependency. Monitor interest coverage ratios closely.")
     f.append(f"**{dominant_stage}** is the dominant life stage — most firms in this filtered set are in their {dominant_stage.lower()} phase.")
+
+    if yoy_delta is not None:
+        direction = "increased" if yoy_delta > 0 else "decreased"
+        f.append(f"Year-over-year change: leverage **{direction}** by **{abs(yoy_delta):+.1f}pp**.")
+
+    if peer_gap is not None:
+        peer_dir = "above" if peer_gap > 0 else "below"
+        f.append(f"Gap vs industry median: **{abs(peer_gap):+.1f}pp {peer_dir}** — your cohort is {peer_dir} peers.")
+
     return f, a
 
 
@@ -288,7 +306,7 @@ def interpret_top_leveraged(top10_df, overall_avg):
     return f, a
 
 
-def interpret_event_impact(overall_avg, gfc_avg, ibc_avg, covid_avg):
+def interpret_event_impact(overall_avg, gfc_avg, ibc_avg, covid_avg, overall_std=None):
     """Interpret the event period impact cards."""
     f, a = [], []
     events = {"GFC (2008-09)": gfc_avg, "IBC (2016+)": ibc_avg, "COVID (2020-21)": covid_avg}
@@ -297,7 +315,16 @@ def interpret_event_impact(overall_avg, gfc_avg, ibc_avg, covid_avg):
             diff = avg - overall_avg
             if abs(diff) > 2:
                 direction = "higher" if diff > 0 else "lower"
-                f.append(f"During **{name}**, average leverage was **{diff:+.1f}pp {direction}** than the full-period average ({avg:.1f}% vs {overall_avg:.1f}%).")
+                finding = f"During **{name}**, average leverage was **{diff:+.1f}pp {direction}** than the full-period average ({avg:.1f}% vs {overall_avg:.1f}%)."
+
+                # Add sigma context if overall_std provided
+                if overall_std is not None and overall_std > 0:
+                    if abs(diff) > 2 * overall_std:
+                        finding += f" This shift exceeds **2σ** ({2*overall_std:.1f}pp) — **statistically large**."
+                    elif abs(diff) > overall_std:
+                        finding += f" This shift exceeds **1σ** ({overall_std:.1f}pp)."
+
+                f.append(finding)
 
     if gfc_avg and gfc_avg > overall_avg:
         a.append("GFC elevated leverage — firms may have been unable to deleverage during the crisis. Review if this pattern repeats in current stress scenarios.")
@@ -351,7 +378,8 @@ def interpret_radar_profile(company_name, comp_vals, ind_vals, stage_vals, label
 
 # ── Econometric Interpretations (Page 8) ──
 
-def interpret_econometric(best, hausman=None, bp=None):
+def interpret_econometric(best, hausman=None, bp=None,
+                          adj_r2=None, f_stat=None, f_pvalue=None, n_obs=None):
     """Generate deep interpretation of econometric regression results."""
     ct = best["coef_table"]
     sig = ct[ct["p-value"] < 0.05]
@@ -359,13 +387,27 @@ def interpret_econometric(best, hausman=None, bp=None):
     f, a = [], []
 
     r2 = best["r_squared"]
+    r2_finding = f"The model explains **{r2*100:.1f}%** of leverage variation"
+    if adj_r2 is not None:
+        r2_finding += f" (adj-R²={adj_r2*100:.1f}%)"
+
     if r2 > 0.3:
-        f.append(f"The model explains **{r2*100:.1f}%** of leverage variation — strong fit for panel data. In capital structure research, R² of 15-35% is typical (Rajan & Zingales, 1995).")
+        r2_finding += " — strong fit for panel data. In capital structure research, R² of 15-35% is typical (Rajan & Zingales, 1995)."
+        f.append(r2_finding)
     elif r2 > 0.15:
-        f.append(f"The model explains **{r2*100:.1f}%** — moderate fit consistent with the thesis findings and broader empirical literature.")
+        r2_finding += " — moderate fit consistent with the thesis findings and broader empirical literature."
+        f.append(r2_finding)
     else:
-        f.append(f"The model explains only **{r2*100:.1f}%** — weak. Important determinants may be omitted (e.g., market timing, managerial preferences).")
+        r2_finding += " — weak. Important determinants may be omitted (e.g., market timing, managerial preferences)."
+        f.append(r2_finding)
         a.append("Consider adding ownership concentration, industry dummies, or macro variables to improve explanatory power.")
+
+    if f_stat is not None and f_pvalue is not None:
+        f_sig = "model is jointly significant" if f_pvalue < 0.05 else "model is not jointly significant at 5%"
+        f.append(f"**F-statistic**={f_stat:.1f} (p={f_pvalue:.4f}) — **{f_sig}**.")
+
+    if n_obs is not None:
+        f.append(f"Analysis based on **{n_obs:,}** firm-year observations.")
 
     for _, row in sig_no_const.iterrows():
         var, coef = row["Variable"], row["Coefficient"]
@@ -409,6 +451,14 @@ def interpret_ml_comparison(comparison_df, stage_importance=None):
 
     f.append(f"**{best['Model']}** achieves the highest R²={r2_best:.4f} (RMSE={best['RMSE']:.1f}pp).")
 
+    # Add RMSE spread if multiple models present
+    if len(comparison_df) > 1:
+        best_rmse = comparison_df["RMSE"].min()
+        worst_rmse = comparison_df["RMSE"].max()
+        rmse_spread = worst_rmse - best_rmse
+        rmse_quality = "consistent results" if rmse_spread < 2 else "significant variation in prediction accuracy"
+        f.append(f"**RMSE spread** across models: {best_rmse:.2f}pp to {worst_rmse:.2f}pp — {rmse_quality}.")
+
     if r2_best > 0.5:
         f.append(f"ML captures **{r2_best*100:.0f}%** of leverage variance — substantially better than linear OLS (~35%). This confirms **significant non-linear patterns** in Indian capital structure data: interaction effects, threshold behaviors, and regime-dependent relationships.")
         a.append("Linear econometric models (OLS, FE) systematically understate predictive power. Use ML for prediction tasks, econometrics for causal inference.")
@@ -435,10 +485,19 @@ def interpret_ml_comparison(comparison_df, stage_importance=None):
 
 # ── Clustering Interpretations (Page 11) ──
 
-def interpret_clustering(ari, n_clusters, summary_df):
+def interpret_clustering(ari, n_clusters, summary_df, silhouette=None, inertia=None):
     """Generate deep interpretation of clustering results."""
     f, a = [], []
     f.append(f"The algorithm discovered **{n_clusters} natural firm groupings** based on financial characteristics alone — no life stage labels were used.")
+
+    if silhouette is not None:
+        if silhouette > 0.5:
+            sil_quality = "well-separated clusters"
+        elif silhouette > 0.25:
+            sil_quality = "moderate cluster separation"
+        else:
+            sil_quality = "overlapping clusters — k may need tuning"
+        f.append(f"**Silhouette score**={silhouette:.3f} — {sil_quality}.")
 
     if ari > 0.5:
         f.append(f"**Strong alignment** with Dickinson stages (ARI={ari:.3f}). The cash-flow classification captures real financial structure differences.")
