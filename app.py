@@ -28,28 +28,39 @@ if os.path.exists(css_path):
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # ── Authentication ────────────────────────────────────────────────────────────
-import streamlit_authenticator as stauth
+import bcrypt as _bcrypt
 
 try:
     _creds = {"usernames": {
         k: dict(v) for k, v in st.secrets.get("credentials", {}).get("usernames", {}).items()
     }}
-    _cookie = st.secrets.get("cookie", {})
 except Exception:
     _creds = {"usernames": {}}
-    _cookie = {}
-authenticator = stauth.Authenticate(
-    _creds,
-    _cookie.get("name", "lclev_auth"),
-    _cookie.get("key", "fallback-key"),
-    int(_cookie.get("expiry_days", 7)),
-)
-authenticator.login()
+
+def _login():
+    st.markdown("### LifeCycle Leverage — Sign In")
+    with st.form("login_form"):
+        _u = st.text_input("Username")
+        _p = st.text_input("Password", type="password")
+        if st.form_submit_button("Login", type="primary"):
+            _user = _creds["usernames"].get(_u)
+            if _user:
+                try:
+                    _ok = _bcrypt.checkpw(_p.encode(), _user["password"].encode())
+                except Exception:
+                    _ok = False
+            else:
+                _ok = False
+            if _ok:
+                st.session_state["authentication_status"] = True
+                st.session_state["username"] = _u
+                st.session_state["name"] = _user.get("name", _u)
+                st.rerun()
+            else:
+                st.error("Username or password incorrect.")
+
 if not st.session_state.get("authentication_status"):
-    if st.session_state.get("authentication_status") is False:
-        st.error("Username or password incorrect.")
-    else:
-        st.info("Please sign in to access the LifeCycle Leverage Dashboard.")
+    _login()
     st.stop()
 
 _username = st.session_state.get("username", "")
