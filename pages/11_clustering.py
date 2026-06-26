@@ -12,6 +12,7 @@ from models.clustering import (
     prepare_firm_features, find_optimal_k, run_kmeans,
     compare_with_dickinson, get_cluster_summary,
 )
+from sklearn.metrics import silhouette_score
 
 ensure_session_state()
 db.log_page_visit("Clustering")
@@ -147,5 +148,9 @@ with ac2:
 
 # Dynamic interpretation
 st.divider()
-cl_insights, cl_actions = interpret_clustering(ari, k, summary)
+# Compute silhouette score for the current clustering
+silhouette = silhouette_score(X_scaled, labels)
+inertia = km.inertia_
+
+cl_insights, cl_actions = interpret_clustering(ari, k, summary, silhouette=silhouette, inertia=inertia)
 render_interpretation(cl_insights, cl_actions, title="Results Interpretation & Call to Action")

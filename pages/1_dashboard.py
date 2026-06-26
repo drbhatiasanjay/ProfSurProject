@@ -110,7 +110,14 @@ if _panel_mode == "latest":
         st.markdown(new_badge(), unsafe_allow_html=True)
         st.metric("Data vintages", "2", delta="thesis + cmie_2025")
 
-insights, actions = interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_prof, dominant_stage, n_obs)
+# Compute optional enhancements for interpret_kpi_cards
+std_lev = df["leverage"].std()
+pct_rank = stats.percentileofscore(df["leverage"], avg_lev, nan_policy='omit')
+yoy_delta = lev_delta  # from line 53
+peer_gap = avg_lev - df.groupby(lambda i: "all")["leverage"].mean().iloc[0] if len(df) > 0 else None
+
+insights, actions = interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_prof, dominant_stage, n_obs,
+                                        std_lev=std_lev, pct_rank=pct_rank, yoy_delta=yoy_delta, peer_gap=peer_gap)
 _render_insight_box("KPI Overview — What do these numbers tell us?", insights, actions,
     "Dynamic summary of the current filtered dataset's capital structure profile.")
 
