@@ -157,7 +157,7 @@ def get_model_runs(username: str, page: str, limit: int = 20) -> "pd.DataFrame":
 
 
 def ensure_app_tables():
-    """Create audit_log, user_preferences, user_model_runs if missing (idempotent)."""
+    """Create audit_log, user_preferences, user_model_runs, ai_cache if missing (idempotent)."""
     conn = get_connection()
     try:
         conn.executescript("""
@@ -176,6 +176,14 @@ def ensure_app_tables():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 username TEXT, page TEXT, params TEXT, summary TEXT
+            );
+            CREATE TABLE IF NOT EXISTS ai_cache (
+                query_hash   TEXT NOT NULL,
+                context_hash TEXT NOT NULL,
+                model        TEXT NOT NULL,
+                response     TEXT NOT NULL,
+                created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (query_hash, context_hash, model)
             );
         """)
         conn.commit()
@@ -1023,3 +1031,53 @@ def get_kg2_company_history(company_code, panel_mode: str = "latest"):
         ORDER BY year
     """
     return _query(sql, [company_code] + vintage_params)
+
+
+# ── AI Cache (Prompt Caching for Phase 1 AI Assistant) ──
+
+def ai_cache_get(query_hash: str, context_hash: str, model: str, ttl_hours: int = 24) -> str | None:
+    """Return cached AI response or None if missing/expired.
+
+    Args:
+        query_hash: Hash of the user query.
+        context_hash: Hash of the context (company/panel background).
+        model: Model identifier (e.g. 'claude-haiku-4-5-20251001').
+        ttl_hours: Time-to-live in hours (default: 24).
+
+    Returns:
+        Cached response string or None if cache miss or expired.
+    """
+    with get_connection() as con:
+        row = con.execute(
+            "SELECT response, created_at FROM ai_cache "
+            "WHERE query_hash=? AND context_hash=? AND model=? "
+            "ORDER BY created_at DESC LIMIT 1",
+            (query_hash, context_hash, model),
+        ).fetchone()
+    if not row:
+        return None
+    from datetime import datetime
+    age = datetime.utcnow() - datetime.fromisoformat(row[1])
+    if age.total_seconds() > ttl_hours * 3600:
+        return None
+    return row[0]
+
+
+def ai_cache_set(query_hash: str, context_hash: str, model: str, response: str) -> None:
+    """Store AI response in cache. Silent no-op on any error.
+
+    Args:
+        query_hash: Hash of the user query.
+        context_hash: Hash of the context.
+        model: Model identifier.
+        response: The LLM response string to cache.
+    """
+    try:
+        with get_connection() as con:
+            con.execute(
+                "INSERT OR REPLACE INTO ai_cache (query_hash, context_hash, model, response) VALUES (?,?,?,?)",
+                (query_hash, context_hash, model, response),
+            )
+            con.commit()
+    except Exception:
+        pass

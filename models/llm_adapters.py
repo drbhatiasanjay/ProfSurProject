@@ -66,7 +66,7 @@ _THESIS_BLOCK = (
     "402 firms to 2025 (latest vintage). Dependent variable: leverage (debt/total assets %).\n"
 )
 
-CONTEXT_BUDGET_TOKENS = 900
+CONTEXT_BUDGET_TOKENS = 1500
 
 
 def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
@@ -325,9 +325,13 @@ def stream_anthropic(
     system: str = "",
     model: str = "claude-haiku-4-5-20251001",
     max_tokens: int = 1024,
+    *,
+    role: str = "viewer",
+    citations: bool = False,
 ) -> Iterator[str]:
     """Yield string chunks from Anthropic streaming chat. Compatible with st.write_stream().
 
+    Attempts prompt caching beta API first, falls back to standard API.
     API key resolution order: ANTHROPIC_API_KEY env var, then st.secrets.
     Streamlit is imported lazily inside this function (not at module level)
     so the module remains importable outside Streamlit (e.g. in pytest).
@@ -337,6 +341,8 @@ def stream_anthropic(
         system: System prompt string.
         model: Anthropic model ID (default: claude-haiku-4-5-20251001).
         max_tokens: Maximum tokens in the response.
+        role: User role for prompt engineering ('admin', 'researcher', 'viewer', 'cfo').
+        citations: When True, append citations instruction to system prompt.
 
     Yields:
         String chunks as they arrive from the model.
@@ -358,14 +364,53 @@ def stream_anthropic(
         return
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        with client.messages.stream(
-            model=model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=messages,
-        ) as stream:
-            for text in stream.text_stream:
-                yield text
+
+        # Build effective system prompt with role preamble + citations instruction
+        effective_system = system
+        role_lower = role.lower()
+        if role_lower in ("admin", "researcher"):
+            role_preamble = (
+                "You are an expert financial economist specialising in corporate capital structure. "
+                "Respond with academic precision, use econometric terminology, and engage with theory rigorously."
+            )
+        else:  # CFO, viewer, or other
+            role_preamble = (
+                "You are a financial advisor providing clear, actionable insights to corporate executives. "
+                "Use plain English, focus on practical recommendations, and avoid unnecessary jargon."
+            )
+        if effective_system:
+            effective_system = role_preamble + "\n\n" + effective_system
+        else:
+            effective_system = role_preamble
+
+        if citations:
+            citations_instruction = (
+                "\n\nSupport your analysis with relevant citations from capital structure literature "
+                "(Modigliani & Miller 1958, Myers 1984, Rajan & Zingales 1995, Jensen & Meckling 1976, "
+                "Fama & French 2002, IBC 2016). Format citations as Author (Year) inline."
+            )
+            effective_system += citations_instruction
+
+        # Try prompt caching beta API first (may raise AttributeError if beta module not available)
+        try:
+            with client.beta.prompt_caching.messages.stream(
+                model=model,
+                max_tokens=max_tokens,
+                system=[{"type": "text", "text": effective_system, "cache_control": {"type": "ephemeral"}}],
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
+        except Exception:
+            # Fall back to standard API if prompt caching fails (beta not available, model mismatch, etc.)
+            with client.messages.stream(
+                model=model,
+                max_tokens=max_tokens,
+                system=effective_system,
+                messages=messages,
+            ) as stream:
+                for text in stream.text_stream:
+                    yield text
     except Exception as e:
         yield f"[Anthropic error: {type(e).__name__}: {e}]"
 

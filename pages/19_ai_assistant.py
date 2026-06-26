@@ -16,6 +16,8 @@ from models.llm_adapters import (
     stream_anthropic,
     log_chat_query,
     count_tokens,
+    classify_query,
+    parse_llm_json,
 )
 
 st.title("AI Financial Assistant")
@@ -36,6 +38,12 @@ with st.sidebar:
         index=0,
         key="p19_backend",
         help="Anthropic: cloud API (default, requires ANTHROPIC_API_KEY in secrets.toml). Ollama: local, zero data egress.",
+    )
+    citations_on = st.checkbox(
+        "Include academic references",
+        value=(mode == "Researcher"),
+        key="p19_citations",
+        help="When on, AI responses cite Rajan & Zingales, Myers, Jensen & Meckling, etc.",
     )
     if mode == "CFO":
         company_code = st.number_input(
@@ -70,7 +78,11 @@ for turn in st.session_state["chat_history"]:
         st.markdown(turn["content"])
 
 # ── Input (natural bottom-of-page position — guaranteed to work) ─────────────
-user_q = st.chat_input("Ask about the panel data...", key="chat_input_p19")
+# Handle pending follow-up questions from suggested chips
+if st.session_state.get("_pending_followup"):
+    user_q = st.session_state.pop("_pending_followup")
+else:
+    user_q = st.chat_input("Ask about the panel data...", key="chat_input_p19")
 
 if user_q:
     panel_mode = st.session_state.get("panel_mode", "thesis")
@@ -90,17 +102,37 @@ if user_q:
     ]
     messages.append({"role": "user", "content": user_q})
 
+    # Model routing based on query classification
+    q_type = classify_query(user_q)
+    model_to_use = "claude-sonnet-4-6" if q_type in ("analytical", "hybrid") else "claude-haiku-4-5-20251001"
+
     with st.chat_message("assistant"):
         if backend == "ollama":
             full = st.write_stream(
                 stream_ollama([{"role": "system", "content": ctx}] + messages)
             )
         else:
-            full = st.write_stream(stream_anthropic(messages, system=ctx))
+            _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
+            full = st.write_stream(
+                stream_anthropic(
+                    messages, system=ctx, model=model_to_use,
+                    role=_user_role, citations=citations_on,
+                )
+            )
 
     st.session_state["chat_history"].append(
         {"role": "assistant", "content": full or ""}
     )
+
+    # Parse and render follow-up question chips
+    _parsed = parse_llm_json(full or "")
+    _followups = _parsed.get("followup_questions", [])
+    if _followups:
+        st.markdown("**Suggested follow-ups:**")
+        for _fq in _followups[:3]:
+            if st.button(_fq, key=f"fq_{hash(_fq)}_{len(st.session_state['chat_history'])}"):
+                st.session_state["_pending_followup"] = _fq
+                st.rerun()
 
     # CFO mode: offer to add reply to board deck
     if mode == "CFO" and full:
@@ -113,6 +145,9 @@ if user_q:
             st.toast("Added to Board Deck ✓")
 
     _u = st.session_state.get("user", {}) or {}
+    # Note: model_to_use is only defined when backend == "anthropic";
+    # for ollama, we don't track specific model in log (implicit llama3.1:8b)
+    _model_logged = model_to_use if backend == "anthropic" else "ollama"
     log_chat_query(
         username=_u.get("username", "anonymous"),
         role=_u.get("role", "viewer"),
