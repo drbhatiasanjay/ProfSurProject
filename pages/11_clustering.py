@@ -8,6 +8,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import db
 from helpers import plotly_layout, ensure_session_state, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG, interpret_clustering, render_interpretation, df_download_button, chart_download_button
+from models.llm_adapters import generate_page_insights
 from models.clustering import (
     prepare_firm_features, find_optimal_k, run_kmeans,
     compare_with_dickinson, get_cluster_summary,
@@ -154,3 +155,23 @@ inertia = km.inertia_
 
 cl_insights, cl_actions = interpret_clustering(ari, k, summary, silhouette=silhouette, inertia=inertia)
 render_interpretation(cl_insights, cl_actions, title="Results Interpretation & Call to Action")
+
+with st.expander("🤖 AI Insights", expanded=False):
+    if st.button("Generate AI Analysis", key="p11_ai_gen"):
+        _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
+        _citations = st.session_state.get("p19_citations", False)
+        _cl_summary = {
+            "Clusters found": k,
+            "ARI vs Dickinson": f"{ari:.3f}",
+            "Silhouette score": f"{silhouette:.3f}" if silhouette is not None else "N/A",
+            "Highest-leverage cluster": f"{summary.loc[summary['avg_leverage'].idxmax(), 'cluster_label']} ({summary['avg_leverage'].max():.1f}%)" if not summary.empty else "N/A",
+            "Lowest-leverage cluster": f"{summary.loc[summary['avg_leverage'].idxmin(), 'cluster_label']} ({summary['avg_leverage'].min():.1f}%)" if not summary.empty else "N/A",
+            "Firm count range": f"{summary['n_firms'].min():.0f}–{summary['n_firms'].max():.0f} firms per cluster" if not summary.empty else "N/A",
+        }
+        with st.spinner("Generating cluster analysis..."):
+            st.session_state["cl_ai"] = "".join(
+                generate_page_insights("clustering", _cl_summary, st.session_state.filters,
+                                       role=_user_role, citations=_citations)
+            )
+    if st.session_state.get("cl_ai"):
+        st.markdown(st.session_state["cl_ai"])

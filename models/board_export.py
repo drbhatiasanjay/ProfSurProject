@@ -1222,6 +1222,59 @@ def build_topic_13_ai(company_code: int, panel_mode: str = "thesis", backend: st
         return out
 
 
+def build_topic_ai_narrative(
+    topic_result: dict,
+    company_code: int,
+    panel_mode: str = "thesis",
+    role: str = "researcher",
+    citations: bool = False,
+) -> str:
+    """Generate a 100-150 word board-ready prose paragraph for any topic result.
+
+    Returns a plain string (not a generator) — it caches via ai_cache_get/set
+    using a SHA256 of the topic insights + company_code.
+    """
+    import hashlib, json as _json
+    from models.llm_adapters import build_company_context, stream_anthropic
+
+    # Build a compact text summary from the topic result
+    title = topic_result.get("title", "Board topic")
+    bullets = []
+    for item in topic_result.get("insights", []):
+        if isinstance(item, (list, tuple)) and len(item) == 2:
+            _label, _pts = item
+            bullets.extend(_pts[:3])
+        elif isinstance(item, str):
+            bullets.append(item)
+    bullets.extend(topic_result.get("actions", [])[:2])
+    summary_text = "\n".join(f"- {b}" for b in bullets[:8])
+
+    ctx = build_company_context(int(company_code), panel_mode=panel_mode)
+
+    prompt = (
+        f"You are preparing the '{title}' section of a board-level capital structure report.\n\n"
+        f"Key findings:\n{summary_text}\n\n"
+        f"Write ONE concise paragraph (100–150 words) in board-appropriate language. "
+        f"Reference specific numbers. Do not use bullet points."
+    )
+
+    query_hash = hashlib.sha256(prompt.encode()).hexdigest()[:16]
+    ctx_hash = hashlib.sha256(ctx.encode()).hexdigest()[:16]
+    model = "claude-sonnet-4-6"
+    ttl_hours = 168  # 7 days — company data is rarely refreshed intraday
+
+    cached = db.ai_cache_get(query_hash, ctx_hash, model, ttl_hours=ttl_hours)
+    if cached:
+        return cached
+
+    messages = [{"role": "user", "content": prompt}]
+    response = "".join(stream_anthropic(messages, system=ctx, model=model,
+                                        role=role, citations=citations))
+    if response:
+        db.ai_cache_set(query_hash, ctx_hash, model, response)
+    return response
+
+
 # ── Dispatch table ─────────────────────────────────────────────────────────────
 
 TOPIC_BUILDERS = {

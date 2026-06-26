@@ -415,6 +415,189 @@ def stream_anthropic(
         yield f"[Anthropic error: {type(e).__name__}: {e}]"
 
 
+def generate_econometric_narrative(
+    result: dict,
+    model_type: str = "Pooled OLS",
+    hausman: dict | None = None,
+    panel_mode: str = "thesis",
+    role: str = "viewer",
+    citations: bool = False,
+) -> "Iterator[str]":
+    """Stream an AI interpretation of econometric regression results.
+
+    Builds a ~600-token prompt from the coefficient table, diagnostic stats, and
+    theoretical grounding. Uses claude-sonnet-4-6 for richer analytical output.
+    Cached in SQLite ai_cache for 7 days (same regression = same response).
+
+    Args:
+        result: Dict from run_pooled_ols/run_fixed_effects/run_random_effects.
+        model_type: Human label for the model specification.
+        hausman: Optional Hausman test result dict.
+        panel_mode: 'thesis' | 'latest' | 'run3'.
+        role: User role for tone adaptation.
+        citations: Whether to include academic citations.
+
+    Yields:
+        String chunks from the LLM.
+    """
+    import hashlib
+
+    ct = result.get("coef_table")
+    if ct is None:
+        yield "[No coefficient table available for AI interpretation.]"
+        return
+
+    # Build markdown coefficient table
+    rows = []
+    for _, row in ct.iterrows():
+        var = row.get("Variable", "")
+        coef = row.get("Coefficient", "")
+        se = row.get("Std Error", "")
+        tstat = row.get("t-stat", row.get("t-value", ""))
+        pval = row.get("p-value", "")
+        sig = row.get("Sig", "")
+        rows.append(f"| {var} | {coef:.4f} | {se:.4f} | {tstat:.3f} | {pval:.4f} | {sig} |" if all(
+            isinstance(x, (int, float)) for x in [coef, se, pval]
+        ) else f"| {var} | {coef} | {se} | {tstat} | {pval} | {sig} |")
+
+    r2 = result.get("r_squared", "N/A")
+    adj_r2 = result.get("adj_r_squared", "N/A")
+    n_obs = result.get("n_obs", "N/A")
+    f_stat = result.get("f_statistic", "N/A")
+    f_pval = result.get("f_pvalue", "N/A")
+
+    hausman_line = ""
+    if hausman:
+        hausman_line = (
+            f"\n**Hausman test**: Chi²={hausman.get('chi2', 'N/A'):.2f}, "
+            f"p={hausman.get('p_value', 'N/A'):.4f} — "
+            f"{'Fixed Effects preferred' if hausman.get('p_value', 1) < 0.05 else 'Random Effects preferred'}"
+        )
+
+    coef_table_md = (
+        "| Variable | Coef | SE | t | p | Sig |\n"
+        "|---|---|---|---|---|---|\n"
+        + "\n".join(rows)
+    )
+
+    prompt = (
+        f"## Regression Results: {model_type} ({panel_mode} panel)\n\n"
+        f"**Diagnostics**: R²={r2}, Adj-R²={adj_r2}, F={f_stat} (p={f_pval}), N={n_obs} obs{hausman_line}\n\n"
+        f"{coef_table_md}\n\n"
+        "**Task**: Interpret each statistically significant coefficient (p<0.05) in terms of capital structure theory "
+        "(Pecking Order, Trade-off, Agency). Flag any sign violations vs theory. Assess model fit quality. "
+        "Conclude with the most important policy implication for Indian listed firms.\n"
+        "Be specific — quote exact coefficient values and p-values."
+    )
+
+    # Cache key
+    cache_key = hashlib.sha256(prompt.encode()).hexdigest()
+    ctx_key = hashlib.sha256(f"{model_type}:{panel_mode}".encode()).hexdigest()
+    cached = db.ai_cache_get(cache_key, ctx_key, "claude-sonnet-4-6", ttl_hours=168)
+    if cached:
+        yield cached
+        return
+
+    full = ""
+    for chunk in stream_anthropic(
+        [{"role": "user", "content": prompt}],
+        system=_THESIS_BLOCK,
+        model="claude-sonnet-4-6",
+        max_tokens=800,
+        role=role,
+        citations=citations,
+    ):
+        full += chunk
+        yield chunk
+
+    if full:
+        db.ai_cache_set(cache_key, ctx_key, "claude-sonnet-4-6", full)
+
+
+def generate_page_insights(
+    page: str,
+    data_summary: dict,
+    filters: dict,
+    role: str = "viewer",
+    citations: bool = False,
+) -> "Iterator[str]":
+    """Stream AI insights for a specific dashboard page.
+
+    Cached in SQLite ai_cache for 24 hours. Only fires when user clicks Generate.
+
+    Args:
+        page: Page identifier (e.g. 'dashboard', 'scenarios', 'ml', 'clustering').
+        data_summary: Page-specific dict of computed stats to feed the AI.
+        filters: Current sidebar filter state (for context).
+        role: User role for tone adaptation.
+        citations: Whether to include academic citations.
+
+    Yields:
+        String chunks from the LLM.
+    """
+    import hashlib
+    import json as _json
+
+    # Build prompt from data_summary
+    summary_lines = "\n".join(f"- **{k}**: {v}" for k, v in data_summary.items() if v is not None)
+    year_range = filters.get("year_range", ("?", "?"))
+    panel_mode = filters.get("panel_mode", "thesis")
+    stage_filter = ", ".join(filters.get("life_stages", [])) or "All stages"
+    industry_filter = ", ".join(filters.get("industry_groups", [])) or "All industries"
+
+    page_tasks = {
+        "dashboard": (
+            "Summarise the capital structure landscape shown in the KPIs. "
+            "Identify the most significant trend, flag any anomaly vs theory, "
+            "and suggest one actionable insight for the filtered cohort."
+        ),
+        "scenarios": (
+            "Interpret the what-if scenario results. Explain what the predicted leverage "
+            "implies given current macro conditions. Which coefficient is driving the outcome most? "
+            "What should a CFO do given these inputs?"
+        ),
+        "ml": (
+            "Explain why the ML model outperforms OLS. Which non-linear interactions "
+            "are the SHAP values revealing? What does this mean for theory vs prediction?"
+        ),
+        "clustering": (
+            "Name and characterise each cluster based on its financial profile. "
+            "Which cluster is highest risk? How does this compare to Dickinson's classification? "
+            "What does the ARI score imply about cash-flow-based life stage theory?"
+        ),
+    }
+    task = page_tasks.get(page, "Provide key insights from the data shown above.")
+
+    prompt = (
+        f"## {page.title()} — Current Data Summary\n"
+        f"**Filter context**: {year_range[0]}–{year_range[1]}, {stage_filter}, {industry_filter}, panel: {panel_mode}\n\n"
+        f"{summary_lines}\n\n"
+        f"**Task**: {task}"
+    )
+
+    cache_key = hashlib.sha256(prompt.encode()).hexdigest()
+    ctx_key = hashlib.sha256(_json.dumps(data_summary, default=str, sort_keys=True).encode()).hexdigest()
+    cached = db.ai_cache_get(cache_key, ctx_key, "claude-sonnet-4-6", ttl_hours=24)
+    if cached:
+        yield cached
+        return
+
+    full = ""
+    for chunk in stream_anthropic(
+        [{"role": "user", "content": prompt}],
+        system=_THESIS_BLOCK,
+        model="claude-sonnet-4-6",
+        max_tokens=600,
+        role=role,
+        citations=citations,
+    ):
+        full += chunk
+        yield chunk
+
+    if full:
+        db.ai_cache_set(cache_key, ctx_key, "claude-sonnet-4-6", full)
+
+
 def parse_llm_json(raw: str) -> dict:
     """Parse LLM response as JSON. Falls back to plain-text answer. Never raises.
 

@@ -9,6 +9,7 @@ import numpy as np
 import db
 from helpers import plotly_layout, format_pct, ensure_session_state, panel_label, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box, df_download_button, chart_download_button, audit_trail_download_button
 from models.scenario_regression import compute_leverage_ols_coefs, leverage_predictor_sample_means
+from models.llm_adapters import generate_page_insights
 
 ensure_session_state()
 db.log_page_visit("Scenarios")
@@ -219,6 +220,28 @@ with res_right:
 
     _render_insight_box("Scenario Interpretation", insights, actions,
         "Dynamic analysis of the current slider settings and their leverage implications.")
+
+    # ── AI Scenario Narrative ──
+    with st.expander("🤖 AI Insights", expanded=False):
+        _s_key = "scenario_ai"
+        if st.button("Generate AI Analysis", key="p3_ai_gen"):
+            _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
+            _citations = st.session_state.get("p19_citations", False)
+            _summary = {
+                "Predicted leverage": f"{pred_lev:.2f}%",
+                "Top driver": top_factor,
+                "Driver effect": f"{top_val:+.2f}pp",
+                "Profitability input": f"{prof_val:.2f}",
+                "Tangibility input": f"{tang_val:.2f}",
+                "Size input": f"{size_val:.2f}",
+            }
+            with st.spinner("Generating scenario narrative..."):
+                st.session_state[_s_key] = "".join(
+                    generate_page_insights("scenarios", _summary, st.session_state.filters,
+                                           role=_user_role, citations=_citations)
+                )
+        if st.session_state.get(_s_key):
+            st.markdown(st.session_state[_s_key])
 
 st.divider()
 

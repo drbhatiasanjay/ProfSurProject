@@ -17,6 +17,7 @@ from helpers import (
     interpret_lifecycle_distribution, interpret_top_leveraged, interpret_event_impact,
     df_download_button, chart_download_button,
 )
+from models.llm_adapters import generate_page_insights
 
 ensure_session_state()
 db.log_page_visit("Dashboard")
@@ -124,6 +125,30 @@ insights, actions = interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_p
                                         std_lev=std_lev, pct_rank=pct_rank, yoy_delta=yoy_delta, peer_gap=peer_gap)
 _render_insight_box("KPI Overview — What do these numbers tell us?", insights, actions,
     "Dynamic summary of the current filtered dataset's capital structure profile.")
+
+with st.expander("🤖 AI Insights", expanded=False):
+    if st.button("Generate AI Analysis", key="p1_ai_gen"):
+        _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
+        _citations = st.session_state.get("p19_citations", False)
+        _d_summary = {
+            "Companies": n_companies,
+            "Observations": n_obs,
+            "Mean leverage": f"{avg_lev:.2f}%",
+            "Median leverage": f"{med_lev:.2f}%",
+            "Std deviation": f"{std_lev:.2f}pp" if std_lev is not None else "N/A",
+            "Percentile rank": f"{pct_rank:.0f}th" if pct_rank is not None else "N/A",
+            "YoY delta": f"{yoy_delta:+.2f}pp" if yoy_delta is not None else "N/A",
+            "Gap vs panel mean": f"{peer_gap:+.2f}pp" if peer_gap is not None else "N/A",
+            "Dominant stage": dominant_stage,
+            "Mean profitability": f"{avg_prof:.2f}%",
+        }
+        with st.spinner("Generating AI analysis..."):
+            st.session_state["dash_ai"] = "".join(
+                generate_page_insights("dashboard", _d_summary, st.session_state.filters,
+                                       role=_user_role, citations=_citations)
+            )
+    if st.session_state.get("dash_ai"):
+        st.markdown(st.session_state["dash_ai"])
 
 st.divider()
 

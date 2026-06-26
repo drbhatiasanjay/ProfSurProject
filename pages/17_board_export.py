@@ -17,7 +17,7 @@ from helpers import (
     PLOTLY_CONFIG, STAGE_COLORS, render_interpretation, new_badge,
     df_download_button, chart_download_button,
 )
-from models.board_export import TOPIC_BUILDERS, TOPIC_LABELS
+from models.board_export import TOPIC_BUILDERS, TOPIC_LABELS, build_topic_ai_narrative
 import models.pptx_generator as pptx_generator
 
 ensure_session_state()
@@ -167,6 +167,14 @@ st.caption(f"**{n_selected} of {len(TOPIC_LABELS)} topics selected** ({n_selecte
 
 st.divider()
 
+# ── AI Narratives toggle ──────────────────────────────────────────────────────
+ai_narratives_on = st.toggle(
+    "Include AI Narratives",
+    value=False,
+    key="p17_ai_narratives",
+    help="Generate a 100-150 word board-ready prose summary for each topic via Claude Sonnet. Adds ~5s per topic on first run; results are cached.",
+)
+
 # ── STEP 5: Action buttons ────────────────────────────────────────────────────
 col_prev, col_dl, col_clear = st.columns([1.2, 1.2, 1])
 preview_clicked  = col_prev.button("Preview Deck",         type="primary",   key="preview_btn")
@@ -214,6 +222,20 @@ if st.session_state.get("deck_previewed"):
             actions  = topic_data.get("actions", [])
             if insights or actions:
                 render_interpretation(insights, actions, title=f"Topic {tid} Interpretation")
+
+            if ai_narratives_on:
+                _ai_key = f"p17_ai_t{tid}_{company_code}"
+                if _ai_key not in st.session_state:
+                    _user_role = (st.session_state.get("user") or {}).get("role", "researcher")
+                    _citations = st.session_state.get("p19_citations", False)
+                    with st.spinner(f"Generating AI narrative for Topic {tid}…"):
+                        st.session_state[_ai_key] = build_topic_ai_narrative(
+                            topic_data, company_code,
+                            panel_mode=panel_mode, role=_user_role, citations=_citations,
+                        )
+                if st.session_state.get(_ai_key):
+                    with st.expander("🤖 Board AI Narrative", expanded=True):
+                        st.markdown(st.session_state[_ai_key])
 
         except Exception as exc:
             st.error(f"Topic {tid} could not render: {exc}")

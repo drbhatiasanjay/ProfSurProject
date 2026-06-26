@@ -15,6 +15,7 @@ from helpers import (
     interpret_econometric, render_interpretation, _render_insight_box,
     df_download_button, chart_download_button, audit_trail_download_button,
 )
+from models.llm_adapters import generate_econometric_narrative
 from models.econometric import (
     run_pooled_ols, run_fixed_effects, run_random_effects, run_robust_regression,
     run_hausman_test, run_breusch_pagan_lm, run_anova_by_stage, run_pairwise_comparison,
@@ -501,6 +502,26 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
                                               adj_r2=adj_r2, f_stat=f_stat,
                                               f_pvalue=f_pvalue, n_obs=n_obs)
     render_interpretation(insights, actions, title="Results Interpretation & Call to Action")
+
+    # ── AI Deep Interpretation ──
+    with st.expander("🤖 AI Deep Interpretation", expanded=False):
+        _ai_key = f"econ_ai_{model_choice}_{panel_mode}"
+        if st.button("Generate AI Analysis", key="p8_ai_gen"):
+            _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
+            _citations = st.session_state.get("p19_citations", False)
+            with st.spinner("Analysing regression results..."):
+                st.session_state[_ai_key] = "".join(
+                    generate_econometric_narrative(
+                        best,
+                        model_type=model_choice,
+                        hausman=hausman_data,
+                        panel_mode=panel_mode,
+                        role=_user_role,
+                        citations=_citations,
+                    )
+                )
+        if st.session_state.get(_ai_key):
+            st.markdown(st.session_state[_ai_key])
 
     # ── Residual diagnostics ──
     with st.expander("Residual Diagnostics"):

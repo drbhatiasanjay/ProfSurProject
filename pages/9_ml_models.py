@@ -16,6 +16,7 @@ from helpers import (
     df_download_button, chart_download_button, audit_trail_download_button,
 )
 from models.base import DEFAULT_X_COLS
+from models.llm_adapters import generate_page_insights
 from models.ml_predict import (
     compare_all_models, get_feature_importance, get_shap_values,
     predict_leverage, get_stage_importance, cross_validate_model,
@@ -243,6 +244,27 @@ Then explore the other tabs:
         st.divider()
         ml_insights, ml_actions = interpret_ml_comparison(comparison)
         render_interpretation(ml_insights, ml_actions, title="Results Interpretation & Call to Action")
+
+        with st.expander("🤖 AI Insights", expanded=False):
+            if st.button("Generate AI Analysis", key="p9_ai_gen"):
+                _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
+                _citations = st.session_state.get("p19_citations", False)
+                _best = comparison.iloc[0]
+                _ml_summary = {
+                    "Best model": _best["Model"],
+                    "Best R²": f"{_best['R-squared']:.4f}",
+                    "Best RMSE": f"{_best['RMSE']:.2f}pp",
+                    "OLS R²": f"{comparison[comparison['Model']=='OLS']['R-squared'].iloc[0]:.4f}" if "OLS" in comparison["Model"].values else "N/A",
+                    "R² spread": f"{comparison['R-squared'].max() - comparison['R-squared'].min():.4f}",
+                    "Models compared": ", ".join(comparison["Model"].tolist()),
+                }
+                with st.spinner("Generating ML analysis..."):
+                    st.session_state["ml_ai"] = "".join(
+                        generate_page_insights("ml", _ml_summary, st.session_state.filters,
+                                               role=_user_role, citations=_citations)
+                    )
+            if st.session_state.get("ml_ai"):
+                st.markdown(st.session_state["ml_ai"])
 
     else:
         if st.session_state.ml_results is None:

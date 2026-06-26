@@ -19,6 +19,7 @@ from models.econometric import (
     run_stage_comparison, run_breusch_pagan_lm, run_pooled_ols,
     run_iv_regression,
 )
+from models.llm_adapters import generate_econometric_narrative
 from models.base import DEFAULT_X_COLS
 
 ensure_session_state()
@@ -181,6 +182,20 @@ with tab_gmm:
                 "Compare the lag DV coefficient with thesis Table 5.12 results.",
                 "A coefficient between 0.3-0.7 is typical for capital structure persistence.",
             ], title="GMM Interpretation")
+
+            with st.expander("🤖 AI Deep Interpretation", expanded=False):
+                if st.button("Generate AI Analysis", key="p13_gmm_ai_gen"):
+                    _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
+                    _citations = st.session_state.get("p19_citations", False)
+                    with st.spinner("Analysing GMM results..."):
+                        st.session_state["p13_gmm_ai"] = "".join(
+                            generate_econometric_narrative(
+                                gmm, model_type="System GMM",
+                                panel_mode=_panel, role=_user_role, citations=_citations,
+                            )
+                        )
+                if st.session_state.get("p13_gmm_ai"):
+                    st.markdown(st.session_state["p13_gmm_ai"])
 
 
 # ══════════════════════════════════════════════
