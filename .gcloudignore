@@ -47,3 +47,10 @@ table*.xml
 
 # Planning docs
 docs/plans/
+
+# Windows reserved device name — causes ZIP timestamp error in gcloud source upload
+NUL
+
+# Slide mirror and other one-off text exports
+slides_mirror.md
+*.md.orig
