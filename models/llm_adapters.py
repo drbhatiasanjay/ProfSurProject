@@ -204,6 +204,22 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
             WHERE {vintage_sql}
         """
         df = pd.read_sql_query(sql, conn, params=vintage_params)
+        # Industry leverage + tangibility breakdown (FIX-2) — keep conn open
+        ind_sql = f"""
+            SELECT c.industry_group,
+                   AVG(f.leverage) AS avg_lev,
+                   AVG(f.tangibility) AS avg_tang,
+                   AVG(CASE WHEN f.year >= 2015 THEN f.leverage END) AS lev_post2015,
+                   AVG(CASE WHEN f.year < 2015  THEN f.leverage END) AS lev_pre2015,
+                   COUNT(DISTINCT f.company_code) AS n_firms
+            FROM financials f
+            JOIN companies c ON c.company_code = f.company_code
+            WHERE {vintage_sql}
+            GROUP BY c.industry_group
+            HAVING n_firms >= 5
+            ORDER BY avg_lev DESC
+        """
+        ind_df = pd.read_sql_query(ind_sql, conn, params=vintage_params)
         conn.close()
         panel_label = _PANEL_DISPLAY_LABELS.get(panel_mode, panel_mode)
         footer = _grounding_footer(panel_label)
@@ -241,6 +257,40 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
         lev_p99    = float(lev.quantile(0.99))
         lev_max    = float(lev.max())
         lev_over100 = int((lev > 100).sum())
+
+        # Event-period leverage means (FIX-2a) — year-range buckets
+        def _pm(mask):
+            s = df.loc[mask, "leverage"].dropna()
+            return float(s.mean()) if len(s) else float("nan")
+        ep_pre    = _pm(df["year"] <= 2007)
+        ep_gfc    = _pm(df["year"].between(2008, 2009))
+        ep_mid    = _pm(df["year"].between(2010, 2015))
+        ep_ibc    = _pm(df["year"].between(2016, 2019))
+        ep_covid  = _pm(df["year"].between(2020, 2021))
+        ep_post   = _pm(df["year"] >= 2022)
+
+        # Industry block (FIX-2b) — top 6 by leverage, top 3 by tangibility
+        ind_lev_top = (
+            ind_df[["industry_group", "avg_lev", "lev_post2015", "lev_pre2015"]]
+            .dropna(subset=["avg_lev"])
+            .head(6)
+        )
+        ind_tang_top = (
+            ind_df[["industry_group", "avg_tang"]]
+            .dropna(subset=["avg_tang"])
+            .sort_values("avg_tang", ascending=False)
+            .head(3)
+        )
+        ind_lev_lines = "\n".join(
+            f"  {r.industry_group}: avg={r.avg_lev:.1f}% "
+            f"(post-2015={r.lev_post2015:.1f}%, pre-2015={r.lev_pre2015:.1f}%)"
+            for r in ind_lev_top.itertuples()
+        )
+        ind_tang_lines = ", ".join(
+            f"{r.industry_group} ({r.avg_tang:.2f})"
+            for r in ind_tang_top.itertuples()
+        )
+
         coef_lines = "\n".join(
             f"- {p}: coef={float(coefs.get(p, 0.0)):+.3f} (sample mean={float(means.get(_means_key_map.get(p, p), 0.0)):+.3f})"
             for p in PREDICTORS
@@ -256,6 +306,14 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
             f"p99={lev_p99:.1f}%, max={lev_max:.1f}% "
             f"({lev_over100} firm-years >100%, driven by negative-equity firms)\n"
             f"- By Life Stage (mean leverage): {stage_line}\n\n"
+            f"## [SOURCE: {panel_label}] Leverage by Event Period (panel mean %)\n"
+            f"- Pre-GFC (2001-07): {ep_pre:.1f}% | GFC (2008-09): {ep_gfc:.1f}%"
+            f" | Post-GFC (2010-15): {ep_mid:.1f}%\n"
+            f"- Post-IBC (2016-19): {ep_ibc:.1f}% | COVID (2020-21): {ep_covid:.1f}%"
+            f" | Post-COVID (2022+): {ep_post:.1f}%\n\n"
+            f"## [SOURCE: {panel_label}] Industry Leverage (top 6 by avg, firms>=5)\n"
+            f"{ind_lev_lines}\n"
+            f"- Highest tangibility: {ind_tang_lines}\n\n"
             f"## [SOURCE: OLS Model] OLS Baseline (DV: leverage)\n"
             f"- intercept: {float(coefs.get('intercept', 0.0)):+.3f}\n"
             f"{coef_lines}\n"
