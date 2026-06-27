@@ -31,23 +31,34 @@ except ImportError:
         return max(1, len(text) // 4)
 
 
-GROUNDING_FOOTER = (
-    "\n\nINSTRUCTIONS: Answer ONLY from the three knowledge blocks above.\n"
-    "For every factual claim or interpretive point, append a citation in brackets "
-    "using one of these three tags:\n"
-    "  [Source: THESIS] — for theory, methodology, Dickinson classification, hypotheses\n"
-    "  [Source: DATA] — for panel statistics, stage means, company KPIs, peer metrics\n"
-    "  [Source: ANALYSIS] — for OLS/regression coefficients, R², model outputs\n"
-    "If asked about something not in the context, say exactly: "
-    "'This data is not available in my current context.'\n"
-    "Never fabricate numbers. Cite exact values from the context."
-)
+_PANEL_DISPLAY_LABELS = {
+    "run3":      "(2001-25)_April26",
+    "thesis":    "Thesis (2001-2024)",
+    "latest":    "Latest (2001-2025)",
+    "cmie_2025": "CMIE 2025",
+    "us_av_2024": "US S&P Sample",
+}
+
+def _grounding_footer(panel_label: str) -> str:
+    return (
+        "\n\nINSTRUCTIONS: Answer ONLY from the three knowledge blocks above.\n"
+        "For every factual claim or interpretive point, append a citation in brackets "
+        "using one of these three tags:\n"
+        f"  [Source: Theory] — for theory, methodology, Dickinson classification, hypotheses\n"
+        f"  [Source: {panel_label}] — for panel statistics, stage means, company KPIs, peer metrics\n"
+        f"  [Source: OLS Model] — for regression coefficients, R², model outputs\n"
+        "If asked about something not in the context, say exactly: "
+        "'This data is not available in my current context.'\n"
+        "Never fabricate numbers. Cite exact values from the context."
+    )
+
+GROUNDING_FOOTER = _grounding_footer("DATA")
 
 # ── Static thesis knowledge block (A) — injected into every context ───────────
 # Covers: Dickinson life-stage classification, core theories, thesis scope,
 # and directional hypotheses. Token cost ~160 tokens — well within 900 budget.
 _THESIS_BLOCK = (
-    "## [SOURCE: THESIS] Theoretical & Methodological Framework\n"
+    "## [SOURCE: Theory] Theoretical & Methodological Framework\n"
     "**Life Stage Classification (Dickinson 2011) — cash-flow sign patterns:**\n"
     "- Startup: OCF−, ICF−, FCF+ → high external financing dependency, higher leverage expected\n"
     "- Growth: OCF+, ICF−, FCF− → heavy reinvestment, moderate-high leverage\n"
@@ -62,8 +73,8 @@ _THESIS_BLOCK = (
     "→ H: tangibility ↑ = leverage ↑ (positive coef, collateral value)\n"
     "- Agency Theory (Jensen & Meckling 1976): debt disciplines free cash flow "
     "→ effect varies by life stage\n\n"
-    "**Thesis Scope:** 401 Indian listed firms, panel 2001–2024 (thesis vintage); "
-    "402 firms to 2025 (latest vintage). Dependent variable: leverage (debt/total assets %).\n"
+    "**Study scope:** Indian listed firms, multi-year panel. "
+    "Dependent variable: leverage = Debt / Total Assets × 100.\n"
 )
 
 CONTEXT_BUDGET_TOKENS = 1500
@@ -136,27 +147,29 @@ def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
         else:
             peer_mean_lev = peer_med_lev = peer_mean_roa = peer_med_roa = float("nan")
         delta_lev = float(latest["leverage"]) - peer_med_lev if peer_n else float("nan")
+        panel_label = _PANEL_DISPLAY_LABELS.get(panel_mode, panel_mode)
+        footer = _grounding_footer(panel_label)
         md = (
             _THESIS_BLOCK
-            + f"## [SOURCE: DATA] Company: {latest['company_name']} (code: {int(company_code)})\n"
+            + f"## [SOURCE: {panel_label}] Company: {latest['company_name']} (code: {int(company_code)})\n"
             f"- Industry: {latest['industry_group']} | Life Stage: {latest['life_stage']} | Size Decile: {latest['size_decile']}\n"
             f"- Latest Year ({int(latest['year'])}): Leverage={float(latest['leverage']):.3f}, "
             f"Profitability={float(latest['profitability']):.3f}, "
             f"Tangibility={float(latest['tangibility']):.3f}, "
             f"FirmSize={float(latest['firm_size']):.3f}\n"
             f"- 5-Year Leverage Trend: {trend_csv}\n\n"
-            f"## [SOURCE: DATA] Peer Group ({peer_n} firms, same industry + life_stage, {int(latest['year'])})\n"
+            f"## [SOURCE: {panel_label}] Peer Group ({peer_n} firms, same industry + life_stage, {int(latest['year'])})\n"
             f"- Peer Mean Leverage: {peer_mean_lev:.3f} | Peer Median: {peer_med_lev:.3f}\n"
             f"- Peer Mean Profitability: {peer_mean_roa:.3f} | Peer Median: {peer_med_roa:.3f}\n"
             f"- Company vs Peer Median (leverage delta): {delta_lev:+.3f}\n"
         )
-        text = md + GROUNDING_FOOTER
+        text = md + footer
         # Token-budget guard — drop trend line, then peer detail, if over budget
         if count_tokens(text) > CONTEXT_BUDGET_TOKENS:
             md_no_trend = re.sub(r"- 5-Year Trend.*\n", "", md)
-            text = md_no_trend + GROUNDING_FOOTER
+            text = md_no_trend + footer
         if count_tokens(text) > CONTEXT_BUDGET_TOKENS:
-            text = (md.split("## PEER GROUP")[0] + GROUNDING_FOOTER)
+            text = (md.split("## PEER GROUP")[0] + footer)
         return text
     except Exception as e:
         return f"Context unavailable: {type(e).__name__}: {e}{GROUNDING_FOOTER}"
@@ -192,8 +205,10 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
         """
         df = pd.read_sql_query(sql, conn, params=vintage_params)
         conn.close()
+        panel_label = _PANEL_DISPLAY_LABELS.get(panel_mode, panel_mode)
+        footer = _grounding_footer(panel_label)
         if df.empty:
-            return f"## PANEL OVERVIEW (mode={panel_mode})\nNo rows.{GROUNDING_FOOTER}"
+            return f"## PANEL OVERVIEW (mode={panel_mode})\nNo rows.{footer}"
         # CRITICAL: compute stats from df directly — do NOT call db.get_db_metadata()
         # which has @st.cache_data and raises outside Streamlit (breaks pytest)
         total_firms = int(df["company_code"].nunique()) if "company_code" in df.columns else 0
@@ -219,30 +234,39 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
         stage_line = ", ".join(
             f"{s}={float(stage_means[s]):.3f}" for s in present
         )
+        # Leverage distribution stats (FIX-3)
+        lev = df["leverage"].dropna()
+        lev_median = float(lev.median())
+        lev_p90    = float(lev.quantile(0.90))
+        lev_p99    = float(lev.quantile(0.99))
+        lev_max    = float(lev.max())
+        lev_over100 = int((lev > 100).sum())
         coef_lines = "\n".join(
             f"- {p}: coef={float(coefs.get(p, 0.0)):+.3f} (sample mean={float(means.get(_means_key_map.get(p, p), 0.0)):+.3f})"
             for p in PREDICTORS
         )
         md = (
             _THESIS_BLOCK
-            + f"## [SOURCE: DATA] Panel Statistics (mode={panel_mode})\n"
+            + f"## [SOURCE: {panel_label}] Panel Statistics\n"
             f"- {total_firms} firms, "
             f"{total_obs} firm-year observations, "
             f"{year_min}-{year_max}\n"
             f"- Overall mean leverage: {float(df['leverage'].mean()):.3f}\n"
+            f"- Leverage distribution: median={lev_median:.1f}%, p90={lev_p90:.1f}%, "
+            f"p99={lev_p99:.1f}%, max={lev_max:.1f}% "
+            f"({lev_over100} firm-years >100%, driven by negative-equity firms)\n"
             f"- By Life Stage (mean leverage): {stage_line}\n\n"
-            f"## [SOURCE: ANALYSIS] OLS Baseline (DV: leverage)\n"
+            f"## [SOURCE: OLS Model] OLS Baseline (DV: leverage)\n"
             f"- intercept: {float(coefs.get('intercept', 0.0)):+.3f}\n"
             f"{coef_lines}\n"
             f"R²={float(coefs.get('r_squared', 0.0)):.3f}, N={int(coefs.get('n_obs', 0))}\n"
         )
-        text = md + GROUNDING_FOOTER
+        text = md + footer
         if count_tokens(text) > CONTEXT_BUDGET_TOKENS:
-            # Truncate by dropping per-predictor sample means
             short = "\n".join(
                 f"- {p}: coef={float(coefs.get(p, 0.0)):+.3f}" for p in PREDICTORS
             )
-            text = md.replace(coef_lines, short) + GROUNDING_FOOTER
+            text = md.replace(coef_lines, short) + footer
         return text
     except Exception as e:
         return f"## PANEL OVERVIEW unavailable: {type(e).__name__}: {e}{GROUNDING_FOOTER}"

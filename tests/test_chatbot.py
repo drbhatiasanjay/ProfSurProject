@@ -30,9 +30,9 @@ class TestBuildCompanyContext:
 
     def test_contains_required_sections(self, sample_company_code):
         ctx = build_company_context(sample_company_code, panel_mode="thesis")
-        assert "## [SOURCE: THESIS]" in ctx
-        assert "## [SOURCE: DATA]" in ctx
-        assert GROUNDING_FOOTER.strip() in ctx
+        assert "## [SOURCE: Theory]" in ctx
+        assert "## [SOURCE: Thesis (2001-2024)]" in ctx
+        assert "Source: Thesis (2001-2024)" in ctx
 
     def test_token_budget_respected(self, sample_company_code):
         ctx = build_company_context(sample_company_code, panel_mode="thesis")
@@ -41,7 +41,7 @@ class TestBuildCompanyContext:
     def test_handles_unknown_company_code_gracefully(self):
         ctx = build_company_context(-99999, panel_mode="thesis")
         assert isinstance(ctx, str)
-        assert GROUNDING_FOOTER.strip() in ctx  # footer always present
+        assert "INSTRUCTIONS" in ctx  # footer always present
 
 
 # ---------------------------------------------------------------------------
@@ -52,10 +52,10 @@ class TestBuildPanelContext:
     def test_returns_string_with_sections(self):
         ctx = build_panel_context(panel_mode="thesis")
         assert isinstance(ctx, str)
-        assert "## [SOURCE: THESIS]" in ctx
-        assert "## [SOURCE: DATA]" in ctx
-        assert "## [SOURCE: ANALYSIS]" in ctx
-        assert GROUNDING_FOOTER.strip() in ctx
+        assert "## [SOURCE: Theory]" in ctx
+        assert "## [SOURCE: Thesis (2001-2024)]" in ctx
+        assert "## [SOURCE: OLS Model]" in ctx
+        assert "Source: Thesis (2001-2024)" in ctx
 
     def test_token_budget_respected(self):
         ctx = build_panel_context(panel_mode="thesis")
