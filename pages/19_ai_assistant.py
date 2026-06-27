@@ -101,6 +101,9 @@ if user_q:
     # Model routing based on query classification
     q_type = classify_query(user_q)
     model_to_use = "claude-sonnet-4-6" if q_type in ("analytical", "hybrid") else "claude-haiku-4-5-20251001"
+    # FIX-5: factual queries lead with the number, not preamble
+    if q_type == "factual":
+        ctx = "Answer in 1-2 sentences. State the exact number first, then one sentence of context.\n\n" + ctx
 
     with st.chat_message("assistant"):
         if backend == "ollama":

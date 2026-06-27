@@ -49,7 +49,9 @@ def _grounding_footer(panel_label: str) -> str:
         f"  [Source: OLS Model] — for regression coefficients, R², model outputs\n"
         "If asked about something not in the context, say exactly: "
         "'This data is not available in my current context.'\n"
-        "Never fabricate numbers. Cite exact values from the context."
+        "Never fabricate numbers. Cite exact values from the context.\n"
+        "For coefficient significance questions: always quote the exact coefficient "
+        "AND the sample mean, then compute the marginal effect = coef × sample_mean."
     )
 
 GROUNDING_FOOTER = _grounding_footer("DATA")
