@@ -127,6 +127,29 @@ with tab_cross:
         )
         df_download_button(_ct_formatted, "cross_term_coefficients.csv")
 
+        # ── Citation Generator ────────────────────────────────────────────────
+        _cite_url = "https://lifecycle-leverage-779655496440.us-east1.run.app"
+        _cite_yr = filters.get("year_range", (2001, 2024))
+        _cite_panel = panel_label(_PANEL)
+        _apa_text = (
+            f"Kumar, S. (2024). Capital structure determinants across corporate life stages "
+            f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
+            f"(Estimated via Cross-Term OLS (Prof×Tang); panel: {_cite_panel}, "
+            f"{_cite_yr[0]}–{_cite_yr[1]}, N={ct['n_firms']:,} firms, "
+            f"{ct['n_obs']:,} obs, R²={ct['r_squared']:.3f})"
+        )
+        _latex_text = (
+            r"\cite{kumar2024lifecycle} estimated via Cross-Term OLS ($\text{Prof} \times \text{Tang}$), "
+            f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
+            f"$N={ct['n_firms']:,}$ firms, $R^2={ct['r_squared']:.3f}$."
+        )
+        with st.expander("📋 Cite this result"):
+            st.caption("Copy the citation in your preferred format:")
+            st.markdown("**APA**")
+            st.code(_apa_text, language=None)
+            st.markdown("**LaTeX**")
+            st.code(_latex_text, language=None)
+
         # ── Simple Slopes Plot ────────────────────────────────────────────────
         st.markdown("#### Simple Slopes Plot")
         st.caption(
