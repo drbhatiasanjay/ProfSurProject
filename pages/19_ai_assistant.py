@@ -2,6 +2,7 @@
 Page 19 — AI Financial Assistant.
 Full-screen dedicated chat interface grounded in the capital structure panel data.
 """
+import time
 import streamlit as st
 from helpers import require_role
 import db
@@ -57,22 +58,63 @@ with st.sidebar:
         st.session_state["chat_history"] = []
         st.rerun()
 
+    # FIX-10: export chat as markdown
+    if st.session_state.get("chat_history"):
+        from datetime import datetime as _dt
+        _export_lines = ["# AI Chat Export", f"*{_dt.now().strftime('%Y-%m-%d %H:%M')}*", ""]
+        for _t in st.session_state["chat_history"]:
+            _export_lines.append(f"**{'You' if _t['role'] == 'user' else 'AI'}:** {_t['content']}\n")
+        st.download_button(
+            "⬇ Export Chat",
+            data="\n".join(_export_lines),
+            file_name=f"ai_chat_{_dt.now().strftime('%Y%m%d')}.md",
+            mime="text/markdown",
+            key="p19_export",
+        )
+
+    # FIX-11: context progress bar
+    _n_msgs = len(st.session_state.get("chat_history", []))
+    st.progress(min(_n_msgs / 20, 1.0))
+    st.caption(f"Context: {_n_msgs}/20 messages")
+
 # ── Shared history (same key as the global bubble — seamless handoff) ────────
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
 
+_STARTER_QUESTIONS = {
+    "researcher": [
+        "What is the mean leverage for Maturity stage firms?",
+        "Explain the role of profitability in leverage decisions — pecking order vs trade-off.",
+        "Compare leverage trends during GFC 2008 and COVID 2020.",
+    ],
+    "admin": [
+        "Which life stage carries the highest default risk in this panel?",
+        "How does leverage differ across industries?",
+        "What would happen to leverage if profitability increased by 10%?",
+    ],
+    "cfo": [
+        "How does my company's leverage compare to industry peers?",
+        "What is the optimal leverage for a Maturity stage firm?",
+        "Which capital structure levers should a CFO adjust first?",
+    ],
+}
+
 # ── Display history ───────────────────────────────────────────────────────────
 if not st.session_state["chat_history"]:
-    st.info(
-        "Ask a question to get started. Examples:\n"
-        "- What is the mean leverage for Maturity stage firms?\n"
-        "- Which industries have the highest tangibility?\n"
-        "- Explain the role of profitability in leverage decisions."
-    )
+    _role_key = (st.session_state.get("user") or {}).get("role", "researcher")
+    _starters = _STARTER_QUESTIONS.get(_role_key, _STARTER_QUESTIONS["researcher"])
+    st.caption("💡 **Try asking:**")
+    for _sq in _starters:
+        if st.button(_sq, use_container_width=True, key=f"starter_{hash(_sq)}"):
+            st.session_state["_pending_followup"] = _sq
+            st.rerun()
 
 for turn in st.session_state["chat_history"]:
     with st.chat_message(turn["role"]):
         st.markdown(turn["content"])
+        if turn["role"] == "assistant" and turn.get("model_used"):
+            _model_short = "Haiku" if "haiku" in turn["model_used"] else "Sonnet"
+            st.caption(f"*{_model_short} · {turn.get('elapsed_s', '?')}s*")
 
 # ── Input (natural bottom-of-page position — guaranteed to work) ─────────────
 # Handle pending follow-up questions from suggested chips
@@ -107,6 +149,7 @@ if user_q:
         ctx = "Answer in 1-2 sentences. State the exact number first, then one sentence of context.\n\n" + ctx
 
     _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
+    _t0 = time.time()
     with st.chat_message("assistant"):
         if backend == "ollama":
             full = st.write_stream(
@@ -119,10 +162,16 @@ if user_q:
                     role=_user_role, citations=citations_on,
                 )
             )
+        _elapsed = round(time.time() - _t0, 1)
+        _model_badge = "Haiku" if "haiku" in model_to_use else "Sonnet"
+        st.caption(f"*{_model_badge} · {_elapsed}s*")
 
-    st.session_state["chat_history"].append(
-        {"role": "assistant", "content": full or ""}
-    )
+    st.session_state["chat_history"].append({
+        "role": "assistant",
+        "content": full or "",
+        "model_used": model_to_use,
+        "elapsed_s": _elapsed,
+    })
 
     # Generate and render context-aware follow-up chips (FIX-6 + FIX-7)
     _followups = generate_followup_suggestions(
