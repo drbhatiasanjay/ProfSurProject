@@ -18,6 +18,7 @@ from models.llm_adapters import (
     count_tokens,
     classify_query,
     parse_llm_json,
+    generate_followup_suggestions,
 )
 
 st.title("AI Financial Assistant")
@@ -105,13 +106,13 @@ if user_q:
     if q_type == "factual":
         ctx = "Answer in 1-2 sentences. State the exact number first, then one sentence of context.\n\n" + ctx
 
+    _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
     with st.chat_message("assistant"):
         if backend == "ollama":
             full = st.write_stream(
                 stream_ollama([{"role": "system", "content": ctx}] + messages)
             )
         else:
-            _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
             full = st.write_stream(
                 stream_anthropic(
                     messages, system=ctx, model=model_to_use,
@@ -123,15 +124,22 @@ if user_q:
         {"role": "assistant", "content": full or ""}
     )
 
-    # Parse and render follow-up question chips
-    _parsed = parse_llm_json(full or "")
-    _followups = _parsed.get("followup_questions", [])
+    # Generate and render context-aware follow-up chips (FIX-6 + FIX-7)
+    _followups = generate_followup_suggestions(
+        st.session_state["chat_history"],
+        last_query=user_q,
+        last_response=full or "",
+        query_type=q_type,
+        role=_user_role,
+    )
     if _followups:
-        st.markdown("**Suggested follow-ups:**")
-        for _fq in _followups[:3]:
-            if st.button(_fq, key=f"fq_{hash(_fq)}_{len(st.session_state['chat_history'])}"):
-                st.session_state["_pending_followup"] = _fq
-                st.rerun()
+        st.caption("💡 Continue exploring:")
+        _cols = st.columns(3)
+        for _idx, _fq in enumerate(_followups[:3]):
+            with _cols[_idx]:
+                if st.button(_fq, key=f"fq_{hash(_fq)}_{len(st.session_state['chat_history'])}", use_container_width=True):
+                    st.session_state["_pending_followup"] = _fq
+                    st.rerun()
 
     # CFO mode: offer to add reply to board deck
     if mode == "CFO" and full:

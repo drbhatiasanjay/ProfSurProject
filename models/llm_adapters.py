@@ -381,6 +381,74 @@ def classify_query(query: str) -> Literal["factual", "analytical", "hybrid"]:
     return "hybrid"
 
 
+def generate_followup_suggestions(
+    chat_history: list[dict],
+    last_query: str,
+    last_response: str,
+    query_type: str,
+    role: str = "researcher",
+) -> list[str]:
+    """Generate 3 context-aware follow-up questions via a separate Haiku call.
+
+    Reads last 3 turns of chat_history to avoid repeating covered topics.
+    Returns [] on any error — never crashes the chat.
+    """
+    try:
+        import anthropic
+    except ImportError:
+        return []
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("ANTHROPIC_API_KEY")
+        except Exception:
+            api_key = None
+    if not api_key:
+        return []
+
+    recent = chat_history[-6:] if len(chat_history) > 6 else chat_history[:]
+    history_text = "\n".join(
+        f"{'User' if t['role'] == 'user' else 'AI'}: {t['content'][:200]}"
+        for t in recent
+        if t.get("content")
+    )
+    user_msg = (
+        f"Recent conversation:\n{history_text}\n\n"
+        f"Last question ({query_type}): {last_query}\n"
+        f"Last response (first 300 chars): {last_response[:300]}"
+    )
+    system_msg = (
+        "You are an expert financial economist. Generate exactly 3 follow-up questions "
+        "to deepen a capital structure research conversation. Rules:\n"
+        "- ONE factual: probe a specific number, stat, or comparison not yet discussed\n"
+        "- ONE analytical: explore a theory, mechanism, or implication\n"
+        "- ONE cross-cutting: connect to industry, time period, or peer firm dimension\n"
+        "Output ONLY valid JSON, no prose, no markdown fences:\n"
+        '{"followups": ["question 1?", "question 2?", "question 3?"]}'
+    )
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=150,
+            system=system_msg,
+            messages=[{"role": "user", "content": user_msg}],
+        )
+        raw = response.content[0].text if response.content else ""
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            m = re.search(r"\{.*\}", raw, re.DOTALL)
+            parsed = json.loads(m.group()) if m else {}
+        items = parsed.get("followups", [])
+        if isinstance(items, list):
+            return [str(q) for q in items[:3] if q]
+        return []
+    except Exception:
+        return []
+
+
 def stream_ollama(
     messages: list[dict],
     model: str = "llama3.1:8b",

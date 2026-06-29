@@ -15,6 +15,7 @@ from models.llm_adapters import (
     count_tokens,
     GROUNDING_FOOTER,
     CONTEXT_BUDGET_TOKENS,
+    generate_followup_suggestions,
 )
 
 
@@ -232,3 +233,80 @@ class TestLogChatQuery:
         monkeypatch.setattr(db_module, "get_connection", boom)
         # Must not raise
         log_chat_query("u", "r", "anthropic", 100, "q", "s")
+
+
+# ---------------------------------------------------------------------------
+# generate_followup_suggestions
+# ---------------------------------------------------------------------------
+
+class TestGenerateFollowupSuggestions:
+    def _fake_client(self, json_text: str):
+        class FakeContent:
+            text = json_text
+        class FakeResponse:
+            content = [FakeContent()]
+        class FakeMessages:
+            def create(self, **kw):
+                return FakeResponse()
+        class FakeClient:
+            def __init__(self, api_key=None):
+                self.messages = FakeMessages()
+        return FakeClient
+
+    def test_returns_list_on_valid_json(self, monkeypatch):
+        import anthropic
+        monkeypatch.setattr(anthropic, "Anthropic",
+            self._fake_client('{"followups": ["Q1?", "Q2?", "Q3?"]}'))
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-fake")
+        result = generate_followup_suggestions(
+            chat_history=[
+                {"role": "user", "content": "How many firms?"},
+                {"role": "assistant", "content": "400 firms."},
+            ],
+            last_query="How many firms?",
+            last_response="400 firms.",
+            query_type="factual",
+        )
+        assert result == ["Q1?", "Q2?", "Q3?"]
+
+    def test_returns_empty_on_llm_error(self, monkeypatch):
+        class ErrorMessages:
+            def create(self, **kw):
+                raise RuntimeError("API down")
+        class ErrorClient:
+            def __init__(self, api_key=None):
+                self.messages = ErrorMessages()
+        import anthropic
+        monkeypatch.setattr(anthropic, "Anthropic", ErrorClient)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-fake")
+        result = generate_followup_suggestions([], "q", "r", "factual")
+        assert result == []
+
+    def test_returns_empty_on_bad_json(self, monkeypatch):
+        import anthropic
+        monkeypatch.setattr(anthropic, "Anthropic",
+            self._fake_client("Sure, here are some ideas for you to consider."))
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-fake")
+        result = generate_followup_suggestions([], "q", "r", "analytical")
+        assert result == []
+
+    def test_max_three_items(self, monkeypatch):
+        import anthropic
+        monkeypatch.setattr(anthropic, "Anthropic",
+            self._fake_client('{"followups": ["Q1?", "Q2?", "Q3?", "Q4?", "Q5?"]}'))
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-fake")
+        result = generate_followup_suggestions([], "q", "r", "hybrid")
+        assert len(result) <= 3
+
+    def test_empty_history_no_crash(self, monkeypatch):
+        import anthropic
+        monkeypatch.setattr(anthropic, "Anthropic",
+            self._fake_client('{"followups": ["Q1?", "Q2?", "Q3?"]}'))
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-fake")
+        result = generate_followup_suggestions(
+            chat_history=[],
+            last_query="test",
+            last_response="test response",
+            query_type="factual",
+        )
+        assert isinstance(result, list)
