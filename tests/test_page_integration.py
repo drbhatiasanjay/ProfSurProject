@@ -655,6 +655,49 @@ class TestDBLayer:
 
 
 # ─────────────────────────────────────────────
+# Page 22 — Comparison
+# ─────────────────────────────────────────────
+
+class TestPage22Comparison:
+    def test_company_detail_has_required_cols(self, db_conn):
+        import db as _db
+        co = _db.get_companies("thesis")
+        code = int(co.iloc[0]["company_code"])
+        df = _db.get_company_detail(code)
+        for col in ["year", "leverage", "profitability", "tangibility", "firm_size", "tax_shield", "cash_holdings"]:
+            assert col in df.columns, f"Missing column: {col}"
+
+    def test_two_companies_have_data(self, db_conn):
+        import db as _db
+        co = _db.get_companies("thesis")
+        assert len(co) >= 2
+        df_a = _db.get_company_detail(int(co.iloc[0]["company_code"]))
+        df_b = _db.get_company_detail(int(co.iloc[1]["company_code"]))
+        assert not df_a.empty
+        assert not df_b.empty
+
+    def test_stage_aggregation(self, thesis_panel):
+        stages = thesis_panel["life_stage"].unique().tolist()
+        assert len(stages) >= 2
+        for stage in stages[:2]:
+            sub = thesis_panel[thesis_panel["life_stage"] == stage]
+            agg = sub.groupby("year")["leverage"].mean()
+            assert len(agg) >= 5
+
+    def test_radar_cols_present_for_comparison(self, thesis_panel):
+        for col in ["leverage", "profitability", "tangibility", "firm_size", "tax_shield", "cash_holdings"]:
+            assert col in thesis_panel.columns
+
+    def test_summary_table_shape(self, thesis_panel):
+        stages = thesis_panel["life_stage"].dropna().unique()
+        df_a = thesis_panel[thesis_panel["life_stage"] == stages[0]]
+        df_b = thesis_panel[thesis_panel["life_stage"] == stages[1]]
+        assert not df_a.empty and not df_b.empty
+        assert df_a["leverage"].mean() >= 0
+        assert df_b["leverage"].mean() >= 0
+
+
+# ─────────────────────────────────────────────
 # UI Helper regression guards
 # ─────────────────────────────────────────────
 
