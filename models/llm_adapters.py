@@ -362,6 +362,7 @@ def classify_query(query: str) -> Literal["factual", "analytical", "hybrid"]:
         "why", "explain", "analyze", "analyse", "interpret", "significance",
         "implication", "economic significance", "recommend", "should", "would",
         "suggest", "mechanism", "theory", "preferred over", "advantage of",
+        "risk", "distress",  # risk/distress always need analytical interpretation
     ]
 
     # Lookup / counting / retrieval

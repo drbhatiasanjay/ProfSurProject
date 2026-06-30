@@ -116,14 +116,27 @@ for turn in st.session_state["chat_history"]:
             _model_short = "Haiku" if "haiku" in turn["model_used"] else "Sonnet"
             st.caption(f"*{_model_short} · {turn.get('elapsed_s', '?')}s*")
 
-# ── Input (natural bottom-of-page position — guaranteed to work) ─────────────
-# Handle pending follow-up questions from suggested chips
-if st.session_state.get("_pending_followup"):
+# ── Persistent followup chips (survive rerenders via session_state) ──────────
+_stored_fups = st.session_state.get("_followup_suggestions", [])
+if _stored_fups:
+    st.caption("💡 Continue exploring:")
+    _fup_cols = st.columns(3)
+    for _idx, _fq in enumerate(_stored_fups[:3]):
+        with _fup_cols[_idx]:
+            if st.button(_fq, key=f"fq_{hash(_fq)}_{len(st.session_state['chat_history'])}", use_container_width=True):
+                st.session_state["_pending_followup"] = _fq
+                st.session_state.pop("_followup_suggestions", None)
+                st.rerun()
+
+# ── Input — always rendered so the chat box never disappears ─────────────────
+user_q = st.chat_input("Ask about the panel data...", key="chat_input_p19")
+if not user_q and st.session_state.get("_pending_followup"):
     user_q = st.session_state.pop("_pending_followup")
-else:
-    user_q = st.chat_input("Ask about the panel data...", key="chat_input_p19")
+elif st.session_state.get("_pending_followup"):
+    st.session_state.pop("_pending_followup")  # typed message wins; discard chip
 
 if user_q:
+    st.session_state.pop("_followup_suggestions", None)  # clear old chips on new message
     panel_mode = st.session_state.get("panel_mode", "thesis")
     if mode == "CFO" and company_code:
         ctx = build_company_context(int(company_code), panel_mode=panel_mode)
@@ -173,22 +186,18 @@ if user_q:
         "elapsed_s": _elapsed,
     })
 
-    # Generate and render context-aware follow-up chips (FIX-6 + FIX-7)
-    _followups = generate_followup_suggestions(
-        st.session_state["chat_history"],
-        last_query=user_q,
-        last_response=full or "",
-        query_type=q_type,
-        role=_user_role,
-    )
+    # Generate chips — stored in session_state so they persist after rerender
+    with st.spinner("Generating follow-up questions…"):
+        _followups = generate_followup_suggestions(
+            st.session_state["chat_history"],
+            last_query=user_q,
+            last_response=full or "",
+            query_type=q_type,
+            role=_user_role,
+        )
     if _followups:
-        st.caption("💡 Continue exploring:")
-        _cols = st.columns(3)
-        for _idx, _fq in enumerate(_followups[:3]):
-            with _cols[_idx]:
-                if st.button(_fq, key=f"fq_{hash(_fq)}_{len(st.session_state['chat_history'])}", use_container_width=True):
-                    st.session_state["_pending_followup"] = _fq
-                    st.rerun()
+        st.session_state["_followup_suggestions"] = _followups
+        st.rerun()
 
     # CFO mode: offer to add reply to board deck
     if mode == "CFO" and full:
