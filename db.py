@@ -157,7 +157,7 @@ def get_model_runs(username: str, page: str, limit: int = 20) -> "pd.DataFrame":
 
 
 def ensure_app_tables():
-    """Create audit_log, user_preferences, user_model_runs, ai_cache if missing (idempotent)."""
+    """Create audit_log, user_preferences, user_model_runs, ai_cache, chat_sessions, chat_messages if missing (idempotent)."""
     conn = get_connection()
     try:
         conn.executescript("""
@@ -185,6 +185,31 @@ def ensure_app_tables():
                 created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (query_hash, context_hash, model)
             );
+            CREATE TABLE IF NOT EXISTS chat_sessions (
+                chat_session_id  TEXT PRIMARY KEY,
+                username         TEXT NOT NULL,
+                role             TEXT NOT NULL,
+                title            TEXT,
+                panel_mode       TEXT DEFAULT 'thesis',
+                mode             TEXT DEFAULT 'Researcher',
+                company_code     INTEGER,
+                started_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_active      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                message_count    INTEGER DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                chat_session_id  TEXT NOT NULL REFERENCES chat_sessions(chat_session_id) ON DELETE CASCADE,
+                ts               TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                role             TEXT NOT NULL CHECK(role IN ('user','assistant')),
+                content          TEXT NOT NULL,
+                model_used       TEXT,
+                elapsed_s        REAL
+            );
+            CREATE INDEX IF NOT EXISTS idx_chat_sessions_user
+                ON chat_sessions(username, last_active DESC);
+            CREATE INDEX IF NOT EXISTS idx_chat_messages_session
+                ON chat_messages(chat_session_id, ts ASC);
         """)
         conn.commit()
     finally:
@@ -1077,6 +1102,133 @@ def ai_cache_set(query_hash: str, context_hash: str, model: str, response: str) 
             con.execute(
                 "INSERT OR REPLACE INTO ai_cache (query_hash, context_hash, model, response) VALUES (?,?,?,?)",
                 (query_hash, context_hash, model, response),
+            )
+            con.commit()
+    except Exception:
+        pass
+
+
+# ── Persistent Chat Sessions ────────────────────────────────────────────────
+
+def create_chat_session(
+    chat_session_id: str,
+    username: str,
+    role: str,
+    panel_mode: str = "thesis",
+    mode: str = "Researcher",
+    company_code: int | None = None,
+) -> None:
+    """Create a new chat session row. Silent no-op on any error."""
+    try:
+        with get_connection() as con:
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute(
+                """INSERT OR IGNORE INTO chat_sessions
+                   (chat_session_id, username, role, panel_mode, mode, company_code)
+                   VALUES (?,?,?,?,?,?)""",
+                (chat_session_id, username, role, panel_mode, mode, company_code),
+            )
+            con.commit()
+    except Exception:
+        pass
+
+
+def append_chat_message(
+    chat_session_id: str,
+    role: str,
+    content: str,
+    model_used: str | None = None,
+    elapsed_s: float | None = None,
+) -> None:
+    """Append a message and update session last_active + message_count. Silent no-op on error."""
+    try:
+        with get_connection() as con:
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute(
+                """INSERT INTO chat_messages (chat_session_id, role, content, model_used, elapsed_s)
+                   VALUES (?,?,?,?,?)""",
+                (chat_session_id, role, content, model_used, elapsed_s),
+            )
+            con.execute(
+                """UPDATE chat_sessions
+                   SET last_active = CURRENT_TIMESTAMP,
+                       message_count = message_count + 1,
+                       title = CASE
+                           WHEN title IS NULL AND ? = 'user'
+                           THEN substr(?, 1, 60)
+                           ELSE title
+                       END
+                   WHERE chat_session_id = ?""",
+                (role, content, chat_session_id),
+            )
+            con.commit()
+    except Exception:
+        pass
+
+
+def load_chat_messages(chat_session_id: str) -> list[dict]:
+    """Return messages for a session ordered by ts ASC. Returns [] on error or missing session."""
+    try:
+        conn = get_connection()
+        try:
+            cur = conn.execute(
+                """SELECT role, content, model_used, elapsed_s
+                   FROM chat_messages
+                   WHERE chat_session_id = ?
+                   ORDER BY ts ASC""",
+                (chat_session_id,),
+            )
+            rows = cur.fetchall()
+        finally:
+            conn.close()
+        return [
+            {"role": r[0], "content": r[1], "model_used": r[2], "elapsed_s": r[3]}
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
+def list_chat_sessions(username: str, limit: int = 15) -> list[dict]:
+    """Return recent sessions for a user ordered last_active DESC. Returns [] on error."""
+    try:
+        conn = get_connection()
+        try:
+            cur = conn.execute(
+                """SELECT chat_session_id, title, started_at, last_active,
+                          message_count, mode
+                   FROM chat_sessions
+                   WHERE username = ?
+                   ORDER BY last_active DESC
+                   LIMIT ?""",
+                (username, limit),
+            )
+            rows = cur.fetchall()
+        finally:
+            conn.close()
+        return [
+            {
+                "chat_session_id": r[0],
+                "title": r[1],
+                "started_at": r[2],
+                "last_active": r[3],
+                "message_count": r[4],
+                "mode": r[5],
+            }
+            for r in rows
+        ]
+    except Exception:
+        return []
+
+
+def delete_chat_session(chat_session_id: str) -> None:
+    """Delete a session and its messages (cascade). Silent no-op on error or missing ID."""
+    try:
+        with get_connection() as con:
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute(
+                "DELETE FROM chat_sessions WHERE chat_session_id = ?",
+                (chat_session_id,),
             )
             con.commit()
     except Exception:

@@ -3,12 +3,31 @@ Page 19 — AI Financial Assistant.
 Full-screen dedicated chat interface grounded in the capital structure panel data.
 """
 import time
+import uuid as _uuid
 import streamlit as st
 from helpers import require_role
 import db
 
 require_role("admin", "researcher")
 db.log_page_visit("ai_assistant_page")
+
+# ── Session persistence lifecycle ─────────────────────────────────────────────
+_u = st.session_state.get("user") or {}
+_username = _u.get("username", "")
+
+if "chat_session_id" not in st.session_state:
+    _sessions = db.list_chat_sessions(_username, limit=1)
+    if _sessions:
+        _sid = _sessions[0]["chat_session_id"]
+        st.session_state["chat_session_id"] = _sid
+        st.session_state["chat_history"] = db.load_chat_messages(_sid)
+    else:
+        _sid = f"cs_{_uuid.uuid4().hex[:12]}"
+        st.session_state["chat_session_id"] = _sid
+        db.create_chat_session(_sid, _username, _u.get("role", "viewer"),
+                               panel_mode=st.session_state.get("panel_mode", "thesis"),
+                               mode="Researcher")
+        st.session_state["chat_history"] = []
 
 from models.llm_adapters import (
     build_company_context,
@@ -55,7 +74,10 @@ with st.sidebar:
         company_code = None
 
     if st.button("Clear history", key="p19_clear"):
+        db.delete_chat_session(st.session_state.get("chat_session_id", ""))
+        st.session_state.pop("chat_session_id", None)
         st.session_state["chat_history"] = []
+        st.session_state.pop("_followup_suggestions", None)
         st.rerun()
 
     # FIX-10: export chat as markdown
@@ -76,6 +98,37 @@ with st.sidebar:
     _n_msgs = len(st.session_state.get("chat_history", []))
     st.progress(min(_n_msgs / 20, 1.0))
     st.caption(f"Context: {_n_msgs}/20 messages")
+
+    # ── Chat History panel ────────────────────────────────────────────────────
+    st.markdown("---")
+    st.subheader("💬 Chat History")
+    if st.button("➕ New Chat", use_container_width=True, key="p19_new_chat"):
+        _new_sid = f"cs_{_uuid.uuid4().hex[:12]}"
+        db.create_chat_session(_new_sid, _username, _u.get("role", "viewer"),
+                               panel_mode=st.session_state.get("panel_mode", "thesis"),
+                               mode=mode)
+        st.session_state["chat_session_id"] = _new_sid
+        st.session_state["chat_history"] = []
+        st.session_state.pop("_followup_suggestions", None)
+        st.rerun()
+
+    for _sess in db.list_chat_sessions(_username, limit=15):
+        _is_active = _sess["chat_session_id"] == st.session_state.get("chat_session_id")
+        _label = f"{'▶ ' if _is_active else ''}{_sess['title'] or 'New chat'}"
+        _sc1, _sc2 = st.columns([5, 1])
+        with _sc1:
+            if st.button(_label, key=f"sess_{_sess['chat_session_id']}", use_container_width=True):
+                st.session_state["chat_session_id"] = _sess["chat_session_id"]
+                st.session_state["chat_history"] = db.load_chat_messages(_sess["chat_session_id"])
+                st.session_state.pop("_followup_suggestions", None)
+                st.rerun()
+        with _sc2:
+            if st.button("🗑", key=f"del_{_sess['chat_session_id']}"):
+                db.delete_chat_session(_sess["chat_session_id"])
+                if _is_active:
+                    st.session_state.pop("chat_session_id", None)
+                    st.session_state["chat_history"] = []
+                st.rerun()
 
 # ── Shared history (same key as the global bubble — seamless handoff) ────────
 if "chat_history" not in st.session_state:
@@ -144,6 +197,7 @@ if user_q:
         ctx = build_panel_context(panel_mode=panel_mode)
 
     st.session_state["chat_history"].append({"role": "user", "content": user_q})
+    db.append_chat_message(st.session_state.get("chat_session_id", ""), "user", user_q)
     with st.chat_message("user"):
         st.markdown(user_q)
 
@@ -185,6 +239,10 @@ if user_q:
         "model_used": model_to_use,
         "elapsed_s": _elapsed,
     })
+    db.append_chat_message(
+        st.session_state.get("chat_session_id", ""), "assistant",
+        full or "", model_used=model_to_use, elapsed_s=_elapsed,
+    )
 
     # Generate chips — stored in session_state so they persist after rerender
     with st.spinner("Generating follow-up questions…"):

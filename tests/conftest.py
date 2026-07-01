@@ -77,3 +77,45 @@ def temp_audit_db(tmp_path, monkeypatch):
 def sample_company_code():
     """Real company_code from thesis panel — Asian Paints (matches test_board_export.py fixtures)."""
     return 22859
+
+
+@pytest.fixture
+def temp_chat_db(tmp_path, monkeypatch):
+    """Redirect db.get_connection to a temp sqlite with chat_sessions + chat_messages schema."""
+    p = tmp_path / "chat_test.db"
+    conn = sqlite3.connect(str(p))
+    conn.executescript("""
+        CREATE TABLE chat_sessions (
+            chat_session_id  TEXT PRIMARY KEY,
+            username         TEXT NOT NULL,
+            role             TEXT NOT NULL,
+            title            TEXT,
+            panel_mode       TEXT DEFAULT 'thesis',
+            mode             TEXT DEFAULT 'Researcher',
+            company_code     INTEGER,
+            started_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_active      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            message_count    INTEGER DEFAULT 0
+        );
+        CREATE TABLE chat_messages (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            chat_session_id  TEXT NOT NULL REFERENCES chat_sessions(chat_session_id) ON DELETE CASCADE,
+            ts               TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            role             TEXT NOT NULL CHECK(role IN ('user','assistant')),
+            content          TEXT NOT NULL,
+            model_used       TEXT,
+            elapsed_s        REAL
+        );
+        CREATE INDEX idx_chat_sessions_user
+            ON chat_sessions(username, last_active DESC);
+        CREATE INDEX idx_chat_messages_session
+            ON chat_messages(chat_session_id, ts ASC);
+    """)
+    conn.commit()
+    conn.close()
+
+    def _temp_conn():
+        return sqlite3.connect(str(p))
+
+    monkeypatch.setattr(db_module, "get_connection", _temp_conn)
+    yield str(p)
