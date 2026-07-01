@@ -38,8 +38,27 @@ from models.llm_adapters import (
     count_tokens,
     classify_query,
     parse_llm_json,
-    generate_followup_suggestions,
 )
+import json as _json
+import re as _re
+
+_FOLLOWUP_INSTRUCTION = (
+    "\n\n---\nAfter your answer, on a new line output exactly:\n"
+    '<followups>{"followups":["<specific stat or number question>?","<theory or mechanism question>?","<industry, time period, or peer comparison question>?"]}</followups>\n'
+    "Replace each placeholder with one real follow-up question. Output only that tag line after your answer — no other text."
+)
+
+def _parse_chips(text: str) -> tuple[str, list[str]]:
+    """Extract <followups>JSON</followups> footer; return (display_text, chips)."""
+    m = _re.search(r'<followups>(.*?)</followups>', text, _re.DOTALL)
+    if not m:
+        return text.strip(), []
+    display = text[:m.start()].strip()
+    try:
+        chips = _json.loads(m.group(1)).get("followups", [])
+        return display, [str(q) for q in chips[:3] if q]
+    except Exception:
+        return display, []
 
 st.title("AI Financial Assistant")
 st.caption("Ask questions grounded in the capital structure panel data.")
@@ -214,56 +233,55 @@ if user_q:
     # FIX-5: factual queries lead with the number, not preamble
     if q_type == "factual":
         ctx = "Answer in 1-2 sentences. State the exact number first, then one sentence of context.\n\n" + ctx
+    ctx += _FOLLOWUP_INSTRUCTION
 
     _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
     _t0 = time.time()
     with st.chat_message("assistant"):
-        if backend == "ollama":
-            full = st.write_stream(
-                stream_ollama([{"role": "system", "content": ctx}] + messages)
-            )
-        else:
-            full = st.write_stream(
-                stream_anthropic(
-                    messages, system=ctx, model=model_to_use,
-                    role=_user_role, citations=citations_on,
-                )
-            )
+        _placeholder = st.empty()
+        _buf = []
+        _stream = (
+            stream_ollama([{"role": "system", "content": ctx}] + messages)
+            if backend == "ollama"
+            else stream_anthropic(messages, system=ctx, model=model_to_use,
+                                  role=_user_role, citations=citations_on)
+        )
+        for _chunk in _stream:
+            _buf.append(_chunk)
+            _placeholder.markdown("".join(_buf))
+        full = "".join(_buf)
         _elapsed = round(time.time() - _t0, 1)
+
+        full_display, _chips_found = _parse_chips(full)
+        if _chips_found:
+            _placeholder.markdown(full_display)
+
         _model_badge = "Haiku" if "haiku" in model_to_use else "Sonnet"
         st.caption(f"*{_model_badge} · {_elapsed}s*")
 
     st.session_state["chat_history"].append({
         "role": "assistant",
-        "content": full or "",
+        "content": full_display or "",
         "model_used": model_to_use,
         "elapsed_s": _elapsed,
     })
     db.append_chat_message(
         st.session_state.get("chat_session_id", ""), "assistant",
-        full or "", model_used=model_to_use, elapsed_s=_elapsed,
+        full_display or "", model_used=model_to_use, elapsed_s=_elapsed,
     )
 
-    # Generate chips — stored in session_state so they persist after rerender
-    with st.spinner("Generating follow-up questions…"):
-        _followups = generate_followup_suggestions(
-            st.session_state["chat_history"],
-            last_query=user_q,
-            last_response=full or "",
-            query_type=q_type,
-            role=_user_role,
-        )
-    if _followups:
-        st.session_state["_followup_suggestions"] = _followups
+    # Chips extracted from response footer — no second API call needed
+    if _chips_found:
+        st.session_state["_followup_suggestions"] = _chips_found
         st.rerun()
 
     # CFO mode: offer to add reply to board deck
-    if mode == "CFO" and full:
+    if mode == "CFO" and full_display:
         if "ai_recommendations" not in st.session_state:
             st.session_state["ai_recommendations"] = []
         if st.button("➕ Add to Board Deck", key=f"brd_{len(st.session_state['chat_history'])}"):
             st.session_state["ai_recommendations"].append(
-                {"question": user_q, "answer": full}
+                {"question": user_q, "answer": full_display}
             )
             st.toast("Added to Board Deck ✓")
 
@@ -273,7 +291,7 @@ if user_q:
         username=_u.get("username", "anonymous"),
         role=_u.get("role", "viewer"),
         backend=_backend_logged,
-        token_count=count_tokens(ctx) + count_tokens(user_q) + count_tokens(full or ""),
+        token_count=count_tokens(ctx) + count_tokens(user_q) + count_tokens(full_display or ""),
         query=user_q,
         session_id=st.session_state.get("chat_session_id", ""),
     )
