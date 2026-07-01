@@ -40,22 +40,23 @@ from models.llm_adapters import (
     parse_llm_json,
 )
 import json as _json
-import re as _re
 
 _FOLLOWUP_INSTRUCTION = (
     "\n\n---\nAfter your answer, on a new line output exactly:\n"
-    '<followups>{"followups":["<specific stat or number question>?","<theory or mechanism question>?","<industry, time period, or peer comparison question>?"]}</followups>\n'
-    "Replace each placeholder with one real follow-up question. Output only that tag line after your answer — no other text."
+    'FOLLOWUPS_JSON: {"followups":["<specific stat or number question>?","<theory or mechanism question>?","<industry, time period, or peer comparison question>?"]}\n'
+    "Replace each placeholder with one real follow-up question. Output ONLY that line after your answer — no markdown, no other text."
 )
+_CHIPS_MARKER = "FOLLOWUPS_JSON:"
 
 def _parse_chips(text: str) -> tuple[str, list[str]]:
-    """Extract <followups>JSON</followups> footer; return (display_text, chips)."""
-    m = _re.search(r'<followups>(.*?)</followups>', text, _re.DOTALL)
-    if not m:
+    """Extract FOLLOWUPS_JSON: {...} footer; return (display_text, chips)."""
+    idx = text.find(_CHIPS_MARKER)
+    if idx == -1:
         return text.strip(), []
-    display = text[:m.start()].strip()
+    display = text[:idx].strip()
+    json_str = text[idx + len(_CHIPS_MARKER):].strip()
     try:
-        chips = _json.loads(m.group(1)).get("followups", [])
+        chips = _json.loads(json_str).get("followups", [])
         return display, [str(q) for q in chips[:3] if q]
     except Exception:
         return display, []
