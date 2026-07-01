@@ -275,5 +275,5 @@ if user_q:
         backend=_backend_logged,
         token_count=count_tokens(ctx) + count_tokens(user_q) + count_tokens(full or ""),
         query=user_q,
-        session_id=st.session_state.get("session_id", ""),
+        session_id=st.session_state.get("chat_session_id", ""),
     )
