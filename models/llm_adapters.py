@@ -446,7 +446,9 @@ def generate_followup_suggestions(
         if isinstance(items, list):
             return [str(q) for q in items[:3] if q]
         return []
-    except Exception:
+    except Exception as _e:
+        import logging as _logging
+        _logging.warning("generate_followup_suggestions failed: %s: %s", type(_e).__name__, _e)
         return []
 
 
