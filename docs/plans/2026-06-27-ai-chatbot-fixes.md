@@ -8,7 +8,7 @@
 
 ## Section 1 — Context Bugs (cause cop-outs on valid questions)
 
-### FIX-1: THESIS block hardcodes wrong scope for non-thesis panels
+### ✅ FIX-1: THESIS block hardcodes wrong scope for non-thesis panels
 **File:** `models/llm_adapters.py` → `build_panel_context()`
 
 **Problem:** The THESIS block always says "401 Indian listed firms, panel 2001–2024" even when
@@ -20,7 +20,7 @@ which is already panel-mode-aware.
 
 ---
 
-### FIX-2: Missing industry/sector leverage data → 4 cop-outs
+### ✅ FIX-2: Missing industry/sector leverage data → 4 cop-outs
 **File:** `models/llm_adapters.py` → `build_panel_context()`
 
 **Prompts that fail today:** H1, H2, H3, F4
@@ -46,7 +46,7 @@ Budget: context is 697 tokens; this adds ~150 tokens. Well within budget.
 
 ---
 
-### FIX-3: Missing leverage distribution stats
+### ✅ FIX-3: Missing leverage distribution stats
 **File:** `models/llm_adapters.py` → `build_panel_context()`
 
 **Problem:** When users ask "why does leverage go from 0 to 200%?" the bot gives theory only,
@@ -62,7 +62,7 @@ Leverage distribution: median=15.9%, p90=46%, p99=76%, max=1425%
 
 ## Section 2 — Response Quality (answers exist but are weak)
 
-### FIX-4: A3 — Tangibility coefficient not cited despite being in context
+### ✅ FIX-4: A3 — Tangibility coefficient not cited despite being in context
 **File:** `models/llm_adapters.py` → system prompt instructions
 
 **Problem:** The context has `tangibility: coef=+34.726` but when asked about economic
@@ -80,7 +80,7 @@ mean to compute the standardised effect: effect = coef × sample_mean.
 
 ---
 
-### FIX-5: F1-type factual queries — Haiku sometimes gives theory before the number
+### ✅ FIX-5: F1-type factual queries — Haiku sometimes gives theory before the number
 **File:** `models/llm_adapters.py` → system prompt instructions
 
 **Problem:** F1 "What is the mean leverage for Mature stage firms?" returns the correct number
@@ -98,7 +98,7 @@ This should be applied in page 19 before calling `stream_anthropic`, not inside 
 
 ## Section 3 — UI Improvements (from approved plan)
 
-### FIX-6: Follow-up suggestions don't work reliably
+### ✅ FIX-6: Follow-up suggestions don't work reliably
 **File:** `models/llm_adapters.py`, `pages/19_ai_assistant.py`
 
 **Problem:** `parse_llm_json()` looks for `{"followup_questions": [...]}` in the LLM response,
@@ -109,14 +109,14 @@ reading the last 3 turns and returning 3 contextual follow-up questions.
 
 ---
 
-### FIX-7: Follow-up chips render as vertical button stack
+### ✅ FIX-7: Follow-up chips render as vertical button stack
 **File:** `pages/19_ai_assistant.py`
 
 **Fix:** Render in `st.columns(3)` with `use_container_width=True` so chips appear side-by-side.
 
 ---
 
-### FIX-8: No metadata on responses (which model, how fast)
+### ✅ FIX-8: No metadata on responses (which model, how fast)
 **File:** `pages/19_ai_assistant.py`
 
 **Fix:** Store `model_used` and `elapsed_s` in chat_history. Show below each assistant message:
@@ -124,7 +124,7 @@ reading the last 3 turns and returning 3 contextual follow-up questions.
 
 ---
 
-### FIX-9: Empty state shows hardcoded generic questions
+### ✅ FIX-9: Empty state shows hardcoded generic questions
 **File:** `pages/19_ai_assistant.py`
 
 **Fix:** Role-aware starter questions:
@@ -133,14 +133,14 @@ reading the last 3 turns and returning 3 contextual follow-up questions.
 
 ---
 
-### FIX-10: No way to export the conversation
+### ✅ FIX-10: No way to export the conversation
 **File:** `pages/19_ai_assistant.py`
 
 **Fix:** Add `st.download_button` in sidebar to export full chat as `.md` file.
 
 ---
 
-### FIX-11: No context usage indicator
+### ✅ FIX-11: No context usage indicator
 **File:** `pages/19_ai_assistant.py`
 
 **Fix:** Add `st.progress(min(n/20, 1.0))` + caption `Context: N/20 messages` in sidebar.
