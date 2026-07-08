@@ -2,6 +2,9 @@ FROM us-east1-docker.pkg.dev/tempproject-462219/cloud-run-source-deploy/lifecycl
 
 WORKDIR /app
 
+# Install torch CPU separately (too large for base image bake)
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
 # App code only — all Python deps are pre-baked in the base image
 COPY . .
 
