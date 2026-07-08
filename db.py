@@ -433,11 +433,9 @@ def write_api_financials(version_id: str, panel_df: pd.DataFrame) -> int:
 
 
 def _where_api_financials_join(filters_tuple):
-    """WHERE clause for api_financials + companies join (industry lives on c, not f)."""
+    """WHERE clause for api_financials + companies join."""
     filters = _deserialize_filters(filters_tuple)
-    where, params = _build_where(filters, "f")
-    where = where.replace("f.industry_group", "c.industry_group")
-    return where, params
+    return _build_where(filters, "f")
 
 
 @st.cache_data(ttl=300)
@@ -670,7 +668,7 @@ def _build_where(filters, table_prefix=""):
 
     if filters.get("industry_groups"):
         placeholders = ",".join("?" * len(filters["industry_groups"]))
-        clauses.append(f"{p}industry_group IN ({placeholders})")
+        clauses.append(f"{p}company_code IN (SELECT company_code FROM companies WHERE industry_group IN ({placeholders}))")
         params.extend(filters["industry_groups"])
 
     events = filters.get("events", {})
