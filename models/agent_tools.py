@@ -21,6 +21,56 @@ _FORBIDDEN_SQL_PATTERNS = [
 ]
 
 _ALLOWED_TABLES = {"financials", "companies", "data_vintages", "model_runs"}
+_ASSISTANT_FINANCIALS_VIEW = "assistant_financials"
+
+
+def _sql_literal(value: str) -> str:
+    """Quote a trusted value used in the per-request assistant view."""
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def _assistant_view_where(panel_mode: str, filters: dict | None) -> str:
+    vintage_sql, vintage_params = db._vintage_predicate(panel_mode, "f")
+    where = [vintage_sql.replace("?", _sql_literal(v)) for v in vintage_params]
+    filters = filters or {}
+
+    year_range = filters.get("year_range")
+    if isinstance(year_range, (list, tuple)) and len(year_range) == 2:
+        try:
+            y0, y1 = int(year_range[0]), int(year_range[1])
+            if y0 <= y1:
+                where.append(f"f.year BETWEEN {y0} AND {y1}")
+        except (TypeError, ValueError):
+            pass
+
+    def _quoted_values(values):
+        if not isinstance(values, (list, tuple)):
+            return []
+        return [_sql_literal(v) for v in values if isinstance(v, str) and v.strip()]
+
+    stages = _quoted_values(filters.get("life_stages"))
+    if stages:
+        where.append(f"f.life_stage IN ({','.join(stages)})")
+
+    industries = _quoted_values(filters.get("industry_groups"))
+    if industries:
+        where.append(
+            "f.company_code IN (SELECT company_code FROM companies "
+            f"WHERE industry_group IN ({','.join(industries)}))"
+        )
+
+    raw_codes = filters.get("company_codes", [])
+    if isinstance(raw_codes, (list, tuple)):
+        company_codes = []
+        for code in raw_codes:
+            try:
+                company_codes.append(str(int(code)))
+            except (TypeError, ValueError):
+                continue
+        if company_codes:
+            where.append(f"f.company_code IN ({','.join(company_codes)})")
+
+    return " AND ".join(where) or "1=1"
 
 
 def get_database_schema_summary() -> str:
@@ -45,12 +95,14 @@ def get_database_schema_summary() -> str:
 def query_financial_database(
     sql_query: str,
     panel_mode: str = "thesis",
+    filters: dict | None = None,
 ) -> dict:
     """Execute a safe, read-only SQL query on the capital structure database.
 
     Args:
         sql_query: A valid SQLite SELECT query. Must only query SELECT on allowed tables.
         panel_mode: Active panel mode ('thesis', 'latest', 'run3', 'us_av_2024') to filter vintage.
+        filters: Optional active UI filters for year, industry, life stage, and company.
 
     Returns:
         Dict with status, columns, rows, count, or error message.
@@ -85,6 +137,11 @@ def query_financial_database(
     clean_query = re.sub(r"\b([a-zA-Z0-9_]+\.)?company_id\b", r"\1company_code", clean_query, flags=re.IGNORECASE)
     clean_query = re.sub(r"\b([a-zA-Z0-9_]+\.)?lifestage\b", r"\1life_stage", clean_query, flags=re.IGNORECASE)
 
+    # Scope financials through a trusted view so panel and UI filters are
+    # enforced by the gateway, not merely described in the prompt.
+    if re.search(r"\bfinancials\b", clean_query, re.IGNORECASE):
+        clean_query = re.sub(r"\bfinancials\b", _ASSISTANT_FINANCIALS_VIEW, clean_query, flags=re.IGNORECASE)
+
     # 5. Ensure automatic LIMIT 50 if none provided
     if not re.search(r"\bLIMIT\s+\d+\b", clean_query, re.IGNORECASE):
         clean_query = f"{clean_query} LIMIT 50"
@@ -93,6 +150,31 @@ def query_financial_database(
         conn = db.get_connection()
         conn.row_factory = sqlite3.Row
         try:
+            where_sql = _assistant_view_where(panel_mode, filters)
+            conn.execute(
+                f"CREATE TEMP VIEW {_ASSISTANT_FINANCIALS_VIEW} AS "
+                f"SELECT f.* FROM financials f WHERE {where_sql}"
+            )
+            conn.execute("PRAGMA query_only = ON")
+
+            allowed_tables = {t.lower() for t in _ALLOWED_TABLES | {_ASSISTANT_FINANCIALS_VIEW}}
+
+            def _authorizer(action, arg1, arg2, db_name, source):
+                if action == sqlite3.SQLITE_READ:
+                    # SQLite supplies table/column in different positions for
+                    # direct reads and reads through a view across versions.
+                    read_targets = {str(arg1 or "").lower(), str(arg2 or "").lower()}
+                    if not read_targets & allowed_tables:
+                        return sqlite3.SQLITE_DENY
+                elif action in {
+                    sqlite3.SQLITE_INSERT, sqlite3.SQLITE_UPDATE, sqlite3.SQLITE_DELETE,
+                    sqlite3.SQLITE_ALTER_TABLE, sqlite3.SQLITE_DROP_TABLE,
+                    sqlite3.SQLITE_ATTACH, sqlite3.SQLITE_DETACH,
+                }:
+                    return sqlite3.SQLITE_DENY
+                return sqlite3.SQLITE_OK
+
+            conn.set_authorizer(_authorizer)
             cursor = conn.cursor()
             cursor.execute(clean_query)
             rows = cursor.fetchall()
@@ -300,35 +382,38 @@ def extract_chat_chart_spec(text: str) -> tuple[Optional[dict], str]:
         return None, text
 
     import json
-    pattern = r"```(?:json)?\s*(\{[\s\S]*?(?:\"chart_type\"|\"chart_spec\")[\s\S]*?\})\s*```"
-    match = re.search(pattern, text, re.IGNORECASE)
-    if not match:
-        bare_pattern = r"(\{\s*\"(?:chart_type|chart_spec)\"[\s\S]*?\n\})"
-        match = re.search(bare_pattern, text)
-
-    if match:
-        raw_json = match.group(1)
+    decoder = json.JSONDecoder()
+    parsed = None
+    start = end = None
+    # Decode complete JSON objects so nested and compact provider output works.
+    for candidate_start in (m.start() for m in re.finditer(r"\{", text)):
         try:
-            parsed = json.loads(raw_json)
-            if isinstance(parsed, dict):
-                if "chart_spec" in parsed and isinstance(parsed["chart_spec"], dict):
-                    parsed = parsed["chart_spec"]
-                if "chart_type" in parsed:
-                    s_input = parsed.get("series") or parsed.get("series_json") or parsed.get("data") or []
-                    res = generate_chat_chart(
-                        chart_type=parsed.get("chart_type", "line"),
-                        title=parsed.get("title", ""),
-                        x_axis_label=parsed.get("x_axis_label", ""),
-                        y_axis_label=parsed.get("y_axis_label", ""),
-                        categories=parsed.get("categories", []),
-                        series=s_input if isinstance(s_input, (list, tuple)) else None,
-                        series_json=s_input if isinstance(s_input, str) else "",
-                    )
-                    if res.get("status") == "success":
-                        clean_text = text[:match.start()].rstrip() + "\n" + text[match.end():].lstrip()
-                        return res["chart_spec"], clean_text.strip()
-        except Exception:
-            pass
+            candidate, candidate_end = decoder.raw_decode(text[candidate_start:])
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(candidate, dict):
+            continue
+        candidate_spec = candidate.get("chart_spec") if isinstance(candidate.get("chart_spec"), dict) else candidate
+        if isinstance(candidate_spec, dict) and "chart_type" in candidate_spec:
+            parsed = candidate_spec
+            start = candidate_start
+            end = candidate_start + candidate_end
+            break
+
+    if parsed is not None:
+        s_input = parsed.get("series") or parsed.get("series_json") or parsed.get("data") or []
+        res = generate_chat_chart(
+            chart_type=parsed.get("chart_type", "line"),
+            title=parsed.get("title", ""),
+            x_axis_label=parsed.get("x_axis_label", ""),
+            y_axis_label=parsed.get("y_axis_label", ""),
+            categories=parsed.get("categories", []),
+            series=s_input if isinstance(s_input, (list, tuple)) else None,
+            series_json=s_input if isinstance(s_input, str) else "",
+        )
+        if res.get("status") == "success":
+            clean_text = text[:start].rstrip() + "\n" + text[end:].lstrip()
+            return res["chart_spec"], clean_text.strip()
 
     return None, text
 

@@ -256,7 +256,8 @@ def ensure_app_tables():
                 content          TEXT NOT NULL,
                 model_used       TEXT,
                 elapsed_s        REAL,
-                followups        TEXT
+                followups        TEXT,
+                chart_spec       TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_chat_sessions_user
                 ON chat_sessions(username, last_active DESC);
@@ -269,6 +270,11 @@ def ensure_app_tables():
         # idempotent in SQLite, so guard it explicitly rather than relying on IF NOT EXISTS.
         try:
             conn.execute("ALTER TABLE chat_messages ADD COLUMN followups TEXT")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+        try:
+            conn.execute("ALTER TABLE chat_messages ADD COLUMN chart_spec TEXT")
             conn.commit()
         except Exception:
             pass  # column already exists
@@ -1226,6 +1232,7 @@ def append_chat_message(
     model_used: str | None = None,
     elapsed_s: float | None = None,
     followups: list[str] | None = None,
+    chart_spec: dict | None = None,
 ) -> None:
     """Append a message and update session last_active + message_count. Silent no-op on error.
 
@@ -1234,13 +1241,15 @@ def append_chat_message(
     """
     import json as _json_db
     followups_json = _json_db.dumps(followups) if followups else None
+    chart_spec_json = _json_db.dumps(chart_spec) if chart_spec else None
     try:
         with get_connection() as con:
             con.execute("PRAGMA foreign_keys=ON")
             con.execute(
-                """INSERT INTO chat_messages (chat_session_id, role, content, model_used, elapsed_s, followups)
-                   VALUES (?,?,?,?,?,?)""",
-                (chat_session_id, role, content, model_used, elapsed_s, followups_json),
+                """INSERT INTO chat_messages
+                   (chat_session_id, role, content, model_used, elapsed_s, followups, chart_spec)
+                   VALUES (?,?,?,?,?,?,?)""",
+                (chat_session_id, role, content, model_used, elapsed_s, followups_json, chart_spec_json),
             )
             con.execute(
                 """UPDATE chat_sessions
@@ -1270,7 +1279,7 @@ def load_chat_messages(chat_session_id: str) -> list[dict]:
         conn = get_connection()
         try:
             cur = conn.execute(
-                """SELECT role, content, model_used, elapsed_s, followups
+                """SELECT role, content, model_used, elapsed_s, followups, chart_spec
                    FROM chat_messages
                    WHERE chat_session_id = ?
                    ORDER BY ts ASC""",
@@ -1287,9 +1296,15 @@ def load_chat_messages(chat_session_id: str) -> list[dict]:
                     fups = []
             except Exception:
                 fups = []
+            try:
+                chart = _json_db.loads(r[5]) if r[5] else None
+                if not isinstance(chart, dict):
+                    chart = None
+            except Exception:
+                chart = None
             out.append({
                 "role": r[0], "content": r[1], "model_used": r[2],
-                "elapsed_s": r[3], "followups": fups,
+                "elapsed_s": r[3], "followups": fups, "chart_spec": chart,
             })
         return out
     except Exception:
@@ -1303,7 +1318,7 @@ def list_chat_sessions(username: str, limit: int = 15) -> list[dict]:
         try:
             cur = conn.execute(
                 """SELECT chat_session_id, title, started_at, last_active,
-                          message_count, mode
+                          message_count, mode, panel_mode, company_code
                    FROM chat_sessions
                    WHERE username = ?
                    ORDER BY last_active DESC
@@ -1321,6 +1336,8 @@ def list_chat_sessions(username: str, limit: int = 15) -> list[dict]:
                 "last_active": r[3],
                 "message_count": r[4],
                 "mode": r[5],
+                "panel_mode": r[6],
+                "company_code": r[7],
             }
             for r in rows
         ]

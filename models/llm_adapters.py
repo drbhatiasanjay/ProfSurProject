@@ -484,6 +484,10 @@ def generate_followup_suggestions(
 def stream_ollama(
     messages: list[dict],
     model: str = "llama3.1:8b",
+    *,
+    panel_mode: str = "thesis",
+    filters: Optional[dict] = None,
+    chart_requested: bool = False,
 ) -> Iterator[str]:
     """Yield string chunks from Ollama streaming chat. Compatible with st.write_stream().
 
@@ -529,6 +533,9 @@ def stream_anthropic(
     *,
     role: str = "viewer",
     citations: bool = False,
+    panel_mode: str = "thesis",
+    filters: Optional[dict] = None,
+    chart_requested: bool = False,
 ) -> Iterator[str]:
     """Yield string chunks from Anthropic streaming chat. Compatible with st.write_stream().
 
@@ -622,7 +629,11 @@ def stream_anthropic(
         yield f"[Anthropic error: {type(e).__name__}: {e}]"
 
 
-def query_financial_database(sql_query: str) -> str:
+def query_financial_database(
+    sql_query: str,
+    panel_mode: str = "thesis",
+    filters: Optional[dict] = None,
+) -> str:
     """Execute a safe, read-only SQL SELECT query on the capital structure database.
 
     Args:
@@ -630,7 +641,7 @@ def query_financial_database(sql_query: str) -> str:
     """
     import json
     from models.agent_tools import query_financial_database as _qfd
-    res = _qfd(sql_query)
+    res = _qfd(sql_query, panel_mode=panel_mode, filters=filters)
     return json.dumps(res, default=str)
 
 
@@ -675,6 +686,8 @@ def generate_chat_chart(
         categories=cats,
         series=series,
     )
+    if spec.get("status") != "success":
+        return json.dumps(spec, default=str)
     return json.dumps({
         "status": "success",
         "message": "Chart rendered successfully in UI. Do not output error apologies.",
@@ -704,6 +717,96 @@ generate_chat_chart.__annotations__ = typing.get_type_hints(generate_chat_chart)
 query_semantic_ontology.__annotations__ = typing.get_type_hints(query_semantic_ontology)
 
 
+def extract_chart_tool_spec(payload: Any) -> Optional[dict]:
+    """Extract a validated chart spec from common Gemini tool-response envelopes."""
+    from models.agent_tools import generate_chat_chart as _gcc
+
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except (TypeError, json.JSONDecodeError):
+            return None
+    if not isinstance(payload, dict):
+        return None
+
+    if payload.get("status") == "success" and isinstance(payload.get("rows"), list):
+        return payload
+
+    if isinstance(payload.get("chart_spec"), dict):
+        return payload["chart_spec"]
+
+    for key in ("result", "response", "output"):
+        if key in payload:
+            found = extract_chart_tool_spec(payload[key])
+            if found:
+                return found
+
+    if payload.get("status") == "success" and "chart_type" in payload:
+        res = _gcc(
+            chart_type=payload.get("chart_type", "line"),
+            title=payload.get("title", ""),
+            x_axis_label=payload.get("x_axis_label", ""),
+            y_axis_label=payload.get("y_axis_label", ""),
+            categories=payload.get("categories", []),
+            series=payload.get("series", []),
+        )
+        return res.get("chart_spec") if res.get("status") == "success" else None
+    return None
+
+
+def build_chart_spec_from_rows(rows: list[dict], user_query: str = "") -> Optional[dict]:
+    """Build a chart from validated query rows when Gemini omits chart tooling."""
+    from models.agent_tools import generate_chat_chart as _gcc
+
+    if not isinstance(rows, list) or len(rows) < 2 or not all(isinstance(r, dict) for r in rows):
+        return None
+    keys = list(rows[0].keys())
+    if len(keys) < 2:
+        return None
+
+    category_key = next((k for k in keys if str(k).lower() in {
+        "year", "company_name", "industry_group", "life_stage", "stage", "name"
+    }), keys[0])
+    numeric_candidates = []
+    for key in keys:
+        if key == category_key:
+            continue
+        values = []
+        valid = True
+        for row in rows:
+            try:
+                value = row.get(key)
+                if value is None:
+                    valid = False
+                    break
+                values.append(float(value))
+            except (TypeError, ValueError):
+                valid = False
+                break
+        if valid and len(values) >= 2:
+            score = 1 if str(key).lower() in {
+                "leverage", "profitability", "tangibility", "avg_leverage", "avg_profitability"
+            } else 0
+            numeric_candidates.append((score, key, values))
+    if not numeric_candidates:
+        return None
+
+    _, value_key, values = max(numeric_candidates, key=lambda item: item[0])
+    categories = [str(row.get(category_key, "")) for row in rows]
+    query_lower = str(user_query).lower()
+    is_year = all(c.isdigit() and len(c) == 4 for c in categories)
+    chart_type = "bar" if "bar" in query_lower else ("line" if is_year or "trend" in query_lower else "bar")
+    result = _gcc(
+        chart_type=chart_type,
+        title=f"{value_key} by {category_key}",
+        x_axis_label=str(category_key),
+        y_axis_label=str(value_key),
+        categories=categories,
+        series=[{"name": str(value_key), "values": values}],
+    )
+    return result.get("chart_spec") if result.get("status") == "success" else None
+
+
 def stream_gemini_agent(
     messages: List[Dict[str, Any]],
     system: str = "",
@@ -713,6 +816,8 @@ def stream_gemini_agent(
     role: str = "researcher",
     citations: bool = False,
     panel_mode: str = "thesis",
+    filters: Optional[dict] = None,
+    chart_requested: bool = False,
 ) -> Generator[Union[str, dict], None, None]:
     """Autonomous agentic streaming loop using Google GenAI SDK (google.genai).
 
@@ -737,6 +842,7 @@ def stream_gemini_agent(
         from google import genai
         from google.genai import types
         from models.agent_tools import get_database_schema_summary
+        from models.agent_tools import query_financial_database as _qfd
     except ImportError as _imp_err:
         yield f"[Google GenAI SDK not installed. Run: pip install google-genai] Error: {_imp_err}"
         return
@@ -755,6 +861,12 @@ def stream_gemini_agent(
 
     try:
         client = genai.Client(api_key=api_key)
+
+        # Bind scope in the closure so the model cannot omit or change it.
+        def query_financial_database(sql_query: str) -> str:
+            return json.dumps(_qfd(sql_query, panel_mode=panel_mode, filters=filters), default=str)
+
+        query_financial_database.__annotations__ = {"sql_query": str, "return": str}
 
         role_lower = role.lower()
         if role_lower in ("admin", "researcher"):
@@ -812,6 +924,15 @@ def stream_gemini_agent(
             else:
                 return
 
+        tool_config = None
+        if chart_requested:
+            tool_config = types.ToolConfig(
+                function_calling_config=types.FunctionCallingConfig(
+                    mode="ANY",
+                    allowed_function_names=["query_financial_database"],
+                )
+            )
+
         config = types.GenerateContentConfig(
             system_instruction=effective_system,
             temperature=0.1,
@@ -821,6 +942,7 @@ def stream_gemini_agent(
                 generate_chat_chart,
                 query_semantic_ontology,
             ],
+            tool_config=tool_config,
         )
 
         response = client.models.generate_content(
@@ -865,24 +987,29 @@ def stream_gemini_agent(
         final_text = _extract_response_text(response)
         has_yielded_chart = False
         has_yielded_text = False
+        query_rows = []
 
         # 1. Check if generate_chat_chart was called in automatic_function_calling_history
         for item in (getattr(response, "automatic_function_calling_history", None) or []):
             for part in (getattr(item, "parts", None) or []):
                 fn_resp = getattr(part, "function_response", None)
+                if fn_resp and "query_financial_database" in getattr(fn_resp, "name", ""):
+                    query_payload = extract_chart_tool_spec(getattr(fn_resp, "response", None))
+                    if isinstance(query_payload, dict) and isinstance(query_payload.get("rows"), list):
+                        query_rows.extend(query_payload["rows"])
                 if fn_resp and "generate_chat_chart" in getattr(fn_resp, "name", ""):
-                    resp_data = getattr(fn_resp, "response", {}) or {}
-                    if isinstance(resp_data, dict) and "result" in resp_data:
-                        raw_r = resp_data["result"]
-                        try:
-                            import json
-                            if isinstance(raw_r, str):
-                                raw_r = json.loads(raw_r)
-                            if isinstance(raw_r, dict) and raw_r.get("status") == "success":
-                                yield {"type": "chart", "spec": raw_r.get("chart_spec")}
-                                has_yielded_chart = True
-                        except Exception:
-                            pass
+                    spec = extract_chart_tool_spec(getattr(fn_resp, "response", None))
+                    if spec:
+                        yield {"type": "chart", "spec": spec}
+                        has_yielded_chart = True
+
+        if chart_requested and not has_yielded_chart and query_rows:
+            fallback_spec = build_chart_spec_from_rows(
+                query_rows, user_query=messages[-1].get("content", "")
+            )
+            if fallback_spec:
+                yield {"type": "chart", "spec": fallback_spec}
+                has_yielded_chart = True
 
         # 2. Also check if model embedded JSON chart spec in text
         from models.agent_tools import extract_chat_chart_spec

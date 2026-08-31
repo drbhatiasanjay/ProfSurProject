@@ -51,6 +51,18 @@ class TestQueryFinancialDatabase:
         assert res["status"] == "error"
         assert "schema_hint" in res
 
+    def test_blocks_sensitive_table_access(self):
+        res = query_financial_database("SELECT username FROM audit_log")
+        assert res["status"] == "error"
+        assert "allow" in res["error"].lower() or "security" in res["error"].lower()
+
+    def test_panel_mode_scopes_financials_query(self):
+        res = query_financial_database(
+            "SELECT COUNT(*) AS n FROM financials", panel_mode="thesis"
+        )
+        assert res["status"] == "success"
+        assert "assistant_financials" in res["query_executed"]
+
 
 class TestGenerateChatChart:
     def test_valid_line_chart_spec(self):

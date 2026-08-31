@@ -105,7 +105,8 @@ def temp_chat_db(tmp_path, monkeypatch):
             content          TEXT NOT NULL,
             model_used       TEXT,
             elapsed_s        REAL,
-            followups        TEXT
+            followups        TEXT,
+            chart_spec       TEXT
         );
         CREATE INDEX idx_chat_sessions_user
             ON chat_sessions(username, last_active DESC);

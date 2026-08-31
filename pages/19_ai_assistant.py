@@ -19,9 +19,13 @@ _username = _u.get("username", "")
 if "chat_session_id" not in st.session_state:
     _sessions = db.list_chat_sessions(_username, limit=1)
     if _sessions:
-        _sid = _sessions[0]["chat_session_id"]
+        _active_session = _sessions[0]
+        _sid = _active_session["chat_session_id"]
         st.session_state["chat_session_id"] = _sid
         st.session_state["chat_history"] = db.load_chat_messages(_sid)
+        st.session_state["p19_mode"] = _active_session.get("mode", "Researcher")
+        if _active_session.get("company_code"):
+            st.session_state["p19_company_code"] = int(_active_session["company_code"])
     else:
         _sid = f"cs_{_uuid.uuid4().hex[:12]}"
         st.session_state["chat_session_id"] = _sid
@@ -326,6 +330,10 @@ if user_q:
         _placeholder = st.empty()
         _buf = []
         _chart_found = None
+        _chart_requested = any(
+            w in user_q.lower()
+            for w in ("chart", "graph", "plot", "visual", "bar", "trend")
+        )
         if backend == "gemini":
             _stream = stream_gemini_agent(
                 messages,
@@ -335,9 +343,16 @@ if user_q:
                 role=_user_role,
                 citations=citations_on,
                 panel_mode=panel_mode,
+                filters=_filters,
+                chart_requested=_chart_requested,
             )
         elif backend == "ollama":
-            _stream = stream_ollama([{"role": "system", "content": ctx}] + messages)
+            _stream = stream_ollama(
+                [{"role": "system", "content": ctx}] + messages,
+                panel_mode=panel_mode,
+                filters=_filters,
+                chart_requested=_chart_requested,
+            )
         else:
             _stream = stream_anthropic(
                 messages,
@@ -346,6 +361,9 @@ if user_q:
                 max_tokens=max_tokens,
                 role=_user_role,
                 citations=citations_on,
+                panel_mode=panel_mode,
+                filters=_filters,
+                chart_requested=_chart_requested,
             )
 
         for _chunk in _stream:
@@ -401,7 +419,7 @@ if user_q:
     db.append_chat_message(
         st.session_state.get("chat_session_id", ""), "assistant",
         full_display or "", model_used=model_to_use, elapsed_s=_elapsed,
-        followups=_chips_found,
+        followups=_chips_found, chart_spec=_chart_found,
     )
     st.session_state["_followup_suggestions"] = _chips_found
 

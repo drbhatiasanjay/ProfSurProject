@@ -1,10 +1,39 @@
 """Unit tests for stream_gemini_agent in models/llm_adapters.py."""
 from unittest.mock import MagicMock, patch
 import pytest
-from models.llm_adapters import stream_gemini_agent
+from models.llm_adapters import build_chart_spec_from_rows, extract_chart_tool_spec, stream_gemini_agent
 
 
 class TestStreamGeminiAgent:
+    def test_chart_fallback_builds_from_query_rows(self):
+        spec = build_chart_spec_from_rows(
+            [{"year": 2020, "profitability": 0.10}, {"year": 2021, "profitability": 0.20}],
+            "show a trend chart",
+        )
+        assert spec["chart_type"] == "line"
+        assert spec["categories"] == ["2020", "2021"]
+        assert spec["series"][0]["values"] == [0.1, 0.2]
+
+    def test_chart_tool_response_accepts_direct_json_string(self):
+        spec = {"chart_type": "line", "categories": ["2020", "2021"],
+                "series": [{"name": "ROA", "values": [0.1, 0.2]}]}
+        payload = {"status": "success", "chart_spec": spec}
+        assert extract_chart_tool_spec(payload)["chart_type"] == "line"
+        assert extract_chart_tool_spec(__import__("json").dumps(payload)) == spec
+
+    def test_chart_tool_response_accepts_nested_result(self):
+        spec = {"chart_type": "bar", "categories": ["A", "B"],
+                "series": [{"name": "Leverage", "values": [10, 20]}]}
+        payload = {"result": __import__("json").dumps({"status": "success", "chart_spec": spec})}
+        assert extract_chart_tool_spec(payload) == spec
+
+    def test_shared_text_parser_accepts_compact_nested_json(self):
+        from models.agent_tools import extract_chat_chart_spec
+        response = 'Analysis first. {"chart_spec":{"chart_type":"bar","title":"Leverage","categories":["A","B"],"series":[{"name":"Leverage","values":[10,20]}]}}'
+        spec, cleaned = extract_chat_chart_spec(response)
+        assert spec["chart_type"] == "bar"
+        assert "chart_spec" not in cleaned
+
     def test_missing_api_key_yields_configuration_message(self, monkeypatch):
         monkeypatch.delenv("GEMINI_API_KEY", raising=False)
         monkeypatch.delenv("GOOGLE_API_KEY", raising=False)

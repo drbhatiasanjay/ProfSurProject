@@ -278,6 +278,19 @@ class TestFollowupPersistence:
         msgs = db.load_chat_messages("cs_fup1")
         assert msgs[0]["followups"] == chips
 
+    def test_chart_spec_round_trip(self, temp_chat_db):
+        db.create_chat_session("cs_chart", "sbhatia", "admin")
+        spec = {"chart_type": "line", "categories": ["2020", "2021"],
+                "series": [{"name": "ROA", "values": [0.1, 0.2]}]}
+        db.append_chat_message("cs_chart", "assistant", "Chart answer", chart_spec=spec)
+        msgs = db.load_chat_messages("cs_chart")
+        assert msgs[0]["chart_spec"] == spec
+
+    def test_list_sessions_includes_company_code(self, temp_chat_db):
+        db.create_chat_session("cs_company", "sbhatia", "admin", mode="CFO", company_code=22859)
+        sessions = db.list_chat_sessions("sbhatia")
+        assert sessions[0]["company_code"] == 22859
+
     def test_user_message_has_no_followups(self, temp_chat_db):
         db.create_chat_session("cs_fup2", "sbhatia", "admin")
         db.append_chat_message("cs_fup2", "user", "What is leverage?")
@@ -333,4 +346,3 @@ class TestChatSessionUpdates:
         ).fetchone()[0]
         conn.close()
         assert code == 12345
-
