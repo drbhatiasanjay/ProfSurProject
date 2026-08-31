@@ -21,12 +21,10 @@ class TestStreamGeminiAgent:
         mock_env.return_value = "fake_gemini_api_key"
 
         mock_client = MagicMock()
-        mock_chat = MagicMock()
         mock_response = MagicMock()
-        mock_response.function_calls = None
         mock_response.text = "Grounded response from Gemini."
-        mock_chat.send_message.return_value = mock_response
-        mock_client.chats.create.return_value = mock_chat
+        mock_response.automatic_function_calling_history = []
+        mock_client.models.generate_content.return_value = mock_response
 
         with patch("google.genai.Client", return_value=mock_client):
             chunks = list(stream_gemini_agent(
@@ -41,24 +39,20 @@ class TestStreamGeminiAgent:
         mock_env.return_value = "fake_gemini_api_key"
 
         mock_client = MagicMock()
-        mock_chat = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "Here are the 2 companies found."
 
-        # Step 1: LLM returns a function call for query_financial_database
-        mock_call = MagicMock()
-        mock_call.name = "query_financial_database"
-        mock_call.args = {"sql_query": "SELECT company_name FROM companies LIMIT 2"}
+        # Simulate automatic_function_calling_history recorded by the SDK
+        mock_part = MagicMock()
+        mock_part.function_response = MagicMock()
+        mock_part.function_response.name = "query_financial_database"
+        mock_part.function_response.response = {"result": '{"status": "success", "count": 2}'}
 
-        mock_resp1 = MagicMock()
-        mock_resp1.function_calls = [mock_call]
-        mock_resp1.text = None
+        mock_item = MagicMock()
+        mock_item.parts = [mock_part]
+        mock_response.automatic_function_calling_history = [mock_item]
 
-        # Step 2: After function response, LLM returns final text
-        mock_resp2 = MagicMock()
-        mock_resp2.function_calls = None
-        mock_resp2.text = "Here are the 2 companies found."
-
-        mock_chat.send_message.side_effect = [mock_resp1, mock_resp2]
-        mock_client.chats.create.return_value = mock_chat
+        mock_client.models.generate_content.return_value = mock_response
 
         with patch("google.genai.Client", return_value=mock_client):
             chunks = list(stream_gemini_agent(

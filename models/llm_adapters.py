@@ -722,7 +722,7 @@ def stream_gemini_agent(
             query_semantic_ontology as _qso,
         )
 
-        def query_financial_database(sql_query: str) -> dict:
+        def query_financial_database(sql_query: str) -> str:
             """Execute a safe, read-only SQL SELECT query on the capital structure database.
 
             CRITICAL: ALWAYS use this tool whenever you need specific statistical aggregations
@@ -732,20 +732,20 @@ def stream_gemini_agent(
             Supported aggregate functions: AVG(x), COUNT(x), MIN(x), MAX(x), SUM(x), MEDIAN(x), STDEV(x), P25(x), P75(x), P90(x).
 
             Args:
-                sql_query: A valid SQLite SELECT query against tables: financials, companies, cash_flows, econometric_results.
+                sql_query: A valid SQLite SELECT query against tables: financials, companies.
             """
-            return _qfd(sql_query, panel_mode=panel_mode)
+            import json
+            return json.dumps(_qfd(sql_query, panel_mode=panel_mode))
 
         def generate_chat_chart(
             chart_type: str,
             title: str,
             x_axis_label: str,
             y_axis_label: str,
-            categories: list[str],
-            series: list = None,
-            series_json: str = "",
-            **kwargs,
-        ) -> dict:
+            categories_csv: str,
+            series_name: str,
+            series_values_csv: str,
+        ) -> str:
             """Generate an interactive Plotly chart specification for in-chat rendering.
 
             Args:
@@ -753,26 +753,28 @@ def stream_gemini_agent(
                 title: Chart title.
                 x_axis_label: X-axis label.
                 y_axis_label: Y-axis label.
-                categories: X-axis values as list of strings (e.g. ['2001', '2002', ...] or stage names).
-                series: Optional list of series dicts (e.g. [{'name': 'Mean ROA', 'values': [0.16, 0.15]}]).
-                series_json: Optional JSON string of series list. Example: '[{"name": "Mean ROA", "values": [0.16, 0.15]}]'
+                categories_csv: Comma-separated list of categories or years (e.g. '2001, 2002, 2003').
+                series_name: Name of the data series.
+                series_values_csv: Comma-separated list of numeric values (e.g. '0.161, 0.155, 0.158').
             """
-            return _gcc(
+            import json
+            cats = [c.strip() for c in categories_csv.split(",") if c.strip()]
+            vals = [float(v.strip()) for v in series_values_csv.split(",") if v.strip()]
+            res = _gcc(
                 chart_type=chart_type,
                 title=title,
                 x_axis_label=x_axis_label,
                 y_axis_label=y_axis_label,
-                categories=categories,
-                series=series,
-                series_json=series_json,
-                **kwargs,
+                categories=cats,
+                series=[{"name": series_name, "values": vals}],
             )
+            return json.dumps(res)
 
         def query_semantic_ontology(
             query_type: str,
             stage: str = "",
             metric: str = "",
-        ) -> dict:
+        ) -> str:
             """Look up normative leverage ranges, cash flow patterns, and anomaly explanations from the KG2 life-cycle ontology.
 
             Args:
@@ -780,59 +782,25 @@ def stream_gemini_agent(
                 stage: Specific life stage (e.g. 'Startup', 'Growth', 'Maturity', 'Decline', 'Decay').
                 metric: Financial metric name (e.g. 'leverage', 'profitability', 'tangibility').
             """
-            return _qso(query_type=query_type, stage=stage, metric=metric)
+            import json
+            return json.dumps(_qso(query_type=query_type, stage=stage, metric=metric))
 
         latest_user_prompt = messages[-1]["content"] if messages else ""
         if not latest_user_prompt:
             return
 
-        chat = client.chats.create(
-            model=model,
-            config=types.GenerateContentConfig(
-                system_instruction=effective_system,
-                temperature=0.1,
-                max_output_tokens=max_tokens,
-                tools=[query_financial_database, generate_chat_chart, query_semantic_ontology],
-            ),
+        config = types.GenerateContentConfig(
+            system_instruction=effective_system,
+            temperature=0.1,
+            max_output_tokens=max_tokens,
+            tools=[query_financial_database, generate_chat_chart, query_semantic_ontology],
         )
 
-        response = chat.send_message(latest_user_prompt)
-
-        tool_map = {
-            "query_financial_database": query_financial_database,
-            "generate_chat_chart": generate_chat_chart,
-            "query_semantic_ontology": query_semantic_ontology,
-        }
-
-        has_yielded_text = False
-        has_yielded_chart = False
-
-        max_tool_turns = 5
-        turn_count = 0
-        while getattr(response, "function_calls", None) and turn_count < max_tool_turns:
-            turn_count += 1
-            function_responses = []
-            for call in response.function_calls:
-                fn_name = getattr(call, "name", "")
-                fn_args = getattr(call, "args", {}) or {}
-                if fn_name in tool_map:
-                    tool_res = tool_map[fn_name](**fn_args)
-                    if fn_name == "generate_chat_chart" and isinstance(tool_res, dict) and tool_res.get("status") == "success":
-                        yield {"type": "chart", "spec": tool_res.get("chart_spec")}
-                        has_yielded_chart = True
-                    try:
-                        function_responses.append(
-                            types.Part.from_function_response(
-                                name=fn_name,
-                                response={"result": tool_res},
-                            )
-                        )
-                    except Exception:
-                        function_responses.append(str(tool_res))
-            if function_responses:
-                response = chat.send_message(function_responses[0] if len(function_responses) == 1 else function_responses)
-            else:
-                break
+        response = client.models.generate_content(
+            model=model,
+            contents=latest_user_prompt,
+            config=config,
+        )
 
         def _extract_response_text(resp) -> str:
             if not resp:
@@ -854,9 +822,29 @@ def stream_gemini_agent(
                 pass
             return ""
 
-        # Safely yield final text and extract embedded chart spec
         final_text = _extract_response_text(response)
+        has_yielded_chart = False
+        has_yielded_text = False
 
+        # 1. Check if generate_chat_chart was called in automatic_function_calling_history
+        for item in (getattr(response, "automatic_function_calling_history", None) or []):
+            for part in (getattr(item, "parts", None) or []):
+                fn_resp = getattr(part, "function_response", None)
+                if fn_resp and getattr(fn_resp, "name", "") == "generate_chat_chart":
+                    resp_data = getattr(fn_resp, "response", {}) or {}
+                    if isinstance(resp_data, dict) and "result" in resp_data:
+                        raw_r = resp_data["result"]
+                        try:
+                            import json
+                            if isinstance(raw_r, str):
+                                raw_r = json.loads(raw_r)
+                            if isinstance(raw_r, dict) and raw_r.get("status") == "success":
+                                yield {"type": "chart", "spec": raw_r.get("chart_spec")}
+                                has_yielded_chart = True
+                        except Exception:
+                            pass
+
+        # 2. Also check if model embedded JSON chart spec in text
         from models.agent_tools import extract_chat_chart_spec
         chart_spec, cleaned_final = extract_chat_chart_spec(final_text)
         if chart_spec and not has_yielded_chart:
