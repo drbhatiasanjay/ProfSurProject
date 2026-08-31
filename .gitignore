@@ -44,3 +44,4 @@ DataV[0-9]*/
 # Misc
 *.log
 .DS_Store
+DataUS/

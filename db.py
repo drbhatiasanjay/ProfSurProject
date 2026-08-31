@@ -39,8 +39,59 @@ _init_conn.execute("PRAGMA journal_mode=WAL")
 _init_conn.close()
 
 
+def _register_sqlite_stats_functions(conn):
+    try:
+        import numpy as np
+        import math
+
+        class MedianAggregate:
+            def __init__(self):
+                self.values = []
+            def step(self, value):
+                if value is not None and not (isinstance(value, float) and np.isnan(value)):
+                    self.values.append(float(value))
+            def finalize(self):
+                return float(np.median(self.values)) if self.values else None
+
+        class StdevAggregate:
+            def __init__(self):
+                self.values = []
+            def step(self, value):
+                if value is not None and not (isinstance(value, float) and np.isnan(value)):
+                    self.values.append(float(value))
+            def finalize(self):
+                return float(np.std(self.values, ddof=1)) if len(self.values) >= 2 else 0.0
+
+        def _make_p_agg(p):
+            class PercentileAgg:
+                def __init__(self):
+                    self.values = []
+                def step(self, value):
+                    if value is not None and not (isinstance(value, float) and np.isnan(value)):
+                        self.values.append(float(value))
+                def finalize(self):
+                    return float(np.percentile(self.values, p)) if self.values else None
+            return PercentileAgg
+
+        conn.create_aggregate("median", 1, MedianAggregate)
+        conn.create_aggregate("stdev", 1, StdevAggregate)
+        conn.create_aggregate("stddev", 1, StdevAggregate)
+        conn.create_aggregate("p25", 1, _make_p_agg(25))
+        conn.create_aggregate("p75", 1, _make_p_agg(75))
+        conn.create_aggregate("p90", 1, _make_p_agg(90))
+        conn.create_aggregate("p95", 1, _make_p_agg(95))
+        conn.create_aggregate("p99", 1, _make_p_agg(99))
+        conn.create_function("sqrt", 1, lambda x: math.sqrt(x) if x is not None and x >= 0 else None)
+        conn.create_function("power", 2, lambda x, y: math.pow(x, y) if x is not None and y is not None else None)
+        conn.create_function("log", 1, lambda x: math.log(x) if x is not None and x > 0 else None)
+    except Exception:
+        pass
+
+
 def get_connection():
-    return sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    _register_sqlite_stats_functions(conn)
+    return conn
 
 
 def db_cache_revision() -> int:
@@ -204,7 +255,8 @@ def ensure_app_tables():
                 role             TEXT NOT NULL CHECK(role IN ('user','assistant')),
                 content          TEXT NOT NULL,
                 model_used       TEXT,
-                elapsed_s        REAL
+                elapsed_s        REAL,
+                followups        TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_chat_sessions_user
                 ON chat_sessions(username, last_active DESC);
@@ -212,6 +264,14 @@ def ensure_app_tables():
                 ON chat_messages(chat_session_id, ts ASC);
         """)
         conn.commit()
+        # Self-upgrade path for databases created before the followups column existed
+        # (e.g. the committed capital_structure.db). ALTER TABLE ADD COLUMN is not
+        # idempotent in SQLite, so guard it explicitly rather than relying on IF NOT EXISTS.
+        try:
+            conn.execute("ALTER TABLE chat_messages ADD COLUMN followups TEXT")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
     finally:
         conn.close()
 
@@ -1131,21 +1191,56 @@ def create_chat_session(
         pass
 
 
+def update_chat_session_mode(chat_session_id: str, mode: str) -> None:
+    """Update active mode for a chat session. Silent no-op on error."""
+    try:
+        with get_connection() as con:
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute(
+                "UPDATE chat_sessions SET mode = ? WHERE chat_session_id = ?",
+                (mode, chat_session_id),
+            )
+            con.commit()
+    except Exception:
+        pass
+
+
+def update_chat_session_company(chat_session_id: str, company_code: int | None) -> None:
+    """Update active company_code for a CFO chat session. Silent no-op on error."""
+    try:
+        with get_connection() as con:
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute(
+                "UPDATE chat_sessions SET company_code = ? WHERE chat_session_id = ?",
+                (company_code, chat_session_id),
+            )
+            con.commit()
+    except Exception:
+        pass
+
+
 def append_chat_message(
     chat_session_id: str,
     role: str,
     content: str,
     model_used: str | None = None,
     elapsed_s: float | None = None,
+    followups: list[str] | None = None,
 ) -> None:
-    """Append a message and update session last_active + message_count. Silent no-op on error."""
+    """Append a message and update session last_active + message_count. Silent no-op on error.
+
+    followups (assistant turns only) is stored as a JSON-encoded list so
+    follow-up chips survive reload and chat-session switching.
+    """
+    import json as _json_db
+    followups_json = _json_db.dumps(followups) if followups else None
     try:
         with get_connection() as con:
             con.execute("PRAGMA foreign_keys=ON")
             con.execute(
-                """INSERT INTO chat_messages (chat_session_id, role, content, model_used, elapsed_s)
-                   VALUES (?,?,?,?,?)""",
-                (chat_session_id, role, content, model_used, elapsed_s),
+                """INSERT INTO chat_messages (chat_session_id, role, content, model_used, elapsed_s, followups)
+                   VALUES (?,?,?,?,?,?)""",
+                (chat_session_id, role, content, model_used, elapsed_s, followups_json),
             )
             con.execute(
                 """UPDATE chat_sessions
@@ -1165,12 +1260,17 @@ def append_chat_message(
 
 
 def load_chat_messages(chat_session_id: str) -> list[dict]:
-    """Return messages for a session ordered by ts ASC. Returns [] on error or missing session."""
+    """Return messages for a session ordered by ts ASC. Returns [] on error or missing session.
+
+    Each dict includes "followups": list[str] — decoded from the stored JSON,
+    defaulting to [] for legacy rows (NULL) or malformed JSON.
+    """
+    import json as _json_db
     try:
         conn = get_connection()
         try:
             cur = conn.execute(
-                """SELECT role, content, model_used, elapsed_s
+                """SELECT role, content, model_used, elapsed_s, followups
                    FROM chat_messages
                    WHERE chat_session_id = ?
                    ORDER BY ts ASC""",
@@ -1179,10 +1279,19 @@ def load_chat_messages(chat_session_id: str) -> list[dict]:
             rows = cur.fetchall()
         finally:
             conn.close()
-        return [
-            {"role": r[0], "content": r[1], "model_used": r[2], "elapsed_s": r[3]}
-            for r in rows
-        ]
+        out = []
+        for r in rows:
+            try:
+                fups = _json_db.loads(r[4]) if r[4] else []
+                if not isinstance(fups, list):
+                    fups = []
+            except Exception:
+                fups = []
+            out.append({
+                "role": r[0], "content": r[1], "model_used": r[2],
+                "elapsed_s": r[3], "followups": fups,
+            })
+        return out
     except Exception:
         return []
 

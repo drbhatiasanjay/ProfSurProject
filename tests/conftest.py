@@ -104,7 +104,8 @@ def temp_chat_db(tmp_path, monkeypatch):
             role             TEXT NOT NULL CHECK(role IN ('user','assistant')),
             content          TEXT NOT NULL,
             model_used       TEXT,
-            elapsed_s        REAL
+            elapsed_s        REAL,
+            followups        TEXT
         );
         CREATE INDEX idx_chat_sessions_user
             ON chat_sessions(username, last_active DESC);

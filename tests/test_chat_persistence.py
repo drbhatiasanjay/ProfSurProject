@@ -262,3 +262,75 @@ class TestChatSessionLifecycle:
         sessions = db.list_chat_sessions("sbhatia")
         assert len(sessions) == 1
         assert sessions[0]["chat_session_id"] == "cs_new"
+
+
+# ── TestFollowupPersistence ───────────────────────────────────────────────────
+# Follow-up chips must survive page reload and chat-session switching —
+# see pages/19_ai_assistant.py "Continue exploring" hydration on load.
+
+class TestFollowupPersistence:
+    def test_followups_round_trip(self, temp_chat_db):
+        db.create_chat_session("cs_fup1", "sbhatia", "admin")
+        chips = ["What is the mean leverage?", "Why does POT predict this?", "How does it vary by industry?"]
+        db.append_chat_message("cs_fup1", "assistant", "Leverage is 0.42.",
+                               model_used="claude-haiku-4-5-20251001", elapsed_s=1.0,
+                               followups=chips)
+        msgs = db.load_chat_messages("cs_fup1")
+        assert msgs[0]["followups"] == chips
+
+    def test_user_message_has_no_followups(self, temp_chat_db):
+        db.create_chat_session("cs_fup2", "sbhatia", "admin")
+        db.append_chat_message("cs_fup2", "user", "What is leverage?")
+        msgs = db.load_chat_messages("cs_fup2")
+        assert msgs[0]["followups"] == []
+
+    def test_legacy_row_with_null_followups_returns_empty_list(self, temp_chat_db):
+        # Simulates a row written before migration 005 — followups column NULL
+        db.create_chat_session("cs_fup3", "sbhatia", "admin")
+        db.append_chat_message("cs_fup3", "assistant", "Answer without chips.")
+        msgs = db.load_chat_messages("cs_fup3")
+        assert msgs[0]["followups"] == []
+
+    def test_malformed_followups_json_returns_empty_list(self, temp_chat_db):
+        db.create_chat_session("cs_fup4", "sbhatia", "admin")
+        db.append_chat_message("cs_fup4", "assistant", "Answer.")
+        conn = sqlite3.connect(temp_chat_db)
+        conn.execute(
+            "UPDATE chat_messages SET followups = ? WHERE chat_session_id = 'cs_fup4'",
+            ("not valid json {",),
+        )
+        conn.commit()
+        conn.close()
+        msgs = db.load_chat_messages("cs_fup4")
+        assert msgs[0]["followups"] == []
+
+    def test_empty_followups_list_stored_as_null(self, temp_chat_db):
+        db.create_chat_session("cs_fup5", "sbhatia", "admin")
+        db.append_chat_message("cs_fup5", "assistant", "Answer.", followups=[])
+        conn = sqlite3.connect(temp_chat_db)
+        raw = conn.execute(
+            "SELECT followups FROM chat_messages WHERE chat_session_id='cs_fup5'"
+        ).fetchone()[0]
+        conn.close()
+        assert raw is None
+
+
+# ── TestChatSessionUpdates ──────────────────────────────────────────────────
+
+class TestChatSessionUpdates:
+    def test_update_session_mode(self, temp_chat_db):
+        db.create_chat_session("cs_up1", "sbhatia", "admin", mode="Researcher")
+        db.update_chat_session_mode("cs_up1", "CFO")
+        sessions = db.list_chat_sessions("sbhatia")
+        assert any(s["chat_session_id"] == "cs_up1" and s["mode"] == "CFO" for s in sessions)
+
+    def test_update_session_company(self, temp_chat_db):
+        db.create_chat_session("cs_up2", "sbhatia", "admin", mode="CFO", company_code=22859)
+        db.update_chat_session_company("cs_up2", 12345)
+        conn = sqlite3.connect(temp_chat_db)
+        code = conn.execute(
+            "SELECT company_code FROM chat_sessions WHERE chat_session_id='cs_up2'"
+        ).fetchone()[0]
+        conn.close()
+        assert code == 12345
+

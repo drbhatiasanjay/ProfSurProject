@@ -168,10 +168,11 @@ def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
         text = md + footer
         # Token-budget guard — drop trend line, then peer detail, if over budget
         if count_tokens(text) > CONTEXT_BUDGET_TOKENS:
-            md_no_trend = re.sub(r"- 5-Year Trend.*\n", "", md)
+            md_no_trend = re.sub(r"-\s*5-Year\s+Leverage\s+Trend:.*\n?", "", md, flags=re.IGNORECASE)
             text = md_no_trend + footer
         if count_tokens(text) > CONTEXT_BUDGET_TOKENS:
-            text = (md.split("## PEER GROUP")[0] + footer)
+            parts = re.split(r"##\s*\[SOURCE:[^\]]*\]\s*Peer Group", md, flags=re.IGNORECASE)
+            text = (parts[0].strip() + "\n\n" + footer) if parts else text
         return text
     except Exception as e:
         return f"Context unavailable: {type(e).__name__}: {e}{GROUNDING_FOOTER}"
@@ -260,6 +261,31 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
         lev_max    = float(lev.max())
         lev_over100 = int((lev > 100).sum())
 
+        # Profitability distribution stats
+        prof = df["profitability"].dropna()
+        prof_mean   = float(prof.mean()) if len(prof) else 0.0
+        prof_median = float(prof.median()) if len(prof) else 0.0
+        prof_std    = float(prof.std()) if len(prof) else 0.0
+        prof_p25    = float(prof.quantile(0.25)) if len(prof) else 0.0
+        prof_p75    = float(prof.quantile(0.75)) if len(prof) else 0.0
+        prof_p90    = float(prof.quantile(0.90)) if len(prof) else 0.0
+        prof_min    = float(prof.min()) if len(prof) else 0.0
+        prof_max    = float(prof.max()) if len(prof) else 0.0
+
+        # Year-over-Year (YoY) Trajectory highlights
+        yoy_df = (
+            df.groupby("year")
+            .agg(
+                mean_prof=("profitability", "mean"),
+                median_prof=("profitability", "median"),
+            )
+            .reset_index()
+        )
+        yoy_lines = ", ".join(
+            f"{int(r.year)}: {r.mean_prof:.3f}/{r.median_prof:.3f}"
+            for r in yoy_df.itertuples()
+        )
+
         # Event-period leverage means (FIX-2a) — year-range buckets
         def _pm(mask):
             s = df.loc[mask, "leverage"].dropna()
@@ -307,6 +333,9 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
             f"- Leverage distribution: median={lev_median:.1f}%, p90={lev_p90:.1f}%, "
             f"p99={lev_p99:.1f}%, max={lev_max:.1f}% "
             f"({lev_over100} firm-years >100%, driven by negative-equity firms)\n"
+            f"- Profitability (ROA) distribution: mean={prof_mean:.4f}, median={prof_median:.4f}, std={prof_std:.4f}, "
+            f"p25={prof_p25:.4f}, p75={prof_p75:.4f}, p90={prof_p90:.4f}, min={prof_min:.4f}, max={prof_max:.4f}\n"
+            f"- YoY Profitability Trajectory (mean/median): {yoy_lines}\n"
             f"- By Life Stage (mean leverage): {stage_line}\n\n"
             f"## [SOURCE: {panel_label}] Leverage by Event Period (panel mean %)\n"
             f"- Pre-GFC (2001-07): {ep_pre:.1f}% | GFC (2008-09): {ep_gfc:.1f}%"
@@ -563,7 +592,10 @@ def stream_anthropic(
             )
             effective_system += citations_instruction
 
-        # Try prompt caching beta API first (may raise AttributeError if beta module not available)
+        # Try prompt caching beta API first (may raise AttributeError if beta module not available).
+        # Only fall back to the standard API if the beta stream fails before yielding anything —
+        # otherwise a mid-stream beta failure would re-stream from the top and duplicate output.
+        _yielded_any = False
         try:
             with client.beta.prompt_caching.messages.stream(
                 model=model,
@@ -572,8 +604,11 @@ def stream_anthropic(
                 messages=messages,
             ) as stream:
                 for text in stream.text_stream:
+                    _yielded_any = True
                     yield text
         except Exception:
+            if _yielded_any:
+                return
             # Fall back to standard API if prompt caching fails (beta not available, model mismatch, etc.)
             with client.messages.stream(
                 model=model,
@@ -585,6 +620,259 @@ def stream_anthropic(
                     yield text
     except Exception as e:
         yield f"[Anthropic error: {type(e).__name__}: {e}]"
+
+
+def stream_gemini_agent(
+    messages: list[dict],
+    system: str = "",
+    model: str = "gemini-2.5-flash",
+    max_tokens: int = 2048,
+    *,
+    role: str = "viewer",
+    citations: bool = False,
+    panel_mode: str = "thesis",
+) -> Iterator[str | dict]:
+    """Yield string chunks and structured action payloads (e.g. charts) from Google GenAI Agent.
+
+    Equipped with Google ADK / GenAI tools:
+    - query_financial_database (safe read-only SQL against capital_structure.db)
+    - generate_chat_chart (interactive Plotly spec builder)
+    - query_semantic_ontology (KG2 semantic ontology lookups)
+
+    Args:
+        messages: List of {role, content} dicts.
+        system: System prompt string with grounded context.
+        model: Gemini model ID (e.g. 'gemini-2.5-flash', 'gemini-2.5-pro').
+        max_tokens: Maximum tokens in the output response.
+        role: User role for prompt framing ('admin', 'researcher', 'viewer', 'cfo').
+        citations: When True, append citations instruction to system prompt.
+        panel_mode: Active panel dataset ('thesis', 'latest', 'run3', 'us_av_2024').
+
+    Yields:
+        String chunks and dict payloads (e.g. {"type": "chart", "spec": ...}).
+    """
+    try:
+        from google import genai
+        from google.genai import types
+        from models.agent_tools import (
+            query_financial_database,
+            generate_chat_chart,
+            query_semantic_ontology,
+            get_database_schema_summary,
+        )
+    except ImportError as _imp_err:
+        yield f"[Google GenAI SDK not installed. Run: pip install google-genai] Error: {_imp_err}"
+        return
+
+    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not api_key:
+        try:
+            import streamlit as st
+            api_key = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
+        except Exception:
+            api_key = None
+
+    if not api_key:
+        yield "[Google Gemini backend not configured. Set GEMINI_API_KEY in .streamlit/secrets.toml]"
+        return
+
+    try:
+        client = genai.Client(api_key=api_key)
+
+        role_lower = role.lower()
+        if role_lower in ("admin", "researcher"):
+            role_preamble = (
+                "You are an expert financial economist and autonomous data agent specialising in corporate capital structure. "
+                "You have direct SQL access to the capital_structure.db database via the query_financial_database tool. "
+                "Respond with econometric rigor and cite exact data."
+            )
+        else:
+            role_preamble = (
+                "You are an executive financial advisor and data agent providing actionable insights on capital structure. "
+                "You have direct SQL access to the capital_structure.db database via the query_financial_database tool."
+            )
+
+        # Remove static-only context restrictions and grounding footers so the agent leverages its tools
+        clean_context = re.sub(r"INSTRUCTIONS:\s*Answer ONLY from the three knowledge blocks above.*", "", system, flags=re.DOTALL).strip()
+        clean_context = re.sub(r"If asked about something not in the context, say exactly:.*", "", clean_context, flags=re.DOTALL).strip()
+
+        agent_instructions = (
+            "AGENT INSTRUCTIONS:\n"
+            "1. You are an autonomous financial econometric agent with tool access to the SQLite database (query_financial_database), interactive in-chat charting (generate_chat_chart), and semantic ontology (query_semantic_ontology).\n"
+            "2. Whenever the user requests specific statistical metrics, distributions (median, standard deviation, percentiles, min, max), Year-over-Year (YoY) tables, or specific company metrics that are not fully detailed in the static context above, YOU MUST call query_financial_database to query capital_structure.db.\n"
+            "3. When the user requests a chart, plot, graph, or visual representation, call query_financial_database if needed, and include the JSON chart specification block in your response:\n"
+            "```json\n"
+            '{\n  "chart_type": "line",\n  "title": "<Chart Title>",\n  "x_axis_label": "<X Axis>",\n  "y_axis_label": "<Y Axis>",\n  "categories": ["2001", "2002", "2003", ...],\n  "series": [\n    {"name": "<Series Name>", "values": [<val1>, <val2>, ...]}\n  ]\n}\n'
+            "```\n"
+            "or call generate_chat_chart, and accompany the chart with an insightful economic analysis.\n"
+            "4. Cite sources using [Source: Theory], [Source: Latest (2001-2025)], or [Source: OLS Model] where appropriate.\n"
+        )
+
+        effective_system = f"{role_preamble}\n\n{clean_context}\n\n{get_database_schema_summary()}\n\n{agent_instructions}"
+        if citations:
+            effective_system += (
+                "\n\nSupport your analysis with relevant citations from capital structure literature "
+                "(Modigliani & Miller 1958, Myers 1984, Rajan & Zingales 1995, Jensen & Meckling 1976, "
+                "Fama & French 2002, Dickinson 2011). Format citations as Author (Year) inline."
+            )
+
+        from models.agent_tools import (
+            query_financial_database as _qfd,
+            generate_chat_chart as _gcc,
+            query_semantic_ontology as _qso,
+        )
+
+        def query_financial_database(sql_query: str) -> dict:
+            """Execute a safe, read-only SQL SELECT query on the capital structure database.
+
+            CRITICAL: ALWAYS use this tool whenever you need specific statistical aggregations
+            (e.g. median, standard deviation, percentiles, min, max, count), company-specific records,
+            or industry breakdowns that are not already present in the prompt context.
+
+            Supported aggregate functions: AVG(x), COUNT(x), MIN(x), MAX(x), SUM(x), MEDIAN(x), STDEV(x), P25(x), P75(x), P90(x).
+
+            Args:
+                sql_query: A valid SQLite SELECT query against tables: financials, companies, cash_flows, econometric_results.
+            """
+            return _qfd(sql_query, panel_mode=panel_mode)
+
+        def generate_chat_chart(
+            chart_type: str,
+            title: str,
+            x_axis_label: str,
+            y_axis_label: str,
+            categories: list[str],
+            series: list = None,
+            series_json: str = "",
+            **kwargs,
+        ) -> dict:
+            """Generate an interactive Plotly chart specification for in-chat rendering.
+
+            Args:
+                chart_type: One of 'line', 'bar', 'scatter', 'box', 'histogram'.
+                title: Chart title.
+                x_axis_label: X-axis label.
+                y_axis_label: Y-axis label.
+                categories: X-axis values as list of strings (e.g. ['2001', '2002', ...] or stage names).
+                series: Optional list of series dicts (e.g. [{'name': 'Mean ROA', 'values': [0.16, 0.15]}]).
+                series_json: Optional JSON string of series list. Example: '[{"name": "Mean ROA", "values": [0.16, 0.15]}]'
+            """
+            return _gcc(
+                chart_type=chart_type,
+                title=title,
+                x_axis_label=x_axis_label,
+                y_axis_label=y_axis_label,
+                categories=categories,
+                series=series,
+                series_json=series_json,
+                **kwargs,
+            )
+
+        def query_semantic_ontology(
+            query_type: str,
+            stage: str = "",
+            metric: str = "",
+        ) -> dict:
+            """Look up normative leverage ranges, cash flow patterns, and anomaly explanations from the KG2 life-cycle ontology.
+
+            Args:
+                query_type: One of 'normative_band', 'stage_definition', 'explain_anomaly', 'macro_summary'.
+                stage: Specific life stage (e.g. 'Startup', 'Growth', 'Maturity', 'Decline', 'Decay').
+                metric: Financial metric name (e.g. 'leverage', 'profitability', 'tangibility').
+            """
+            return _qso(query_type=query_type, stage=stage, metric=metric)
+
+        latest_user_prompt = messages[-1]["content"] if messages else ""
+        if not latest_user_prompt:
+            return
+
+        chat = client.chats.create(
+            model=model,
+            config=types.GenerateContentConfig(
+                system_instruction=effective_system,
+                temperature=0.1,
+                max_output_tokens=max_tokens,
+                tools=[query_financial_database, generate_chat_chart, query_semantic_ontology],
+            ),
+        )
+
+        response = chat.send_message(latest_user_prompt)
+
+        tool_map = {
+            "query_financial_database": query_financial_database,
+            "generate_chat_chart": generate_chat_chart,
+            "query_semantic_ontology": query_semantic_ontology,
+        }
+
+        has_yielded_text = False
+        has_yielded_chart = False
+
+        max_tool_turns = 5
+        turn_count = 0
+        while getattr(response, "function_calls", None) and turn_count < max_tool_turns:
+            turn_count += 1
+            function_responses = []
+            for call in response.function_calls:
+                fn_name = getattr(call, "name", "")
+                fn_args = getattr(call, "args", {}) or {}
+                if fn_name in tool_map:
+                    tool_res = tool_map[fn_name](**fn_args)
+                    if fn_name == "generate_chat_chart" and isinstance(tool_res, dict) and tool_res.get("status") == "success":
+                        yield {"type": "chart", "spec": tool_res.get("chart_spec")}
+                        has_yielded_chart = True
+                    try:
+                        function_responses.append(
+                            types.Part.from_function_response(
+                                name=fn_name,
+                                response={"result": tool_res},
+                            )
+                        )
+                    except Exception:
+                        function_responses.append(str(tool_res))
+            if function_responses:
+                response = chat.send_message(function_responses[0] if len(function_responses) == 1 else function_responses)
+            else:
+                break
+
+        def _extract_response_text(resp) -> str:
+            if not resp:
+                return ""
+            parts_text = []
+            for cand in (getattr(resp, "candidates", None) or []):
+                content = getattr(cand, "content", None)
+                for p in (getattr(content, "parts", None) or []):
+                    t = getattr(p, "text", None)
+                    if t:
+                        parts_text.append(t)
+            if parts_text:
+                return "".join(parts_text)
+            try:
+                t = getattr(resp, "text", None)
+                if t:
+                    return t
+            except Exception:
+                pass
+            return ""
+
+        # Safely yield final text and extract embedded chart spec
+        final_text = _extract_response_text(response)
+
+        from models.agent_tools import extract_chat_chart_spec
+        chart_spec, cleaned_final = extract_chat_chart_spec(final_text)
+        if chart_spec and not has_yielded_chart:
+            yield {"type": "chart", "spec": chart_spec}
+            has_yielded_chart = True
+            final_text = cleaned_final
+
+        if final_text.strip():
+            yield final_text
+            has_yielded_text = True
+        elif not has_yielded_text and has_yielded_chart:
+            yield "Here is the interactive visualization based on the requested panel dataset."
+
+    except Exception as e:
+        yield f"[Gemini error: {type(e).__name__}: {e}]"
+
 
 
 def generate_econometric_narrative(
@@ -817,6 +1105,88 @@ def parse_llm_json(raw: str) -> dict:
         except json.JSONDecodeError:
             pass
     return default
+
+
+_FOLLOWUP_MARKER_RE = re.compile(r"-{0,3}\s*\*{0,2}FOLLOWUPS_JSON\*{0,2}\s*:?", re.IGNORECASE)
+_FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
+_SALVAGE_Q_RE = re.compile(r'"([^"]{10,300}\?)"')
+
+
+def _extract_balanced_object(text: str) -> Optional[str]:
+    """Return the first balanced {...} substring in text, or None if unbalanced.
+
+    Ignores braces inside JSON string literals so a stray '{' or '}' in a
+    follow-up question does not break the scan.
+    """
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    in_string = False
+    escaped = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+        elif ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    return None  # never closed — truncated response
+
+
+def parse_followup_chips(text: str) -> tuple[str, list[str]]:
+    """Split a streamed answer into (display_text, follow-up chips).
+
+    The model is instructed to append a 'FOLLOWUPS_JSON: {...}' footer after
+    its answer. This function must NEVER let that marker or its JSON leak
+    into display_text, even when the model deviates from the instruction —
+    truncated output (max_tokens cut-off), a markdown fence around the JSON,
+    a bold marker, or trailing prose after the object. On any parse failure
+    it falls back to regex-salvaging quoted questions from the tail, and
+    worst case returns an empty chip list with a still-clean display_text.
+
+    Args:
+        text: Full accumulated response text from the LLM stream.
+
+    Returns:
+        (display_text, chips) — chips is a list of up to 3 non-empty strings.
+    """
+    m = _FOLLOWUP_MARKER_RE.search(text)
+    if not m:
+        return text.strip(), []
+
+    display = text[:m.start()].strip()
+    # Strip a trailing '---' separator the instruction's own template echoes
+    display = re.sub(r"-{3,}\s*$", "", display).strip()
+
+    tail = _FENCE_RE.sub("", text[m.end():]).strip()
+
+    obj_str = _extract_balanced_object(tail)
+    if obj_str is not None:
+        try:
+            parsed = json.loads(obj_str)
+            raw_chips = parsed.get("followups") or parsed.get("followup_questions") or []
+            if isinstance(raw_chips, list):
+                chips = [str(q).strip() for q in raw_chips if isinstance(q, str) and q.strip()]
+                if chips:
+                    return display, chips[:3]
+        except (json.JSONDecodeError, AttributeError):
+            pass
+
+    # Salvage: pull quoted question-like strings out of whatever tail we have
+    salvaged = [q.strip() for q in _SALVAGE_Q_RE.findall(tail) if q.strip()]
+    return display, salvaged[:3]
 
 
 def log_chat_query(
