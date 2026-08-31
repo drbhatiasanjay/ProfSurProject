@@ -17,7 +17,9 @@ MODEL_CONFIGS = {
     "Random Forest": {
         "class": RandomForestRegressor,
         "params": {"n_estimators": 300, "max_depth": 8, "min_samples_leaf": 20,
-                   "random_state": 42, "n_jobs": -1},
+                   # Keep fitting single-process for hosted/Windows runtimes where
+                   # joblib worker creation can be denied by the sandbox.
+                   "random_state": 42, "n_jobs": 1},
     },
     "XGBoost": {
         "class": XGBRegressor,
