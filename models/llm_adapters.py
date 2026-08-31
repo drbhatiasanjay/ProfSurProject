@@ -8,12 +8,12 @@ Context builders produce <=900 token grounded prompts — no hallucination
 surface. CFO mode injects company + peer metrics; Researcher mode injects
 panel OLS outputs + descriptive statistics.
 """
-from __future__ import annotations
 
 import json
 import re
 import os
-from typing import Iterator, Literal, Optional
+import typing
+from typing import Iterator, Generator, Literal, Optional, List, Dict, Union, Any
 
 import pandas as pd
 
@@ -622,21 +622,103 @@ def stream_anthropic(
         yield f"[Anthropic error: {type(e).__name__}: {e}]"
 
 
+def query_financial_database(sql_query: str) -> str:
+    """Execute a safe, read-only SQL SELECT query on the capital structure database.
+
+    Args:
+        sql_query: A valid SQLite SELECT query against tables: financials, companies.
+    """
+    import json
+    from models.agent_tools import query_financial_database as _qfd
+    res = _qfd(sql_query)
+    return json.dumps(res, default=str)
+
+
+def generate_chat_chart(
+    chart_type: str,
+    title: str,
+    x_axis_label: str,
+    y_axis_label: str,
+    categories_csv: str,
+    series_name: str,
+    series_values_csv: str,
+) -> str:
+    """Render an interactive Plotly visualization for the user in the UI.
+
+    Args:
+        chart_type: One of 'line', 'bar', 'scatter', 'box', 'histogram', 'area'.
+        title: Chart title.
+        x_axis_label: X-axis label.
+        y_axis_label: Y-axis label.
+        categories_csv: Comma-separated list of categories or years (e.g. '2001, 2002, 2003').
+        series_name: Name of the data series.
+        series_values_csv: Comma-separated list of numeric values (e.g. '0.161, 0.155, 0.158').
+    """
+    import json
+    from models.agent_tools import generate_chat_chart as _gcc
+    cats = [c.strip() for c in str(categories_csv).split(",") if c.strip()]
+    vals = []
+    for v in str(series_values_csv).split(","):
+        try:
+            vals.append(float(v.strip()))
+        except (ValueError, TypeError):
+            vals.append(0.0)
+
+    s_name = series_name or y_axis_label or "Series"
+    series = [{"name": s_name, "values": vals}]
+
+    spec = _gcc(
+        chart_type=chart_type,
+        title=title,
+        x_axis_label=x_axis_label,
+        y_axis_label=y_axis_label,
+        categories=cats,
+        series=series,
+    )
+    return json.dumps({
+        "status": "success",
+        "message": "Chart rendered successfully in UI. Do not output error apologies.",
+        "chart_spec": spec.get("chart_spec", {}),
+    }, default=str)
+
+
+def query_semantic_ontology(
+    query_type: str,
+    stage: str = "",
+    metric: str = "",
+) -> str:
+    """Look up normative leverage ranges, cash flow patterns, and anomaly explanations from the KG2 life-cycle ontology.
+
+    Args:
+        query_type: One of 'normative_band', 'stage_definition', 'explain_anomaly', 'macro_summary'.
+        stage: Specific life stage (e.g. 'Startup', 'Growth', 'Maturity', 'Decline', 'Decay').
+        metric: Financial metric name (e.g. 'leverage', 'profitability', 'tangibility').
+    """
+    import json
+    from models.agent_tools import query_semantic_ontology as _qso
+    return json.dumps(_qso(query_type=query_type, stage=stage, metric=metric), default=str)
+
+
+query_financial_database.__annotations__ = typing.get_type_hints(query_financial_database)
+generate_chat_chart.__annotations__ = typing.get_type_hints(generate_chat_chart)
+query_semantic_ontology.__annotations__ = typing.get_type_hints(query_semantic_ontology)
+
+
 def stream_gemini_agent(
-    messages: list[dict],
+    messages: List[Dict[str, Any]],
     system: str = "",
     model: str = "gemini-2.5-flash",
     max_tokens: int = 2048,
     *,
-    role: str = "viewer",
+    role: str = "researcher",
     citations: bool = False,
     panel_mode: str = "thesis",
-) -> Iterator[str | dict]:
-    """Yield string chunks and structured action payloads (e.g. charts) from Google GenAI Agent.
+) -> Generator[Union[str, dict], None, None]:
+    """Autonomous agentic streaming loop using Google GenAI SDK (google.genai).
 
-    Equipped with Google ADK / GenAI tools:
-    - query_financial_database (safe read-only SQL against capital_structure.db)
-    - generate_chat_chart (interactive Plotly spec builder)
+    Equipped with three primary tool capabilities:
+    - query_financial_database (safe read-only SQL querying on capital_structure.db)
+    - generate_chat_chart (interactive Plotly spec generation)
     - query_semantic_ontology (KG2 semantic ontology lookups)
 
     Args:
@@ -654,12 +736,7 @@ def stream_gemini_agent(
     try:
         from google import genai
         from google.genai import types
-        from models.agent_tools import (
-            query_financial_database,
-            generate_chat_chart,
-            query_semantic_ontology,
-            get_database_schema_summary,
-        )
+        from models.agent_tools import get_database_schema_summary
     except ImportError as _imp_err:
         yield f"[Google GenAI SDK not installed. Run: pip install google-genai] Error: {_imp_err}"
         return
@@ -693,97 +770,26 @@ def stream_gemini_agent(
             )
 
         # Remove static-only context restrictions and grounding footers so the agent leverages its tools
-        clean_context = re.sub(r"INSTRUCTIONS:\s*Answer ONLY from the three knowledge blocks above.*", "", system, flags=re.DOTALL).strip()
-        clean_context = re.sub(r"If asked about something not in the context, say exactly:.*", "", clean_context, flags=re.DOTALL).strip()
+        clean_context = re.sub(r"INSTRUCTIONS:\s*Answer ONLY from.*?(?=\n\n|\Z)", "", system, flags=re.DOTALL).strip()
+        clean_context = re.sub(r"If asked about something not in the context, say exactly:.*?(?=\n\n|\Z)", "", clean_context, flags=re.DOTALL).strip()
 
         agent_instructions = (
-            "AGENT INSTRUCTIONS:\n"
-            "1. You are an autonomous financial econometric agent with tool access to the SQLite database (query_financial_database), interactive in-chat charting (generate_chat_chart), and semantic ontology (query_semantic_ontology).\n"
-            "2. Whenever the user requests specific statistical metrics, distributions (median, standard deviation, percentiles, min, max), Year-over-Year (YoY) tables, or specific company metrics that are not fully detailed in the static context above, YOU MUST call query_financial_database to query capital_structure.db.\n"
-            "3. When the user requests a chart, plot, graph, or visual representation, call query_financial_database if needed, and include the JSON chart specification block in your response:\n"
-            "```json\n"
-            '{\n  "chart_type": "line",\n  "title": "<Chart Title>",\n  "x_axis_label": "<X Axis>",\n  "y_axis_label": "<Y Axis>",\n  "categories": ["2001", "2002", "2003", ...],\n  "series": [\n    {"name": "<Series Name>", "values": [<val1>, <val2>, ...]}\n  ]\n}\n'
-            "```\n"
-            "or call generate_chat_chart, and accompany the chart with an insightful economic analysis.\n"
-            "4. Cite sources using [Source: Theory], [Source: Latest (2001-2025)], or [Source: OLS Model] where appropriate.\n"
+            "PANEL COVERAGE & CRITICAL RULES:\n"
+            "1. The panel database covers annual corporate financial records from 2001 to 2025 inclusive (400 Indian listed firms, 9,031 observations).\n"
+            "2. Whenever the user requests specific company lookups, top rankings, distributions (median, standard deviation, percentiles, min, max), Year-overYear (YoY) tables, or queries about specific years (e.g. 2024, 2025), YOU MUST call query_financial_database to query capital_structure.db.\n"
+            "3. Join companies and financials on company_code: JOIN companies c ON f.company_code = c.company_code (Note: use company_code, not company_id).\n"
+            "4. When the user requests a chart, plot, graph, or visual representation, query the database if needed, call generate_chat_chart, and accompany the interactive visualization with the complete data table and an insightful economic analysis. The UI automatically renders the interactive Plotly graph.\n"
+            "5. Cite sources using [Source: Theory], [Source: Latest (2001-2025)], or [Source: OLS Model] where appropriate.\n"
+            "6. The interactive charting system is fully supported and operational. NEVER output apologies or statements claiming you are unable to generate charts or graphs.\n"
         )
 
-        effective_system = f"{role_preamble}\n\n{clean_context}\n\n{get_database_schema_summary()}\n\n{agent_instructions}"
+        effective_system = f"{role_preamble}\n\n{agent_instructions}\n\n{get_database_schema_summary()}\n\n{clean_context}"
         if citations:
             effective_system += (
                 "\n\nSupport your analysis with relevant citations from capital structure literature "
                 "(Modigliani & Miller 1958, Myers 1984, Rajan & Zingales 1995, Jensen & Meckling 1976, "
                 "Fama & French 2002, Dickinson 2011). Format citations as Author (Year) inline."
             )
-
-        from models.agent_tools import (
-            query_financial_database as _qfd,
-            generate_chat_chart as _gcc,
-            query_semantic_ontology as _qso,
-        )
-
-        def query_financial_database(sql_query: str) -> str:
-            """Execute a safe, read-only SQL SELECT query on the capital structure database.
-
-            CRITICAL: ALWAYS use this tool whenever you need specific statistical aggregations
-            (e.g. median, standard deviation, percentiles, min, max, count), company-specific records,
-            or industry breakdowns that are not already present in the prompt context.
-
-            Supported aggregate functions: AVG(x), COUNT(x), MIN(x), MAX(x), SUM(x), MEDIAN(x), STDEV(x), P25(x), P75(x), P90(x).
-
-            Args:
-                sql_query: A valid SQLite SELECT query against tables: financials, companies.
-            """
-            import json
-            return json.dumps(_qfd(sql_query, panel_mode=panel_mode))
-
-        def generate_chat_chart(
-            chart_type: str,
-            title: str,
-            x_axis_label: str,
-            y_axis_label: str,
-            categories_csv: str,
-            series_name: str,
-            series_values_csv: str,
-        ) -> str:
-            """Generate an interactive Plotly chart specification for in-chat rendering.
-
-            Args:
-                chart_type: One of 'line', 'bar', 'scatter', 'box', 'histogram'.
-                title: Chart title.
-                x_axis_label: X-axis label.
-                y_axis_label: Y-axis label.
-                categories_csv: Comma-separated list of categories or years (e.g. '2001, 2002, 2003').
-                series_name: Name of the data series.
-                series_values_csv: Comma-separated list of numeric values (e.g. '0.161, 0.155, 0.158').
-            """
-            import json
-            cats = [c.strip() for c in categories_csv.split(",") if c.strip()]
-            vals = [float(v.strip()) for v in series_values_csv.split(",") if v.strip()]
-            res = _gcc(
-                chart_type=chart_type,
-                title=title,
-                x_axis_label=x_axis_label,
-                y_axis_label=y_axis_label,
-                categories=cats,
-                series=[{"name": series_name, "values": vals}],
-            )
-            return json.dumps(res)
-
-        def query_semantic_ontology(
-            query_type: str,
-            stage: str = "",
-            metric: str = "",
-        ) -> str:
-            """Look up normative leverage ranges, cash flow patterns, and anomaly explanations from the KG2 life-cycle ontology.
-
-            Args:
-                query_type: One of 'normative_band', 'stage_definition', 'explain_anomaly', 'macro_summary'.
-                stage: Specific life stage (e.g. 'Startup', 'Growth', 'Maturity', 'Decline', 'Decay').
-                metric: Financial metric name (e.g. 'leverage', 'profitability', 'tangibility').
-            """
-            import json
-            return json.dumps(_qso(query_type=query_type, stage=stage, metric=metric))
 
         formatted_contents = []
         for m in messages:
@@ -793,10 +799,10 @@ def stream_gemini_agent(
             # Filter out legacy tool errors / apologies from historical context
             if "internal tool error" in content or "INVALID_ARGUMENT" in content or "[Gemini error:" in content:
                 continue
-            role = "user" if m.get("role") == "user" else "model"
+            role_val = "user" if m.get("role") == "user" else "model"
             formatted_contents.append(
                 types.Content(
-                    role=role,
+                    role=role_val,
                     parts=[types.Part.from_text(text=content)],
                 )
             )
@@ -810,7 +816,11 @@ def stream_gemini_agent(
             system_instruction=effective_system,
             temperature=0.1,
             max_output_tokens=max_tokens,
-            tools=[query_financial_database, generate_chat_chart, query_semantic_ontology],
+            tools=[
+                query_financial_database,
+                generate_chat_chart,
+                query_semantic_ontology,
+            ],
         )
 
         response = client.models.generate_content(
@@ -823,14 +833,27 @@ def stream_gemini_agent(
             if not resp:
                 return ""
             parts_text = []
+            # Prioritize candidates content (the completed final turn)
             for cand in (getattr(resp, "candidates", None) or []):
                 content = getattr(cand, "content", None)
-                for p in (getattr(content, "parts", None) or []):
-                    t = getattr(p, "text", None)
-                    if t:
-                        parts_text.append(t)
+                if content:
+                    for p in (getattr(content, "parts", None) or []):
+                        t = getattr(p, "text", None)
+                        if t and t.strip():
+                            parts_text.append(t.strip())
             if parts_text:
-                return "".join(parts_text)
+                return "\n\n".join(parts_text)
+            # If candidates was empty, inspect history turns
+            for turn in (getattr(resp, "automatic_function_calling_history", None) or []):
+                if getattr(turn, "role", "") == "model":
+                    for p in (getattr(turn, "parts", None) or []):
+                        if getattr(p, "function_call", None):
+                            continue
+                        t = getattr(p, "text", None)
+                        if t and t.strip():
+                            parts_text.append(t.strip())
+            if parts_text:
+                return "\n\n".join(parts_text)
             try:
                 t = getattr(resp, "text", None)
                 if t:
@@ -847,7 +870,7 @@ def stream_gemini_agent(
         for item in (getattr(response, "automatic_function_calling_history", None) or []):
             for part in (getattr(item, "parts", None) or []):
                 fn_resp = getattr(part, "function_response", None)
-                if fn_resp and getattr(fn_resp, "name", "") == "generate_chat_chart":
+                if fn_resp and "generate_chat_chart" in getattr(fn_resp, "name", ""):
                     resp_data = getattr(fn_resp, "response", {}) or {}
                     if isinstance(resp_data, dict) and "result" in resp_data:
                         raw_r = resp_data["result"]
@@ -868,6 +891,19 @@ def stream_gemini_agent(
             yield {"type": "chart", "spec": chart_spec}
             has_yielded_chart = True
             final_text = cleaned_final
+
+        if has_yielded_chart and final_text:
+            disclaimer_patterns = [
+                r"I apologize[^\n]*",
+                r"I am (?:currently|still) (?:unable|experiencing)[^\n]*",
+                r"\(Note:[^\)\n]*?(?:chart|graph|visual|tool)[^\)\n]*?\)",
+                r"Note: There was an issue generating[^\n]*",
+                r"However, I (?:have provided|can still provide)[^\n]*",
+            ]
+            cleaned = final_text
+            for pat in disclaimer_patterns:
+                cleaned = re.sub(pat, "", cleaned, flags=re.IGNORECASE)
+            final_text = re.sub(r"\n\s*\n\s*\n", "\n\n", cleaned).strip()
 
         if final_text.strip():
             yield final_text

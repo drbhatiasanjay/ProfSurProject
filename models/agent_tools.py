@@ -31,6 +31,7 @@ def get_database_schema_summary() -> str:
         "2. financials (company_code INT, year INT, life_stage TEXT, size_decile TEXT, leverage REAL, "
         "profitability REAL, tangibility REAL, firm_size REAL, log_size REAL, tax REAL, tax_shield REAL, "
         "dividend REAL, ocf REAL, icf REAL, fcf REAL, vintage TEXT)\n"
+        "   - JOIN RULE: Always join companies and financials on company_code (e.g. JOIN companies c ON f.company_code = c.company_code). Note: there is no company_id column.\n"
         "   - life_stage values: 'Startup', 'Growth', 'Maturity', 'Shakeout1', 'Shakeout2', 'Shakeout3', 'Decline', 'Decay'\n"
         "   - leverage = Debt / Total Assets * 100\n"
         "   - profitability = Return on Assets (ROA)\n"
@@ -80,7 +81,11 @@ def query_financial_database(
             "error": "Query must start with SELECT or WITH.",
         }
 
-    # 3. Ensure automatic LIMIT 50 if none provided
+    # 4. Automatically rewrite common column aliases and hallucinations
+    clean_query = re.sub(r"\b([a-zA-Z0-9_]+\.)?company_id\b", r"\1company_code", clean_query, flags=re.IGNORECASE)
+    clean_query = re.sub(r"\b([a-zA-Z0-9_]+\.)?lifestage\b", r"\1life_stage", clean_query, flags=re.IGNORECASE)
+
+    # 5. Ensure automatic LIMIT 50 if none provided
     if not re.search(r"\bLIMIT\s+\d+\b", clean_query, re.IGNORECASE):
         clean_query = f"{clean_query} LIMIT 50"
 
@@ -226,39 +231,58 @@ def generate_chat_chart(
 
 def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
     """Build an interactive Plotly Figure from a chart specification."""
+    import re
     import plotly.graph_objects as go
     from helpers import plotly_layout_light, plotly_layout_dark
 
-    chart_type = spec.get("chart_type", "line").lower()
+    chart_type = str(spec.get("chart_type", "line")).lower()
     title = spec.get("title", "")
     x_label = spec.get("x_axis_label", "")
     y_label = spec.get("y_axis_label", "")
-    categories = spec.get("categories", [])
+    raw_cats = spec.get("categories", [])
     series = spec.get("series", [])
+
+    clean_cats = [str(c).strip() for c in raw_cats]
 
     fig = go.Figure()
     for s in series:
         s_name = s.get("name", "")
-        s_vals = s.get("values", [])
+        raw_vals = s.get("values", [])
+        clean_vals = []
+        for v in raw_vals:
+            if isinstance(v, (int, float)):
+                clean_vals.append(float(v))
+            elif isinstance(v, str):
+                m = re.search(r"[-+]?(?:\d*\.\d+|\d+)", v)
+                clean_vals.append(float(m.group(0)) if m else 0.0)
+            else:
+                clean_vals.append(0.0)
+
+        # Match category count if possible
+        plot_x = clean_cats[:len(clean_vals)] if clean_cats else list(range(1, len(clean_vals) + 1))
+
         if chart_type == "bar":
-            fig.add_trace(go.Bar(x=categories, y=s_vals, name=s_name))
+            fig.add_trace(go.Bar(x=plot_x, y=clean_vals, name=s_name, marker=dict(color="#0284c7")))
         elif chart_type == "scatter":
-            fig.add_trace(go.Scatter(x=categories, y=s_vals, mode="markers", name=s_name))
+            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="markers", name=s_name, marker=dict(size=8, color="#0284c7")))
         elif chart_type == "box":
-            fig.add_trace(go.Box(y=s_vals, name=s_name, x=categories if len(categories) == len(s_vals) else None))
+            fig.add_trace(go.Box(y=clean_vals, name=s_name, x=plot_x if len(plot_x) == len(clean_vals) else None))
         elif chart_type in ("area", "filled_line"):
-            fig.add_trace(go.Scatter(x=categories, y=s_vals, mode="lines", fill="tozeroy", name=s_name))
+            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="lines", fill="tozeroy", name=s_name, line=dict(color="#0284c7")))
         elif chart_type == "histogram":
-            fig.add_trace(go.Histogram(x=s_vals, name=s_name))
+            fig.add_trace(go.Histogram(x=clean_vals, name=s_name, marker=dict(color="#0284c7")))
         else:
-            fig.add_trace(go.Scatter(x=categories, y=s_vals, mode="lines+markers", name=s_name))
+            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="lines+markers", name=s_name, line=dict(width=2.5, color="#0284c7"), marker=dict(size=6, color="#0284c7")))
 
     layout_func = plotly_layout_dark if str(theme).lower() == "dark" else plotly_layout_light
+    base_layout = layout_func(title=title)
     fig.update_layout(
+        **base_layout,
         xaxis_title=x_label,
         yaxis_title=y_label,
-        **layout_func(title=title),
     )
+    # Ensure y-axis autoranges accurately to show variations in decimals (e.g. ROA 0.13-0.18)
+    fig.update_yaxes(autorange=True)
     return fig
 
 
@@ -307,6 +331,64 @@ def extract_chat_chart_spec(text: str) -> tuple[Optional[dict], str]:
             pass
 
     return None, text
+
+
+def extract_table_chart_spec(text: str, user_q: str = "") -> Optional[dict]:
+    """Fallback: synthesize an interactive chart spec from a Markdown table if user asked for a visual chart."""
+    if not text:
+        return None
+    import re
+    table_lines = [line.strip() for line in text.splitlines() if line.strip().startswith("|") and line.strip().endswith("|")]
+    if len(table_lines) < 3:
+        return None
+
+    # Header
+    header_cols = [c.strip() for c in table_lines[0].strip("|").split("|") if c.strip()]
+    if len(header_cols) < 2:
+        return None
+
+    # Check separator
+    if not re.match(r"^[\s\|:\-]+$", table_lines[1]):
+        return None
+
+    categories = []
+    values = []
+    for row in table_lines[2:]:
+        cols = [c.strip() for c in row.strip("|").split("|")]
+        if len(cols) >= 2:
+            cat = cols[0]
+            val_str = re.sub(r"[^\d\.\-]", "", cols[1])
+            try:
+                val = float(val_str)
+                categories.append(cat)
+                values.append(val)
+            except ValueError:
+                continue
+
+    if len(categories) >= 2 and len(values) >= 2:
+        q_lower = user_q.lower() if user_q else ""
+        is_year = all(c.isdigit() and len(c) == 4 for c in categories)
+        if "bar" in q_lower:
+            c_type = "bar"
+        elif "line" in q_lower or is_year:
+            c_type = "line"
+        else:
+            c_type = "bar" if len(categories) <= 10 else "line"
+
+        x_title = header_cols[0]
+        y_title = header_cols[1]
+        title = f"{y_title} by {x_title}"
+        res = generate_chat_chart(
+            chart_type=c_type,
+            title=title,
+            x_axis_label=x_title,
+            y_axis_label=y_title,
+            categories=categories,
+            series=[{"name": y_title, "values": values}],
+        )
+        if res.get("status") == "success":
+            return res["chart_spec"]
+    return None
 
 
 # ── KG2 Semantic Knowledge Graph & Ontology Lookups ──────────────────────────

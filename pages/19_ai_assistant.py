@@ -48,7 +48,7 @@ from models.llm_adapters import (
     parse_llm_json,
     parse_followup_chips,
 )
-from models.agent_tools import render_chat_chart_figure, extract_chat_chart_spec
+from models.agent_tools import render_chat_chart_figure, extract_chat_chart_spec, extract_table_chart_spec
 
 _CHART_INSTRUCTION = (
     "\n\nVISUALIZATION INSTRUCTIONS:\n"
@@ -359,12 +359,15 @@ if user_q:
         full = "".join(_buf)
         _elapsed = round(time.time() - _t0, 1)
 
-        # If chart was not received as a tool event, check if model embedded a JSON chart spec in text
+        # If chart was not received as a tool event, check if model embedded a JSON chart spec in text or if table can be parsed
         if not _chart_found:
             _extracted_chart, _cleaned_full = extract_chat_chart_spec(full)
             if _extracted_chart:
                 _chart_found = _extracted_chart
                 full = _cleaned_full
+            elif any(w in user_q.lower() for w in ("chart", "graph", "plot", "visual", "bar", "trend")):
+                _chart_found = extract_table_chart_spec(full, user_q=user_q)
+            if _chart_found:
                 fig = render_chat_chart_figure(_chart_found, theme=st.session_state.get("theme", "light"))
                 st.plotly_chart(fig, use_container_width=True)
 
