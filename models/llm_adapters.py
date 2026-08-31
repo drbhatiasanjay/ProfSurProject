@@ -785,9 +785,26 @@ def stream_gemini_agent(
             import json
             return json.dumps(_qso(query_type=query_type, stage=stage, metric=metric))
 
-        latest_user_prompt = messages[-1]["content"] if messages else ""
-        if not latest_user_prompt:
-            return
+        formatted_contents = []
+        for m in messages:
+            content = str(m.get("content", "")).strip()
+            if not content:
+                continue
+            # Filter out legacy tool errors / apologies from historical context
+            if "internal tool error" in content or "INVALID_ARGUMENT" in content or "[Gemini error:" in content:
+                continue
+            role = "user" if m.get("role") == "user" else "model"
+            formatted_contents.append(
+                types.Content(
+                    role=role,
+                    parts=[types.Part.from_text(text=content)],
+                )
+            )
+        if not formatted_contents:
+            if messages:
+                formatted_contents = [types.Content(role="user", parts=[types.Part.from_text(text=messages[-1].get("content", ""))])]
+            else:
+                return
 
         config = types.GenerateContentConfig(
             system_instruction=effective_system,
@@ -798,7 +815,7 @@ def stream_gemini_agent(
 
         response = client.models.generate_content(
             model=model,
-            contents=latest_user_prompt,
+            contents=formatted_contents,
             config=config,
         )
 

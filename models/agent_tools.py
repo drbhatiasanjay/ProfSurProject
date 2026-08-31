@@ -136,7 +136,7 @@ def generate_chat_chart(
     Returns:
         Dict with status and chart specification payload.
     """
-    valid_types = {"line", "bar", "scatter", "box", "histogram"}
+    valid_types = {"line", "bar", "scatter", "box", "histogram", "area", "heatmap"}
     if not chart_type or chart_type.lower() not in valid_types:
         chart_type = "line"
 
@@ -244,6 +244,12 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
             fig.add_trace(go.Bar(x=categories, y=s_vals, name=s_name))
         elif chart_type == "scatter":
             fig.add_trace(go.Scatter(x=categories, y=s_vals, mode="markers", name=s_name))
+        elif chart_type == "box":
+            fig.add_trace(go.Box(y=s_vals, name=s_name, x=categories if len(categories) == len(s_vals) else None))
+        elif chart_type in ("area", "filled_line"):
+            fig.add_trace(go.Scatter(x=categories, y=s_vals, mode="lines", fill="tozeroy", name=s_name))
+        elif chart_type == "histogram":
+            fig.add_trace(go.Histogram(x=s_vals, name=s_name))
         else:
             fig.add_trace(go.Scatter(x=categories, y=s_vals, mode="lines+markers", name=s_name))
 
