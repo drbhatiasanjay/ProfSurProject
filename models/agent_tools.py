@@ -218,9 +218,14 @@ def query_financial_database(
         finally:
             conn.close()
     except Exception as e:
+        error_text = str(e)
+        if "prohibited" in error_text.lower() or "not authorized" in error_text.lower():
+            error_message = f"Security violation: database access was denied ({error_text})"
+        else:
+            error_message = f"SQL execution error: {type(e).__name__}: {error_text}"
         return {
             "status": "error",
-            "error": f"SQL execution error: {type(e).__name__}: {str(e)}",
+            "error": error_message,
             "schema_hint": get_database_schema_summary(),
         }
 
