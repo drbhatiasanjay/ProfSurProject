@@ -1,7 +1,13 @@
 """Unit tests for stream_gemini_agent in models/llm_adapters.py."""
 from unittest.mock import MagicMock, patch
 import pytest
-from models.llm_adapters import build_chart_spec_from_rows, extract_chart_tool_spec, stream_gemini_agent
+from models.llm_adapters import (
+    build_chart_spec_from_rows,
+    extract_chart_tool_spec,
+    normalize_assistant_chunk,
+    normalize_assistant_response,
+    stream_gemini_agent,
+)
 
 
 class TestStreamGeminiAgent:
@@ -13,6 +19,21 @@ class TestStreamGeminiAgent:
         assert spec["chart_type"] == "line"
         assert spec["categories"] == ["2020", "2021"]
         assert spec["series"][0]["values"] == [0.1, 0.2]
+
+    def test_chart_fallback_preserves_multiple_numeric_series(self):
+        spec = build_chart_spec_from_rows(
+            [{"year": 2020, "leverage": 20, "profitability": 0.1},
+             {"year": 2021, "leverage": 22, "profitability": 0.2}],
+            "plot leverage and profitability trend",
+        )
+        assert len(spec["series"]) == 2
+
+    def test_chart_fallback_supports_horizontal_bar(self):
+        spec = build_chart_spec_from_rows(
+            [{"industry_group": "A", "leverage": 20}, {"industry_group": "B", "leverage": 30}],
+            "horizontal bar chart",
+        )
+        assert spec["orientation"] == "h"
 
     def test_chart_tool_response_accepts_direct_json_string(self):
         spec = {"chart_type": "line", "categories": ["2020", "2021"],
@@ -33,6 +54,25 @@ class TestStreamGeminiAgent:
         spec, cleaned = extract_chat_chart_spec(response)
         assert spec["chart_type"] == "bar"
         assert "chart_spec" not in cleaned
+
+    def test_table_fallback_preserves_multiple_series(self):
+        from models.agent_tools import extract_table_chart_spec
+        spec = extract_table_chart_spec(
+            "| Year | Leverage | Profitability |\n|---|---:|---:|\n| 2020 | 20 | 0.1 |\n| 2021 | 22 | 0.2 |",
+            "show a line chart",
+        )
+        assert len(spec["series"]) == 2
+
+    def test_provider_neutral_response_contract(self):
+        text, chart = normalize_assistant_chunk({"type": "chart", "spec": {"chart_type": "line"}})
+        assert text == "" and chart["chart_type"] == "line"
+        result = normalize_assistant_response(
+            "| Year | ROA |\n|---|---:|\n| 2020 | 0.1 |\n| 2021 | 0.2 |",
+            user_query="show a trend chart",
+            chart_requested=True,
+        )
+        assert len(result["table"]) == 2
+        assert result["chart_spec"]["chart_type"] == "line"
 
     def test_missing_api_key_yields_configuration_message(self, monkeypatch):
         monkeypatch.delenv("GEMINI_API_KEY", raising=False)

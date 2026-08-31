@@ -51,6 +51,8 @@ from models.llm_adapters import (
     classify_query,
     parse_llm_json,
     parse_followup_chips,
+    normalize_assistant_chunk,
+    normalize_assistant_response,
 )
 from models.agent_tools import render_chat_chart_figure, extract_chat_chart_spec, extract_table_chart_spec
 
@@ -332,7 +334,10 @@ if user_q:
         _chart_found = None
         _chart_requested = any(
             w in user_q.lower()
-            for w in ("chart", "graph", "plot", "visual", "bar", "trend")
+            for w in (
+                "chart", "graph", "plot", "visual", "bar", "trend",
+                "illustrat", "diagram", "display", "interactive",
+            )
         )
         if backend == "gemini":
             _stream = stream_gemini_agent(
@@ -367,27 +372,29 @@ if user_q:
             )
 
         for _chunk in _stream:
-            if isinstance(_chunk, dict) and _chunk.get("type") == "chart":
-                _chart_found = _chunk.get("spec")
+            _chunk_text, _chunk_chart = normalize_assistant_chunk(_chunk)
+            if _chunk_chart and _chart_found is None:
+                _chart_found = _chunk_chart
                 fig = render_chat_chart_figure(_chart_found, theme=st.session_state.get("theme", "light"))
                 st.plotly_chart(fig, use_container_width=True)
-            elif isinstance(_chunk, str):
-                _buf.append(_chunk)
+            if _chunk_text:
+                _buf.append(_chunk_text)
                 _placeholder.markdown("".join(_buf))
         full = "".join(_buf)
         _elapsed = round(time.time() - _t0, 1)
 
         # If chart was not received as a tool event, check if model embedded a JSON chart spec in text or if table can be parsed
-        if not _chart_found:
-            _extracted_chart, _cleaned_full = extract_chat_chart_spec(full)
-            if _extracted_chart:
-                _chart_found = _extracted_chart
-                full = _cleaned_full
-            elif any(w in user_q.lower() for w in ("chart", "graph", "plot", "visual", "bar", "trend")):
-                _chart_found = extract_table_chart_spec(full, user_q=user_q)
-            if _chart_found:
-                fig = render_chat_chart_figure(_chart_found, theme=st.session_state.get("theme", "light"))
-                st.plotly_chart(fig, use_container_width=True)
+        normalized = normalize_assistant_response(
+            full,
+            chart_spec=_chart_found,
+            user_query=user_q,
+            chart_requested=_chart_requested,
+        )
+        full = normalized["answer"]
+        if normalized["chart_spec"] and _chart_found is None:
+            _chart_found = normalized["chart_spec"]
+            fig = render_chat_chart_figure(_chart_found, theme=st.session_state.get("theme", "light"))
+            st.plotly_chart(fig, use_container_width=True)
 
         full_display, _chips_found = parse_followup_chips(full)
         if not _chips_found:

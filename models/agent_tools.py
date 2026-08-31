@@ -23,6 +23,24 @@ _FORBIDDEN_SQL_PATTERNS = [
 _ALLOWED_TABLES = {"financials", "companies", "data_vintages", "model_runs"}
 _ASSISTANT_FINANCIALS_VIEW = "assistant_financials"
 
+# Prompt/test vocabulary aliases that map to columns actually present in the
+# thesis panel. Concepts without a defensible source column remain explicit
+# failures instead of being silently mapped to an unrelated measure.
+_COLUMN_ALIASES = {
+    "roa": "profitability",
+    "ndts": "tax_shield",
+    "liquidity": "cash_holdings",
+    "ocf": "oc",
+    "icf": "ic",
+    "fcf": "fc",
+}
+_UNAVAILABLE_CONCEPTS = {
+    "cash_flow_volatility",
+    "growth",
+    "tobins_q",
+    "ownership_group",
+}
+
 
 def _sql_literal(value: str) -> str:
     """Quote a trusted value used in the per-request assistant view."""
@@ -73,6 +91,14 @@ def _assistant_view_where(panel_mode: str, filters: dict | None) -> str:
     return " AND ".join(where) or "1=1"
 
 
+def _normalize_schema_aliases(sql_query: str) -> str:
+    """Normalize safe metric aliases before the model query is executed."""
+    normalized = sql_query
+    for alias, column in _COLUMN_ALIASES.items():
+        normalized = re.sub(rf"\b{re.escape(alias)}\b", column, normalized, flags=re.IGNORECASE)
+    return normalized
+
+
 def get_database_schema_summary() -> str:
     """Return a compact schema summary of the capital structure database to guide NL-to-SQL."""
     return (
@@ -84,8 +110,10 @@ def get_database_schema_summary() -> str:
         "   - JOIN RULE: Always join companies and financials on company_code (e.g. JOIN companies c ON f.company_code = c.company_code). Note: there is no company_id column.\n"
         "   - life_stage values: 'Startup', 'Growth', 'Maturity', 'Shakeout1', 'Shakeout2', 'Shakeout3', 'Decline', 'Decay'\n"
         "   - leverage = Debt / Total Assets * 100\n"
-        "   - profitability = Return on Assets (ROA)\n"
+        "   - profitability = Return on Assets (ROA); ROA is an alias for profitability\n"
         "   - tangibility = Fixed Assets / Total Assets\n"
+        "   - tax_shield (NDTS alias), cash_holdings (liquidity alias), and oc/ic/fc (OCF/ICF/FCF aliases) are available\n"
+        "   - unavailable concepts requiring an explicit fallback: cash_flow_volatility, growth, tobins_q, ownership_group\n"
         "3. data_vintages (vintage_id TEXT, description TEXT, year_start INT, year_end INT, n_firms INT, n_obs INT)\n"
         "Supported SQLite aggregate & scalar functions: AVG(x), COUNT(x), MIN(x), MAX(x), SUM(x), "
         "MEDIAN(x), STDEV(x), P25(x), P75(x), P90(x), P95(x), P99(x), SQRT(x), LOG(x), POWER(x, n).\n"
@@ -107,7 +135,7 @@ def query_financial_database(
     Returns:
         Dict with status, columns, rows, count, or error message.
     """
-    clean_query = sql_query.strip().rstrip(";")
+    clean_query = _normalize_schema_aliases(sql_query.strip().rstrip(";"))
     if not clean_query:
         return {"status": "error", "error": "Query string cannot be empty."}
 
@@ -307,6 +335,8 @@ def generate_chat_chart(
             "y_axis_label": y_axis_label,
             "categories": [str(c) for c in (categories or [])],
             "series": cleaned_series,
+            "orientation": str(kwargs.get("orientation", "v")).lower(),
+            "show_trendline": bool(kwargs.get("show_trendline", False)),
         },
     }
 
@@ -323,6 +353,8 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
     y_label = spec.get("y_axis_label", "")
     raw_cats = spec.get("categories", [])
     series = spec.get("series", [])
+    orientation = str(spec.get("orientation", "v")).lower()
+    show_trendline = bool(spec.get("show_trendline", False))
 
     clean_cats = [str(c).strip() for c in raw_cats]
 
@@ -344,7 +376,10 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
         plot_x = clean_cats[:len(clean_vals)] if clean_cats else list(range(1, len(clean_vals) + 1))
 
         if chart_type == "bar":
-            fig.add_trace(go.Bar(x=plot_x, y=clean_vals, name=s_name, marker=dict(color="#0284c7")))
+            if orientation == "h":
+                fig.add_trace(go.Bar(x=clean_vals, y=plot_x, name=s_name, orientation="h", marker=dict(color="#0284c7")))
+            else:
+                fig.add_trace(go.Bar(x=plot_x, y=clean_vals, name=s_name, marker=dict(color="#0284c7")))
         elif chart_type == "scatter":
             fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="markers", name=s_name, marker=dict(size=8, color="#0284c7")))
         elif chart_type == "box":
@@ -355,6 +390,25 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
             fig.add_trace(go.Histogram(x=clean_vals, name=s_name, marker=dict(color="#0284c7")))
         else:
             fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="lines+markers", name=s_name, line=dict(width=2.5, color="#0284c7"), marker=dict(size=6, color="#0284c7")))
+
+        if chart_type == "scatter" and show_trendline and len(clean_vals) >= 2:
+            import numpy as np
+            x_numeric = []
+            for value in plot_x:
+                try:
+                    x_numeric.append(float(value))
+                except (TypeError, ValueError):
+                    x_numeric = []
+                    break
+            if len(x_numeric) == len(clean_vals):
+                slope, intercept = np.polyfit(x_numeric, clean_vals, 1)
+                fig.add_trace(go.Scatter(
+                    x=plot_x,
+                    y=[slope * value + intercept for value in x_numeric],
+                    mode="lines",
+                    name=f"{s_name} trend",
+                    line=dict(dash="dash", color="#dc2626"),
+                ))
 
     layout_func = plotly_layout_dark if str(theme).lower() == "dark" else plotly_layout_light
     base_layout = layout_func(title=title)
@@ -437,20 +491,29 @@ def extract_table_chart_spec(text: str, user_q: str = "") -> Optional[dict]:
         return None
 
     categories = []
-    values = []
+    column_values = [[] for _ in header_cols[1:]]
     for row in table_lines[2:]:
         cols = [c.strip() for c in row.strip("|").split("|")]
         if len(cols) >= 2:
             cat = cols[0]
-            val_str = re.sub(r"[^\d\.\-]", "", cols[1])
-            try:
-                val = float(val_str)
+            parsed_values = []
+            for cell in cols[1:len(header_cols)]:
+                val_str = re.sub(r"[^\d\.\-]", "", cell)
+                try:
+                    parsed_values.append(float(val_str))
+                except ValueError:
+                    parsed_values.append(None)
+            if parsed_values and parsed_values[0] is not None:
                 categories.append(cat)
-                values.append(val)
-            except ValueError:
-                continue
+                for idx, value in enumerate(parsed_values):
+                    column_values[idx].append(value if value is not None else 0.0)
 
-    if len(categories) >= 2 and len(values) >= 2:
+    valid_series = [
+        {"name": header_cols[idx + 1], "values": values}
+        for idx, values in enumerate(column_values)
+        if len(values) == len(categories) and len(values) >= 2
+    ]
+    if len(categories) >= 2 and valid_series:
         q_lower = user_q.lower() if user_q else ""
         is_year = all(c.isdigit() and len(c) == 4 for c in categories)
         if "bar" in q_lower:
@@ -469,7 +532,9 @@ def extract_table_chart_spec(text: str, user_q: str = "") -> Optional[dict]:
             x_axis_label=x_title,
             y_axis_label=y_title,
             categories=categories,
-            series=[{"name": y_title, "values": values}],
+            series=valid_series,
+            orientation="h" if "horizontal" in q_lower else "v",
+            show_trendline="trendline" in q_lower,
         )
         if res.get("status") == "success":
             return res["chart_spec"]

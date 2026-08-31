@@ -63,6 +63,26 @@ class TestQueryFinancialDatabase:
         assert res["status"] == "success"
         assert "assistant_financials" in res["query_executed"]
 
+    def test_normalizes_panel_metric_aliases(self):
+        res = query_financial_database(
+            "SELECT year, AVG(ndts) AS ndts, AVG(liquidity) AS liquidity, "
+            "AVG(ocf) AS ocf FROM financials GROUP BY year LIMIT 2"
+        )
+        assert res["status"] == "success"
+        assert "tax_shield" in res["query_executed"]
+        assert "cash_holdings" in res["query_executed"]
+        assert "AVG(oc)" in res["query_executed"]
+
+    def test_supports_statistical_aggregates(self):
+        res = query_financial_database(
+            "SELECT MEDIAN(profitability) AS median_roa, "
+            "P25(profitability) AS p25_roa, P75(profitability) AS p75_roa, "
+            "STDEV(profitability) AS sd_roa FROM financials"
+        )
+        assert res["status"] == "success"
+        row = res["rows"][0]
+        assert all(row[key] is not None for key in ("median_roa", "p25_roa", "p75_roa", "sd_roa"))
+
 
 class TestGenerateChatChart:
     def test_valid_line_chart_spec(self):

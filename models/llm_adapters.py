@@ -791,20 +791,102 @@ def build_chart_spec_from_rows(rows: list[dict], user_query: str = "") -> Option
     if not numeric_candidates:
         return None
 
-    _, value_key, values = max(numeric_candidates, key=lambda item: item[0])
-    categories = [str(row.get(category_key, "")) for row in rows]
     query_lower = str(user_query).lower()
+    wants_scatter = "scatter" in query_lower or "versus" in query_lower or " vs " in query_lower
+    if wants_scatter and category_key == keys[0] and len(numeric_candidates) >= 2:
+        # For x-versus-y rows, use the first numeric column as X and the
+        # remaining numeric column(s) as Y series.
+        x_key = numeric_candidates[0][1]
+        categories = [str(row.get(x_key, "")) for row in rows]
+        selected = [item for item in numeric_candidates if item[1] != x_key]
+        chart_series = [{"name": str(key), "values": values} for _, key, values in selected]
+        x_label = str(x_key)
+        y_label = ", ".join(str(item[1]) for item in selected)
+    else:
+        selected = numeric_candidates
+        categories = [str(row.get(category_key, "")) for row in rows]
+        chart_series = [{"name": str(key), "values": values} for _, key, values in selected]
+        x_label = str(category_key)
+        y_label = ", ".join(str(item[1]) for item in selected)
     is_year = all(c.isdigit() and len(c) == 4 for c in categories)
-    chart_type = "bar" if "bar" in query_lower else ("line" if is_year or "trend" in query_lower else "bar")
+    if "scatter" in query_lower or "versus" in query_lower or " vs " in query_lower:
+        chart_type = "scatter"
+    elif "area" in query_lower:
+        chart_type = "area"
+    elif "histogram" in query_lower or "distribution" in query_lower:
+        chart_type = "histogram"
+    elif "box" in query_lower or "quartile" in query_lower:
+        chart_type = "box"
+    else:
+        chart_type = "bar" if "bar" in query_lower else ("line" if is_year or "trend" in query_lower else "bar")
+    orientation = "h" if "horizontal" in query_lower else "v"
     result = _gcc(
         chart_type=chart_type,
-        title=f"{value_key} by {category_key}",
-        x_axis_label=str(category_key),
-        y_axis_label=str(value_key),
+        title=f"{y_label} by {x_label}",
+        x_axis_label=x_label,
+        y_axis_label=y_label,
         categories=categories,
-        series=[{"name": str(value_key), "values": values}],
+        series=chart_series,
+        orientation=orientation,
+        show_trendline="trendline" in query_lower,
     )
     return result.get("chart_spec") if result.get("status") == "success" else None
+
+
+def normalize_assistant_chunk(chunk: Any) -> tuple[str, Optional[dict]]:
+    """Normalize a provider stream item into text and an optional chart spec."""
+    if isinstance(chunk, str):
+        return chunk, None
+    if not isinstance(chunk, dict):
+        return "", None
+    chart = chunk.get("spec") if chunk.get("type") == "chart" else chunk.get("chart_spec")
+    if not isinstance(chart, dict):
+        chart = None
+    text = chunk.get("text") or chunk.get("content") or chunk.get("answer") or ""
+    return str(text), chart
+
+
+def _extract_markdown_table(text: str) -> list[dict]:
+    """Parse simple provider-generated Markdown tables into structured rows."""
+    lines = [line.strip() for line in str(text or "").splitlines()
+             if line.strip().startswith("|") and line.strip().endswith("|")]
+    if len(lines) < 3:
+        return []
+    headers = [c.strip() for c in lines[0].strip("|").split("|")]
+    if len(headers) < 2 or not re.match(r"^[\s|:\-]+$", lines[1]):
+        return []
+    rows = []
+    for line in lines[2:]:
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) >= len(headers):
+            rows.append({headers[i]: cells[i] for i in range(len(headers))})
+    return rows
+
+
+def normalize_assistant_response(
+    text: str,
+    *,
+    chart_spec: Optional[dict] = None,
+    user_query: str = "",
+    chart_requested: bool = False,
+) -> dict:
+    """Return the common answer/table/chart contract used by every backend."""
+    from models.agent_tools import extract_chat_chart_spec, extract_table_chart_spec
+
+    answer = str(text or "")
+    embedded_chart, cleaned = extract_chat_chart_spec(answer)
+    if embedded_chart:
+        answer = cleaned
+    resolved_chart = chart_spec or embedded_chart
+    table = _extract_markdown_table(answer)
+    if chart_requested and resolved_chart is None:
+        resolved_chart = extract_table_chart_spec(answer, user_q=user_query)
+    return {
+        "answer": answer,
+        "table": table,
+        "chart_spec": resolved_chart,
+        "sources": [],
+    }
 
 
 def stream_gemini_agent(

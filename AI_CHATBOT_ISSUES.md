@@ -8,10 +8,12 @@
 - **P0 SQL table allowlist was advisory only.** The gateway now uses a scoped financials view, SQLite read-only mode, and an authorizer to reject reads and writes outside the allowed tables.
 - **P1 Charts were not persisted.** Chart specifications are stored with assistant messages and restored with chat history.
 - **P1 Session context was not restored.** The active session restores mode and company selection on page initialization.
+- **P1 Schema aliases caused avoidable SQL failures.** Common aliases such as ROA, NDTS, liquidity, and cash-flow measures now normalize to the real panel columns.
+- **P1 Chart fallback dropped data series.** Row and Markdown-table fallbacks now preserve multiple numeric series and support horizontal bars and trendline metadata.
 
 ## Remaining Follow-up
 
-- **P1 Backend parity.** Ollama and Anthropic still rely on their existing response/table fallback path; deterministic forced chart queries are currently Gemini-specific.
+- **P1 Backend parity.** Ollama and Anthropic now share the chart-intent and extraction contract, but still rely on response/table fallback while native tool loops are completed.
 - **P1 Browser E2E coverage.** Automated UI interaction could not be run in this environment because no browser connector was available. HTTP health and page-load checks were completed.
 - **P2 Query resource limits.** Add execution time and result-size limits beyond the current row limit if untrusted model-generated SQL remains enabled.
 - **P2 Error-state persistence.** Consider storing provider failures separately from normal assistant turns for clearer retry and telemetry behavior.
