@@ -9,6 +9,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .cache/
+.venv/
 
 # Claude/dev tooling
 .claude/
