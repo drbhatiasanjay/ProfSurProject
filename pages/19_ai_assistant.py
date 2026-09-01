@@ -562,9 +562,6 @@ for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
             )
         else:
             st.markdown(turn["content"])
-            if st.button("Reuse", key=f"reuse_{_turn_idx}"):
-                st.session_state["_pending_followup"] = turn.get("content", "")
-                st.rerun()
             _previous_user_question = turn.get("content", "")
         if turn["role"] == "assistant" and turn.get("model_used"):
             _mu = str(turn["model_used"]).lower()

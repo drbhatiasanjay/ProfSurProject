@@ -120,6 +120,11 @@ class TestStreamGeminiAgent:
         assert "chart_type" not in result["answer"]
         assert "The result is strongest" in result["answer"]
 
+    def test_repeated_provider_sections_are_collapsed(self):
+        section = "This is a substantive answer section that should appear once because providers can repeat context when a long chart response is generated."
+        result = normalize_assistant_response(f"{section}\n\n{section}")
+        assert result["answer"].count("substantive answer section") == 1
+
     def test_grouped_variation_question_requests_chart_fallback(self):
         assert should_generate_chart("How does profitability vary by industry group?")
 

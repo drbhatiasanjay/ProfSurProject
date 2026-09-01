@@ -958,6 +958,7 @@ def normalize_assistant_response(
         # A provider can emit an incomplete/invalid chart JSON block. It must
         # never leak into the user-facing answer as a wide monospace block.
         answer = _remove_unrenderable_chart_blocks(answer)
+    answer = _remove_repeated_sections(answer)
     resolved_chart = chart_spec or embedded_chart
     table = _extract_markdown_table(answer)
     if chart_requested and resolved_chart is None:
@@ -983,6 +984,22 @@ def _remove_unrenderable_chart_blocks(text: str) -> str:
     )
     cleaned = chart_block.sub("", text)
     return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+
+
+def _remove_repeated_sections(text: str) -> str:
+    """Collapse duplicated provider paragraphs caused by context over-generation."""
+    paragraphs = re.split(r"\n\s*\n", str(text or ""))
+    seen: set[str] = set()
+    kept: list[str] = []
+    for paragraph in paragraphs:
+        normalized = re.sub(r"\s+", " ", paragraph).strip().lower()
+        # Short repeated labels can be intentional; only suppress substantive blocks.
+        if len(normalized) >= 80 and normalized in seen:
+            continue
+        if len(normalized) >= 80:
+            seen.add(normalized)
+        kept.append(paragraph.strip())
+    return "\n\n".join(part for part in kept if part).strip()
 
 
 def stream_gemini_agent(
