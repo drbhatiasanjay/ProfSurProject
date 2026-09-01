@@ -307,7 +307,7 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
     _render_answer_context(key_prefix)
 
 
-def _render_response_actions(content: str, key_prefix: str, regenerate_question: str = "") -> None:
+def _render_response_actions(content: str, key_prefix: str, regenerate_question: str = "", message_id=None, feedback=None) -> None:
     """Expose lightweight answer actions without coupling them to an LLM."""
     action_cols = st.columns([1.1, 1.1, 1.2, 1.2, 4])
     with action_cols[0]:
@@ -332,6 +332,8 @@ def _render_response_actions(content: str, key_prefix: str, regenerate_question:
         feedback_key = f"{key_prefix}_feedback"
         if st.button("Useful", key=feedback_key):
             st.session_state[feedback_key] = "submitted"
+            if message_id:
+                db.set_chat_message_feedback(message_id, "useful")
             st.toast("Thanks for the feedback")
     with action_cols[4]:
         if st.session_state.get(feedback_key) == "submitted":
@@ -555,6 +557,8 @@ for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
                 turn.get("content", ""),
                 f"history_{_turn_idx}",
                 regenerate_question=_previous_user_question,
+                message_id=turn.get("id"),
+                feedback=turn.get("feedback"),
             )
         else:
             st.markdown(turn["content"])

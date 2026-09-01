@@ -258,7 +258,8 @@ def ensure_app_tables():
                 model_used       TEXT,
                 elapsed_s        REAL,
                 followups        TEXT,
-                chart_spec       TEXT
+                chart_spec       TEXT,
+                feedback         TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_chat_sessions_user
                 ON chat_sessions(username, last_active DESC);
@@ -281,6 +282,11 @@ def ensure_app_tables():
             pass  # column already exists
         try:
             conn.execute("ALTER TABLE chat_messages ADD COLUMN chart_spec TEXT")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+        try:
+            conn.execute("ALTER TABLE chat_messages ADD COLUMN feedback TEXT")
             conn.commit()
         except Exception:
             pass  # column already exists
@@ -1260,6 +1266,18 @@ def set_chat_session_archived(chat_session_id: str, archived: bool) -> None:
         pass
 
 
+def set_chat_message_feedback(message_id: int, feedback: str) -> None:
+    """Persist a compact feedback value for an assistant message."""
+    if feedback not in {"useful", "not_useful"}:
+        return
+    try:
+        with get_connection() as con:
+            con.execute("UPDATE chat_messages SET feedback = ? WHERE id = ?", (feedback, message_id))
+            con.commit()
+    except Exception:
+        pass
+
+
 def append_chat_message(
     chat_session_id: str,
     role: str,
@@ -1314,7 +1332,7 @@ def load_chat_messages(chat_session_id: str) -> list[dict]:
         conn = get_connection()
         try:
             cur = conn.execute(
-                """SELECT role, content, model_used, elapsed_s, followups, chart_spec
+                """SELECT id, role, content, model_used, elapsed_s, followups, chart_spec, feedback
                    FROM chat_messages
                    WHERE chat_session_id = ?
                    ORDER BY ts ASC""",
@@ -1326,20 +1344,21 @@ def load_chat_messages(chat_session_id: str) -> list[dict]:
         out = []
         for r in rows:
             try:
-                fups = _json_db.loads(r[4]) if r[4] else []
+                fups = _json_db.loads(r[5]) if r[5] else []
                 if not isinstance(fups, list):
                     fups = []
             except Exception:
                 fups = []
             try:
-                chart = _json_db.loads(r[5]) if r[5] else None
+                chart = _json_db.loads(r[6]) if r[6] else None
                 if not isinstance(chart, dict):
                     chart = None
             except Exception:
                 chart = None
             out.append({
-                "role": r[0], "content": r[1], "model_used": r[2],
-                "elapsed_s": r[3], "followups": fups, "chart_spec": chart,
+                "id": r[0], "role": r[1], "content": r[2], "model_used": r[3],
+                "elapsed_s": r[4], "followups": fups, "chart_spec": chart,
+                "feedback": r[7],
             })
         return out
     except Exception:

@@ -161,6 +161,13 @@ class TestChatMessages:
         session = next(item for item in sessions if item["chat_session_id"] == "cs_rename")
         assert session["title"] == "A renamed research session"
 
+    def test_assistant_feedback_is_persisted(self, temp_chat_db):
+        db.create_chat_session("cs_feedback", "sbhatia", "admin")
+        db.append_chat_message("cs_feedback", "assistant", "Answer")
+        message_id = db.load_chat_messages("cs_feedback")[0]["id"]
+        db.set_chat_message_feedback(message_id, "useful")
+        assert db.load_chat_messages("cs_feedback")[0]["feedback"] == "useful"
+
     def test_message_count_increments(self, temp_chat_db):
         db.create_chat_session("cs_count", "sbhatia", "admin")
         for i in range(4):
