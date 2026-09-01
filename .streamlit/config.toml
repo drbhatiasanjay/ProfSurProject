@@ -8,3 +8,7 @@ font = "sans serif"
 [server]
 maxUploadSize = 50
 headless = true
+
+[client]
+# Keep Streamlit's developer controls out of the production-facing UI.
+toolbarMode = "minimal"
