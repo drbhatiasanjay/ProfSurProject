@@ -103,6 +103,44 @@ _FALLBACK_CHIPS = {
 
 st.title("AI Financial Assistant")
 st.caption("Ask questions grounded in the capital structure panel data.")
+st.markdown(
+    """
+<style>
+/* Chat prose wraps; only inherently wide content scrolls horizontally. */
+[data-testid="stChatMessage"] {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+}
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    white-space: normal !important;
+}
+[data-testid="stChatMessage"] p,
+[data-testid="stChatMessage"] li,
+[data-testid="stChatMessage"] h1,
+[data-testid="stChatMessage"] h2,
+[data-testid="stChatMessage"] h3 {
+    overflow-wrap: anywhere !important;
+    white-space: normal !important;
+}
+[data-testid="stChatMessage"] pre,
+[data-testid="stChatMessage"] table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}
+[data-testid="stChatMessage"] pre { white-space: pre; }
+@media (max-width: 768px) {
+    [data-testid="stChatMessage"] { padding-left: 0.5rem; padding-right: 0.5rem; }
+}
+</style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 def _render_chart_card(spec: dict, key_prefix: str) -> None:
