@@ -157,7 +157,7 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
 
     with st.container(border=True):
         st.markdown("**Interactive visualization**")
-        c1, c2, c3 = st.columns([1, 1, 1])
+        c1, c2, c3, c4 = st.columns([1, 1.2, 1.2, 1])
         with c1:
             limits = [10, 25, 50, len(categories)]
             limits = list(dict.fromkeys(n for n in limits if n <= len(categories)))
@@ -166,17 +166,40 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
         with c2:
             as_percent = st.checkbox("Display as %", value=False, key=f"{key_prefix}_percent")
         with c3:
+            sort_order = st.selectbox(
+                "Sort",
+                ["Original order", "Highest first", "Lowest first"],
+                key=f"{key_prefix}_sort",
+            )
+        with c4:
+            orientation_label = st.selectbox(
+                "Orientation",
+                ["Vertical", "Horizontal"],
+                key=f"{key_prefix}_orientation",
+            )
+        with c1:
             st.caption(f"{len(categories)} categories · {len(series)} series")
 
         display_spec = copy.deepcopy(spec)
-        display_spec["categories"] = categories[:top_n]
+        indexed_categories = list(enumerate(categories))
+        if sort_order != "Original order" and series:
+            sort_values = list(series[0].get("values") or [])
+            indexed_categories.sort(
+                key=lambda pair: float(sort_values[pair[0]])
+                if pair[0] < len(sort_values) else 0.0,
+                reverse=sort_order == "Highest first",
+            )
+        selected_indexes = [index for index, _ in indexed_categories[:top_n]]
+        display_spec["categories"] = [categories[index] for index in selected_indexes]
         display_series = []
         for item in series:
-            values = list(item.get("values") or [])[:top_n]
+            source_values = list(item.get("values") or [])
+            values = [source_values[index] for index in selected_indexes if index < len(source_values)]
             if as_percent:
                 values = [round(float(value) * 100, 4) for value in values]
             display_series.append({**item, "values": values})
         display_spec["series"] = display_series
+        display_spec["orientation"] = "h" if orientation_label == "Horizontal" else "v"
         if as_percent and display_spec.get("y_axis_label"):
             label = str(display_spec["y_axis_label"])
             if "%" not in label:
@@ -205,6 +228,27 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
                 mime="text/csv",
                 key=f"{key_prefix}_csv",
             )
+            st.download_button(
+                "Download interactive HTML",
+                data=fig.to_html(include_plotlyjs="cdn", full_html=True),
+                file_name="ai_chart.html",
+                mime="text/html",
+                key=f"{key_prefix}_html",
+            )
+            try:
+                _png_data = fig.to_image(format="png")
+            except Exception:
+                _png_data = None
+            if _png_data:
+                st.download_button(
+                    "Download PNG",
+                    data=_png_data,
+                    file_name="ai_chart.png",
+                    mime="image/png",
+                    key=f"{key_prefix}_png",
+                )
+            else:
+                st.caption("PNG export requires the optional Plotly image engine.")
 
 
 def _split_supporting_tables(text: str) -> tuple[str, list[str]]:
