@@ -11,12 +11,13 @@ if ($InstallDependencies) {
     $launcher = Get-Command py -ErrorAction SilentlyContinue
     $venvCreated = $false
     if ($launcher) {
-        foreach ($version in @("-3.11", "-3.12", "-3.10")) {
-            & py $version --version *> $null
-            if ($LASTEXITCODE -eq 0) {
-                & py $version -m venv .venv
-                if ($LASTEXITCODE -eq 0) { $venvCreated = $true; break }
-            }
+        $available = (& py --list 2>$null | Out-String)
+        $version = @("-3.11", "-3.12", "-3.10") |
+            Where-Object { $available -match [regex]::Escape($_.Substring(1)) } |
+            Select-Object -First 1
+        if ($version) {
+            & py $version -m venv .venv
+            $venvCreated = ($LASTEXITCODE -eq 0)
         }
     }
     if (-not $venvCreated) {
