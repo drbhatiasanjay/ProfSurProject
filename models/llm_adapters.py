@@ -842,6 +842,27 @@ def build_chart_spec_from_rows(rows: list[dict], user_query: str = "") -> Option
     return result.get("chart_spec") if result.get("status") == "success" else None
 
 
+def select_chart_rows_for_query(datasets: list[list[dict]], user_query: str = "") -> list[dict]:
+    """Choose the current question's dataset from Gemini's accumulated tool history."""
+    query = str(user_query or "").lower()
+    if not datasets:
+        return []
+    preferred_keys = []
+    if "industry" in query:
+        preferred_keys.append("industry_group")
+    if "life stage" in query or "lifestage" in query or "stage" in query:
+        preferred_keys.extend(["life_stage", "stage"])
+    if "company" in query or "firm" in query:
+        preferred_keys.extend(["company_name", "company_code"])
+    if any(term in query for term in ("over time", "by year", "annual", "yearly", "trend")):
+        preferred_keys.append("year")
+    for rows in reversed(datasets):
+        keys = {str(key).lower() for row in rows if isinstance(row, dict) for key in row}
+        if any(key in keys for key in preferred_keys):
+            return rows
+    return datasets[-1]
+
+
 def normalize_assistant_chunk(chunk: Any) -> tuple[str, Optional[dict]]:
     """Normalize a provider stream item into text and an optional chart spec."""
     if isinstance(chunk, str):
@@ -1105,7 +1126,7 @@ def stream_gemini_agent(
         final_text = _extract_response_text(response)
         has_yielded_chart = False
         has_yielded_text = False
-        query_rows = []
+        query_datasets = []
 
         # 1. Check if generate_chat_chart was called in automatic_function_calling_history
         for item in (getattr(response, "automatic_function_calling_history", None) or []):
@@ -1114,13 +1135,16 @@ def stream_gemini_agent(
                 if fn_resp and "query_financial_database" in getattr(fn_resp, "name", ""):
                     query_payload = extract_chart_tool_spec(getattr(fn_resp, "response", None))
                     if isinstance(query_payload, dict) and isinstance(query_payload.get("rows"), list):
-                        query_rows.extend(query_payload["rows"])
+                        query_datasets.append(query_payload["rows"])
                 if fn_resp and "generate_chat_chart" in getattr(fn_resp, "name", ""):
                     spec = extract_chart_tool_spec(getattr(fn_resp, "response", None))
                     if spec:
                         yield {"type": "chart", "spec": spec}
                         has_yielded_chart = True
 
+        query_rows = select_chart_rows_for_query(
+            query_datasets, user_query=messages[-1].get("content", "")
+        )
         if chart_requested and not has_yielded_chart and query_rows:
             fallback_spec = build_chart_spec_from_rows(
                 query_rows, user_query=messages[-1].get("content", "")

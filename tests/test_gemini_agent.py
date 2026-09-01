@@ -7,6 +7,7 @@ from models.llm_adapters import (
     normalize_assistant_chunk,
     normalize_assistant_response,
     should_generate_chart,
+    select_chart_rows_for_query,
     stream_gemini_agent,
 )
 
@@ -90,6 +91,14 @@ class TestStreamGeminiAgent:
 
     def test_grouped_variation_question_requests_chart_fallback(self):
         assert should_generate_chart("How does profitability vary by industry group?")
+
+    def test_chart_rows_selects_current_dataset_from_accumulated_history(self):
+        datasets = [
+            [{"life_stage": "Growth", "avg_profitability": 0.14}],
+            [{"industry_group": "Software", "avg_profitability": 0.22}],
+        ]
+        rows = select_chart_rows_for_query(datasets, "How does profitability vary by industry group?")
+        assert rows[0]["industry_group"] == "Software"
 
     def test_missing_api_key_yields_configuration_message(self, monkeypatch):
         monkeypatch.delenv("GEMINI_API_KEY", raising=False)
