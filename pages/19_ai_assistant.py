@@ -9,6 +9,7 @@ import csv
 import io
 import json
 import re
+import base64
 import streamlit as st
 import streamlit.components.v1 as components
 import plotly.graph_objects as go
@@ -309,28 +310,29 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
 
 def _render_response_actions(content: str, key_prefix: str, regenerate_question: str = "", message_id=None, feedback=None) -> None:
     """Expose lightweight answer actions without coupling them to an LLM."""
-    action_cols = st.columns([1.1, 1.1, 1.2, 1.2, 4])
+    action_cols = st.columns([1.15, 1.15, 1.15, 1.25, 3.5])
     with action_cols[0]:
         st.download_button(
-            "Download",
+            "Save",
             data=str(content or ""),
             file_name="ai_answer.md",
             mime="text/markdown",
             key=f"{key_prefix}_download",
+            help="Save this answer as Markdown",
         )
     with action_cols[1]:
-        _copy_payload = json.dumps(str(content or ""))
+        _copy_payload = base64.b64encode(str(content or "").encode("utf-8")).decode("ascii")
         components.html(
-            f"""<button style='font:inherit;padding:0.4rem 0.7rem;border:1px solid #d1d5db;border-radius:0.4rem;background:white;cursor:pointer' onclick='navigator.clipboard.writeText({_copy_payload}).then(() => this.innerText="Copied")'>Copy</button>""",
+            f"""<button style='font:inherit;padding:0.4rem 0.7rem;border:1px solid #d1d5db;border-radius:0.4rem;background:white;cursor:pointer;white-space:nowrap' onclick=\"navigator.clipboard.writeText(atob('{_copy_payload}')).then(() => this.innerText='Copied')\">Copy</button>""",
             height=38,
         )
     with action_cols[2]:
-        if regenerate_question and st.button("Regenerate", key=f"{key_prefix}_regenerate"):
+        if regenerate_question and st.button("Retry", key=f"{key_prefix}_regenerate", help="Run the same question again"):
             st.session_state["_pending_followup"] = regenerate_question
             st.rerun()
     with action_cols[3]:
         feedback_key = f"{key_prefix}_feedback"
-        if st.button("Useful", key=feedback_key):
+        if st.button("Helpful", key=feedback_key, help="Mark this answer as helpful"):
             st.session_state[feedback_key] = "submitted"
             if message_id:
                 db.set_chat_message_feedback(message_id, "useful")
