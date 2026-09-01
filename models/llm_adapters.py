@@ -920,15 +920,6 @@ def stream_gemini_agent(
     Yields:
         String chunks and dict payloads (e.g. {"type": "chart", "spec": ...}).
     """
-    try:
-        from google import genai
-        from google.genai import types
-        from models.agent_tools import get_database_schema_summary
-        from models.agent_tools import query_financial_database as _qfd
-    except ImportError as _imp_err:
-        yield f"[Google GenAI SDK not installed. Run: pip install google-genai] Error: {_imp_err}"
-        return
-
     api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if not api_key:
         try:
@@ -939,6 +930,15 @@ def stream_gemini_agent(
 
     if not api_key:
         yield "[Google Gemini backend not configured. Set GEMINI_API_KEY in .streamlit/secrets.toml]"
+        return
+
+    try:
+        from google import genai
+        from google.genai import types
+        from models.agent_tools import get_database_schema_summary
+        from models.agent_tools import query_financial_database as _qfd
+    except ImportError as _imp_err:
+        yield f"[Google GenAI SDK not installed. Run: pip install google-genai] Error: {_imp_err}"
         return
 
     try:

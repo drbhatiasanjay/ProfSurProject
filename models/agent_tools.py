@@ -472,6 +472,9 @@ def extract_chat_chart_spec(text: str) -> tuple[Optional[dict], str]:
         )
         if res.get("status") == "success":
             clean_text = text[:start].rstrip() + "\n" + text[end:].lstrip()
+            # Remove the complete markdown wrapper left around the extracted JSON.
+            clean_text = re.sub(r"```(?:json)?", "", clean_text, flags=re.IGNORECASE)
+            clean_text = clean_text.replace("```", "")
             return res["chart_spec"], clean_text.strip()
 
     return None, text
