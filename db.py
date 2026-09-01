@@ -246,7 +246,8 @@ def ensure_app_tables():
                 company_code     INTEGER,
                 started_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_active      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                message_count    INTEGER DEFAULT 0
+                message_count    INTEGER DEFAULT 0,
+                archived         INTEGER DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS chat_messages (
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -270,6 +271,11 @@ def ensure_app_tables():
         # idempotent in SQLite, so guard it explicitly rather than relying on IF NOT EXISTS.
         try:
             conn.execute("ALTER TABLE chat_messages ADD COLUMN followups TEXT")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+        try:
+            conn.execute("ALTER TABLE chat_sessions ADD COLUMN archived INTEGER DEFAULT 0")
             conn.commit()
         except Exception:
             pass  # column already exists
@@ -1241,6 +1247,19 @@ def update_chat_session_title(chat_session_id: str, title: str) -> None:
         pass
 
 
+def set_chat_session_archived(chat_session_id: str, archived: bool) -> None:
+    """Archive or restore a chat session without deleting its messages."""
+    try:
+        with get_connection() as con:
+            con.execute(
+                "UPDATE chat_sessions SET archived = ? WHERE chat_session_id = ?",
+                (1 if archived else 0, chat_session_id),
+            )
+            con.commit()
+    except Exception:
+        pass
+
+
 def append_chat_message(
     chat_session_id: str,
     role: str,
@@ -1334,7 +1353,7 @@ def list_chat_sessions(username: str, limit: int = 15) -> list[dict]:
         try:
             cur = conn.execute(
                 """SELECT chat_session_id, title, started_at, last_active,
-                          message_count, mode, panel_mode, company_code
+                          message_count, mode, panel_mode, company_code, archived
                    FROM chat_sessions
                    WHERE username = ?
                    ORDER BY last_active DESC
@@ -1354,6 +1373,7 @@ def list_chat_sessions(username: str, limit: int = 15) -> list[dict]:
                 "mode": r[5],
                 "panel_mode": r[6],
                 "company_code": r[7],
+                "archived": r[8] if len(r) > 8 else 0,
             }
             for r in rows
         ]

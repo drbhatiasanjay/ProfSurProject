@@ -95,7 +95,8 @@ def temp_chat_db(tmp_path, monkeypatch):
             company_code     INTEGER,
             started_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_active      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            message_count    INTEGER DEFAULT 0
+            message_count    INTEGER DEFAULT 0,
+            archived         INTEGER DEFAULT 0
         );
         CREATE TABLE chat_messages (
             id               INTEGER PRIMARY KEY AUTOINCREMENT,

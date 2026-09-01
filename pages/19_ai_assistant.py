@@ -10,6 +10,7 @@ import io
 import json
 import re
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 from helpers import require_role, plotly_layout
 import db
@@ -308,7 +309,7 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
 
 def _render_response_actions(content: str, key_prefix: str, regenerate_question: str = "") -> None:
     """Expose lightweight answer actions without coupling them to an LLM."""
-    action_cols = st.columns([1.2, 1.2, 1.2, 5])
+    action_cols = st.columns([1.1, 1.1, 1.2, 1.2, 4])
     with action_cols[0]:
         st.download_button(
             "Download",
@@ -318,15 +319,21 @@ def _render_response_actions(content: str, key_prefix: str, regenerate_question:
             key=f"{key_prefix}_download",
         )
     with action_cols[1]:
+        _copy_payload = json.dumps(str(content or ""))
+        components.html(
+            f"""<button style='font:inherit;padding:0.4rem 0.7rem;border:1px solid #d1d5db;border-radius:0.4rem;background:white;cursor:pointer' onclick='navigator.clipboard.writeText({_copy_payload}).then(() => this.innerText="Copied")'>Copy</button>""",
+            height=38,
+        )
+    with action_cols[2]:
         if regenerate_question and st.button("Regenerate", key=f"{key_prefix}_regenerate"):
             st.session_state["_pending_followup"] = regenerate_question
             st.rerun()
-    with action_cols[2]:
+    with action_cols[3]:
         feedback_key = f"{key_prefix}_feedback"
         if st.button("Useful", key=feedback_key):
             st.session_state[feedback_key] = "submitted"
             st.toast("Thanks for the feedback")
-    with action_cols[3]:
+    with action_cols[4]:
         if st.session_state.get(feedback_key) == "submitted":
             st.caption("Feedback recorded")
 
@@ -466,14 +473,17 @@ with st.sidebar:
         placeholder="Search titles...",
         key="p19_chat_search",
     ).strip().lower()
+    _show_archived = st.checkbox("Show archived", value=False, key="p19_show_archived")
     _visible_sessions = [
         s for s in _chat_sessions
-        if not _chat_search or _chat_search in (s["title"] or "New chat").lower()
+        if (_show_archived or not s.get("archived"))
+        and (not _chat_search or _chat_search in (s["title"] or "New chat").lower())
     ]
     for _sess in _visible_sessions[:15]:
         _is_active = _sess["chat_session_id"] == st.session_state.get("chat_session_id")
-        _label = f"{'▶ ' if _is_active else ''}{_sess['title'] or 'New chat'}"
-        _sc1, _sc2 = st.columns([5, 1])
+        _archive_marker = " (archived)" if _sess.get("archived") else ""
+        _label = f"{'▶ ' if _is_active else ''}{_sess['title'] or 'New chat'}{_archive_marker}"
+        _sc1, _sc2, _sc3 = st.columns([4, 1, 1])
         with _sc1:
             if st.button(_label, key=f"sess_{_sess['chat_session_id']}", use_container_width=True):
                 st.session_state["chat_session_id"] = _sess["chat_session_id"]
@@ -486,6 +496,15 @@ with st.sidebar:
                     st.session_state["_followup_suggestions"] = _loaded[-1]["followups"]
                 st.rerun()
         with _sc2:
+            if st.button(
+                "Restore" if _sess.get("archived") else "Archive",
+                key=f"archive_{_sess['chat_session_id']}",
+            ):
+                db.set_chat_session_archived(
+                    _sess["chat_session_id"], not bool(_sess.get("archived"))
+                )
+                st.rerun()
+        with _sc3:
             if st.button("🗑", key=f"del_{_sess['chat_session_id']}"):
                 db.delete_chat_session(_sess["chat_session_id"])
                 if _is_active:
@@ -539,6 +558,9 @@ for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
             )
         else:
             st.markdown(turn["content"])
+            if st.button("Reuse", key=f"reuse_{_turn_idx}"):
+                st.session_state["_pending_followup"] = turn.get("content", "")
+                st.rerun()
             _previous_user_question = turn.get("content", "")
         if turn["role"] == "assistant" and turn.get("model_used"):
             _mu = str(turn["model_used"]).lower()
