@@ -297,8 +297,8 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
     prose, tables, chart = _normalized_turn_content(turn)
     if placeholder is not None:
         placeholder.markdown(prose or "Preparing the answer...")
-    else:
-        st.markdown(prose)
+        return
+    st.markdown(prose)
     if chart:
         _render_chart_card(chart, f"{key_prefix}_chart")
     if tables:
@@ -742,10 +742,10 @@ if user_q:
             _chips_found = [
                 q for q in _fallback_pool if q.strip().lower() != user_q.strip().lower()
             ][:3]
+        _placeholder.empty()
         _render_assistant_content(
             {"content": full_display, "chart_spec": _chart_found},
             f"live_{len(st.session_state['chat_history'])}",
-            placeholder=_placeholder,
         )
 
         if "gemini" in model_to_use.lower():
