@@ -375,7 +375,7 @@ with _header_cols[2]:
     st.markdown(f"**{st.session_state.get('p19_backend', 'gemini').title()}**")
 with _header_cols[3]:
     st.caption("Context")
-    st.markdown(f"**{len(st.session_state.get('chat_history', []))}/20 turns**")
+    st.markdown(f"**{min(len(st.session_state.get('chat_history', [])), 6)} recent turns**")
 
 # ── Sidebar controls ─────────────────────────────────────────────────────────
 with st.sidebar:
@@ -437,7 +437,7 @@ with st.sidebar:
     # FIX-11: context progress bar
     _n_msgs = len(st.session_state.get("chat_history", []))
     st.progress(min(_n_msgs / 20, 1.0))
-    st.caption(f"Context: {_n_msgs}/20 messages")
+    st.caption(f"Stored turns: {_n_msgs} · model context: up to 6 recent turns")
 
     # ── Chat History panel ────────────────────────────────────────────────────
     st.markdown("---")
@@ -632,11 +632,14 @@ if user_q:
     with st.chat_message("user"):
         st.markdown(user_q)
 
-    # Last 10 turns as context window (exclude the turn we just appended)
-    messages = [
-        {"role": t["role"], "content": t["content"]}
-        for t in st.session_state["chat_history"][-11:-1]
-    ]
+    # Keep provider context compact. Long prior chart answers cause models to
+    # echo old headings/tables and materially increase first-token latency.
+    messages = []
+    for _context_turn in st.session_state["chat_history"][:-1][-6:]:
+        _context_content = str(_context_turn.get("content", ""))
+        if _context_turn.get("role") == "assistant" and len(_context_content) > 1800:
+            _context_content = _context_content[:1800].rstrip() + "..."
+        messages.append({"role": _context_turn["role"], "content": _context_content})
     messages.append({"role": "user", "content": user_q})
 
     # Model routing based on query classification
@@ -651,7 +654,11 @@ if user_q:
     max_tokens = 2048 if ("sonnet" in model_to_use or "gemini" in model_to_use) else 1024
     if q_type == "factual":
         ctx = "Answer in 1-2 sentences. State the exact number first, then one sentence of context.\n\n" + ctx
-    ctx += _CHART_INSTRUCTION + _FOLLOWUP_INSTRUCTION
+    ctx += (
+        "\n\nAnswer only the current user question. Do not repeat headings, tables, charts, or analysis "
+        "from earlier conversation turns unless the user explicitly asks for a recap."
+        + _CHART_INSTRUCTION + _FOLLOWUP_INSTRUCTION
+    )
 
     _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
     _t0 = time.time()
