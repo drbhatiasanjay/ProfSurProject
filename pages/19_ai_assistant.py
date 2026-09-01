@@ -59,6 +59,7 @@ from models.llm_adapters import (
     normalize_assistant_chunk,
     normalize_assistant_response,
     should_generate_chart,
+    stream_with_fallback,
 )
 from models.agent_tools import render_chat_chart_figure, extract_chat_chart_spec, extract_table_chart_spec
 
@@ -665,6 +666,25 @@ if user_q:
                 filters=_filters,
                 chart_requested=_chart_requested,
             )
+
+        if backend == "gemini":
+            _fallback_stream = lambda: stream_anthropic(
+                messages, system=ctx, model="claude-sonnet-4-6", max_tokens=max_tokens,
+                role=_user_role, citations=citations_on, panel_mode=panel_mode,
+                filters=_filters, chart_requested=_chart_requested,
+            )
+        elif backend == "ollama":
+            _fallback_stream = lambda: stream_anthropic(
+                messages, system=ctx, model=model_to_use, max_tokens=max_tokens,
+                role=_user_role, citations=citations_on, panel_mode=panel_mode,
+                filters=_filters, chart_requested=_chart_requested,
+            )
+        else:
+            _fallback_stream = lambda: stream_ollama(
+                [{"role": "system", "content": ctx}] + messages,
+                panel_mode=panel_mode, filters=_filters, chart_requested=_chart_requested,
+            )
+        _stream = stream_with_fallback(_stream, _fallback_stream)
 
         for _chunk in _stream:
             _chunk_text, _chunk_chart = normalize_assistant_chunk(_chunk)

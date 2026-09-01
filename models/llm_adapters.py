@@ -876,6 +876,20 @@ def normalize_assistant_chunk(chunk: Any) -> tuple[str, Optional[dict]]:
     return str(text), chart
 
 
+def stream_with_fallback(primary: Iterator[Any], fallback_factory) -> Iterator[Any]:
+    """Use one fallback provider when the primary fails before yielding content."""
+    yielded_content = False
+    for chunk in primary:
+        text, _chart = normalize_assistant_chunk(chunk)
+        is_error = text.lstrip().startswith("[") and " error" in text[:80].lower()
+        if is_error and not yielded_content:
+            yield from fallback_factory()
+            return
+        if text or _chart:
+            yielded_content = True
+        yield chunk
+
+
 def should_generate_chart(user_query: str) -> bool:
     """Detect explicit and implicit requests where a visual comparison is useful."""
     query = str(user_query or "").lower()

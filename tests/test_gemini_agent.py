@@ -6,6 +6,7 @@ from models.llm_adapters import (
     extract_chart_tool_spec,
     normalize_assistant_chunk,
     normalize_assistant_response,
+    stream_with_fallback,
     should_generate_chart,
     select_chart_rows_for_query,
     stream_gemini_agent,
@@ -13,6 +14,18 @@ from models.llm_adapters import (
 
 
 class TestStreamGeminiAgent:
+    def test_provider_fallback_only_runs_before_primary_content(self):
+        primary = iter(["[Anthropic error: temporary outage]"])
+        fallback = lambda: iter(["fallback answer"])
+        assert list(stream_with_fallback(primary, fallback)) == ["fallback answer"]
+
+    def test_provider_fallback_does_not_duplicate_partial_answer(self):
+        primary = iter(["partial answer", "[Anthropic error: late outage]"])
+        fallback = lambda: iter(["fallback answer"])
+        assert list(stream_with_fallback(primary, fallback)) == [
+            "partial answer", "[Anthropic error: late outage]"
+        ]
+
     def test_chart_fallback_builds_from_query_rows(self):
         spec = build_chart_spec_from_rows(
             [{"year": 2020, "profitability": 0.10}, {"year": 2021, "profitability": 0.20}],
