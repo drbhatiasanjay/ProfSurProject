@@ -302,6 +302,7 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
         with st.expander("Supporting data", expanded=False):
             for table in tables:
                 st.markdown(table)
+    _render_answer_context(key_prefix)
 
 
 def _render_response_actions(content: str, key_prefix: str, regenerate_question: str = "") -> None:
@@ -327,6 +328,21 @@ def _render_response_actions(content: str, key_prefix: str, regenerate_question:
     with action_cols[3]:
         if st.session_state.get(feedback_key) == "submitted":
             st.caption("Feedback recorded")
+
+
+def _render_answer_context(key_prefix: str) -> None:
+    """Show the active data scope without adding noise to the main answer."""
+    filters = st.session_state.get("filters", {}) or {}
+    panel_mode = st.session_state.get("panel_mode", "thesis")
+    years = filters.get("year_range", ("All", "All"))
+    industries = ", ".join(filters.get("industry_groups", [])) or "All industries"
+    stages = ", ".join(filters.get("life_stages", [])) or "All life stages"
+    backend = str(st.session_state.get("p19_backend", "gemini")).title()
+    with st.expander("Answer context", expanded=False):
+        st.caption(
+            f"Panel: {panel_mode}  |  Years: {years[0]}-{years[1]}  |  "
+            f"Industries: {industries}  |  Life stages: {stages}  |  Backend: {backend}"
+        )
 
 
 _panel_label = {
