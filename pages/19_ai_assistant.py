@@ -8,6 +8,7 @@ import copy
 import csv
 import io
 import json
+import re
 import streamlit as st
 import plotly.graph_objects as go
 from helpers import require_role, plotly_layout
@@ -133,6 +134,8 @@ st.markdown(
     max-width: 100%;
     overflow-x: auto;
 }
+[data-testid="stChatMessage"] [data-testid="stCodeBlock"],
+[data-testid="stChatMessage"] pre { max-width: 100%; overflow-x: auto; }
 [data-testid="stChatMessage"] pre { white-space: pre; }
 @media (max-width: 768px) {
     [data-testid="stChatMessage"] { padding-left: 0.5rem; padding-right: 0.5rem; }
@@ -202,6 +205,59 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
                 mime="text/csv",
                 key=f"{key_prefix}_csv",
             )
+
+
+def _split_supporting_tables(text: str) -> tuple[str, list[str]]:
+    """Keep markdown tables out of the prose column and render them on demand."""
+    lines = str(text or "").splitlines()
+    prose: list[str] = []
+    tables: list[str] = []
+    index = 0
+    while index < len(lines):
+        line = lines[index].strip()
+        if line.startswith("|") and line.endswith("|"):
+            block: list[str] = []
+            while index < len(lines):
+                candidate = lines[index].strip()
+                if not (candidate.startswith("|") and candidate.endswith("|")):
+                    break
+                block.append(lines[index])
+                index += 1
+            if len(block) >= 3 and re.match(r"^[\s|:\-]+$", block[1]):
+                tables.append("\n".join(block))
+                if prose and prose[-1].strip():
+                    prose.append("")
+                continue
+            prose.extend(block)
+            continue
+        prose.append(lines[index])
+        index += 1
+    return "\n".join(prose).strip(), tables
+
+
+def _normalized_turn_content(turn: dict) -> tuple[str, list[str], dict | None]:
+    """Return display prose, supporting tables, and chart for any provider turn."""
+    normalized = normalize_assistant_response(
+        turn.get("content", ""),
+        chart_spec=turn.get("chart_spec"),
+    )
+    prose, tables = _split_supporting_tables(normalized["answer"])
+    return prose, tables, normalized.get("chart_spec")
+
+
+def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) -> None:
+    """Render the common answer hierarchy: prose, chart, observations, data."""
+    prose, tables, chart = _normalized_turn_content(turn)
+    if placeholder is not None:
+        placeholder.markdown(prose or "Preparing the answer...")
+    else:
+        st.markdown(prose)
+    if chart:
+        _render_chart_card(chart, f"{key_prefix}_chart")
+    if tables:
+        with st.expander("Supporting data", expanded=False):
+            for table in tables:
+                st.markdown(table)
 
 
 _panel_label = {
@@ -359,15 +415,10 @@ if not st.session_state["chat_history"]:
 
 for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
     with st.chat_message(turn["role"]):
-        _history_content = turn["content"]
         if turn["role"] == "assistant":
-            _history_content = normalize_assistant_response(
-                _history_content,
-                chart_spec=turn.get("chart_spec"),
-            )["answer"]
-        st.markdown(_history_content)
-        if turn.get("chart_spec"):
-            _render_chart_card(turn["chart_spec"], f"history_{_turn_idx}")
+            _render_assistant_content(turn, f"history_{_turn_idx}")
+        else:
+            st.markdown(turn["content"])
         if turn["role"] == "assistant" and turn.get("model_used"):
             _mu = str(turn["model_used"]).lower()
             if "gemini" in _mu:
@@ -499,10 +550,13 @@ if user_q:
             _chunk_text, _chunk_chart = normalize_assistant_chunk(_chunk)
             if _chunk_chart and _chart_found is None:
                 _chart_found = _chunk_chart
-                _render_chart_card(_chart_found, f"live_{len(st.session_state['chat_history'])}")
             if _chunk_text:
                 _buf.append(_chunk_text)
-                _placeholder.markdown("".join(_buf))
+                _render_assistant_content(
+                    {"content": "".join(_buf)},
+                    f"stream_{len(st.session_state['chat_history'])}",
+                    placeholder=_placeholder,
+                )
         full = "".join(_buf)
         _elapsed = round(time.time() - _t0, 1)
 
@@ -516,7 +570,6 @@ if user_q:
         full = normalized["answer"]
         if normalized["chart_spec"] and _chart_found is None:
             _chart_found = normalized["chart_spec"]
-            _render_chart_card(_chart_found, f"live_{len(st.session_state['chat_history'])}")
 
         full_display, _chips_found = parse_followup_chips(full)
         if not _chips_found:
@@ -524,7 +577,11 @@ if user_q:
             _chips_found = [
                 q for q in _fallback_pool if q.strip().lower() != user_q.strip().lower()
             ][:3]
-        _placeholder.markdown(full_display)
+        _render_assistant_content(
+            {"content": full_display, "chart_spec": _chart_found},
+            f"live_{len(st.session_state['chat_history'])}",
+            placeholder=_placeholder,
+        )
 
         if "gemini" in model_to_use.lower():
             _model_badge = "Gemini"
