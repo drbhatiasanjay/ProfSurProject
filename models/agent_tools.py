@@ -487,7 +487,23 @@ def extract_table_chart_spec(text: str, user_q: str = "") -> Optional[dict]:
     import re
     table_lines = [line.strip() for line in text.splitlines() if line.strip().startswith("|") and line.strip().endswith("|")]
     if len(table_lines) >= 3:
-        header_cols = [c.strip() for c in table_lines[0].strip("|").split("|") if c.strip()]
+        raw_header_cols = [c.strip() for c in table_lines[0].strip("|").split("|")]
+        header_cols = [c for c in raw_header_cols if c]
+        # Some providers concatenate a two-column header and leave an empty
+        # trailing cell, e.g. ``Industry GroupAverage Leverage (%) |``.
+        # Recover the intended schema so the numeric rows remain chartable.
+        if len(header_cols) == 1 and len(raw_header_cols) >= 2:
+            compact_header = re.sub(r"\s+", " ", header_cols[0]).strip()
+            match = re.match(
+                r"^(industry\s+group)(average\s+)?(profitability|leverage|roa)\s*(\([^)]*\))?$",
+                compact_header,
+                flags=re.IGNORECASE,
+            )
+            if match:
+                metric = (match.group(2) or "") + match.group(3)
+                if match.group(4):
+                    metric += f" {match.group(4)}"
+                header_cols = [match.group(1), metric]
         if len(header_cols) < 2 or not re.match(r"^[\s\|:\-]+$", table_lines[1]):
             table_lines = []
         else:

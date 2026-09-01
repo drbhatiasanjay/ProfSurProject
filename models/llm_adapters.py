@@ -906,6 +906,7 @@ def should_generate_chart(user_query: str) -> bool:
         "chart", "graph", "plot", "visual", "bar", "trend", "illustrat",
         "diagram", "display", "interactive", "vary by", "varies by",
         "by industry", "by life stage", "by lifestage", "across industry",
+        "across industries", "differ across", "differs across",
         "across different", "distribution", "compare", "comparison", "versus",
         "top ", "bottom ", "rank", "over time",
     ))

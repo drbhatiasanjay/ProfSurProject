@@ -100,6 +100,19 @@ class TestStreamGeminiAgent:
         assert spec["categories"] == ["Lubricants, etc.", "Readymade garments", "Media-broadcasting"]
         assert spec["series"][0]["values"] == [0.439, 0.331, 0.283]
 
+    def test_table_fallback_recovers_concatenated_header(self):
+        from models.agent_tools import extract_table_chart_spec
+        text = (
+            "| Industry GroupAverage Leverage (%) |       |\n"
+            "| ---------------------------------- | ----- |\n"
+            "| Steel                              | 34.05 |\n"
+            "| Computer software                  | 6.69  |\n"
+        )
+        spec = extract_table_chart_spec(text, "How does leverage differ across industries?")
+        assert spec["chart_type"] == "bar"
+        assert spec["categories"] == ["Steel", "Computer software"]
+        assert spec["series"][0]["values"] == [34.05, 6.69]
+
     def test_provider_neutral_response_contract(self):
         text, chart = normalize_assistant_chunk({"type": "chart", "spec": {"chart_type": "line"}})
         assert text == "" and chart["chart_type"] == "line"
@@ -134,6 +147,7 @@ class TestStreamGeminiAgent:
 
     def test_grouped_variation_question_requests_chart_fallback(self):
         assert should_generate_chart("How does profitability vary by industry group?")
+        assert should_generate_chart("How does leverage differ across industries?")
 
     def test_chart_rows_selects_current_dataset_from_accumulated_history(self):
         datasets = [
