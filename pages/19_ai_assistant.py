@@ -4,6 +4,10 @@ Full-screen dedicated chat interface grounded in the capital structure panel dat
 """
 import time
 import uuid as _uuid
+import copy
+import csv
+import io
+import json
 import streamlit as st
 import plotly.graph_objects as go
 from helpers import require_role, plotly_layout
@@ -99,6 +103,88 @@ _FALLBACK_CHIPS = {
 
 st.title("AI Financial Assistant")
 st.caption("Ask questions grounded in the capital structure panel data.")
+
+
+def _render_chart_card(spec: dict, key_prefix: str) -> None:
+    """Render a consistent, inspectable chart surface for history and live replies."""
+    if not isinstance(spec, dict):
+        return
+    categories = list(spec.get("categories") or [])
+    series = list(spec.get("series") or [])
+    if not categories or not series:
+        return
+
+    with st.container(border=True):
+        st.markdown("**Interactive visualization**")
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c1:
+            limits = [10, 25, 50, len(categories)]
+            limits = list(dict.fromkeys(n for n in limits if n <= len(categories)))
+            top_n = st.selectbox("Categories", limits, index=len(limits) - 1,
+                                 key=f"{key_prefix}_top_n")
+        with c2:
+            as_percent = st.checkbox("Display as %", value=False, key=f"{key_prefix}_percent")
+        with c3:
+            st.caption(f"{len(categories)} categories · {len(series)} series")
+
+        display_spec = copy.deepcopy(spec)
+        display_spec["categories"] = categories[:top_n]
+        display_series = []
+        for item in series:
+            values = list(item.get("values") or [])[:top_n]
+            if as_percent:
+                values = [round(float(value) * 100, 4) for value in values]
+            display_series.append({**item, "values": values})
+        display_spec["series"] = display_series
+        if as_percent and display_spec.get("y_axis_label"):
+            label = str(display_spec["y_axis_label"])
+            if "%" not in label:
+                display_spec["y_axis_label"] = f"{label} (%)"
+
+        fig = render_chat_chart_figure(display_spec, theme=st.session_state.get("theme", "light"))
+        st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_figure")
+        with st.expander("Chart data", expanded=False):
+            st.download_button(
+                "Download JSON",
+                data=json.dumps(display_spec, indent=2, default=str),
+                file_name="ai_chart.json",
+                mime="application/json",
+                key=f"{key_prefix}_json",
+            )
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["category"] + [str(item.get("name", "Series")) for item in display_series])
+            for index, category in enumerate(display_spec["categories"]):
+                writer.writerow([category] + [item["values"][index] if index < len(item["values"]) else ""
+                                              for item in display_series])
+            st.download_button(
+                "Download CSV",
+                data=output.getvalue(),
+                file_name="ai_chart.csv",
+                mime="text/csv",
+                key=f"{key_prefix}_csv",
+            )
+
+
+_panel_label = {
+    "run3": "April 2026 panel",
+    "thesis": "Thesis panel",
+    "latest": "Latest panel",
+    "us_av_2024": "US S&P panel",
+}.get(st.session_state.get("panel_mode", "thesis"), st.session_state.get("panel_mode", "thesis"))
+_header_cols = st.columns([2.4, 1.2, 1.2, 1.2])
+with _header_cols[0]:
+    st.markdown("**Current research workspace**")
+    st.caption(_panel_label)
+with _header_cols[1]:
+    st.caption("Mode")
+    st.markdown(f"**{st.session_state.get('p19_mode', 'Researcher')}**")
+with _header_cols[2]:
+    st.caption("Backend")
+    st.markdown(f"**{st.session_state.get('p19_backend', 'gemini').title()}**")
+with _header_cols[3]:
+    st.caption("Context")
+    st.markdown(f"**{len(st.session_state.get('chat_history', []))}/20 turns**")
 
 # ── Sidebar controls ─────────────────────────────────────────────────────────
 with st.sidebar:
@@ -233,12 +319,11 @@ if not st.session_state["chat_history"]:
             st.session_state["_pending_followup"] = _sq
             st.rerun()
 
-for turn in st.session_state["chat_history"]:
+for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
     with st.chat_message(turn["role"]):
         st.markdown(turn["content"])
         if turn.get("chart_spec"):
-            fig = render_chat_chart_figure(turn["chart_spec"], theme=st.session_state.get("theme", "light"))
-            st.plotly_chart(fig, use_container_width=True)
+            _render_chart_card(turn["chart_spec"], f"history_{_turn_idx}")
         if turn["role"] == "assistant" and turn.get("model_used"):
             _mu = str(turn["model_used"]).lower()
             if "gemini" in _mu:
@@ -370,8 +455,7 @@ if user_q:
             _chunk_text, _chunk_chart = normalize_assistant_chunk(_chunk)
             if _chunk_chart and _chart_found is None:
                 _chart_found = _chunk_chart
-                fig = render_chat_chart_figure(_chart_found, theme=st.session_state.get("theme", "light"))
-                st.plotly_chart(fig, use_container_width=True)
+                _render_chart_card(_chart_found, f"live_{len(st.session_state['chat_history'])}")
             if _chunk_text:
                 _buf.append(_chunk_text)
                 _placeholder.markdown("".join(_buf))
@@ -388,8 +472,7 @@ if user_q:
         full = normalized["answer"]
         if normalized["chart_spec"] and _chart_found is None:
             _chart_found = normalized["chart_spec"]
-            fig = render_chat_chart_figure(_chart_found, theme=st.session_state.get("theme", "light"))
-            st.plotly_chart(fig, use_container_width=True)
+            _render_chart_card(_chart_found, f"live_{len(st.session_state['chat_history'])}")
 
         full_display, _chips_found = parse_followup_chips(full)
         if not _chips_found:
