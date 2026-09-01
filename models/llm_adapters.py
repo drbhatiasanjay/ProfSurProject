@@ -855,6 +855,18 @@ def normalize_assistant_chunk(chunk: Any) -> tuple[str, Optional[dict]]:
     return str(text), chart
 
 
+def should_generate_chart(user_query: str) -> bool:
+    """Detect explicit and implicit requests where a visual comparison is useful."""
+    query = str(user_query or "").lower()
+    return any(term in query for term in (
+        "chart", "graph", "plot", "visual", "bar", "trend", "illustrat",
+        "diagram", "display", "interactive", "vary by", "varies by",
+        "by industry", "by life stage", "by lifestage", "across industry",
+        "across different", "distribution", "compare", "comparison", "versus",
+        "top ", "bottom ", "rank", "over time",
+    ))
+
+
 def _extract_markdown_table(text: str) -> list[dict]:
     """Parse provider-generated Markdown or tab-separated tables into rows."""
     lines = [line.strip() for line in str(text or "").splitlines()

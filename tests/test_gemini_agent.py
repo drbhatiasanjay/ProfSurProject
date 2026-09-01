@@ -6,6 +6,7 @@ from models.llm_adapters import (
     extract_chart_tool_spec,
     normalize_assistant_chunk,
     normalize_assistant_response,
+    should_generate_chart,
     stream_gemini_agent,
 )
 
@@ -86,6 +87,9 @@ class TestStreamGeminiAgent:
         )
         assert len(result["table"]) == 2
         assert result["chart_spec"]["chart_type"] == "line"
+
+    def test_grouped_variation_question_requests_chart_fallback(self):
+        assert should_generate_chart("How does profitability vary by industry group?")
 
     def test_missing_api_key_yields_configuration_message(self, monkeypatch):
         monkeypatch.delenv("GEMINI_API_KEY", raising=False)

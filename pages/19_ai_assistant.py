@@ -53,6 +53,7 @@ from models.llm_adapters import (
     parse_followup_chips,
     normalize_assistant_chunk,
     normalize_assistant_response,
+    should_generate_chart,
 )
 from models.agent_tools import render_chat_chart_figure, extract_chat_chart_spec, extract_table_chart_spec
 
@@ -332,13 +333,7 @@ if user_q:
         _placeholder = st.empty()
         _buf = []
         _chart_found = None
-        _chart_requested = any(
-            w in user_q.lower()
-            for w in (
-                "chart", "graph", "plot", "visual", "bar", "trend",
-                "illustrat", "diagram", "display", "interactive",
-            )
-        )
+        _chart_requested = should_generate_chart(user_q)
         if backend == "gemini":
             _stream = stream_gemini_agent(
                 messages,
