@@ -260,6 +260,31 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
                 st.markdown(table)
 
 
+def _render_response_actions(content: str, key_prefix: str, regenerate_question: str = "") -> None:
+    """Expose lightweight answer actions without coupling them to an LLM."""
+    action_cols = st.columns([1.2, 1.2, 1.2, 5])
+    with action_cols[0]:
+        st.download_button(
+            "Download",
+            data=str(content or ""),
+            file_name="ai_answer.md",
+            mime="text/markdown",
+            key=f"{key_prefix}_download",
+        )
+    with action_cols[1]:
+        if regenerate_question and st.button("Regenerate", key=f"{key_prefix}_regenerate"):
+            st.session_state["_pending_followup"] = regenerate_question
+            st.rerun()
+    with action_cols[2]:
+        feedback_key = f"{key_prefix}_feedback"
+        if st.button("Useful", key=feedback_key):
+            st.session_state[feedback_key] = "submitted"
+            st.toast("Thanks for the feedback")
+    with action_cols[3]:
+        if st.session_state.get(feedback_key) == "submitted":
+            st.caption("Feedback recorded")
+
+
 _panel_label = {
     "run3": "April 2026 panel",
     "thesis": "Thesis panel",
@@ -413,12 +438,19 @@ if not st.session_state["chat_history"]:
             st.session_state["_pending_followup"] = _sq
             st.rerun()
 
+_previous_user_question = ""
 for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
     with st.chat_message(turn["role"]):
         if turn["role"] == "assistant":
             _render_assistant_content(turn, f"history_{_turn_idx}")
+            _render_response_actions(
+                turn.get("content", ""),
+                f"history_{_turn_idx}",
+                regenerate_question=_previous_user_question,
+            )
         else:
             st.markdown(turn["content"])
+            _previous_user_question = turn.get("content", "")
         if turn["role"] == "assistant" and turn.get("model_used"):
             _mu = str(turn["model_used"]).lower()
             if "gemini" in _mu:
@@ -590,6 +622,7 @@ if user_q:
         else:
             _model_badge = "Sonnet"
         st.caption(f"*{_model_badge} · {_elapsed}s*")
+        _render_response_actions(full_display, f"live_{len(st.session_state['chat_history'])}", user_q)
 
     turn_data = {
         "role": "assistant",
