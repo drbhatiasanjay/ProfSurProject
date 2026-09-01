@@ -125,6 +125,13 @@ class TestStreamGeminiAgent:
         result = normalize_assistant_response(f"{section}\n\n{section}")
         assert result["answer"].count("substantive answer section") == 1
 
+    def test_repeated_headings_are_collapsed(self):
+        result = normalize_assistant_response(
+            "Economic Analysis:\n\nFirst explanation.\n\n"
+            "Economic Analysis:\n\nSecond explanation."
+        )
+        assert result["answer"].count("Economic Analysis:") == 1
+
     def test_grouped_variation_question_requests_chart_fallback(self):
         assert should_generate_chart("How does profitability vary by industry group?")
 

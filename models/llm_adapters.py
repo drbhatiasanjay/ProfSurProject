@@ -987,11 +987,25 @@ def _remove_unrenderable_chart_blocks(text: str) -> str:
 
 
 def _remove_repeated_sections(text: str) -> str:
-    """Collapse duplicated provider paragraphs caused by context over-generation."""
+    """Collapse duplicated provider sections and headings caused by echoing."""
     paragraphs = re.split(r"\n\s*\n", str(text or ""))
     seen: set[str] = set()
     kept: list[str] = []
     for paragraph in paragraphs:
+        lines = paragraph.splitlines()
+        filtered_lines: list[str] = []
+        for line in lines:
+            normalized_line = re.sub(r"\s+", " ", line).strip().lower()
+            is_heading = bool(re.match(r"^#{1,6}\s+", line.strip()))
+            is_label = bool(re.match(r"^[^.!?]{2,80}:$", line.strip()))
+            if (is_heading or is_label) and normalized_line in seen:
+                continue
+            if is_heading or is_label:
+                seen.add(normalized_line)
+            filtered_lines.append(line)
+        paragraph = "\n".join(filtered_lines).strip()
+        if not paragraph:
+            continue
         normalized = re.sub(r"\s+", " ", paragraph).strip().lower()
         # Short repeated labels can be intentional; only suppress substantive blocks.
         if len(normalized) >= 80 and normalized in seen:

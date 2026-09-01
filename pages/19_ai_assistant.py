@@ -238,20 +238,9 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
                 mime="text/html",
                 key=f"{key_prefix}_html",
             )
-            try:
-                _png_data = fig.to_image(format="png")
-            except Exception:
-                _png_data = None
-            if _png_data:
-                st.download_button(
-                    "Download PNG",
-                    data=_png_data,
-                    file_name="ai_chart.png",
-                    mime="image/png",
-                    key=f"{key_prefix}_png",
-                )
-            else:
-                st.caption("PNG export requires the optional Plotly image engine.")
+            # PNG conversion is intentionally omitted from the render path;
+            # Kaleido can block the whole Streamlit script on large charts.
+            st.caption("Use the chart toolbar camera icon to save a PNG.")
 
 
 def _split_supporting_tables(text: str) -> tuple[str, list[str]]:
