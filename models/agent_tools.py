@@ -481,27 +481,38 @@ def extract_chat_chart_spec(text: str) -> tuple[Optional[dict], str]:
 
 
 def extract_table_chart_spec(text: str, user_q: str = "") -> Optional[dict]:
-    """Fallback: synthesize an interactive chart spec from a Markdown table if user asked for a visual chart."""
+    """Fallback: synthesize a chart from Markdown or tab-separated table output."""
     if not text:
         return None
     import re
     table_lines = [line.strip() for line in text.splitlines() if line.strip().startswith("|") and line.strip().endswith("|")]
-    if len(table_lines) < 3:
-        return None
+    if len(table_lines) >= 3:
+        header_cols = [c.strip() for c in table_lines[0].strip("|").split("|") if c.strip()]
+        if len(header_cols) < 2 or not re.match(r"^[\s\|:\-]+$", table_lines[1]):
+            table_lines = []
+        else:
+            data_lines = table_lines[2:]
+    else:
+        data_lines = []
 
-    # Header
-    header_cols = [c.strip() for c in table_lines[0].strip("|").split("|") if c.strip()]
-    if len(header_cols) < 2:
-        return None
-
-    # Check separator
-    if not re.match(r"^[\s\|:\-]+$", table_lines[1]):
-        return None
+    # Providers sometimes emit TSV tables when the answer is long. This also
+    # works when a following JSON chart block is cut off by max output tokens.
+    if not table_lines:
+        tab_candidates = [line.strip() for line in text.splitlines() if "\t" in line]
+        header_index = next((i for i, line in enumerate(tab_candidates)
+                             if "industry" in line.lower() and
+                             ("profit" in line.lower() or "roa" in line.lower())), None)
+        if header_index is None:
+            return None
+        header_cols = [c.strip() for c in tab_candidates[header_index].split("\t") if c.strip()]
+        data_lines = tab_candidates[header_index + 1:]
+        if len(header_cols) < 2:
+            return None
 
     categories = []
     column_values = [[] for _ in header_cols[1:]]
-    for row in table_lines[2:]:
-        cols = [c.strip() for c in row.strip("|").split("|")]
+    for row in data_lines:
+        cols = [c.strip() for c in (row.strip("|").split("|") if "|" in row else row.split("\t"))]
         if len(cols) >= 2:
             cat = cols[0]
             parsed_values = []

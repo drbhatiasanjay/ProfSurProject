@@ -63,6 +63,19 @@ class TestStreamGeminiAgent:
         )
         assert len(spec["series"]) == 2
 
+    def test_table_fallback_accepts_tab_separated_industry_table(self):
+        from models.agent_tools import extract_table_chart_spec
+        text = (
+            "Industry Group\tAverage Profitability (ROA)\n"
+            "Lubricants, etc.\t0.439\n"
+            "Readymade garments\t0.331\n"
+            "Media-broadcasting\t0.283\n"
+        )
+        spec = extract_table_chart_spec(text, "show a bar chart")
+        assert spec["chart_type"] == "bar"
+        assert spec["categories"] == ["Lubricants, etc.", "Readymade garments", "Media-broadcasting"]
+        assert spec["series"][0]["values"] == [0.439, 0.331, 0.283]
+
     def test_provider_neutral_response_contract(self):
         text, chart = normalize_assistant_chunk({"type": "chart", "spec": {"chart_type": "line"}})
         assert text == "" and chart["chart_type"] == "line"

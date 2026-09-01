@@ -856,17 +856,29 @@ def normalize_assistant_chunk(chunk: Any) -> tuple[str, Optional[dict]]:
 
 
 def _extract_markdown_table(text: str) -> list[dict]:
-    """Parse simple provider-generated Markdown tables into structured rows."""
+    """Parse provider-generated Markdown or tab-separated tables into rows."""
     lines = [line.strip() for line in str(text or "").splitlines()
              if line.strip().startswith("|") and line.strip().endswith("|")]
-    if len(lines) < 3:
-        return []
-    headers = [c.strip() for c in lines[0].strip("|").split("|")]
-    if len(headers) < 2 or not re.match(r"^[\s|:\-]+$", lines[1]):
-        return []
+    if len(lines) >= 3:
+        headers = [c.strip() for c in lines[0].strip("|").split("|")]
+        if len(headers) < 2 or not re.match(r"^[\s|:\-]+$", lines[1]):
+            lines = []
+        else:
+            data_lines = lines[2:]
+    else:
+        data_lines = []
+    if not lines:
+        candidates = [line.strip() for line in str(text or "").splitlines() if "\t" in line]
+        header_index = next((i for i, line in enumerate(candidates)
+                             if "industry" in line.lower() and
+                             ("profit" in line.lower() or "roa" in line.lower())), None)
+        if header_index is None:
+            return []
+        headers = [c.strip() for c in candidates[header_index].split("\t")]
+        data_lines = candidates[header_index + 1:]
     rows = []
-    for line in lines[2:]:
-        cells = [c.strip() for c in line.strip("|").split("|")]
+    for line in data_lines:
+        cells = [c.strip() for c in (line.strip("|").split("|") if "|" in line else line.split("\t"))]
         if len(cells) >= len(headers):
             rows.append({headers[i]: cells[i] for i in range(len(headers))})
     return rows
