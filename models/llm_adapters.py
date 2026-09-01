@@ -19,6 +19,15 @@ import pandas as pd
 
 import db
 
+# Import once at module load so provider tests and runtime calls do not import
+# the SDK while a caller is temporarily patching process environment access.
+try:
+    from google import genai as _GENAI_SDK
+    from google.genai import types as _GENAI_TYPES
+except ImportError:
+    _GENAI_SDK = None
+    _GENAI_TYPES = None
+
 # tiktoken for token counting; fall back to a rough char/4 heuristic if not installed
 try:
     import tiktoken
@@ -933,12 +942,15 @@ def stream_gemini_agent(
         return
 
     try:
-        from google import genai
-        from google.genai import types
         from models.agent_tools import get_database_schema_summary
         from models.agent_tools import query_financial_database as _qfd
     except ImportError as _imp_err:
         yield f"[Google GenAI SDK not installed. Run: pip install google-genai] Error: {_imp_err}"
+        return
+    genai = _GENAI_SDK
+    types = _GENAI_TYPES
+    if genai is None or types is None:
+        yield "[Google GenAI SDK not installed. Run: pip install google-genai]"
         return
 
     try:
