@@ -890,6 +890,15 @@ def stream_with_fallback(primary: Iterator[Any], fallback_factory) -> Iterator[A
         yield chunk
 
 
+def stream_with_cancellation(stream: Iterator[Any], stop_event) -> Iterator[Any]:
+    """Stop a provider stream cooperatively when its cancellation event is set."""
+    for chunk in stream:
+        if stop_event is not None and stop_event.is_set():
+            yield {"type": "status", "text": "[Generation stopped by user]"}
+            return
+        yield chunk
+
+
 def should_generate_chart(user_query: str) -> bool:
     """Detect explicit and implicit requests where a visual comparison is useful."""
     query = str(user_query or "").lower()

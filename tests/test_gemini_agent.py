@@ -7,6 +7,7 @@ from models.llm_adapters import (
     normalize_assistant_chunk,
     normalize_assistant_response,
     stream_with_fallback,
+    stream_with_cancellation,
     should_generate_chart,
     select_chart_rows_for_query,
     stream_gemini_agent,
@@ -24,6 +25,14 @@ class TestStreamGeminiAgent:
         fallback = lambda: iter(["fallback answer"])
         assert list(stream_with_fallback(primary, fallback)) == [
             "partial answer", "[Anthropic error: late outage]"
+        ]
+
+    def test_provider_stream_honors_cancellation_event(self):
+        from threading import Event
+        stop_event = Event()
+        stop_event.set()
+        assert list(stream_with_cancellation(iter(["not shown"]), stop_event)) == [
+            {"type": "status", "text": "[Generation stopped by user]"}
         ]
 
     def test_chart_fallback_builds_from_query_rows(self):
