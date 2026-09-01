@@ -154,6 +154,13 @@ class TestChatMessages:
         conn.close()
         assert title == "First question"
 
+    def test_chat_title_can_be_updated_and_is_bounded(self, temp_chat_db):
+        db.create_chat_session("cs_rename", "sbhatia", "admin")
+        db.update_chat_session_title("cs_rename", "  A   renamed   research   session  ")
+        sessions = db.list_chat_sessions("sbhatia")
+        session = next(item for item in sessions if item["chat_session_id"] == "cs_rename")
+        assert session["title"] == "A renamed research session"
+
     def test_message_count_increments(self, temp_chat_db):
         db.create_chat_session("cs_count", "sbhatia", "admin")
         for i in range(4):

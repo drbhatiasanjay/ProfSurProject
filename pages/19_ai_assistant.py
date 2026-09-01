@@ -441,7 +441,35 @@ with st.sidebar:
         st.session_state.pop("_last_qa", None)
         st.rerun()
 
-    for _sess in db.list_chat_sessions(_username, limit=15):
+    _chat_sessions = db.list_chat_sessions(_username, limit=50)
+    _active_session_record = next(
+        (s for s in _chat_sessions if s["chat_session_id"] == st.session_state.get("chat_session_id")),
+        None,
+    )
+    with st.expander("Session settings", expanded=False):
+        _current_title = (_active_session_record or {}).get("title") or "New chat"
+        _edited_title = st.text_input(
+            "Chat title",
+            value=_current_title,
+            max_chars=80,
+            key="p19_chat_title",
+        )
+        if st.button("Save title", key="p19_save_title") and _active_session_record:
+            db.update_chat_session_title(
+                _active_session_record["chat_session_id"], _edited_title
+            )
+            st.rerun()
+
+    _chat_search = st.text_input(
+        "Search conversations",
+        placeholder="Search titles...",
+        key="p19_chat_search",
+    ).strip().lower()
+    _visible_sessions = [
+        s for s in _chat_sessions
+        if not _chat_search or _chat_search in (s["title"] or "New chat").lower()
+    ]
+    for _sess in _visible_sessions[:15]:
         _is_active = _sess["chat_session_id"] == st.session_state.get("chat_session_id")
         _label = f"{'▶ ' if _is_active else ''}{_sess['title'] or 'New chat'}"
         _sc1, _sc2 = st.columns([5, 1])

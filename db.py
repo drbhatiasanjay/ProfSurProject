@@ -1225,6 +1225,22 @@ def update_chat_session_company(chat_session_id: str, company_code: int | None) 
         pass
 
 
+def update_chat_session_title(chat_session_id: str, title: str) -> None:
+    """Set a user-visible chat title, bounded to keep the sidebar compact."""
+    clean_title = " ".join(str(title or "").split())[:80]
+    if not clean_title:
+        return
+    try:
+        with get_connection() as con:
+            con.execute(
+                "UPDATE chat_sessions SET title = ? WHERE chat_session_id = ?",
+                (clean_title, chat_session_id),
+            )
+            con.commit()
+    except Exception:
+        pass
+
+
 def append_chat_message(
     chat_session_id: str,
     role: str,
