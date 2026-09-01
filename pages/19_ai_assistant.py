@@ -359,7 +359,13 @@ if not st.session_state["chat_history"]:
 
 for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
     with st.chat_message(turn["role"]):
-        st.markdown(turn["content"])
+        _history_content = turn["content"]
+        if turn["role"] == "assistant":
+            _history_content = normalize_assistant_response(
+                _history_content,
+                chart_spec=turn.get("chart_spec"),
+            )["answer"]
+        st.markdown(_history_content)
         if turn.get("chart_spec"):
             _render_chart_card(turn["chart_spec"], f"history_{_turn_idx}")
         if turn["role"] == "assistant" and turn.get("model_used"):
