@@ -931,6 +931,10 @@ def normalize_assistant_response(
     embedded_chart, cleaned = extract_chat_chart_spec(answer)
     if embedded_chart:
         answer = cleaned
+    else:
+        # A provider can emit an incomplete/invalid chart JSON block. It must
+        # never leak into the user-facing answer as a wide monospace block.
+        answer = _remove_unrenderable_chart_blocks(answer)
     resolved_chart = chart_spec or embedded_chart
     table = _extract_markdown_table(answer)
     if chart_requested and resolved_chart is None:
@@ -941,6 +945,21 @@ def normalize_assistant_response(
         "chart_spec": resolved_chart,
         "sources": [],
     }
+
+
+def _remove_unrenderable_chart_blocks(text: str) -> str:
+    """Remove provider chart payloads that could not be parsed/rendered."""
+    if not text or "chart_type" not in text:
+        return text
+
+    chart_block = re.compile(
+        r"```(?:json|javascript|js)?\s*"
+        r"(?=[\s\S]*?\"chart_type\")"
+        r"[\s\S]*?(?:```|\Z)",
+        flags=re.IGNORECASE,
+    )
+    cleaned = chart_block.sub("", text)
+    return re.sub(r"\n{3,}", "\n\n", cleaned).strip()
 
 
 def stream_gemini_agent(

@@ -89,6 +89,15 @@ class TestStreamGeminiAgent:
         assert len(result["table"]) == 2
         assert result["chart_spec"]["chart_type"] == "line"
 
+    def test_unrenderable_chart_json_is_not_shown_as_prose(self):
+        result = normalize_assistant_response(
+            'Analysis.\n```json\n{"chart_type":"bar","categories":["A"],\n```\nThe result is strongest in the mature stage.',
+            user_query="show a chart",
+            chart_requested=True,
+        )
+        assert "chart_type" not in result["answer"]
+        assert "The result is strongest" in result["answer"]
+
     def test_grouped_variation_question_requests_chart_fallback(self):
         assert should_generate_chart("How does profitability vary by industry group?")
 
