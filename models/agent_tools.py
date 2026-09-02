@@ -360,20 +360,22 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
     series = spec.get("series", [])
     orientation = str(spec.get("orientation", "v")).lower()
     show_trendline = bool(spec.get("show_trendline", False))
+    dual_axis = bool(spec.get("dual_axis", False))
+    show_event_bands = bool(spec.get("show_event_bands", True))
 
-    _CHART_COLORS = [
-        "#0284c7",  # Electric Sky Blue (Series 1 / Leverage)
-        "#e11d48",  # Crimson / Rose (Series 2 / Profitability - Stata contrast)
-        "#10b981",  # Emerald Green (Series 3)
-        "#f59e0b",  # Amber Orange (Series 4)
-        "#8b5cf6",  # Purple (Series 5)
-        "#06b6d4",  # Cyan (Series 6)
-        "#ec4899",  # Pink (Series 7)
+    _STATA_COLORS = [
+        "#1f77b4",  # Stata Blue (Series 1 / Leverage)
+        "#c00000",  # Stata Crimson/Maroon (Series 2 / Profitability)
+        "#2ca02c",  # Stata Forest Green (Series 3 / Tangibility)
+        "#ff7f0e",  # Stata Orange (Series 4 / Size)
+        "#9467bd",  # Stata Purple (Series 5 / Non-debt Tax Shield)
+        "#17becf",  # Stata Teal (Series 6 / Dividend)
+        "#e377c2",  # Stata Rose (Series 7)
     ]
 
     clean_cats = [str(c).strip() for c in raw_cats]
 
-    # Pre-scan series to detect unit/scale mismatches (e.g. leverage in % [10-50] vs profitability in decimal [0.1-0.3])
+    # Pre-scan series to detect unit/scale mismatches
     series_cleaned = []
     has_large_scale = False
     has_small_scale = False
@@ -400,9 +402,9 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
 
         series_cleaned.append({"name": s_name, "values": clean_vals})
 
-    # If comparing percentage series (> 2.0) with decimal ratio series (<= 1.0),
-    # automatically harmonize decimal ratio series to percentage (* 100) so both curves share the dynamic visual range
-    if len(series_cleaned) > 1 and has_large_scale and has_small_scale:
+    # If comparing percentage series (> 2.0) with decimal ratio series (<= 1.0) without dual axis,
+    # auto-harmonize decimal ratio series to percentage (* 100)
+    if len(series_cleaned) > 1 and has_large_scale and has_small_scale and not dual_axis:
         for s in series_cleaned:
             vals = s["values"]
             if vals and 0 < max(vals) <= 1.0:
@@ -414,24 +416,45 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
     for s_idx, s in enumerate(series_cleaned):
         s_name = s.get("name", "")
         clean_vals = s.get("values", [])
-        color = _CHART_COLORS[s_idx % len(_CHART_COLORS)]
+        color = _STATA_COLORS[s_idx % len(_STATA_COLORS)]
+        use_y2 = dual_axis and s_idx == 1
 
-        # Match category count if possible
         plot_x = clean_cats[:len(clean_vals)] if clean_cats else list(range(1, len(clean_vals) + 1))
 
         if chart_type == "bar":
             if orientation == "h":
-                fig.add_trace(go.Bar(x=clean_vals, y=plot_x, name=s_name, orientation="h", marker=dict(color=color)))
+                fig.add_trace(go.Bar(
+                    x=clean_vals, y=plot_x, name=s_name, orientation="h", marker=dict(color=color),
+                    yaxis="y2" if use_y2 else "y",
+                ))
             else:
-                fig.add_trace(go.Bar(x=plot_x, y=clean_vals, name=s_name, marker=dict(color=color)))
+                fig.add_trace(go.Bar(
+                    x=plot_x, y=clean_vals, name=s_name, marker=dict(color=color),
+                    yaxis="y2" if use_y2 else "y",
+                ))
         elif chart_type == "scatter":
-            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="markers", name=s_name, marker=dict(size=8, color=color)))
+            fig.add_trace(go.Scatter(
+                x=plot_x, y=clean_vals, mode="markers", name=s_name,
+                marker=dict(size=8, color=color),
+                yaxis="y2" if use_y2 else "y",
+            ))
         elif chart_type == "box":
-            fig.add_trace(go.Box(y=clean_vals, name=s_name, x=plot_x if len(plot_x) == len(clean_vals) else None, marker=dict(color=color)))
+            fig.add_trace(go.Box(
+                y=clean_vals, name=s_name, x=plot_x if len(plot_x) == len(clean_vals) else None,
+                marker=dict(color=color),
+                yaxis="y2" if use_y2 else "y",
+            ))
         elif chart_type in ("area", "filled_line"):
-            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="lines", fill="tozeroy", name=s_name, line=dict(color=color)))
+            fig.add_trace(go.Scatter(
+                x=plot_x, y=clean_vals, mode="lines", fill="tozeroy", name=s_name,
+                line=dict(color=color),
+                yaxis="y2" if use_y2 else "y",
+            ))
         elif chart_type == "histogram":
-            fig.add_trace(go.Histogram(x=clean_vals, name=s_name, marker=dict(color=color)))
+            fig.add_trace(go.Histogram(
+                x=clean_vals, name=s_name, marker=dict(color=color),
+                yaxis="y2" if use_y2 else "y",
+            ))
         else:
             fig.add_trace(go.Scatter(
                 x=plot_x,
@@ -439,7 +462,8 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
                 mode="lines+markers",
                 name=s_name,
                 line=dict(width=2.5, color=color),
-                marker=dict(size=6, color=color),
+                marker=dict(size=7, color=color),
+                yaxis="y2" if use_y2 else "y",
             ))
 
         if chart_type == "scatter" and show_trendline and len(clean_vals) >= 2:
@@ -457,19 +481,74 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
                     x=plot_x,
                     y=[slope * value + intercept for value in x_numeric],
                     mode="lines",
-                    name=f"{s_name} trend",
+                    name=f"{s_name} OLS trend (β={slope:+.4f})",
                     line=dict(dash="dash", color="#dc2626"),
                 ))
+
+    # Add Macro Event Period Shaded Overlays for Time Series (GFC, IBC, COVID)
+    is_time_series = any(
+        isinstance(c, str) and (re.match(r"^(19|20)\d\d$", c.strip()) or "200" in c or "201" in c or "202" in c)
+        for c in clean_cats
+    )
+    if is_time_series and show_event_bands:
+        cats_str = [str(c).strip() for c in clean_cats]
+        # GFC (2008-2009)
+        if "2008" in cats_str or "2009" in cats_str:
+            fig.add_vrect(
+                x0="2008" if "2008" in cats_str else min(cats_str),
+                x1="2009" if "2009" in cats_str else "2008",
+                fillcolor="rgba(245, 158, 11, 0.12)",
+                layer="below",
+                line_width=0,
+                annotation_text="GFC",
+                annotation_position="top left",
+                annotation_font=dict(size=10, color="#b45309"),
+            )
+        # IBC (2016-2019)
+        if "2016" in cats_str and "2019" in cats_str:
+            fig.add_vrect(
+                x0="2016",
+                x1="2019",
+                fillcolor="rgba(99, 102, 241, 0.12)",
+                layer="below",
+                line_width=0,
+                annotation_text="IBC Reform",
+                annotation_position="top left",
+                annotation_font=dict(size=10, color="#4338ca"),
+            )
+        # COVID-19 (2020-2021)
+        if "2020" in cats_str and "2021" in cats_str:
+            fig.add_vrect(
+                x0="2020",
+                x1="2021",
+                fillcolor="rgba(239, 68, 68, 0.12)",
+                layer="below",
+                line_width=0,
+                annotation_text="COVID-19",
+                annotation_position="top left",
+                annotation_font=dict(size=10, color="#b91c1c"),
+            )
 
     layout_func = plotly_layout_dark if str(theme).lower() == "dark" else plotly_layout_light
     base_layout = layout_func(title=title)
     fig.update_layout(
         **base_layout,
-        xaxis_title=x_label,
-        yaxis_title=y_label,
+        xaxis_title=x_label or ("Year" if is_time_series else None),
+        yaxis_title=y_label or (series_cleaned[0]["name"] if series_cleaned else "Value"),
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
-    # Ensure y-axis autoranges accurately to show variations in decimals
-    fig.update_yaxes(autorange=True)
+    if dual_axis and len(series_cleaned) > 1:
+        fig.update_layout(
+            yaxis2=dict(
+                title=series_cleaned[1]["name"],
+                overlaying="y",
+                side="right",
+                showgrid=False,
+            )
+        )
+    fig.update_xaxes(showline=True, linewidth=1, linecolor="#94a3b8", gridcolor="rgba(148, 163, 184, 0.2)", gridwidth=1, griddash="dash")
+    fig.update_yaxes(showline=True, linewidth=1, linecolor="#94a3b8", gridcolor="rgba(148, 163, 184, 0.2)", gridwidth=1, griddash="dash", autorange=True)
     return fig
 
 

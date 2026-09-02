@@ -160,15 +160,21 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
         return
 
     with st.container(border=True):
-        st.markdown("**Interactive visualization**")
-        c1, c2, c3, c4 = st.columns([1, 1.2, 1.2, 1])
+        st.markdown("**Interactive visualization** *(Stata Econometric Standard)*")
+        c1, c2, c3, c4, c5 = st.columns([1, 1.1, 1.1, 1, 1.2])
         with c1:
             limits = [10, 25, 50, len(categories)]
             limits = list(dict.fromkeys(n for n in limits if n <= len(categories)))
             top_n = st.selectbox("Categories", limits, index=len(limits) - 1,
                                  key=f"{key_prefix}_top_n")
         with c2:
-            as_percent = st.checkbox("Display as %", value=False, key=f"{key_prefix}_percent")
+            scale_mode = st.selectbox(
+                "Scaling",
+                ["Auto Harmonized", "Dual Y-Axis", "Raw Units"],
+                index=0,
+                key=f"{key_prefix}_scale",
+                help="Auto Harmonized converts decimals to % for consistent axes. Dual Y-Axis separates series across Left/Right axes.",
+            )
         with c3:
             sort_order = st.selectbox(
                 "Sort",
@@ -181,8 +187,10 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
                 ["Vertical", "Horizontal"],
                 key=f"{key_prefix}_orientation",
             )
-        with c1:
-            st.caption(f"{len(categories)} categories · {len(series)} series")
+        with c5:
+            event_bands = st.checkbox("Event Bands", value=True, key=f"{key_prefix}_events", help="Shade GFC (2008-09), IBC (2016-19), and COVID-19 (2020-21)")
+
+        st.caption(f"{len(categories)} categories · {len(series)} series · Stata Academic Palette")
 
         display_spec = copy.deepcopy(spec)
         indexed_categories = list(enumerate(categories))
@@ -199,19 +207,18 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
         for item in series:
             source_values = list(item.get("values") or [])
             values = [source_values[index] for index in selected_indexes if index < len(source_values)]
-            if as_percent:
-                values = [round(float(value) * 100, 4) for value in values]
+            if scale_mode == "Auto Harmonized":
+                # let render_chat_chart_figure handle harmonization
+                pass
             display_series.append({**item, "values": values})
         display_spec["series"] = display_series
         display_spec["orientation"] = "h" if orientation_label == "Horizontal" else "v"
-        if as_percent and display_spec.get("y_axis_label"):
-            label = str(display_spec["y_axis_label"])
-            if "%" not in label:
-                display_spec["y_axis_label"] = f"{label} (%)"
+        display_spec["dual_axis"] = (scale_mode == "Dual Y-Axis")
+        display_spec["show_event_bands"] = event_bands
 
         fig = render_chat_chart_figure(display_spec, theme=st.session_state.get("theme", "light"))
         st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_figure")
-        with st.expander("Chart data", expanded=False):
+        with st.expander("Chart data & Replication Code", expanded=False):
             st.download_button(
                 "Download JSON",
                 data=json.dumps(display_spec, indent=2, default=str),
@@ -225,9 +232,10 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
             for index, category in enumerate(display_spec["categories"]):
                 writer.writerow([category] + [item["values"][index] if index < len(item["values"]) else ""
                                               for item in display_series])
+            csv_data = output.getvalue()
             st.download_button(
                 "Download CSV",
-                data=output.getvalue(),
+                data=csv_data,
                 file_name="ai_chart.csv",
                 mime="text/csv",
                 key=f"{key_prefix}_csv",
@@ -239,9 +247,40 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
                 mime="text/html",
                 key=f"{key_prefix}_html",
             )
-            # PNG conversion is intentionally omitted from the render path;
-            # Kaleido can block the whole Streamlit script on large charts.
-            st.caption("Use the chart toolbar camera icon to save a PNG.")
+
+            # Generate Stata .do replication script
+            series_vars = [re.sub(r"\W+", "_", str(s.get("name", f"v{i}")).lower()).strip("_") for i, s in enumerate(display_series)]
+            stata_lines = [
+                "* -----------------------------------------------------------------------------",
+                "* LifeCycle Leverage — Stata Publication Replication Script",
+                f"* Title: {display_spec.get('title', 'Econometric Visualization')}",
+                "* -----------------------------------------------------------------------------",
+                "clear all",
+                "import delimited \"ai_chart.csv\", varnames(1) clear",
+                "",
+                "* Plotting Stata twoway connected visualization",
+                "twoway \\",
+            ]
+            for i, var_name in enumerate(series_vars):
+                color = "blue" if i == 0 else ("red" if i == 1 else "forest_green")
+                stata_lines.append(f"    (connected {var_name} category, lcolor({color}) mcolor({color}) msize(medium)) \\")
+            stata_lines.extend([
+                f"    , title(\"{display_spec.get('title', 'Econometric Analysis')}\", size(medium)) \\",
+                f"      ytitle(\"{display_spec.get('y_axis_label', 'Mean')}\") xtitle(\"{display_spec.get('x_axis_label', 'Period')}\") \\",
+                "      legend(order(" + " ".join(f"{i+1} \"{display_series[i].get('name')}\"" for i in range(len(display_series))) + ") rows(1)) \\",
+                "      scheme(s2color) graphregion(color(white))",
+                "",
+                "graph export \"econometric_figure.png\", as(png) replace width(2400)",
+                "graph export \"econometric_figure.pdf\", as(pdf) replace",
+            ])
+            st.download_button(
+                "Download Stata (.do) Replication Script",
+                data="\n".join(stata_lines),
+                file_name="replicate_chart.do",
+                mime="text/x-stata",
+                key=f"{key_prefix}_stata",
+            )
+            st.caption("Use the chart toolbar camera icon to save a high-res vector/PNG image.")
 
 
 def _split_supporting_tables(text: str) -> tuple[str, list[str]]:
