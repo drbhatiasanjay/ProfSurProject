@@ -361,9 +361,23 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
     orientation = str(spec.get("orientation", "v")).lower()
     show_trendline = bool(spec.get("show_trendline", False))
 
+    _CHART_COLORS = [
+        "#0284c7",  # Electric Sky Blue (Series 1 / Leverage)
+        "#e11d48",  # Crimson / Rose (Series 2 / Profitability - Stata contrast)
+        "#10b981",  # Emerald Green (Series 3)
+        "#f59e0b",  # Amber Orange (Series 4)
+        "#8b5cf6",  # Purple (Series 5)
+        "#06b6d4",  # Cyan (Series 6)
+        "#ec4899",  # Pink (Series 7)
+    ]
+
     clean_cats = [str(c).strip() for c in raw_cats]
 
-    fig = go.Figure()
+    # Pre-scan series to detect unit/scale mismatches (e.g. leverage in % [10-50] vs profitability in decimal [0.1-0.3])
+    series_cleaned = []
+    has_large_scale = False
+    has_small_scale = False
+
     for s in series:
         s_name = s.get("name", "")
         raw_vals = s.get("values", [])
@@ -377,24 +391,56 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
             else:
                 clean_vals.append(0.0)
 
+        if clean_vals:
+            max_v = max(clean_vals)
+            if max_v > 2.0:
+                has_large_scale = True
+            elif 0 < max_v <= 1.0:
+                has_small_scale = True
+
+        series_cleaned.append({"name": s_name, "values": clean_vals})
+
+    # If comparing percentage series (> 2.0) with decimal ratio series (<= 1.0),
+    # automatically harmonize decimal ratio series to percentage (* 100) so both curves share the dynamic visual range
+    if len(series_cleaned) > 1 and has_large_scale and has_small_scale:
+        for s in series_cleaned:
+            vals = s["values"]
+            if vals and 0 < max(vals) <= 1.0:
+                s["values"] = [round(v * 100.0, 3) for v in vals]
+                if "(%)" not in s["name"] and "pct" not in s["name"].lower():
+                    s["name"] = f"{s['name']} (%)"
+
+    fig = go.Figure()
+    for s_idx, s in enumerate(series_cleaned):
+        s_name = s.get("name", "")
+        clean_vals = s.get("values", [])
+        color = _CHART_COLORS[s_idx % len(_CHART_COLORS)]
+
         # Match category count if possible
         plot_x = clean_cats[:len(clean_vals)] if clean_cats else list(range(1, len(clean_vals) + 1))
 
         if chart_type == "bar":
             if orientation == "h":
-                fig.add_trace(go.Bar(x=clean_vals, y=plot_x, name=s_name, orientation="h", marker=dict(color="#0284c7")))
+                fig.add_trace(go.Bar(x=clean_vals, y=plot_x, name=s_name, orientation="h", marker=dict(color=color)))
             else:
-                fig.add_trace(go.Bar(x=plot_x, y=clean_vals, name=s_name, marker=dict(color="#0284c7")))
+                fig.add_trace(go.Bar(x=plot_x, y=clean_vals, name=s_name, marker=dict(color=color)))
         elif chart_type == "scatter":
-            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="markers", name=s_name, marker=dict(size=8, color="#0284c7")))
+            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="markers", name=s_name, marker=dict(size=8, color=color)))
         elif chart_type == "box":
-            fig.add_trace(go.Box(y=clean_vals, name=s_name, x=plot_x if len(plot_x) == len(clean_vals) else None))
+            fig.add_trace(go.Box(y=clean_vals, name=s_name, x=plot_x if len(plot_x) == len(clean_vals) else None, marker=dict(color=color)))
         elif chart_type in ("area", "filled_line"):
-            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="lines", fill="tozeroy", name=s_name, line=dict(color="#0284c7")))
+            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="lines", fill="tozeroy", name=s_name, line=dict(color=color)))
         elif chart_type == "histogram":
-            fig.add_trace(go.Histogram(x=clean_vals, name=s_name, marker=dict(color="#0284c7")))
+            fig.add_trace(go.Histogram(x=clean_vals, name=s_name, marker=dict(color=color)))
         else:
-            fig.add_trace(go.Scatter(x=plot_x, y=clean_vals, mode="lines+markers", name=s_name, line=dict(width=2.5, color="#0284c7"), marker=dict(size=6, color="#0284c7")))
+            fig.add_trace(go.Scatter(
+                x=plot_x,
+                y=clean_vals,
+                mode="lines+markers",
+                name=s_name,
+                line=dict(width=2.5, color=color),
+                marker=dict(size=6, color=color),
+            ))
 
         if chart_type == "scatter" and show_trendline and len(clean_vals) >= 2:
             import numpy as np
@@ -422,7 +468,7 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
         xaxis_title=x_label,
         yaxis_title=y_label,
     )
-    # Ensure y-axis autoranges accurately to show variations in decimals (e.g. ROA 0.13-0.18)
+    # Ensure y-axis autoranges accurately to show variations in decimals
     fig.update_yaxes(autorange=True)
     return fig
 
