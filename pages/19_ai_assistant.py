@@ -17,7 +17,7 @@ import plotly.graph_objects as go
 from helpers import require_role, plotly_layout
 import db
 
-require_role("admin", "researcher")
+require_role("admin", "researcher", "viewer", "cfo", "guest")
 db.log_page_visit("ai_assistant_page")
 
 # ── Session persistence lifecycle ─────────────────────────────────────────────
