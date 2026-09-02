@@ -854,7 +854,7 @@ def run_live_econometric_model(
         selected_model_name = "Two-Way Fixed Effects Panel Regression"
         if hausman_p is not None and hausman_p < 0.05:
             selection_reason = (
-                f"Automated Hausman test rejected Random Effects (χ²={hausman_stat:.2f}, p < 0.0001). "
+                f"Automated Hausman test rejected Random Effects (Chi2={hausman_stat:.2f}, p < 0.0001). "
                 "Fixed Effects within-estimator is mathematically required to eliminate unobserved firm-specific heterogeneity."
             )
         else:
@@ -884,11 +884,11 @@ def run_live_econometric_model(
 
     # 7. Strict Guardrails
     guardrails = {
-        "what_is_proven": f"Establishes empirical within-firm co-movement across {n_firms} firms ({n_obs} observations) over {year_start}–{year_end} while holding time-invariant firm traits constant.",
+        "what_is_proven": f"Establishes empirical within-firm co-movement across {n_firms} firms ({n_obs} observations) over {year_start}-{year_end} while holding time-invariant firm traits constant.",
         "strict_limitations": [
             "Cannot assert pure exogenous causality without an external instrumental variable (time-varying unobserved shocks may exist).",
             "Coefficients are specific to the filtered panel subset and cannot be generalized across dissimilar industries without empirical re-estimation.",
-            "Panel dataset is restricted to BSE/NSE listed Indian corporate entities (2001–2025).",
+            "Panel dataset is restricted to BSE/NSE listed Indian corporate entities (2001-2025).",
         ],
     }
 
@@ -899,7 +899,7 @@ def run_live_econometric_model(
         "sample": {
             "n_obs": n_obs,
             "n_firms": n_firms,
-            "year_range": f"{year_start}–{year_end}",
+            "year_range": f"{year_start}-{year_end}",
             "industry": industry_group or "Full Panel Sample",
             "life_stage": life_stage or "All Stages",
         },
@@ -936,7 +936,7 @@ def run_cfo_stress_simulation(
         new_life_stage: Optional simulated Dickinson stage migration (e.g. 'Shakeout', 'Decline').
 
     Returns:
-        Dict with target leverage shift, Interest Coverage Ratio (ICR), covenant headroom (₹ Cr), rating band, and 3-point CFO playbook.
+        Dict with target leverage shift, Interest Coverage Ratio (ICR), covenant headroom (Rs. Cr), rating band, and 3-point CFO playbook.
     """
     # 1. Resolve Company
     conn = db.get_connection()
@@ -1008,8 +1008,8 @@ def run_cfo_stress_simulation(
     base_icr = 3.55
     shocked_icr = max(0.60, base_icr + (operating_margin_shock_pct * 0.05) - (interest_rate_shock_bps * 0.0055))
 
-    # 4. Debt Headroom in ₹ Crores
-    # Base headroom ₹1,420 Cr; each 1% ICR buffer ~ ₹350 Cr
+    # 4. Debt Headroom in Rs. Crores
+    # Base headroom Rs. 1,420 Cr; each 1% ICR buffer ~ Rs. 350 Cr
     base_headroom = 1420
     headroom_delta = int((shocked_icr - 2.0) * 850)
     available_headroom_cr = max(0, headroom_delta)
@@ -1029,8 +1029,8 @@ def run_cfo_stress_simulation(
     # 6. Strategic C-Suite Action Playbook
     playbook = [
         f"1. Refinance Short-Term Commercial Paper: Pre-fund maturing obligations with 3- to 5-year fixed paper to insulate against the +{int(interest_rate_shock_bps)} bps rate shock.",
-        f"2. Calibrate Capital Expenditure: Adjust discretionary CapEx by 10–15% to preserve internal operating cash flow.",
-        f"3. Working Capital Cash Acceleration: Reduce receivables cash conversion cycle (DSO) by 6 days to free ₹{min(350, max(120, int(available_headroom_cr * 0.15)))} Cr in liquid cash.",
+        f"2. Calibrate Capital Expenditure: Adjust discretionary CapEx by 10-15% to preserve internal operating cash flow.",
+        f"3. Working Capital Cash Acceleration: Reduce receivables cash conversion cycle (DSO) by 6 days to free Rs. {min(350, max(120, int(available_headroom_cr * 0.15)))} Cr in liquid cash.",
     ]
 
     return {
@@ -1046,11 +1046,11 @@ def run_cfo_stress_simulation(
         "covenant_and_debt_metrics": {
             "baseline_leverage": f"{base_lev:.2f}%",
             "shocked_target_leverage": f"{shocked_target_lev:.2f}%",
-            "leverage_delta": f"{'+' if delta_target_lev >= 0 else ''}{delta_target_lev:.2f}% Δ",
+            "leverage_delta": f"{'+' if delta_target_lev >= 0 else ''}{delta_target_lev:.2f}% (delta)",
             "interest_coverage_ratio": f"{shocked_icr:.2f}x",
             "covenant_floor": "2.00x",
             "covenant_status": covenant_status,
-            "available_debt_headroom_cr": f"₹{available_headroom_cr:,} Cr",
+            "available_debt_headroom_cr": f"Rs. {available_headroom_cr:,} Cr",
             "simulated_credit_rating": rating_band,
         },
         "cfo_action_playbook": playbook,
