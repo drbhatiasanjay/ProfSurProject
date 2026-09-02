@@ -180,3 +180,36 @@ def test_execute_export_dta(sample_panel_df, tmp_path):
     # Verify readable by pandas Stata reader
     reloaded = pd.read_stata(out_file)
     assert len(reloaded) == len(sample_panel_df)
+
+
+def test_regression_auto_generates_graph(sample_panel_df):
+    from models.stata_engine import execute_stata_command
+    res = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=sample_panel_df)
+    assert res["status"] == "success"
+    assert "chart_spec" in res, "Regression must automatically return a chart_spec for immediate visualization"
+    spec = res["chart_spec"]
+    assert spec["chart_type"] == "scatter"
+    assert "profitability" in spec["categories"]
+    assert "error_bars" in spec
+    assert len(spec["error_bars"]["low"]) == len(spec["categories"])
+
+
+def test_scatter_graph_command(sample_panel_df):
+    from models.stata_engine import execute_stata_command
+    res = execute_stata_command("scatter leverage profitability", df=sample_panel_df)
+    assert res["status"] == "success"
+    assert "chart_spec" in res
+    spec = res["chart_spec"]
+    assert spec["chart_type"] == "scatter"
+    assert spec["x_axis_label"] == "profitability"
+    assert spec["y_axis_label"] == "leverage"
+
+
+def test_histogram_graph_command(sample_panel_df):
+    from models.stata_engine import execute_stata_command
+    res = execute_stata_command("histogram leverage", df=sample_panel_df)
+    assert res["status"] == "success"
+    assert "chart_spec" in res
+    spec = res["chart_spec"]
+    assert spec["chart_type"] == "histogram"
+    assert spec["x_axis_label"] == "leverage"

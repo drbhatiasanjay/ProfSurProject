@@ -459,11 +459,36 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
                     yaxis="y2" if use_y2 else "y",
                 ))
         elif chart_type == "scatter":
-            fig.add_trace(go.Scatter(
-                x=plot_x, y=clean_vals, mode="markers", name=s_name,
-                marker=dict(size=8, color=color),
-                yaxis="y2" if use_y2 else "y",
-            ))
+            error_bars = spec.get("error_bars")
+            if error_bars and "low" in error_bars and "high" in error_bars:
+                lows = error_bars["low"]
+                highs = error_bars["high"]
+                err_minus = [v - l for v, l in zip(clean_vals, lows)]
+                err_plus = [h - v for v, h in zip(clean_vals, highs)]
+                fig.add_trace(go.Scatter(
+                    x=clean_vals,
+                    y=plot_x,
+                    mode="markers",
+                    name=s_name,
+                    marker=dict(size=10, color="#1f77b4", symbol="circle"),
+                    error_x=dict(
+                        type="data",
+                        symmetric=False,
+                        array=err_plus,
+                        arrayminus=err_minus,
+                        color="#1f77b4",
+                        thickness=2,
+                        width=6,
+                    ),
+                    hovertemplate="<b>%{y}</b><br>Estimate: %{x:.4f}<extra></extra>",
+                ))
+                fig.add_vline(x=0, line_width=1.5, line_dash="dash", line_color="#dc2626")
+            else:
+                fig.add_trace(go.Scatter(
+                    x=plot_x, y=clean_vals, mode="markers", name=s_name,
+                    marker=dict(size=8, color=color),
+                    yaxis="y2" if use_y2 else "y",
+                ))
         elif chart_type == "box":
             fig.add_trace(go.Box(
                 y=clean_vals, name=s_name, x=plot_x if len(plot_x) == len(clean_vals) else None,

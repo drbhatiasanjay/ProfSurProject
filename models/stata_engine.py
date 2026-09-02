@@ -71,6 +71,16 @@ def parse_stata_command(cmd_str: str) -> dict:
             indepvars = tokens[2:]
     elif cmd in ("summarize", "sum", "tabstat", "pwcorr", "correlate", "corr"):
         indepvars = tokens[1:]
+    elif cmd == "scatter":
+        if len(tokens) >= 2:
+            depvar = tokens[1]
+        if len(tokens) >= 3:
+            indepvars = tokens[2:]
+    elif cmd in ("histogram", "hist"):
+        if len(tokens) >= 2:
+            depvar = tokens[1]
+        if len(tokens) >= 3:
+            indepvars = tokens[2:]
     elif cmd == "hausman":
         indepvars = tokens[1:3]  # e.g. ['fe', 're']
     elif cmd == "estat":
@@ -147,6 +157,10 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
         return _handle_esttab(parsed, df)
     elif cmd == "coefplot":
         return _handle_coefplot(parsed, df)
+    elif cmd == "scatter":
+        return _handle_scatter(parsed, df)
+    elif cmd in ("histogram", "hist"):
+        return _handle_histogram(parsed, df)
     elif cmd == "export":
         return _handle_export(parsed, df)
     elif cmd == "twoway":
@@ -301,6 +315,37 @@ def _handle_pwcorr(parsed: dict, df: pd.DataFrame) -> dict:
         "ascii_output": "\n".join(lines),
     }
 
+def _build_coefplot_chart_spec(est: dict, drop_cons: bool = True) -> dict:
+    """Build a standard Stata coefplot specification with 95% confidence intervals."""
+    if not est:
+        return None
+    coefs = est.get("coefficients", {})
+    categories = []
+    values = []
+    ci_lows = []
+    ci_highs = []
+
+    for var, vals in coefs.items():
+        if drop_cons and var == "_cons":
+            continue
+        categories.append(var)
+        values.append(vals["coef"])
+        ci_lows.append(vals["ci_low"])
+        ci_highs.append(vals["ci_high"])
+
+    if not categories:
+        return None
+
+    return {
+        "chart_type": "scatter",
+        "title": f"coefplot: {est.get('model_type', 'Econometric')} Estimates (95% CI)",
+        "x_axis_label": "Coefficient Estimate",
+        "y_axis_label": "Determinant",
+        "categories": categories,
+        "series": [{"name": "Point Estimate", "values": values}],
+        "error_bars": {"low": ci_lows, "high": ci_highs},
+    }
+
 
 def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
     global _LAST_ESTIMATE
@@ -318,9 +363,9 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
     result = model.fit(cov_type="HC1" if robust else "nonrobust")
 
     # Format Stata OLS table
-    ss_model = result.ess
-    ss_resid = result.ssr
-    ss_total = ss_model + ss_resid
+    ss_model = float(result.ess)
+    ss_resid = float(result.ssr)
+    ss_total = float(result.centered_tss if hasattr(result, "centered_tss") else ss_model + ss_resid)
     df_model = int(result.df_model)
     df_resid = int(result.df_resid)
     df_total = df_model + df_resid
@@ -366,6 +411,7 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
         "ascii_output": "\n".join(lines),
         "result_obj": result,
     }
+    estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
     _LAST_ESTIMATE = estimate_obj
     _STORED_ESTIMATES["ols"] = estimate_obj
 
@@ -461,6 +507,7 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         "ascii_output": "\n".join(l for l in lines if l),
         "result_obj": res,
     }
+    estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
     _LAST_ESTIMATE = estimate_obj
     store_key = "fe" if is_fe else "re"
     _STORED_ESTIMATES[store_key] = estimate_obj
@@ -546,38 +593,83 @@ def _handle_coefplot(parsed: dict, df: pd.DataFrame) -> dict:
         execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
         est = _LAST_ESTIMATE
 
-    coefs = est.get("coefficients", {})
     drop_cons = "drop(_cons)" in parsed["raw"] or parsed["options"].get("drop") == "_cons"
-
-    categories = []
-    values = []
-    ci_lows = []
-    ci_highs = []
-
-    for var, vals in coefs.items():
-        if drop_cons and var == "_cons":
-            continue
-        categories.append(var)
-        values.append(vals["coef"])
-        ci_lows.append(vals["ci_low"])
-        ci_highs.append(vals["ci_high"])
-
-    chart_spec = {
-        "chart_type": "scatter",
-        "title": f"coefplot: {est.get('model_type', 'Econometric')} Estimates (95% CI)",
-        "x_axis_label": "Coefficient Estimate",
-        "y_axis_label": "Variable",
-        "categories": categories,
-        "series": [{"name": "Point Estimate", "values": values}],
-        "error_bars": {"low": ci_lows, "high": ci_highs},
-    }
+    chart_spec = _build_coefplot_chart_spec(est, drop_cons=drop_cons)
+    cat_len = len(chart_spec["categories"]) if chart_spec else 0
 
     return {
         "status": "success",
         "command": parsed["raw"],
         "chart_spec": chart_spec,
-        "ascii_output": f"Generated coefplot for {len(categories)} determinants.",
+        "ascii_output": f"Generated coefplot for {cat_len} determinants.",
     }
+
+
+def _handle_scatter(parsed: dict, df: pd.DataFrame) -> dict:
+    depvar = parsed.get("depvar")
+    indepvars = parsed.get("indepvars", [])
+    if not depvar or not indepvars:
+        return {"status": "error", "message": "Syntax: scatter <yvar> <xvar>", "ascii_output": "r(102); too few variables specified"}
+    xvar = indepvars[0]
+    if depvar not in df.columns or xvar not in df.columns:
+        return {"status": "error", "message": f"Variables {depvar} or {xvar} not found", "ascii_output": "r(111); variable not found"}
+
+    sub = df[[xvar, depvar]].apply(pd.to_numeric, errors="coerce").dropna()
+    if len(sub) > 500:
+        sub = sub.sample(500, random_state=42)
+    x_vals = [round(float(v), 3) for v in sub[xvar]]
+    y_vals = [round(float(v), 3) for v in sub[depvar]]
+    chart_spec = {
+        "chart_type": "scatter",
+        "title": f"twoway scatter {depvar} {xvar}",
+        "x_axis_label": xvar,
+        "y_axis_label": depvar,
+        "categories": [str(v) for v in x_vals],
+        "series": [{"name": f"{depvar} vs {xvar}", "values": y_vals}],
+        "show_trendline": True,
+    }
+    return {
+        "status": "success",
+        "command": parsed["raw"],
+        "chart_spec": chart_spec,
+        "ascii_output": f"Generated twoway scatter plot: {depvar} vs {xvar} (sample N={len(sub):,}).",
+    }
+
+
+def _handle_histogram(parsed: dict, df: pd.DataFrame) -> dict:
+    varname = parsed.get("depvar") or (parsed.get("indepvars", [""])[0] if parsed.get("indepvars") else "")
+    if not varname or varname not in df.columns:
+        return {"status": "error", "message": f"Variable {varname} not found", "ascii_output": "r(111); variable not found"}
+    series = pd.to_numeric(df[varname], errors="coerce").dropna().tolist()
+    chart_spec = {
+        "chart_type": "histogram",
+        "title": f"histogram {varname}",
+        "x_axis_label": varname,
+        "y_axis_label": "Frequency",
+        "series": [{"name": varname, "values": series[:2000]}],
+    }
+    return {
+        "status": "success",
+        "command": parsed["raw"],
+        "chart_spec": chart_spec,
+        "ascii_output": f"Generated distribution histogram for {varname} (N={len(series):,}).",
+    }
+
+
+def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
+    raw = parsed.get("raw", "")
+    tokens = parsed.get("indepvars", [])
+    if "scatter" in tokens:
+        s_idx = tokens.index("scatter")
+        sub_tokens = tokens[s_idx:]
+        depvar = sub_tokens[1] if len(sub_tokens) > 1 else ""
+        xvar = sub_tokens[2] if len(sub_tokens) > 2 else ""
+        parsed_scatter = {"depvar": depvar, "indepvars": [xvar] if xvar else [], "raw": raw}
+        return _handle_scatter(parsed_scatter, df)
+    elif len(tokens) >= 2:
+        parsed_scatter = {"depvar": tokens[0], "indepvars": tokens[1:], "raw": raw}
+        return _handle_scatter(parsed_scatter, df)
+    return {"status": "error", "message": "Syntax: twoway scatter <yvar> <xvar>", "ascii_output": "r(198); invalid twoway syntax"}
 
 
 def _handle_esttab(parsed: dict, df: pd.DataFrame) -> dict:
