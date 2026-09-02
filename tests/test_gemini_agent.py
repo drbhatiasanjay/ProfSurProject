@@ -52,6 +52,14 @@ class TestStreamGeminiAgent:
         )
         assert len(spec["series"]) == 2
 
+    def test_industry_leverage_chart_ignores_firm_count_series(self):
+        spec = build_chart_spec_from_rows(
+            [{"industry_group": "A", "average_leverage": 20, "num_firms": 10},
+             {"industry_group": "B", "average_leverage": 30, "num_firms": 20}],
+            "How does leverage differ across industries?",
+        )
+        assert [series["name"] for series in spec["series"]] == ["average_leverage"]
+
     def test_chart_fallback_supports_horizontal_bar(self):
         spec = build_chart_spec_from_rows(
             [{"industry_group": "A", "leverage": 20}, {"industry_group": "B", "leverage": 30}],

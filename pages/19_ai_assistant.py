@@ -729,7 +729,9 @@ if user_q:
             chart_requested=_chart_requested,
         )
         full = normalized["answer"]
-        if normalized["chart_spec"] and _chart_found is None:
+        if normalized["chart_spec"]:
+            # Apply the same query-aware series filtering to tool-generated
+            # charts and embedded/fallback charts before the final render.
             _chart_found = normalized["chart_spec"]
 
         full_display, _chips_found = parse_followup_chips(full)

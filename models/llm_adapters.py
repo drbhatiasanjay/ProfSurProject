@@ -801,6 +801,31 @@ def build_chart_spec_from_rows(rows: list[dict], user_query: str = "") -> Option
         return None
 
     query_lower = str(user_query).lower()
+    requested_metric_terms = [
+        ("leverage", ("leverage",)),
+        ("profitability", ("profitability", "profit", "roa")),
+        ("tangibility", ("tangibility",)),
+    ]
+    requested_metric_terms = [
+        item for item in requested_metric_terms if any(term in query_lower for term in item[1])
+    ]
+    if requested_metric_terms:
+        matching = [
+            item for item in numeric_candidates
+            if any(term in str(item[1]).lower() for _, aliases in requested_metric_terms for term in aliases)
+        ]
+        # Keep multiple measures only when the prompt explicitly names them.
+        if matching:
+            selected_metric_terms = {
+                name for name, aliases in requested_metric_terms
+                if any(term in str(item[1]).lower() for item in matching for term in aliases)
+            }
+            if len(selected_metric_terms) == 1:
+                numeric_candidates = matching
+            elif len(selected_metric_terms) < len(requested_metric_terms):
+                numeric_candidates = matching
+    elif any(item[0] for item in numeric_candidates):
+        numeric_candidates = [item for item in numeric_candidates if item[0]]
     wants_scatter = "scatter" in query_lower or "versus" in query_lower or " vs " in query_lower
     if wants_scatter and category_key == keys[0] and len(numeric_candidates) >= 2:
         # For x-versus-y rows, use the first numeric column as X and the
@@ -840,6 +865,28 @@ def build_chart_spec_from_rows(rows: list[dict], user_query: str = "") -> Option
         show_trendline="trendline" in query_lower,
     )
     return result.get("chart_spec") if result.get("status") == "success" else None
+
+
+def _filter_chart_series_for_query(spec: Optional[dict], user_query: str = "") -> Optional[dict]:
+    """Drop incidental numeric series (for example firm counts) from single-metric charts."""
+    if not isinstance(spec, dict) or not isinstance(spec.get("series"), list):
+        return spec
+    query = str(user_query or "").lower()
+    requested = [
+        ("leverage", ("leverage",)),
+        ("profitability", ("profitability", "profit", "roa")),
+        ("tangibility", ("tangibility",)),
+    ]
+    requested = [item for item in requested if any(term in query for term in item[1])]
+    if len(set(requested)) != 1 or len(spec["series"]) <= 1:
+        return spec
+    aliases = requested[0][1]
+    matching = [s for s in spec["series"] if any(term in str(s.get("name", "")).lower() for term in aliases)]
+    if not matching:
+        return spec
+    filtered = dict(spec)
+    filtered["series"] = matching
+    return filtered
 
 
 def select_chart_rows_for_query(datasets: list[list[dict]], user_query: str = "") -> list[dict]:
@@ -960,10 +1007,11 @@ def normalize_assistant_response(
         # never leak into the user-facing answer as a wide monospace block.
         answer = _remove_unrenderable_chart_blocks(answer)
     answer = _remove_repeated_sections(answer)
-    resolved_chart = chart_spec or embedded_chart
+    resolved_chart = _filter_chart_series_for_query(chart_spec or embedded_chart, user_query)
     table = _extract_markdown_table(answer)
     if chart_requested and resolved_chart is None:
         resolved_chart = extract_table_chart_spec(answer, user_q=user_query)
+        resolved_chart = _filter_chart_series_for_query(resolved_chart, user_query)
     return {
         "answer": answer,
         "table": table,
