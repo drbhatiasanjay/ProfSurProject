@@ -306,6 +306,17 @@ _header_text = "#0F172A" if _theme == "light" else "#F8FAFC"
 _header_sub  = "#64748B" if _theme == "light" else "#94A3B8"
 _accent_grad = "linear-gradient(135deg, #4F46E5, #0891B2)" if _theme == "light" else "linear-gradient(135deg, #6366F1, #06B6D4)"
 
+_nav_border = "rgba(226, 232, 240, 0.8)" if _theme == "light" else "rgba(255, 255, 255, 0.08)"
+_nav_shadow = "0 2px 10px rgba(0,0,0,0.04)" if _theme == "light" else "0 4px 20px rgba(0,0,0,0.35)"
+_version_border = "#e2e8f0" if _theme == "light" else "rgba(255,255,255,0.1)"
+_tag_bg = "rgba(79, 70, 229, 0.1)" if _theme == "light" else "rgba(99, 102, 241, 0.15)"
+_tag_color = "#4F46E5" if _theme == "light" else "#818CF8"
+_tag_border = "rgba(79, 70, 229, 0.3)" if _theme == "light" else "rgba(99, 102, 241, 0.3)"
+_signout_bg = "rgba(244, 63, 94, 0.08)" if _theme == "light" else "rgba(244, 63, 94, 0.12)"
+_signout_color = "#E11D48" if _theme == "light" else "#FB7185"
+_signout_border = "rgba(225, 29, 72, 0.25)" if _theme == "light" else "rgba(244, 63, 94, 0.3)"
+_panel_title = _panel_labels_map.get(_qp_panel, _qp_panel)
+
 st.markdown(f"""
 <div id="lc-navbar" style="
     position: fixed;
@@ -317,8 +328,8 @@ st.markdown(f"""
     background: {_header_bg};
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid {'rgba(226, 232, 240, 0.8)' if _theme == 'light' else 'rgba(255, 255, 255, 0.08)'};
-    box-shadow: {'0 2px 10px rgba(0,0,0,0.04)' if _theme == 'light' else '0 4px 20px rgba(0,0,0,0.35)'};
+    border-bottom: 1px solid {_nav_border};
+    box-shadow: {_nav_shadow};
     padding: 0 1.75rem;
     display: flex;
     align-items: center;
@@ -328,19 +339,19 @@ st.markdown(f"""
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 ">
     <span style="font-family:'Plus Jakarta Sans', sans-serif; font-weight:800; background:{_accent_grad}; -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:18px; white-space:nowrap; display:flex; align-items:center; gap:6px;">
-        💎 LifeCycle Leverage<span style="font-size:11px;color:{_header_sub};font-weight:600;margin-left:6px;border:1px solid {'#e2e8f0' if _theme == 'light' else 'rgba(255,255,255,0.1)'};padding:2px 6px;border-radius:6px;-webkit-text-fill-color:initial;">v{_APP_VERSION}</span>
+        💎 LifeCycle Leverage<span style="font-size:11px;color:{_header_sub};font-weight:600;margin-left:6px;border:1px solid {_version_border};padding:2px 6px;border-radius:6px;-webkit-text-fill-color:initial;">v{_APP_VERSION}</span>
     </span>
-    <span style="background:{'rgba(79, 70, 229, 0.1)' if _theme == 'light' else 'rgba(99, 102, 241, 0.15)'};color:{'#4F46E5' if _theme == 'light' else '#818CF8'};border:1px solid {'rgba(79, 70, 229, 0.3)' if _theme == 'light' else 'rgba(99, 102, 241, 0.3)'};border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;white-space:nowrap;">
-        🏷️&nbsp;{_panel_labels_map.get(_qp_panel, _qp_panel)}
+    <span style="background:{_tag_bg};color:{_tag_color};border:1px solid {_tag_border};border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;white-space:nowrap;">
+        🏷️&nbsp;{_panel_title}
     </span>
     <span style="white-space:nowrap; color:{_header_sub};"><strong>{_display_name}</strong> &middot; <span style="text-transform:capitalize;">{_role_display}</span></span>
     <span style="margin-left:auto; color:{_header_sub}; font-size:13px; font-family:'JetBrains Mono', monospace; white-space:nowrap;">{_now_str}</span>
     <button
         onclick="(function(){{var btns=document.querySelectorAll('section[data-testid=stSidebar] button');for(var b of btns){{if(b.innerText.includes('Sign out')){{b.click();return;}}}}}})()"
         style="
-            background: {'rgba(244,63,94,0.08)' if _theme == 'light' else 'rgba(244,63,94,0.12)'};
-            color: {'#E11D48' if _theme == 'light' else '#FB7185'};
-            border: 1px solid {'rgba(225,29,72,0.25)' if _theme == 'light' else 'rgba(244,63,94,0.3)'};
+            background: {_signout_bg};
+            color: {_signout_color};
+            border: 1px solid {_signout_border};
             font-weight: 600;
             font-size: 13px;
             border-radius: 8px;
@@ -351,7 +362,7 @@ st.markdown(f"""
             transition: all 0.2s ease;
         "
         onmouseover="this.style.background='rgba(244,63,94,0.2)'"
-        onmouseout="this.style.background={'\"rgba(244,63,94,0.08)\"' if _theme == 'light' else '\"rgba(244,63,94,0.12)\"'}"
+        onmouseout="this.style.background='{_signout_bg}'"
     >Sign Out</button>
 </div>
 <style>

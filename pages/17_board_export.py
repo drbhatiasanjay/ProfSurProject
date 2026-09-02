@@ -43,8 +43,8 @@ except Exception as _e:
     st.error(f"Failed to load company list. Please refresh. ({_e})")
     st.stop()
 # Put Indian firms first (they have thesis data), US firms at the end
-india_df = companies_df[~companies_df["company_name"].str.contains("Inc\.|Corp\.|Co\.", regex=True, na=False)]
-us_df    = companies_df[companies_df["company_name"].str.contains("Inc\.|Corp\.|Co\.", regex=True, na=False)]
+india_df = companies_df[~companies_df["company_name"].str.contains(r"Inc\.|Corp\.|Co\.", regex=True, na=False)]
+us_df    = companies_df[companies_df["company_name"].str.contains(r"Inc\.|Corp\.|Co\.", regex=True, na=False)]
 ordered_names = india_df["company_name"].tolist() + us_df["company_name"].tolist()
 
 _saved_company = _bd_prefs.get("selected_company", ordered_names[0] if ordered_names else "")
