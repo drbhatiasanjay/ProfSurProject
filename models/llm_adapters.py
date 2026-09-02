@@ -1000,7 +1000,10 @@ def stream_with_fallback(primary: Iterator[Any], fallback_factory) -> Iterator[A
     yielded_content = False
     for chunk in primary:
         text, _chart = normalize_assistant_chunk(chunk)
-        is_error = text.lstrip().startswith("[") and " error" in text[:80].lower()
+        is_error = text.lstrip().startswith("[") and any(
+            err_marker in text[:120].lower()
+            for err_marker in ("error", "not configured", "not installed", "backend not", "invalid_argument")
+        )
         if is_error and not yielded_content:
             yield from fallback_factory()
             return
@@ -1172,7 +1175,12 @@ def stream_gemini_agent(
     if not api_key:
         try:
             import streamlit as st
-            api_key = st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
+            api_key = (
+                st.session_state.get("gemini_api_key")
+                or st.secrets.get("GEMINI_API_KEY")
+                or st.secrets.get("GOOGLE_API_KEY")
+                or st.secrets.get("credentials", {}).get("gemini_api_key")
+            )
         except Exception:
             api_key = None
 

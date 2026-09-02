@@ -388,8 +388,26 @@ with st.sidebar:
         ["gemini", "anthropic", "ollama"],
         index=0,
         key="p19_backend",
-        help="Gemini: Google ADK multi-tool agent (NL-to-SQL + Charting + KG2). Anthropic: Claude Haiku/Sonnet. Ollama: local, zero data egress.",
+        help="Gemini: Google GenAI multi-tool agent (NL-to-SQL + Live Econometrics + CFO Stress Tester). Anthropic: Claude Haiku/Sonnet. Ollama: local.",
     )
+    if backend == "gemini":
+        _has_gemini_key = bool(
+            os.environ.get("GEMINI_API_KEY")
+            or os.environ.get("GOOGLE_API_KEY")
+            or st.session_state.get("gemini_api_key")
+            or (hasattr(st, "secrets") and (st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")))
+        )
+        if not _has_gemini_key:
+            _custom_gkey = st.text_input(
+                "Gemini API Key",
+                type="password",
+                value=st.session_state.get("gemini_api_key", ""),
+                help="Enter your Google AI Studio key (AIzaSy...) or switch Backend to Anthropic Claude.",
+                key="gemini_api_key_input",
+            )
+            if _custom_gkey:
+                st.session_state["gemini_api_key"] = _custom_gkey
+                st.success("API key active for session ✓")
     citations_on = st.session_state.get("p19_citations", False)
     st.caption(f"Academic citations: **{'on' if citations_on else 'off'}** — toggle in sidebar under AI Settings.")
     if mode == "CFO":
