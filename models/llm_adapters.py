@@ -1221,11 +1221,16 @@ def stream_gemini_agent(
     try:
         client = genai.Client(api_key=api_key)
 
-        # Bind scope in the closure so the model cannot omit or change it.
         def query_financial_database(sql_query: str) -> str:
             return json.dumps(_qfd(sql_query, panel_mode=panel_mode, filters=filters), default=str)
 
         query_financial_database.__annotations__ = {"sql_query": str, "return": str}
+
+        def run_stata_command(command: str) -> str:
+            from models.agent_tools import run_stata_command as _rsc
+            return json.dumps(_rsc(command), default=str)
+
+        run_stata_command.__annotations__ = {"command": str, "return": str}
 
         role_lower = role.lower()
         if role_lower in ("admin", "researcher"):
@@ -1296,6 +1301,7 @@ def stream_gemini_agent(
                 query_semantic_ontology,
                 run_live_econometric_model,
                 run_cfo_stress_simulation,
+                run_stata_command,
             ],
         )
 

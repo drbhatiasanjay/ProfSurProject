@@ -230,6 +230,32 @@ def query_financial_database(
         }
 
 
+def run_stata_command(command: str) -> dict:
+    """Execute an empirical Stata command against the active panel dataset.
+
+    Supported Stata commands:
+    - xtreg depvar indepvars, fe cluster(company_code) [Fixed Effects]
+    - xtreg depvar indepvars, re [Random Effects]
+    - regress depvar indepvars, robust [Pooled OLS with White SE]
+    - summarize [varlist], detail [Summary statistics & percentiles]
+    - tabstat [varlist], by(varname) stat(mean sd n) [Group tabulation]
+    - pwcorr [varlist], sig star(0.05) [Correlation matrix with stars]
+    - hausman fe re [Hausman specification test]
+    - estat vif [Variance Inflation Factors for multicollinearity]
+    - esttab [Side-by-side publication comparison table]
+    - coefplot [Point estimates with 95% confidence intervals]
+    - export dta using filename.dta [Native Stata .dta dataset export]
+
+    Args:
+        command: Stata command string, e.g. 'xtreg leverage roa tang size, fe cluster(company_code)'
+
+    Returns:
+        Dict with status, ascii_output, statistics, and optional chart_spec.
+    """
+    from models.stata_engine import execute_stata_command
+    return execute_stata_command(command)
+
+
 # ── In-Chat Plotly Visualization Spec Generator ───────────────────────────────
 
 def generate_chat_chart(

@@ -674,12 +674,36 @@ if user_q:
     )
     ctx = _telemetry_ctx + ctx
 
-    st.session_state["chat_history"].append({"role": "user", "content": user_q})
-    db.append_chat_message(st.session_state.get("chat_session_id", ""), "user", user_q)
     with st.chat_message("user"):
         st.markdown(user_q)
+    st.session_state["chat_history"].append({"role": "user", "content": user_q})
+    db.append_chat_message(st.session_state.get("chat_session_id", ""), "user", user_q)
 
-    # Keep provider context compact and turn-isolated. Long prior chart answers cause models to
+    # Fast direct execution if query starts with Stata prompt '.'
+    if user_q.strip().startswith("."):
+        from models.stata_engine import execute_stata_command
+        stata_res = execute_stata_command(user_q)
+        ascii_text = stata_res.get("ascii_output", "")
+        reply_content = f"```stata\n{user_q.strip()}\n\n{ascii_text}\n```"
+        st_turn = {
+            "role": "assistant",
+            "content": reply_content,
+            "model_used": "Stata-Engine (Open Source)",
+            "elapsed_s": 0.05,
+            "followups": ["esttab, se r2 star", "coefplot, drop(_cons) xline(0)", "summarize leverage roa, detail"],
+        }
+        if stata_res.get("chart_spec"):
+            st_turn["chart_spec"] = stata_res["chart_spec"]
+        st.session_state["chat_history"].append(st_turn)
+        db.append_chat_message(
+            st.session_state.get("chat_session_id", ""),
+            "assistant",
+            reply_content,
+            model_used="Stata-Engine",
+            elapsed_s=0.05,
+            chart_spec=st_turn.get("chart_spec"),
+        )
+        st.rerun()
     # echo old headings/tables and repeat earlier topics.
     messages = []
     for _context_turn in st.session_state["chat_history"][:-1][-4:]:
