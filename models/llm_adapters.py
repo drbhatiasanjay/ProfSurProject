@@ -724,9 +724,78 @@ def query_semantic_ontology(
     return json.dumps(_qso(query_type=query_type, stage=stage, metric=metric), default=str)
 
 
+def run_live_econometric_model(
+    dependent_var: str = "leverage",
+    independent_vars_csv: str = "profitability, tangibility",
+    model_type: str = "auto",
+    industry_group: str = "",
+    life_stage: str = "",
+    year_start: int = 2001,
+    year_end: int = 2025,
+    panel_mode: str = "thesis",
+) -> str:
+    """Estimates an on-the-fly live econometric panel regression (Fixed Effects, Pooled OLS, Random Effects) with diagnostic tests.
+
+    Args:
+        dependent_var: Dependent variable (e.g. 'leverage').
+        independent_vars_csv: Comma-separated independent variables (e.g. 'profitability, tangibility, log_size').
+        model_type: 'auto', 'fixed_effects', 'pooled_ols', 'random_effects'.
+        industry_group: Optional industry name (e.g. 'Automobiles & Auto Ancillaries').
+        life_stage: Optional Dickinson life stage (e.g. 'Maturity', 'Growth').
+        year_start: Start year (2001-2025).
+        year_end: End year (2001-2025).
+        panel_mode: Active panel vintage ('thesis', 'latest').
+    """
+    import json
+    from models.agent_tools import run_live_econometric_model as _rlem
+    indeps = [x.strip() for x in str(independent_vars_csv).split(",") if x.strip()]
+    res = _rlem(
+        dependent_var=dependent_var,
+        independent_vars=indeps,
+        model_type=model_type,
+        industry_group=industry_group,
+        life_stage=life_stage,
+        year_start=int(year_start),
+        year_end=int(year_end),
+        panel_mode=panel_mode,
+    )
+    return json.dumps(res, default=str)
+
+
+def run_cfo_stress_simulation(
+    company_name_or_code: str = "Tata Motors",
+    interest_rate_shock_bps: float = 100.0,
+    operating_margin_shock_pct: float = -15.0,
+    collateral_tangibility_shock_pct: float = 0.0,
+    new_life_stage: str = "",
+) -> str:
+    """Simulates dynamic macroeconomic interest rate hikes, margin compression, and Dickinson life-stage shocks for CFO decision-making.
+
+    Args:
+        company_name_or_code: Company name (e.g. 'Tata Motors') or code (e.g. '2451').
+        interest_rate_shock_bps: Interest rate shock in basis points (e.g. 100 for +100 bps).
+        operating_margin_shock_pct: Operating profitability ROA shock in % (e.g. -15.0).
+        collateral_tangibility_shock_pct: Collateral tangibility shock in % (e.g. 5.0).
+        new_life_stage: Optional new simulated life-cycle stage (e.g. 'Shakeout', 'Decline').
+    """
+    import json
+    from models.agent_tools import run_cfo_stress_simulation as _rcss
+    res = _rcss(
+        company_name_or_code=company_name_or_code,
+        interest_rate_shock_bps=float(interest_rate_shock_bps),
+        operating_margin_shock_pct=float(operating_margin_shock_pct),
+        collateral_tangibility_shock_pct=float(collateral_tangibility_shock_pct),
+        new_life_stage=new_life_stage,
+    )
+    return json.dumps(res, default=str)
+
+
 query_financial_database.__annotations__ = typing.get_type_hints(query_financial_database)
 generate_chat_chart.__annotations__ = typing.get_type_hints(generate_chat_chart)
 query_semantic_ontology.__annotations__ = typing.get_type_hints(query_semantic_ontology)
+run_live_econometric_model.__annotations__ = typing.get_type_hints(run_live_econometric_model)
+run_cfo_stress_simulation.__annotations__ = typing.get_type_hints(run_cfo_stress_simulation)
+
 
 
 def extract_chart_tool_spec(payload: Any) -> Optional[dict]:
@@ -1155,8 +1224,10 @@ def stream_gemini_agent(
             "2. Whenever the user requests specific company lookups, top rankings, distributions (median, standard deviation, percentiles, min, max), Year-overYear (YoY) tables, or queries about specific years (e.g. 2024, 2025), YOU MUST call query_financial_database to query capital_structure.db.\n"
             "3. Join companies and financials on company_code: JOIN companies c ON f.company_code = c.company_code (Note: use company_code, not company_id).\n"
             "4. When the user requests a chart, plot, graph, or visual representation, query the database if needed, call generate_chat_chart, and accompany the interactive visualization with the complete data table and an insightful economic analysis. For industry comparisons, return all qualifying industry groups (do not reduce the query to two examples); for time comparisons, return every year in the requested range. The UI automatically renders the interactive Plotly graph and provides category selectors.\n"
-            "5. Cite sources using [Source: Theory], [Source: Latest (2001-2025)], or [Source: OLS Model] where appropriate.\n"
-            "6. The interactive charting system is fully supported and operational. NEVER output apologies or statements claiming you are unable to generate charts or graphs.\n"
+            "5. LIVE ON-THE-FLY STATISTICAL & ECONOMETRIC MODELING: Whenever the user asks natural language questions about relationships between variables, empirical effects, or regressions (e.g. 'Do auto firms use profits to pay down debt?', 'How does tangibility impact leverage?', 'Test if profitability reduces debt post-COVID'), YOU MUST call run_live_econometric_model. Structure your response with the 5-Step Scientific Method: (1) Variable & Sample Formulation, (2) Automated Diagnostic Selection Rationale (Hausman & Breusch-Pagan tests), (3) Live Regression Table with exact β and p-values, (4) Economic & Theoretical Interpretation (Pecking Order vs Trade-Off vs Dickinson Stages), (5) Strict Methodological Guardrails & Limitations.\n"
+            "6. DYNAMIC CFO COUNTERFACTUAL STRESS TESTING: Whenever the user asks 'What-If' macro/operating shock questions (e.g. 'What happens if RBI hikes rates 100 bps?', 'Simulate a 15% margin drop on Tata Motors', 'What is our debt headroom?'), YOU MUST call run_cfo_stress_simulation to compute covenant floors, ICR, headroom in ₹ Cr, and the 3-point C-suite action playbook.\n"
+            "7. Cite sources using [Source: Theory], [Source: Latest (2001-2025)], or [Source: OLS Model] where appropriate.\n"
+            "8. The interactive charting system is fully supported and operational. NEVER output apologies or statements claiming you are unable to generate charts or graphs.\n"
         )
 
         effective_system = f"{role_preamble}\n\n{agent_instructions}\n\n{get_database_schema_summary()}\n\n{clean_context}"
@@ -1205,6 +1276,8 @@ def stream_gemini_agent(
                 query_financial_database,
                 generate_chat_chart,
                 query_semantic_ontology,
+                run_live_econometric_model,
+                run_cfo_stress_simulation,
             ],
             tool_config=tool_config,
         )

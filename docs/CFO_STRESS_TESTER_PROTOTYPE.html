@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeCycle Leverage — Dynamic Counterfactual & CFO Stress-Testing Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-canvas: #060913;
+            --bg-surface: #0e1424;
+            --bg-surface-elevated: #162035;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-indigo: #6366f1;
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-focused: rgba(99, 102, 241, 0.4);
+            --shadow-glow: 0 0 35px rgba(99, 102, 241, 0.18);
+        }
+
+        .light-mode {
+            --bg-canvas: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-surface-elevated: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-indigo: #4f46e5;
+            --accent-cyan: #0891b2;
+            --accent-emerald: #059669;
+            --accent-amber: #d97706;
+            --accent-rose: #e11d48;
+            --border-subtle: #e2e8f0;
+            --border-focused: rgba(79, 70, 229, 0.4);
+            --shadow-glow: 0 10px 30px rgba(79, 70, 229, 0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-canvas);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1280px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Top Header */
+        .header-bar {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-group h1 {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .title-group p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Persona Switcher: CFO Mode vs. Researcher Mode */
+        .persona-toggle {
+            display: flex;
+            background: var(--bg-surface-elevated);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--border-subtle);
+            gap: 4px;
+        }
+
+        .persona-btn {
+            padding: 6px 14px;
+            border-radius: 7px;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .persona-btn.active {
+            background: var(--accent-indigo);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
+        }
+
+        /* Main 3-Column Interactive Grid */
+        .sim-grid {
+            display: grid;
+            grid-template-columns: 340px 1fr 340px;
+            gap: 18px;
+        }
+
+        /* Left Column: Shock Parameter Controls */
+        .card-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-heading {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 14px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 10px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .slider-val-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-size: 12px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-surface-elevated);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent-indigo);
+            box-shadow: 0 0 10px var(--accent-indigo);
+            cursor: pointer;
+        }
+
+        /* Center Column: Live Gauge & Trajectory Visualization */
+        .center-canvas {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .kpi-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .kpi-capsule {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+        }
+
+        .kpi-capsule::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            border-radius: 12px 12px 0 0;
+        }
+        .kpi-capsule.safe::before { background: var(--accent-emerald); }
+        .kpi-capsule.warn::before { background: var(--accent-amber); }
+        .kpi-capsule.danger::before { background: var(--accent-rose); }
+
+        .kpi-lbl {
+            font-size: 10.5px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .kpi-num {
+            font-size: 20px;
+            font-weight: 800;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .kpi-delta {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+        }
+
+        /* Interactive Gauge Visual */
+        .gauge-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Chart Canvas Box */
+        .trajectory-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }
+
+        /* Right Column: AI Executive Action Memo & Econometric Robustness */
+        .memo-body {
+            font-size: 12.5px;
+            line-height: 1.55;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .memo-box {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 10px;
+            padding: 12px;
+            color: var(--text-primary);
+        }
+
+        .action-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .action-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .exec-export-btn {
+            background: var(--accent-indigo);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        }
+        .exec-export-btn:hover { background: #4f46e5; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Top Control Bar -->
+        <div class="header-bar">
+            <div class="title-group">
+                <h1>Dynamic Counterfactual & CFO Stress-Testing Simulator</h1>
+                <p>Simulate Macroeconomic Shocks, Dickinson Life-Cycle Migrations & Target Leverage Recalibration</p>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:14px;">
+                <div class="persona-toggle">
+                    <button class="persona-btn active" id="btn-cfo" onclick="setPersona('cfo')">👔 CFO Mode</button>
+                    <button class="persona-btn" id="btn-researcher" onclick="setPersona('researcher')">🔬 Researcher Mode</button>
+                </div>
+                <button style="background:transparent; border:1px solid var(--border-subtle); color:var(--text-secondary); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px;" onclick="document.body.classList.toggle('light-mode')">
+                    🌓 Theme
+                </button>
+            </div>
+        </div>
+
+        <!-- Main 3-Column Simulator Grid -->
+        <div class="sim-grid">
+            
+            <!-- LEFT COLUMN: Shock Controls -->
+            <div class="card-panel">
+                <div class="panel-heading">
+                    <span>⚡ Counterfactual Controls</span>
+                    <span style="font-size:11px; color:var(--accent-indigo); font-family:'JetBrains Mono';">Tata Motors</span>
+                </div>
+
+                <!-- 1. Life Stage Migration -->
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Dickinson Life-Cycle Stage</span>
+                        <span class="slider-val-badge" id="lbl-stage">Mature (Stage 3)</span>
+                    </div>
+                    <select id="sel-stage" style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); color:var(--text-primary); padding:8px 12px; border-radius:8px; font-size:12.5px; outline:none;" onchange="updateSim()">
+                        <option value="intro">Stage 1: Introduction</option>
+                        <option value="growth">Stage 2: Growth</option>
+                        <option value="mature" selected>Stage 3: Mature</option>
+                        <option value="shakeout">Stage 4: Shakeout</option>
+                        <option value="decline">Stage 5: Decline</option>
+                    </select>
+                </div>
+
+                <!-- 2. Interest Rate Shock -->
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>RBI Benchmark Interest Rate Shock</span>
+                        <span class="slider-val-badge" id="lbl-rate">+100 bps</span>
+                    </div>
+                    <input type="range" id="rng-rate" min="-200" max="400" step="25" value="100" oninput="updateSim()">
+                </div>
+
+                <!-- 3. Operating Margin Compression -->
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Operating Margin Shock (ROA)</span>
+                        <span class="slider-val-badge" id="lbl-margin">-15.0%</span>
+                    </div>
+                    <input type="range" id="rng-margin" min="-50" max="30" step="5" value="-15" oninput="updateSim()">
+                </div>
+
+                <!-- 4. Asset Tangibility Shock -->
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Collateral Asset Tangibility</span>
+                        <span class="slider-val-badge" id="lbl-tang">48.1% (Base)</span>
+                    </div>
+                    <input type="range" id="rng-tang" min="10" max="80" step="2" value="48" oninput="updateSim()">
+                </div>
+
+                <!-- 5. Speed of Adjustment Lambda -->
+                <div class="slider-group" id="researcher-lambda-box" style="display:none;">
+                    <div class="slider-header">
+                        <span>Speed of Adjustment (λ - System GMM)</span>
+                        <span class="slider-val-badge" id="lbl-lambda">0.342</span>
+                    </div>
+                    <input type="range" id="rng-lambda" min="0.1" max="0.9" step="0.05" value="0.342" oninput="updateSim()">
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:10px; font-size:11px; color:var(--text-muted);">
+                    💡 <strong>Econometric Engine:</strong> Recalibrates target leverage ($Lev^*$) via Dynamic Panel System GMM within-firm parameters ($\beta_1=-0.245, \beta_2=+0.312$).
+                </div>
+            </div>
+
+            <!-- CENTER COLUMN: Visual Intelligence & Meters -->
+            <div class="center-canvas">
+                
+                <!-- 3 Top KPIs -->
+                <div class="kpi-row">
+                    <div class="kpi-capsule warn" id="kpi-lev-box">
+                        <span class="kpi-lbl">Target Leverage (Lev*)</span>
+                        <div class="kpi-num">
+                            <span id="kpi-lev">29.10%</span>
+                            <span class="kpi-delta" style="color:var(--accent-rose);" id="kpi-lev-delta">-5.10% Δ</span>
+                        </div>
+                        <span style="font-size:11px; color:var(--text-muted);">Current: 34.20%</span>
+                    </div>
+
+                    <div class="kpi-capsule safe" id="kpi-icr-box">
+                        <span class="kpi-lbl">Interest Coverage (ICR)</span>
+                        <div class="kpi-num">
+                            <span id="kpi-icr">2.45x</span>
+                            <span class="kpi-delta" style="color:var(--accent-amber);" id="kpi-icr-delta">-1.10x</span>
+                        </div>
+                        <span style="font-size:11px; color:var(--text-muted);">Covenant Floor: 2.00x</span>
+                    </div>
+
+                    <div class="kpi-capsule warn" id="kpi-pd-box">
+                        <span class="kpi-lbl" id="lbl-kpi3">Distance to Default (Merton)</span>
+                        <div class="kpi-num">
+                            <span id="kpi-dd">3.12 σ</span>
+                            <span class="kpi-delta" style="color:var(--accent-amber);" id="kpi-dd-delta">PD: 1.4%</span>
+                        </div>
+                        <span style="font-size:11px; color:var(--text-muted);">Altman Z'': 5.82 (Grey Zone)</span>
+                    </div>
+                </div>
+
+                <!-- Live Debt Capacity & Distance-to-Default Chart -->
+                <div class="trajectory-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-family:'Plus Jakarta Sans'; font-size:14px; font-weight:800;" id="chart-title">
+                            📈 Target Leverage Adjustment & Debt Capacity Trajectory
+                        </span>
+                        <span style="font-size:11px; font-family:'JetBrains Mono'; color:var(--accent-cyan);">Simulated Horizon: 2026–2030</span>
+                    </div>
+
+                    <!-- SVG Dynamic Curve Visual -->
+                    <div style="position:relative; height:180px; width:100%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="100%" height="100%" viewBox="0 0 500 160">
+                            <!-- Safe Zone Band -->
+                            <rect x="0" y="0" width="500" height="90" fill="rgba(16, 185, 129, 0.05)" />
+                            <text x="10" y="20" fill="var(--accent-emerald)" font-size="10" font-family="JetBrains Mono">SUSTAINABLE DEBT CAPACITY ZONE</text>
+                            
+                            <!-- Danger Line -->
+                            <line x1="0" y1="90" x2="500" y2="90" stroke="var(--accent-amber)" stroke-dasharray="4" stroke-width="1.5"/>
+                            <text x="350" y="85" fill="var(--accent-amber)" font-size="10" font-family="JetBrains Mono">Covenant Limit (35%)</text>
+
+                            <!-- Baseline Path -->
+                            <path d="M 40,80 Q 150,82 280,84 T 480,85" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="3"/>
+                            <text x="40" y="70" fill="var(--text-muted)" font-size="10" font-family="JetBrains Mono">Baseline</text>
+
+                            <!-- Shocked Path -->
+                            <path id="svg-shock-path" d="M 40,80 Q 150,110 280,125 T 480,135" fill="none" stroke="var(--accent-rose)" stroke-width="3.5" stroke-linecap="round"/>
+                            <circle id="svg-shock-pt" cx="480" cy="135" r="5" fill="var(--accent-rose)"/>
+                            <text x="360" y="150" fill="var(--accent-rose)" font-size="11" font-weight="700" font-family="JetBrains Mono">Shocked Path</text>
+                        </svg>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-secondary); border-top:1px solid var(--border-subtle); padding-top:10px;">
+                        <span>Current Leverage: <strong>34.20%</strong></span>
+                        <span id="txt-headroom">Available Debt Headroom: <strong style="color:var(--accent-emerald);">₹1,420 Cr</strong></span>
+                        <span>Estimated Recovery Time: <strong>2.8 Years</strong></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Actionable Executive Memo & Econometric Audit -->
+            <div class="card-panel">
+                <div class="panel-heading">
+                    <span id="memo-head">📑 CFO Executive Action Memo</span>
+                    <span style="font-size:10px; background:rgba(99,102,241,0.15); color:var(--accent-indigo); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono';">AI GENERATED</span>
+                </div>
+
+                <div class="memo-body">
+                    <div class="memo-box" id="memo-content">
+                        <strong>Strategic Assessment:</strong>
+                        <p style="margin-top:4px;">
+                            Under a <strong>+100 bps rate hike</strong> and <strong>-15% margin shock</strong>, Tata Motors' ICR drops to <strong>2.45x</strong>, dangerously close to the 2.0x bank covenant. Target debt-to-capital should be trimmed by <strong>-5.10%</strong>.
+                        </p>
+                    </div>
+
+                    <div style="font-size:11px; font-weight:700; text-transform:uppercase; color:var(--text-muted); font-family:'JetBrains Mono';">
+                        Priority CFO Playbook:
+                    </div>
+
+                    <div class="action-list" id="action-playbook">
+                        <div class="action-item">
+                            <span>1️⃣</span>
+                            <div><strong>Refinance Short-Term Debt:</strong> Replace ₹850 Cr maturing debt with 5-year fixed coupon paper to insulate against further rate hikes.</div>
+                        </div>
+                        <div class="action-item">
+                            <span>2️⃣</span>
+                            <div><strong>Curtail Discretionary CapEx:</strong> Realign capital expenditure by 10% to preserve internal operating cash flows.</div>
+                        </div>
+                        <div class="action-item">
+                            <span>3️⃣</span>
+                            <div><strong>Working Capital Optimization:</strong> Accelerate receivables turnover by 6 days to unlock ₹210 Cr liquidity.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="exec-export-btn" onclick="alert('Exporting 4-Page Executive Board Stress-Testing Briefing (PDF/PPTX)...')">
+                    📄 Export Board Stress Memo (PDF / PPTX)
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let currentPersona = 'cfo';
+
+        function setPersona(p) {
+            currentPersona = p;
+            document.getElementById('btn-cfo').classList.toggle('active', p === 'cfo');
+            document.getElementById('btn-researcher').classList.toggle('active', p === 'researcher');
+            
+            document.getElementById('researcher-lambda-box').style.display = (p === 'researcher') ? 'flex' : 'none';
+            
+            if (p === 'researcher') {
+                document.getElementById('memo-head').innerText = "🔬 Econometric Robustness Audit";
+                document.getElementById('lbl-kpi3').innerText = "Wooldridge Autocorr (AR2)";
+                document.getElementById('chart-title').innerText = "🔬 Dynamic Target Leverage Convergence Path (GMM)";
+                document.getElementById('memo-content').innerHTML = `
+                    <strong>Empirical Identification:</strong>
+                    <p style="margin-top:4px;">
+                        Under Dickinson transition to <em>Mature</em>, the speed of adjustment $\\lambda = 0.342$ implies a half-life of <strong>1.66 years</strong> to close 50% of the target leverage gap ($p < 0.001$).
+                    </p>
+                `;
+            } else {
+                document.getElementById('memo-head').innerText = "📑 CFO Executive Action Memo";
+                document.getElementById('lbl-kpi3').innerText = "Distance to Default (Merton)";
+                document.getElementById('chart-title').innerText = "📈 Target Leverage Adjustment & Debt Capacity Trajectory";
+                updateSim();
+            }
+        }
+
+        function updateSim() {
+            const rate = parseInt(document.getElementById('rng-rate').value);
+            const margin = parseInt(document.getElementById('rng-margin').value);
+            const tang = parseInt(document.getElementById('rng-tang').value);
+            const stage = document.getElementById('sel-stage').value;
+
+            document.getElementById('lbl-rate').innerText = (rate >= 0 ? '+' : '') + rate + ' bps';
+            document.getElementById('lbl-margin').innerText = (margin >= 0 ? '+' : '') + margin + '.0%';
+            document.getElementById('lbl-tang').innerText = tang + '.0%';
+
+            // Dynamic Calculations
+            let baseLev = 34.20;
+            let targetLev = baseLev + (margin * 0.245) - (rate * 0.015) + ((tang - 48) * 0.1);
+            if (stage === 'growth') targetLev -= 6.0;
+            if (stage === 'shakeout') targetLev -= 12.0;
+            if (stage === 'decline') targetLev -= 18.0;
+
+            let deltaLev = targetLev - baseLev;
+            let icr = Math.max(0.8, 3.55 + (margin * 0.05) - (rate * 0.005)).toFixed(2);
+            let dd = Math.max(1.2, 4.2 - (rate * 0.004) + (margin * 0.03)).toFixed(2);
+
+            document.getElementById('kpi-lev').innerText = targetLev.toFixed(2) + '%';
+            document.getElementById('kpi-lev-delta').innerText = (deltaLev >= 0 ? '+' : '') + deltaLev.toFixed(2) + '% Δ';
+            document.getElementById('kpi-icr').innerText = icr + 'x';
+            document.getElementById('kpi-dd').innerText = dd + ' σ';
+
+            // Headroom
+            let headroom = Math.max(0, Math.round(1420 + (deltaLev * 180)));
+            document.getElementById('txt-headroom').innerHTML = `Available Debt Headroom: <strong style="color:${headroom > 500 ? 'var(--accent-emerald)' : 'var(--accent-rose)'};">₹${headroom.toLocaleString()} Cr</strong>`;
+
+            // SVG Path Animation
+            let shockY = Math.min(150, Math.max(50, 80 - deltaLev * 4));
+            document.getElementById('svg-shock-path').setAttribute('d', `M 40,80 Q 150,${(80+shockY)/2} 280,${shockY-5} T 480,${shockY}`);
+            document.getElementById('svg-shock-pt').setAttribute('cy', shockY);
+        }
+    </script>
+</body>
+</html>

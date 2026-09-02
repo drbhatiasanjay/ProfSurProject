@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeCycle Leverage — Enterprise CFO Strategic Intelligence & Stress Suite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-canvas: #040711;
+            --bg-surface: #0b1120;
+            --bg-surface-elevated: #111a2e;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-indigo: #6366f1;
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-focused: rgba(99, 102, 241, 0.4);
+            --shadow-glow: 0 0 35px rgba(99, 102, 241, 0.2);
+        }
+
+        .light-mode {
+            --bg-canvas: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-surface-elevated: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-indigo: #4f46e5;
+            --accent-cyan: #0891b2;
+            --accent-emerald: #059669;
+            --accent-amber: #d97706;
+            --accent-rose: #e11d48;
+            --border-subtle: #e2e8f0;
+            --border-focused: rgba(79, 70, 229, 0.4);
+            --shadow-glow: 0 10px 30px rgba(79, 70, 229, 0.12);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-canvas);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1320px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* Top Bar */
+        .top-nav {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-pill {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 18px;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Live Internet Market News & Central Bank Feed Ticker */
+        .news-ticker-strip {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-left: 3px solid var(--accent-cyan);
+            border-radius: 10px;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 12px;
+            overflow: hidden;
+        }
+
+        .ticker-badge {
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent-cyan);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ticker-news-items {
+            display: flex;
+            gap: 24px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow-x: auto;
+        }
+
+        .news-entry {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .news-entry:hover { color: var(--text-primary); text-decoration: underline; }
+
+        /* Horizon Tab Switcher */
+        .horizon-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 6px;
+            border-radius: 12px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .h-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 3px;
+            transition: all 0.2s;
+            text-align: left;
+        }
+
+        .h-btn.active {
+            background: var(--bg-surface-elevated);
+            border-color: var(--accent-indigo);
+            color: var(--text-primary);
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.25);
+        }
+
+        .h-btn .h-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10.5px;
+            color: var(--accent-cyan);
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* 3-Column Executive Workbench */
+        .sim-grid {
+            display: grid;
+            grid-template-columns: 360px 1fr 360px;
+            gap: 16px;
+        }
+
+        .card-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .panel-heading {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 13.5px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 10px;
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .slider-val-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            font-size: 11.5px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: var(--bg-surface-elevated);
+            outline: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--accent-indigo);
+            box-shadow: 0 0 10px var(--accent-indigo);
+            cursor: pointer;
+        }
+
+        /* Center Column: Radar & Visual Trajectory */
+        .center-canvas {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .verdict-triplet {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .v-capsule {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            position: relative;
+        }
+
+        .v-capsule::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            border-radius: 10px 10px 0 0;
+        }
+        .v-capsule.safe::before { background: var(--accent-emerald); }
+        .v-capsule.warn::before { background: var(--accent-amber); }
+        .v-capsule.danger::before { background: var(--accent-rose); }
+
+        .v-lbl {
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .v-num {
+            font-size: 18px;
+            font-weight: 800;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .v-delta {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+        }
+
+        /* Dynamic SVG Visualization Box */
+        .chart-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }
+
+        /* Right Column: Strategic Memo & Action Playbook */
+        .memo-box {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.5;
+            color: var(--text-primary);
+        }
+
+        .action-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .action-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 11.5px;
+            line-height: 1.45;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .export-btn {
+            background: var(--accent-indigo);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+        }
+        .export-btn:hover { background: #4f46e5; }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Top App Navigation -->
+        <div class="top-nav">
+            <div class="brand-pill">
+                💎 LifeCycle Leverage <span style="font-size:11px; color:var(--text-muted); font-weight:600; border:1px solid var(--border-subtle); padding:2px 6px; border-radius:6px; -webkit-text-fill-color: initial;">Enterprise CFO Suite</span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:16px;">
+                <span style="font-size:12.5px; color:var(--text-secondary);">Active Entity: <strong>Tata Motors Ltd. (CODE: 2451)</strong></span>
+                <button style="background:transparent; border:1px solid var(--border-subtle); color:var(--text-secondary); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px;" onclick="document.body.classList.toggle('light-mode')">
+                    🌓 Theme
+                </button>
+            </div>
+        </div>
+
+        <!-- Live Internet Financial Market & Macro Ticker Strip -->
+        <div class="news-ticker-strip">
+            <span class="ticker-badge">● LIVE MACRO INTELLIGENCE</span>
+            <div class="ticker-news-items">
+                <span class="news-entry" onclick="applyMacroNews('rbi_hold')">
+                    🏛️ <strong>RBI MPC:</strong> Repo rate held at 6.50%; sticky food inflation delays rate cut cycle.
+                </span>
+                <span class="news-entry" onclick="applyMacroNews('credit_spread')">
+                    📊 <strong>CRISIL Debt Yields:</strong> Corporate AA vs AAA bond spread widens +35 bps.
+                </span>
+                <span class="news-entry" onclick="applyMacroNews('crude_oil')">
+                    🛢️ <strong>Commodity Shock:</strong> Brent crude surges +8.5% on Middle East supply friction.
+                </span>
+            </div>
+        </div>
+
+        <!-- 3-Horizon Strategy Selector -->
+        <div class="horizon-bar">
+            <button class="h-btn active" onclick="switchHorizon('short', this)">
+                <span class="h-time">⏱️ Short-Term (0–12 Months)</span>
+                <strong>Liquidity, Refinancing & Covenants</strong>
+                <span style="font-size:11px; color:var(--text-muted);">Maturity Wall, 13-Week Cash Burn & ICR Floor</span>
+            </button>
+
+            <button class="h-btn" onclick="switchHorizon('medium', this)">
+                <span class="h-time">⏳ Medium-Term (1–3 Years)</span>
+                <strong>Credit Rating Defense & CapEx Mix</strong>
+                <span style="font-size:11px; color:var(--text-muted);">Speed of Adjustment (λ), Rating Triggers & WACC</span>
+            </button>
+
+            <button class="h-btn" onclick="switchHorizon('long', this)">
+                <span class="h-time">🔮 Long-Term (3–5+ Years)</span>
+                <strong>Life-Cycle Evolution & Capital Recycling</strong>
+                <span style="font-size:11px; color:var(--text-muted);">Dickinson Stage Migration, M&A & Default Distance</span>
+            </button>
+        </div>
+
+        <!-- Main 3-Column Simulator Grid -->
+        <div class="sim-grid">
+            
+            <!-- LEFT: Multi-Factor Shock Sliders -->
+            <div class="card-panel">
+                <div class="panel-heading">
+                    <span id="slider-title">⚡ Short-Term Liquidity & Macro Shocks</span>
+                    <span style="font-size:10.5px; color:var(--accent-indigo); font-family:'JetBrains Mono';">TATA MOTORS</span>
+                </div>
+
+                <!-- 1. Interest Rate Shock -->
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>RBI Benchmark Interest Rate Shock</span>
+                        <span class="slider-val-badge" id="lbl-rate">+100 bps</span>
+                    </div>
+                    <input type="range" id="rng-rate" min="-200" max="400" step="25" value="100" oninput="recalc()">
+                </div>
+
+                <!-- 2. Operating Margin / Cash Flow Shock -->
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Operating Margin Shock (ROA)</span>
+                        <span class="slider-val-badge" id="lbl-margin">-15.0%</span>
+                    </div>
+                    <input type="range" id="rng-margin" min="-50" max="30" step="5" value="-15" oninput="recalc()">
+                </div>
+
+                <!-- 3. Working Capital Cash Drag -->
+                <div class="slider-group" id="group-wc">
+                    <div class="slider-header">
+                        <span>Working Capital Cash Cycle (DSO Delay)</span>
+                        <span class="slider-val-badge" id="lbl-dso">+12 Days</span>
+                    </div>
+                    <input type="range" id="rng-dso" min="0" max="45" step="3" value="12" oninput="recalc()">
+                </div>
+
+                <!-- 4. Maturity Wall Refinancing Fraction -->
+                <div class="slider-group" id="group-mat">
+                    <div class="slider-header">
+                        <span>Next 12M Maturing Debt (₹ Cr)</span>
+                        <span class="slider-val-badge" id="lbl-mat">₹1,250 Cr</span>
+                    </div>
+                    <input type="range" id="rng-mat" min="200" max="3000" step="50" value="1250" oninput="recalc()">
+                </div>
+
+                <!-- 5. Dickinson Stage Migration (Medium/Long-Term) -->
+                <div class="slider-group" id="group-stage" style="display:none;">
+                    <div class="slider-header">
+                        <span>Dickinson Life-Cycle Migration</span>
+                        <span class="slider-val-badge">Stage 3 ➔ Stage 4</span>
+                    </div>
+                    <select id="sel-stage" style="background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); color:var(--text-primary); padding:6px 10px; border-radius:6px; font-size:12px;" onchange="recalc()">
+                        <option value="growth">Stage 2: Growth</option>
+                        <option value="mature" selected>Stage 3: Mature</option>
+                        <option value="shakeout">Stage 4: Shakeout</option>
+                        <option value="decline">Stage 5: Decline</option>
+                    </select>
+                </div>
+
+                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:8px; padding:10px; font-size:11px; color:var(--text-muted);">
+                    📡 <strong>Live Fed & RBI Link:</strong> Live internet yield curve spreads adjust floating debt refinancing cost dynamically.
+                </div>
+            </div>
+
+            <!-- CENTER: Visual Cockpit & Trajectory -->
+            <div class="center-canvas">
+                <!-- 3 Top Verdict Capsules -->
+                <div class="verdict-triplet">
+                    <div class="v-capsule safe" id="cap-icr">
+                        <span class="v-lbl">Interest Coverage (ICR)</span>
+                        <div class="v-num">
+                            <span id="txt-icr">2.45x</span>
+                            <span class="v-delta" style="color:var(--accent-amber);" id="txt-icr-delta">-1.10x</span>
+                        </div>
+                        <span style="font-size:10.5px; color:var(--text-muted);">Covenant Floor: 2.00x</span>
+                    </div>
+
+                    <div class="v-capsule warn" id="cap-headroom">
+                        <span class="v-lbl">Available Debt Headroom</span>
+                        <div class="v-num">
+                            <span id="txt-headroom">₹1,420 Cr</span>
+                            <span class="v-delta" style="color:var(--accent-rose);" id="txt-headroom-delta">-₹580 Cr</span>
+                        </div>
+                        <span style="font-size:10.5px; color:var(--text-muted);">Max Safe Borrowing Limit</span>
+                    </div>
+
+                    <div class="v-capsule safe" id="cap-rating">
+                        <span class="v-lbl">Credit Rating Band (CRISIL)</span>
+                        <div class="v-num">
+                            <span id="txt-rating">AA (Stable)</span>
+                            <span class="v-delta" style="color:var(--accent-cyan);">Investment Grade</span>
+                        </div>
+                        <span style="font-size:10.5px; color:var(--text-muted);">Downgrade Floor: A-</span>
+                    </div>
+                </div>
+
+                <!-- Trajectory & Stress Curve -->
+                <div class="chart-box">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-family:'Plus Jakarta Sans'; font-size:13.5px; font-weight:800;" id="chart-head">
+                            📈 12-Month Liquidity Runway & Covenant Distance Under Stress
+                        </span>
+                        <span style="font-size:10.5px; font-family:'JetBrains Mono'; color:var(--accent-cyan);">Shock Horizon: Active</span>
+                    </div>
+
+                    <div style="height:170px; width:100%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="100%" height="100%" viewBox="0 0 500 150">
+                            <!-- Safe Zone -->
+                            <rect x="0" y="0" width="500" height="85" fill="rgba(16, 185, 129, 0.05)" />
+                            <text x="10" y="20" fill="var(--accent-emerald)" font-size="10" font-family="JetBrains Mono">SAFE COVENANT ZONE (ICR &gt; 2.0x)</text>
+                            
+                            <!-- Danger Threshold -->
+                            <line x1="0" y1="85" x2="500" y2="85" stroke="var(--accent-amber)" stroke-dasharray="4" stroke-width="1.5"/>
+                            <text x="360" y="80" fill="var(--accent-amber)" font-size="10" font-family="JetBrains Mono">2.0x Bank Covenant Floor</text>
+
+                            <!-- Baseline Path -->
+                            <path d="M 40,75 Q 160,78 300,79 T 480,80" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="3"/>
+                            <text x="40" y="65" fill="var(--text-muted)" font-size="9" font-family="JetBrains Mono">Baseline Path</text>
+
+                            <!-- Shocked Path -->
+                            <path id="svg-path" d="M 40,75 Q 160,105 300,118 T 480,128" fill="none" stroke="var(--accent-rose)" stroke-width="3" stroke-linecap="round"/>
+                            <circle id="svg-pt" cx="480" cy="128" r="4.5" fill="var(--accent-rose)"/>
+                            <text x="370" y="140" fill="var(--accent-rose)" font-size="10" font-weight="700" font-family="JetBrains Mono">Shocked Runway</text>
+                        </svg>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-secondary); border-top:1px solid var(--border-subtle); padding-top:8px;">
+                        <span>Current Leverage: <strong>34.20%</strong></span>
+                        <span>Maturity Coverage Ratio: <strong style="color:var(--accent-emerald);">1.85x</strong></span>
+                        <span>Liquidity Runway: <strong style="color:var(--accent-emerald);">14.2 Months</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Strategic Memo & Action Playbook -->
+            <div class="card-panel">
+                <div class="panel-heading">
+                    <span id="memo-title">📑 Short-Term CFO Action Playbook</span>
+                    <span style="font-size:10px; background:rgba(99,102,241,0.15); color:var(--accent-indigo); padding:2px 6px; border-radius:4px; font-family:'JetBrains Mono';">AI ASSISTANT</span>
+                </div>
+
+                <div class="memo-box" id="memo-text">
+                    <strong>C-Suite Strategic Synthesis:</strong>
+                    <p style="margin-top:4px;">
+                        With RBI holding rates at 6.50% and a <strong>-15% operating margin shock</strong>, Tata Motors' ICR tightens to <strong>2.45x</strong>. The firm remains above the 2.0x covenant floor with <strong>₹1,420 Cr</strong> in headroom.
+                    </p>
+                </div>
+
+                <div style="font-size:10.5px; font-weight:700; text-transform:uppercase; color:var(--text-muted); font-family:'JetBrains Mono';">
+                    Immediate Action Matrix:
+                </div>
+
+                <div class="action-list" id="action-list-items">
+                    <div class="action-item">
+                        <span>1️⃣</span>
+                        <div><strong>Refinance Maturing Commercial Paper:</strong> Pre-fund ₹850 Cr of CP with 3-year term loans to lock in spreads before further credit tightening.</div>
+                    </div>
+                    <div class="action-item">
+                        <span>2️⃣</span>
+                        <div><strong>Working Capital Optimization:</strong> Accelerate receivables collection by 6 days to free ₹210 Cr cash buffer.</div>
+                    </div>
+                    <div class="action-item">
+                        <span>3️⃣</span>
+                        <div><strong>Preserve Liquidity Lines:</strong> Maintain ₹1,200 Cr in committed undrawn revolving credit facilities (RCF).</div>
+                    </div>
+                </div>
+
+                <button class="export-btn" onclick="alert('Exporting Board Deck & Executive Stress Memo (PPTX/PDF)...')">
+                    📄 Export Executive Board Deck (PPTX / PDF)
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        let currentHorizon = 'short';
+
+        function switchHorizon(h, btnEl) {
+            currentHorizon = h;
+            document.querySelectorAll('.h-btn').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+
+            const groupWc = document.getElementById('group-wc');
+            const groupMat = document.getElementById('group-mat');
+            const groupStage = document.getElementById('group-stage');
+
+            if (h === 'short') {
+                document.getElementById('slider-title').innerText = "⚡ Short-Term Liquidity & Macro Shocks";
+                document.getElementById('chart-head').innerText = "📈 12-Month Liquidity Runway & Covenant Distance";
+                document.getElementById('memo-title').innerText = "📑 Short-Term CFO Action Playbook";
+                groupWc.style.display = 'flex';
+                groupMat.style.display = 'flex';
+                groupStage.style.display = 'none';
+            } else if (h === 'medium') {
+                document.getElementById('slider-title').innerText = "⏳ Medium-Term Rating & CapEx Shocks";
+                document.getElementById('chart-head').innerText = "📈 3-Year Target Leverage (GMM λ) & Rating Trajectory";
+                document.getElementById('memo-title').innerText = "📑 Medium-Term Capital Allocation Playbook";
+                groupWc.style.display = 'none';
+                groupMat.style.display = 'none';
+                groupStage.style.display = 'none';
+            } else if (h === 'long') {
+                document.getElementById('slider-title').innerText = "🔮 Long-Term Life-Cycle & M&A Shocks";
+                document.getElementById('chart-head').innerText = "📈 5-Year Dickinson Life-Cycle Transition & Default Distance";
+                document.getElementById('memo-title').innerText = "📑 Long-Term Corporate Restructuring Playbook";
+                groupWc.style.display = 'none';
+                groupMat.style.display = 'none';
+                groupStage.style.display = 'flex';
+            }
+            recalc();
+        }
+
+        function applyMacroNews(type) {
+            if (type === 'rbi_hold') {
+                document.getElementById('rng-rate').value = 50;
+                document.getElementById('rng-margin').value = -10;
+            } else if (type === 'credit_spread') {
+                document.getElementById('rng-rate').value = 125;
+                document.getElementById('rng-margin').value = -15;
+            } else if (type === 'crude_oil') {
+                document.getElementById('rng-margin').value = -25;
+            }
+            recalc();
+        }
+
+        function recalc() {
+            const rate = parseInt(document.getElementById('rng-rate').value);
+            const margin = parseInt(document.getElementById('rng-margin').value);
+
+            document.getElementById('lbl-rate').innerText = (rate >= 0 ? '+' : '') + rate + ' bps';
+            document.getElementById('lbl-margin').innerText = (margin >= 0 ? '+' : '') + margin + '.0%';
+
+            let icr = Math.max(0.8, 3.55 + (margin * 0.05) - (rate * 0.005)).toFixed(2);
+            let headroom = Math.max(0, Math.round(1420 + (margin * 25) - (rate * 1.5)));
+
+            document.getElementById('txt-icr').innerText = icr + 'x';
+            document.getElementById('txt-headroom').innerText = '₹' + headroom.toLocaleString() + ' Cr';
+
+            // Rating band logic
+            const ratingEl = document.getElementById('txt-rating');
+            if (icr >= 3.0) { ratingEl.innerText = "AAA / AA+"; }
+            else if (icr >= 2.2) { ratingEl.innerText = "AA (Stable)"; }
+            else if (icr >= 1.8) { ratingEl.innerText = "A- (Watch Negative)"; }
+            else { ratingEl.innerText = "BBB- (Covenant Risk)"; }
+
+            // Dynamic SVG Path
+            let y = Math.min(140, Math.max(50, 75 - (margin * 1.5) + (rate * 0.1)));
+            document.getElementById('svg-path').setAttribute('d', `M 40,75 Q 160,${(75+y)/2} 300,${y-4} T 480,${y}`);
+            document.getElementById('svg-pt').setAttribute('cy', y);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeCycle Leverage — Context-Aware Financial Intelligence Suite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-canvas: #040711;
+            --bg-surface: #0b1120;
+            --bg-surface-elevated: #111a2e;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-indigo: #6366f1;
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-focused: rgba(99, 102, 241, 0.4);
+            --shadow-glow: 0 0 35px rgba(99, 102, 241, 0.2);
+        }
+
+        .light-mode {
+            --bg-canvas: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-surface-elevated: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --accent-indigo: #4f46e5;
+            --accent-cyan: #0891b2;
+            --accent-emerald: #059669;
+            --accent-amber: #d97706;
+            --border-subtle: #e2e8f0;
+            --border-focused: rgba(79, 70, 229, 0.4);
+            --shadow-glow: 0 10px 30px rgba(79, 70, 229, 0.12);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: var(--bg-canvas);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1280px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Top Bar */
+        .top-nav {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .brand-pill {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 800;
+            font-size: 18px;
+            background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Global Smart Action Search Bar (Always Live) */
+        .omni-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-focused);
+            border-radius: 24px;
+            padding: 7px 18px;
+            width: 520px;
+            box-shadow: var(--shadow-glow);
+        }
+
+        .omni-search-bar input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 13.5px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .kbd-pill {
+            background: rgba(0,0,0,0.25);
+            border: 1px solid var(--border-subtle);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10.5px;
+            color: var(--accent-indigo);
+            font-weight: 700;
+        }
+
+        /* Market Innovation 1: The "Verdict Row" & Exception Bar (FactSet / Bloomberg Best Practice) */
+        .verdict-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .verdict-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        .verdict-card:hover {
+            border-color: var(--border-focused);
+            transform: translateY(-2px);
+        }
+
+        .verdict-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0; width: 4px;
+        }
+        .verdict-card.mature::before { background: var(--accent-emerald); }
+        .verdict-card.growth::before { background: var(--accent-cyan); }
+        .verdict-card.anomaly::before { background: var(--accent-rose); }
+        .verdict-card.model::before { background: var(--accent-indigo); }
+
+        .v-label {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .v-val {
+            font-size: 18px;
+            font-weight: 800;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .v-sub {
+            font-size: 11.5px;
+            color: var(--text-secondary);
+        }
+
+        /* Main Workspace Split: 68% Active Interactive Workbench | 32% Proactive Sidecar Copilot */
+        .workspace-split {
+            display: grid;
+            grid-template-columns: 68% 32%;
+            gap: 16px;
+            min-height: 520px;
+        }
+
+        /* Left Workbench: Multi-Entity Comparison Screener (Koyfin / FactSet model) */
+        .workbench-panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 12px;
+        }
+
+        .panel-title {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 16px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Multi-Firm Comparative Matrix */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+        }
+
+        .comparison-table th {
+            text-align: left;
+            padding: 10px 12px;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            border-bottom: 1px solid var(--border-subtle);
+            text-transform: uppercase;
+        }
+
+        .comparison-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .firm-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+        }
+
+        .stage-pill {
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-size: 10.5px;
+            font-weight: 700;
+        }
+        .stage-pill.mature { background: rgba(16, 185, 129, 0.12); color: var(--accent-emerald); }
+        .stage-pill.growth { background: rgba(6, 182, 212, 0.12); color: var(--accent-cyan); }
+        .stage-pill.shakeout { background: rgba(245, 158, 11, 0.12); color: var(--accent-amber); }
+
+        /* Right Sidecar Copilot (Perplexity / GitHub Copilot Model) */
+        .sidecar-copilot {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-focused);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: var(--shadow-glow);
+            position: relative;
+        }
+
+        .copilot-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 12px;
+        }
+
+        .copilot-pulse-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--accent-indigo);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .copilot-body {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            margin: 14px 0;
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        .insight-callout {
+            background: rgba(99, 102, 241, 0.08);
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 10px;
+            padding: 12px;
+            color: var(--text-primary);
+        }
+
+        .action-chip-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .action-chip {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .action-chip:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--accent-indigo);
+            color: #ffffff;
+            transform: translateX(2px);
+        }
+
+        /* Floating 1-Click Executive Report Builder (Academic & CFO Workflow) */
+        .executive-action-dock {
+            background: var(--bg-surface-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12.5px;
+        }
+
+        .dock-btn {
+            background: var(--accent-indigo);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 700;
+            font-size: 12.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .dock-btn:hover { background: #4f46e5; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Top App Navigation with Global Smart Bar -->
+        <div class="top-nav">
+            <div class="brand-pill">
+                💎 LifeCycle Leverage <span style="font-size:11px; color:var(--text-muted); font-weight:600; border:1px solid var(--border-subtle); padding:2px 6px; border-radius:6px; -webkit-text-fill-color: initial;">v1.4.0</span>
+            </div>
+
+            <div class="omni-search-bar">
+                <span>🔍</span>
+                <input type="text" placeholder="Type firm (e.g. TATA), compare (TATA vs RELIANCE), or natural query..." value="TATA MOTORS vs RELIANCE">
+                <span class="kbd-pill">Ctrl + K</span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button style="background:transparent; border:1px solid var(--border-subtle); color:var(--text-secondary); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px;" onclick="document.body.classList.toggle('light-mode')">
+                    🌓 Theme
+                </button>
+            </div>
+        </div>
+
+        <!-- 1. The "Verdict Row" (Top-Level Exception & Status Radar) -->
+        <div class="verdict-strip">
+            <div class="verdict-card mature">
+                <span class="v-label">Panel Mean Leverage</span>
+                <div class="v-val">28.45% <span style="font-size:12px; color:var(--accent-emerald); font-weight:600;">-0.8% 5Y-Δ</span></div>
+                <span class="v-sub">Pecking Order Equilibrium</span>
+            </div>
+
+            <div class="verdict-card growth">
+                <span class="v-label">Dickinson Stage Leader</span>
+                <div class="v-val">Mature (54.2%) <span style="font-size:12px; color:var(--accent-cyan); font-weight:600;">215 Firms</span></div>
+                <span class="v-sub">Highest Debt Capacity</span>
+            </div>
+
+            <div class="verdict-card anomaly">
+                <span class="v-label">Anomaly / Leverage Spikes</span>
+                <div class="v-val">12 Firms <span style="font-size:12px; color:var(--accent-rose); font-weight:600;">+14.2% Outlier</span></div>
+                <span class="v-sub">Distress Transition Watchlist</span>
+            </div>
+
+            <div class="verdict-card model">
+                <span class="v-label">Best Econometric Model</span>
+                <div class="v-val">Fixed Effects <span style="font-size:12px; color:var(--accent-indigo); font-weight:600;">p &lt; 0.001</span></div>
+                <span class="v-sub">Hausman χ² = 5.27e+10</span>
+            </div>
+        </div>
+
+        <!-- 2. Active Multi-Entity Workbench + Proactive Sidecar Copilot -->
+        <div class="workspace-split">
+            <!-- Left: Multi-Firm Comparison Screener (Koyfin / FactSet Paradigm) -->
+            <div class="workbench-panel">
+                <div class="panel-head">
+                    <div class="panel-title">
+                        <span>📊 Multi-Firm Capital Structure Screener</span>
+                        <span style="font-size:11px; font-family:'JetBrains Mono'; color:var(--accent-indigo); background:rgba(99,102,241,0.1); padding:2px 8px; border-radius:6px;">Comparing 2 Active Firms</span>
+                    </div>
+                    <span style="font-size:11px; color:var(--text-muted); font-family:'JetBrains Mono';">Panel: Thesis (2001–2024)</span>
+                </div>
+
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Firm Identity</th>
+                            <th>Dickinson Stage</th>
+                            <th>Mean Lev (μ)</th>
+                            <th>ROA (Profitability)</th>
+                            <th>Tangibility</th>
+                            <th>NDTS (Tax Shield)</th>
+                            <th>Trajectory (5Y)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="firm-tag">
+                                    <span>🏎️</span>
+                                    <div>
+                                        <div>Tata Motors Ltd.</div>
+                                        <div style="font-size:10.5px; color:var(--text-muted);">CODE: 2451 · AUTOMOBILES</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="stage-pill mature">STAGE 3: MATURE</span></td>
+                            <td style="font-weight:700; color:var(--accent-emerald);">34.20%</td>
+                            <td>12.45%</td>
+                            <td>48.10%</td>
+                            <td>03.20%</td>
+                            <td>
+                                <svg width="70" height="20" viewBox="0 0 70 20">
+                                    <path d="M0,16 Q20,12 40,6 T70,4" fill="none" stroke="var(--accent-emerald)" stroke-width="2"/>
+                                </svg>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="firm-tag">
+                                    <span>⛽</span>
+                                    <div>
+                                        <div>Reliance Industries Ltd.</div>
+                                        <div style="font-size:10.5px; color:var(--text-muted);">CODE: 1890 · REFINERIES</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="stage-pill mature">STAGE 3: MATURE</span></td>
+                            <td style="font-weight:700; color:var(--accent-cyan);">22.80%</td>
+                            <td>14.10%</td>
+                            <td>62.30%</td>
+                            <td>04.50%</td>
+                            <td>
+                                <svg width="70" height="20" viewBox="0 0 70 20">
+                                    <path d="M0,10 Q20,14 40,8 T70,6" fill="none" stroke="var(--accent-cyan)" stroke-width="2"/>
+                                </svg>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div style="background:rgba(255,255,255,0.02); border:1px solid var(--border-subtle); border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:12px; color:var(--text-secondary);">
+                        💡 <strong>Econometric Insight:</strong> Both firms occupy the <strong>Mature Stage</strong>, but Tata Motors carries +11.40% higher debt-to-capital ratio due to lower internal cash accumulation during capital expenditure cycles.
+                    </span>
+                    <button style="background:transparent; border:1px solid var(--border-focused); color:var(--accent-indigo); padding:6px 12px; border-radius:6px; font-size:11.5px; font-weight:600; cursor:pointer;">
+                        + Add Third Firm
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Proactive Context-Aware Sidecar Copilot (Bloomberg/FactSet Model) -->
+            <div class="sidecar-copilot">
+                <div>
+                    <div class="copilot-header">
+                        <span style="font-weight:800; font-family:'Plus Jakarta Sans'; font-size:14px;">🤖 Proactive Copilot Intelligence</span>
+                        <span class="copilot-pulse-badge">● LIVE SYNC</span>
+                    </div>
+
+                    <div class="copilot-body">
+                        <div class="insight-callout">
+                            <strong>Active Panel Observation:</strong>
+                            <p style="margin-top:4px; font-size:12px; color:var(--text-secondary);">
+                                You are analyzing peer comparison across Mature Stage firms. The <strong>Fixed Effects within-estimator</strong> indicates a strong negative coefficient on profitability ($\beta_1 = -0.245, p < 0.001$), conforming to the Pecking Order Hypothesis.
+                            </p>
+                        </div>
+
+                        <div style="font-weight:700; font-size:11px; text-transform:uppercase; color:var(--text-muted); font-family:'JetBrains Mono';">
+                            Recommended Next Actions:
+                        </div>
+
+                        <div class="action-chip-list">
+                            <div class="action-chip">
+                                <span>🔬 Run Speed of Adjustment (System GMM)</span>
+                                <span class="kbd-pill">Page 13</span>
+                            </div>
+                            <div class="action-chip">
+                                <span>📈 Simulate +100bps Interest Rate Shock</span>
+                                <span class="kbd-pill">Stress Test</span>
+                            </div>
+                            <div class="action-chip">
+                                <span>📋 Compile Executive Board Memo</span>
+                                <span class="kbd-pill">Export</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top:1px solid var(--border-subtle); padding-top:12px; display:flex; gap:8px;">
+                    <input type="text" placeholder="Ask Copilot about this comparison..." style="flex:1; background:rgba(255,255,255,0.04); border:1px solid var(--border-subtle); border-radius:8px; padding:8px 12px; font-size:12px; color:#fff; outline:none;">
+                    <button style="background:var(--accent-indigo); color:#fff; border:none; border-radius:8px; padding:8px 12px; font-size:12px; font-weight:700; cursor:pointer;">↵</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Bottom Executive Action & Export Dock -->
+        <div class="executive-action-dock">
+            <div style="display:flex; align-items:center; gap:16px;">
+                <span style="font-weight:600; color:var(--text-primary);">📁 Active Research Session:</span>
+                <span style="color:var(--text-muted);">2 Firms Selected · 1 OLS Model Pinned · LaTeX BibTeX Ready</span>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="dock-btn" style="background:rgba(255,255,255,0.06); border:1px solid var(--border-subtle); color:var(--text-primary);">
+                    📋 Copy BibTeX Citation
+                </button>
+                <button class="dock-btn">
+                    📄 Export Executive Memo (PDF / PPTX)
+                </button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
