@@ -258,12 +258,26 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
             "tax_shield": "tax_shield",
             "dividend": "dvnd",
         }
-        # By-stage leverage means — use actual stage names from the DB
-        stage_means = df.groupby("life_stage")["leverage"].mean().to_dict()
+        # By-stage leverage & ratio breakdown (Leverage, Profitability ROA, Tangibility, Obs)
+        stage_group = df.groupby("life_stage").agg(
+            mean_lev=("leverage", "mean"),
+            mean_prof=("profitability", "mean"),
+            mean_tang=("tangibility", "mean"),
+            n_obs=("company_code", "count"),
+        ).to_dict("index")
         order = ["Startup", "Growth", "Maturity", "Shakeout1", "Shakeout2", "Shakeout3", "Decline", "Decay"]
-        present = [s for s in order if s in stage_means]
+        present = [s for s in order if s in stage_group]
         stage_line = ", ".join(
-            f"{s}={float(stage_means[s]):.3f}" for s in present
+            f"{s}={float(stage_group[s]['mean_lev']):.2f}%" for s in present
+        )
+        stage_table_rows = [
+            f"| {s} | {stage_group[s]['mean_lev']:.2f}% | {stage_group[s]['mean_prof']:.3f} | {stage_group[s]['mean_tang']:.3f} | {stage_group[s]['n_obs']} |"
+            for s in present
+        ]
+        stage_table = (
+            "| Life Stage | Mean Leverage (%) | Mean Profitability (ROA) | Mean Tangibility | Firm-Years |\n"
+            "|---|---|---|---|---|\n"
+            + "\n".join(stage_table_rows)
         )
         # Leverage distribution stats (FIX-3)
         lev = df["leverage"].dropna()
@@ -341,14 +355,15 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
             f"- {total_firms} firms, "
             f"{total_obs} firm-year observations, "
             f"{year_min}-{year_max}\n"
-            f"- Overall mean leverage: {float(df['leverage'].mean()):.3f}\n"
+            f"- Overall mean leverage: {float(df['leverage'].mean()):.3f}%\n"
             f"- Leverage distribution: median={lev_median:.1f}%, p90={lev_p90:.1f}%, "
             f"p99={lev_p99:.1f}%, max={lev_max:.1f}% "
             f"({lev_over100} firm-years >100%, driven by negative-equity firms)\n"
             f"- Profitability (ROA) distribution: mean={prof_mean:.4f}, median={prof_median:.4f}, std={prof_std:.4f}, "
             f"p25={prof_p25:.4f}, p75={prof_p75:.4f}, p90={prof_p90:.4f}, min={prof_min:.4f}, max={prof_max:.4f}\n"
-            f"- YoY Profitability Trajectory (mean/median): {yoy_lines}\n"
-            f"- By Life Stage (mean leverage): {stage_line}\n\n"
+            f"- YoY Profitability Trajectory (mean/median): {yoy_lines}\n\n"
+            f"## [SOURCE: {panel_label}] Life Stage Financial Metrics & Ratios\n"
+            f"{stage_table}\n\n"
             f"## [SOURCE: {panel_label}] Leverage by Event Period (panel mean %)\n"
             f"- Pre-GFC (2001-07): {ep_pre:.1f}% | GFC (2008-09): {ep_gfc:.1f}%"
             f" | Post-GFC (2010-15): {ep_mid:.1f}%\n"
@@ -1030,7 +1045,10 @@ def should_generate_chart(user_query: str) -> bool:
         "by industry", "by life stage", "by lifestage", "across industry",
         "across industries", "differ across", "differs across",
         "across different", "distribution", "compare", "comparison", "versus",
-        "top ", "bottom ", "rank", "over time",
+        "top ", "bottom ", "rank", "over time", "startup and maturity",
+        "life stage", "life stages", "lifestage", "marginal effect",
+        "tangibility and leverage", "profitability and leverage",
+        "highest leverage", "lowest leverage", "highest tangibility",
     ))
 
 
