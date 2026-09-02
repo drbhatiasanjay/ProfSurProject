@@ -37,6 +37,7 @@ def sample_panel_df():
                 "leverage": max(0.0, lev),
                 "profitability": roa,
                 "tangibility": tang,
+                "dividend": max(0.0, np.random.normal(25.0, 5.0)),
                 "size": size,
                 "log_size": size,
                 "life_stage": "Maturity" if f in (101, 102) else ("Growth" if f in (103, 104) else "Decline"),
@@ -213,3 +214,18 @@ def test_histogram_graph_command(sample_panel_df):
     spec = res["chart_spec"]
     assert spec["chart_type"] == "histogram"
     assert spec["x_axis_label"] == "leverage"
+
+
+def test_execute_thesis_figures(sample_panel_df):
+    from models.stata_engine import execute_stata_command
+    res51 = execute_stata_command("thesis fig51", df=sample_panel_df)
+    assert res51["status"] == "success"
+    assert "fig" in res51
+    assert res51["fig"].layout.height == 950
+    assert "Figure 5.1" in res51["ascii_output"]
+
+    res83 = execute_stata_command("thesis fig83", df=sample_panel_df)
+    assert res83["status"] == "success"
+    assert "fig" in res83
+    assert res83["fig"].layout.height == 700
+    assert "Figure 8.3" in res83["ascii_output"]

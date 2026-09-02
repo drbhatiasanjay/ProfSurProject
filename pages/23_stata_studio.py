@@ -168,15 +168,15 @@ with tab_cli:
     with st.expander("📚 PhD Dissertation Figure Replications (Chapters 5 & 8) — 1-Click Stata Command & Graph", expanded=False):
         col_th1, col_th2 = st.columns(2)
         with col_th1:
-            if st.button("📊 Fig 5.1: Stage-Wise Profile (tabstat by life_stage)", use_container_width=True):
-                quick_cmd = "tabstat leverage profitability log_size dividend, by(life_stage)"
-            if st.button("📈 Fig 5.2: 2001–2024 Year-Wise Trends (tabstat by year)", use_container_width=True):
-                quick_cmd = "tabstat leverage profitability log_size dividend, by(year)"
+            if st.button("📊 Fig 5.1: Stage-Wise Profile (thesis fig51)", use_container_width=True):
+                quick_cmd = "thesis fig51"
+            if st.button("📈 Fig 5.2: 2001–2024 Year-Wise Trends (thesis fig52)", use_container_width=True):
+                quick_cmd = "thesis fig52"
             if st.button("🧪 Fig 5.3: ANOVA Means of Leverage (tabstat leverage by stage)", use_container_width=True):
                 quick_cmd = "tabstat leverage, by(life_stage)"
         with col_th2:
-            if st.button("📉 Fig 8.3A: Leverage vs Profitability (scatter)", use_container_width=True):
-                quick_cmd = "scatter leverage profitability"
+            if st.button("📉 Fig 8.3: Leverage vs Profit & Tangibility (thesis fig83)", use_container_width=True):
+                quick_cmd = "thesis fig83"
             if st.button("📈 Fig 8.3B: Leverage vs Tangibility (scatter)", use_container_width=True):
                 quick_cmd = "scatter leverage tangibility"
             if st.button("🏛 Full Thesis Model: FE Panel Regression + coefplot", use_container_width=True):
@@ -209,19 +209,17 @@ with tab_cli:
     # Render Terminal Output Box
     last_res = st.session_state.get("stata_last_result", {})
     last_cmd = st.session_state["stata_history"][-1][0] if st.session_state["stata_history"] else "xtreg leverage roa tang size, fe"
+    import html
     ascii_out = last_res.get("ascii_output", "No output generated.")
-
-    terminal_html = f"""
-    <div class="stata-terminal-box">
-<span class="stata-prompt-prefix">. {last_cmd.lstrip('. ')}</span>
-
-{ascii_out}
-    </div>
-    """
+    safe_ascii = html.escape(ascii_out)
+    clean_cmd = html.escape(last_cmd.lstrip('. '))
+    terminal_html = f'<div class="stata-terminal-box"><span class="stata-prompt-prefix">. {clean_cmd}</span><br><br><pre style="margin:0; background:transparent; color:#f0f6fc; font-family:inherit; white-space:pre-wrap;">{safe_ascii}</pre></div>'
     st.markdown(terminal_html, unsafe_allow_html=True)
 
-    # In-terminal chart rendering if generated (e.g. twoway or coefplot)
-    if last_res.get("chart_spec"):
+    # In-terminal chart rendering if generated (e.g. twoway, coefplot, or calibrated thesis figure)
+    if last_res.get("fig"):
+        st.plotly_chart(last_res["fig"], use_container_width=True)
+    elif last_res.get("chart_spec"):
         from models.agent_tools import render_chat_chart_figure
         fig = render_chat_chart_figure(last_res["chart_spec"], theme=st.session_state.get("theme", "light"))
         if fig:

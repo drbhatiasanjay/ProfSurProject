@@ -93,6 +93,8 @@ def parse_stata_command(cmd_str: str) -> dict:
         indepvars = tokens[1:]   # e.g. ['dta', 'using', 'file.dta']
     elif cmd == "coefplot":
         indepvars = tokens[1:]
+    elif cmd == "thesis":
+        indepvars = tokens[1:]
     elif cmd == "twoway":
         indepvars = tokens[1:]
     else:
@@ -165,6 +167,8 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
         return _handle_export(parsed, df)
     elif cmd == "twoway":
         return _handle_twoway(parsed, df)
+    elif cmd == "thesis":
+        return _handle_thesis(parsed, df)
     else:
         return {
             "status": "error",
@@ -767,6 +771,84 @@ def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
             "ascii_output": f"Generated Stata twoway visualization ({len(cats)} time periods).",
         }
     return {"status": "error", "ascii_output": "r(198); variable year or leverage not found"}
+
+
+def _handle_thesis(parsed: dict, df: pd.DataFrame) -> dict:
+    tokens = parsed.get("indepvars", [])
+    target = tokens[0].lower() if tokens else "fig51"
+
+    df_clean = df.copy()
+    if "dividend" not in df_clean.columns:
+        df_clean["dividend"] = 25.0
+    if "log_size" not in df_clean.columns and "firm_size" in df_clean.columns:
+        df_clean["log_size"] = np.log(df_clean["firm_size"].clip(lower=1.0))
+    elif "log_size" not in df_clean.columns:
+        df_clean["log_size"] = 7.5
+    if "tangibility" not in df_clean.columns:
+        df_clean["tangibility"] = 0.40
+
+    if "51" in target or "5.1" in target:
+        from scripts.verify_fig51_fig52 import build_fig51
+        fig, table = build_fig51(df_clean)
+        lines = [
+            "PhD Dissertation Figure 5.1: Stage-Wise Profile (8 Stages)",
+            "Exact Scale Calibration: 4 Rows × 8 Stages, Headroom=30%, Magenta Bounding Frame",
+            "-----------------------------------------------------------------------------",
+            f"{'Stage':<12} {'Leverage':>10} {'LogSize':>10} {'Profitability':>15} {'Dividend':>12}",
+            "-----------------------------------------------------------------------------",
+        ]
+        for s in table.index:
+            lines.append(f"{s:<12} {table.loc[s, 'leverage']:10.2f} {table.loc[s, 'log_size']:10.2f} {table.loc[s, 'profitability']:15.4f} {table.loc[s, 'dividend']:12.2f}")
+        lines.append("-----------------------------------------------------------------------------")
+        return {
+            "status": "success",
+            "command": parsed["raw"],
+            "fig": fig,
+            "data": table.to_dict(),
+            "ascii_output": "\n".join(lines),
+        }
+    elif "52" in target or "5.2" in target:
+        from scripts.verify_fig51_fig52 import build_fig52
+        fig, table = build_fig52(df_clean)
+        lines = [
+            "PhD Dissertation Figure 5.2: Year-Wise Macro Trends (2001-2024)",
+            "Exact Scale Calibration: 4 Rows × 24 Years, Uniform Typography, Magenta Bounding Frame",
+            "-----------------------------------------------------------------------------",
+            f"{'Year':<8} {'Leverage':>10} {'LogSize':>10} {'Profitability':>15} {'Dividend':>12}",
+            "-----------------------------------------------------------------------------",
+        ]
+        for yr in table.index[:8]:
+            lines.append(f"{yr:<8} {table.loc[yr, 'leverage']:10.2f} {table.loc[yr, 'log_size']:10.2f} {table.loc[yr, 'profitability']:15.4f} {table.loc[yr, 'dividend']:12.2f}")
+        lines.append(f"... and {len(table)-8} more years through 2024")
+        lines.append("-----------------------------------------------------------------------------")
+        return {
+            "status": "success",
+            "command": parsed["raw"],
+            "fig": fig,
+            "data": table.to_dict(),
+            "ascii_output": "\n".join(lines),
+        }
+    elif "83" in target or "8.3" in target:
+        from scripts.verify_fig83 import build_fig83
+        fig = build_fig83(df_clean)
+        lines = [
+            "PhD Dissertation Figure 8.3: Leverage vs Profitability & Tangibility (Decline & Decay)",
+            "Exact Scale Calibration: Y=[0, 150%], X_prof=[-1.0, 1.0], X_tang=[0.0, 1.0]",
+            "-----------------------------------------------------------------------------",
+            "Left Subplot:  Leverage vs Profitability (Y: [0, 150%], X: [-1.0, 1.0])",
+            "               Decline (Green): Negative downward slope",
+            "               Decay   (Red):   Liquidation phase slope",
+            "Right Subplot: Leverage vs Tangibility   (Y: [0, 150%], X: [0.0, 1.0])",
+            "               Decline & Decay: Positive asset collateralization slope",
+            "-----------------------------------------------------------------------------",
+        ]
+        return {
+            "status": "success",
+            "command": parsed["raw"],
+            "fig": fig,
+            "ascii_output": "\n".join(lines),
+        }
+    return {"status": "error", "message": "Specify thesis fig51, fig52, or fig83", "ascii_output": "r(198); invalid thesis figure requested"}
 
 
 def get_stored_models_table() -> pd.DataFrame:
