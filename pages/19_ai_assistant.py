@@ -85,7 +85,7 @@ _CHART_INSTRUCTION = (
 
 _FOLLOWUP_INSTRUCTION = (
     "\n\n---\nAfter your answer, on a new line output exactly:\n"
-    'FOLLOWUPS_JSON: {"followups":["<specific stat or number question>?","<theory or mechanism question>?","<industry, time period, or peer comparison question>?"]}\n'
+    'FOLLOWUPS_JSON: {"followups":["<specific stat or number question>?","<theory or mechanism question>?","<one focused industry, time-period, or peer comparison question>?"]}\n'
     "Replace each placeholder with one real follow-up question. Output ONLY that line after your answer — no markdown, no other text."
 )
 
@@ -96,12 +96,12 @@ _FALLBACK_CHIPS = {
     "Researcher": [
         "What is the mean leverage across all life stages?",
         "Explain the theoretical mechanism behind this result — pecking order vs trade-off.",
-        "How does this compare across industries or time periods?",
+        "How does leverage differ across industries?",
     ],
     "CFO": [
         "How does my company's leverage compare to industry peers?",
         "What is the practical implication of this for capital structure decisions?",
-        "Which industry or time period comparison is most relevant here?",
+            "How does leverage differ across industry peers?",
     ],
 }
 
