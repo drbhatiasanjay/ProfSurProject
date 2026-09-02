@@ -165,6 +165,23 @@ with tab_cli:
         if st.button("🔗 . pwcorr leverage roa tang size, sig", use_container_width=True):
             quick_cmd = "pwcorr leverage profitability tangibility log_size, sig star(0.05)"
 
+    with st.expander("📚 PhD Dissertation Figure Replications (Chapters 5 & 8) — 1-Click Stata Command & Graph", expanded=False):
+        col_th1, col_th2 = st.columns(2)
+        with col_th1:
+            if st.button("📊 Fig 5.1: Stage-Wise Profile (tabstat by life_stage)", use_container_width=True):
+                quick_cmd = "tabstat leverage profitability log_size dividend, by(life_stage)"
+            if st.button("📈 Fig 5.2: 2001–2024 Year-Wise Trends (tabstat by year)", use_container_width=True):
+                quick_cmd = "tabstat leverage profitability log_size dividend, by(year)"
+            if st.button("🧪 Fig 5.3: ANOVA Means of Leverage (tabstat leverage by stage)", use_container_width=True):
+                quick_cmd = "tabstat leverage, by(life_stage)"
+        with col_th2:
+            if st.button("📉 Fig 8.3A: Leverage vs Profitability (scatter)", use_container_width=True):
+                quick_cmd = "scatter leverage profitability"
+            if st.button("📈 Fig 8.3B: Leverage vs Tangibility (scatter)", use_container_width=True):
+                quick_cmd = "scatter leverage tangibility"
+            if st.button("🏛 Full Thesis Model: FE Panel Regression + coefplot", use_container_width=True):
+                quick_cmd = "xtreg leverage profitability tangibility log_size tax_shield, fe cluster(company_code)"
+
     # Command Input Bar
     c_in1, c_in2 = st.columns([5, 1])
     with c_in1:

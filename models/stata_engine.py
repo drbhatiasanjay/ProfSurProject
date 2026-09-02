@@ -270,10 +270,28 @@ def _handle_tabstat(parsed: dict, df: pd.DataFrame) -> dict:
         lines.append(row_str)
         res_data[str(group_name)] = group_metrics
 
+    # Build automatic grouped bar or line chart (Thesis Fig 5.1 / Fig 5.2)
+    cats = list(res_data.keys())
+    series_list = []
+    for v in vars_to_tab:
+        vals = [round(res_data[g][v]["mean"], 2) for g in cats if v in res_data[g]]
+        series_list.append({"name": f"{v} (mean)", "values": vals})
+
+    chart_type = "line" if by_var == "year" else "bar"
+    chart_spec = {
+        "chart_type": chart_type,
+        "title": f"tabstat: {', '.join(vars_to_tab)} by {by_var}",
+        "x_axis_label": by_var,
+        "y_axis_label": "Mean Value",
+        "categories": [str(c) for c in cats],
+        "series": series_list,
+    }
+
     return {
         "status": "success",
         "command": parsed["raw"],
         "data": res_data,
+        "chart_spec": chart_spec,
         "ascii_output": "\n".join(lines),
     }
 
