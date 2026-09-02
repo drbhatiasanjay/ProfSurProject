@@ -383,12 +383,18 @@ with st.sidebar:
         key="p19_mode",
         help="Researcher: panel-wide context. CFO: single-company context.",
     )
+    _has_gemini_env = bool(
+        os.environ.get("GEMINI_API_KEY")
+        or os.environ.get("GOOGLE_API_KEY")
+        or (hasattr(st, "secrets") and (st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")))
+    )
+    _default_backend_idx = 0 if _has_gemini_env else 1
     backend = st.radio(
         "Backend",
         ["gemini", "anthropic", "ollama"],
-        index=0,
+        index=_default_backend_idx,
         key="p19_backend",
-        help="Gemini: Google GenAI multi-tool agent (NL-to-SQL + Live Econometrics + CFO Stress Tester). Anthropic: Claude Haiku/Sonnet. Ollama: local.",
+        help="Gemini: Google GenAI multi-tool agent. Anthropic: Claude Haiku/Sonnet. Ollama: local.",
     )
     if backend == "gemini":
         _has_gemini_key = bool(
