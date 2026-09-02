@@ -531,12 +531,10 @@ def render_chat_chart_figure(spec: dict, theme: str = "light") -> Any:
 
     layout_func = plotly_layout_dark if str(theme).lower() == "dark" else plotly_layout_light
     base_layout = layout_func(title=title)
+    fig.update_layout(**base_layout)
     fig.update_layout(
-        **base_layout,
         xaxis_title=x_label or ("Year" if is_time_series else None),
         yaxis_title=y_label or (series_cleaned[0]["name"] if series_cleaned else "Value"),
-        hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
     if dual_axis and len(series_cleaned) > 1:
         fig.update_layout(
