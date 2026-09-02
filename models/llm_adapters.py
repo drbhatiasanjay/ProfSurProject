@@ -1286,15 +1286,6 @@ def stream_gemini_agent(
             else:
                 return
 
-        tool_config = None
-        if chart_requested:
-            tool_config = types.ToolConfig(
-                function_calling_config=types.FunctionCallingConfig(
-                    mode="ANY",
-                    allowed_function_names=["query_financial_database"],
-                )
-            )
-
         config = types.GenerateContentConfig(
             system_instruction=effective_system,
             temperature=0.1,
@@ -1306,7 +1297,6 @@ def stream_gemini_agent(
                 run_live_econometric_model,
                 run_cfo_stress_simulation,
             ],
-            tool_config=tool_config,
         )
 
         response = client.models.generate_content(
@@ -1356,6 +1346,14 @@ def stream_gemini_agent(
         # 1. Check if generate_chat_chart was called in automatic_function_calling_history
         for item in (getattr(response, "automatic_function_calling_history", None) or []):
             for part in (getattr(item, "parts", None) or []):
+                fn_call = getattr(part, "function_call", None)
+                if fn_call and getattr(fn_call, "name", "") == "generate_chat_chart":
+                    call_args = getattr(fn_call, "args", None)
+                    if isinstance(call_args, dict) and not has_yielded_chart:
+                        spec = extract_chart_tool_spec(call_args)
+                        if spec:
+                            yield {"type": "chart", "spec": spec}
+                            has_yielded_chart = True
                 fn_resp = getattr(part, "function_response", None)
                 if fn_resp and "query_financial_database" in getattr(fn_resp, "name", ""):
                     query_payload = extract_chart_tool_spec(getattr(fn_resp, "response", None))
@@ -1363,7 +1361,7 @@ def stream_gemini_agent(
                         query_datasets.append(query_payload["rows"])
                 if fn_resp and "generate_chat_chart" in getattr(fn_resp, "name", ""):
                     spec = extract_chart_tool_spec(getattr(fn_resp, "response", None))
-                    if spec:
+                    if spec and not has_yielded_chart:
                         yield {"type": "chart", "spec": spec}
                         has_yielded_chart = True
 

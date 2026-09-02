@@ -272,11 +272,13 @@ def _split_supporting_tables(text: str) -> tuple[str, list[str]]:
     return "\n".join(prose).strip(), tables
 
 
-def _normalized_turn_content(turn: dict) -> tuple[str, list[str], dict | None]:
+def _normalized_turn_content(turn: dict, user_query: str = "") -> tuple[str, list[str], dict | None]:
     """Return display prose, supporting tables, and chart for any provider turn."""
     normalized = normalize_assistant_response(
         turn.get("content", ""),
         chart_spec=turn.get("chart_spec"),
+        user_query=user_query,
+        chart_requested=True,
     )
     prose, tables = _split_supporting_tables(normalized["answer"])
     return prose, tables, normalized.get("chart_spec")
@@ -384,18 +386,12 @@ with st.sidebar:
         key="p19_mode",
         help="Researcher: panel-wide context. CFO: single-company context.",
     )
-    _has_gemini_env = bool(
-        os.environ.get("GEMINI_API_KEY")
-        or os.environ.get("GOOGLE_API_KEY")
-        or (hasattr(st, "secrets") and (st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")))
-    )
-    _default_backend_idx = 0 if _has_gemini_env else 1
     backend = st.radio(
         "Backend",
         ["gemini", "anthropic", "ollama"],
-        index=_default_backend_idx,
+        index=0,
         key="p19_backend",
-        help="Gemini: Google GenAI multi-tool agent. Anthropic: Claude Haiku/Sonnet. Ollama: local.",
+        help="Gemini: Google GenAI multi-tool agent. Anthropic: Claude Sonnet. Ollama: local.",
     )
     if backend == "gemini":
         _has_gemini_key = bool(
@@ -659,13 +655,11 @@ if user_q:
     q_type = classify_query(user_q)
     if backend == "gemini":
         model_to_use = "gemini-2.5-flash"
-    elif q_type in ("analytical", "hybrid"):
-        model_to_use = "claude-sonnet-4-6"
     else:
-        model_to_use = "claude-haiku-4-5-20251001"
+        model_to_use = "claude-sonnet-4-6"
 
-    max_tokens = 2048 if ("sonnet" in model_to_use or "gemini" in model_to_use) else 1024
-    if q_type == "factual":
+    max_tokens = 2048
+    if q_type == "factual" and not should_generate_chart(user_q):
         ctx = "Answer in 1-2 sentences. State the exact number first, then one sentence of context.\n\n" + ctx
     ctx += (
         "\n\nAnswer only the current user question. Do not repeat headings, tables, charts, or analysis "

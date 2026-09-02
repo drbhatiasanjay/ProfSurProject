@@ -557,9 +557,29 @@ def extract_table_chart_spec(text: str, user_q: str = "") -> Optional[dict]:
     else:
         data_lines = []
 
-    # Providers sometimes emit TSV tables when the answer is long. This also
-    # works when a following JSON chart block is cut off by max output tokens.
+    # Providers sometimes emit TSV tables or bullet lists with percentages/metrics
     if not table_lines:
+        bullet_matches = re.findall(
+            r"(?:^|\n)\s*[\*\-]\s*\*{0,2}([\w\s\(\)\-\_/]+?)\*{0,2}\s*:\*{0,2}\s*(?:is\s*)?([+\-]?\d+(?:\.\d+)?)\s*%",
+            text,
+        )
+        if len(bullet_matches) >= 3:
+            b_cats = [m[0].strip() for m in bullet_matches]
+            b_vals = [float(m[1]) for m in bullet_matches]
+            q_lower = (user_q or "").lower()
+            b_metric = "Leverage (%)" if "leverage" in q_lower or "%" in text else "Metric"
+            b_title = f"{b_metric} Comparison"
+            res = generate_chat_chart(
+                chart_type="bar",
+                title=b_title,
+                x_axis_label="Category / Period",
+                y_axis_label=b_metric,
+                categories=b_cats,
+                series=[{"name": b_metric, "values": b_vals}],
+            )
+            if res.get("status") == "success":
+                return res["chart_spec"]
+
         tab_candidates = [line.strip() for line in text.splitlines() if "\t" in line]
         header_index = next((i for i, line in enumerate(tab_candidates)
                              if "industry" in line.lower() and
