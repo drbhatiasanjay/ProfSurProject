@@ -1,99 +1,285 @@
-/* LifeCycle Leverage Dashboard — Light Theme (default) */
+/* ==========================================================================
+   LifeCycle Leverage — Alpine Porcelain (Light Theme Design Tokens & System)
+   ========================================================================== */
 
-/* KPI metric cards */
+:root,
+:root[data-theme="light"] {
+    --bg-canvas: #F8FAFC;
+    --bg-surface: #FFFFFF;
+    --bg-surface-elevated: #F1F5F9;
+    --bg-glass: rgba(255, 255, 255, 0.85);
+
+    --border-subtle: rgba(226, 232, 240, 0.9);
+    --border-focused: rgba(79, 70, 229, 0.5);
+
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #94A3B8;
+
+    --accent-indigo: #4F46E5;
+    --accent-cyan: #0891B2;
+    --delta-positive: #059669;
+    --delta-negative: #E11D48;
+
+    /* Life Stage Semantic Colors */
+    --stage-intro: #059669;
+    --stage-growth: #0284C7;
+    --stage-mature: #7C3AED;
+    --stage-shakeout: #D97706;
+    --stage-decline: #E11D48;
+
+    --shadow-elevation: 0 4px 16px -2px rgba(0, 0, 0, 0.06);
+    --shadow-glow: 0 0 12px rgba(79, 70, 229, 0.15);
+    --new: #FFB020;
+
+    /* Legacy aliases */
+    --bg: var(--bg-canvas);
+    --panel: var(--bg-surface);
+    --border: var(--border-subtle);
+    --text: var(--text-primary);
+    --muted: var(--text-muted);
+    --accent: var(--accent-indigo);
+}
+
+/* App background + default text */
+.stApp,
+div[data-testid="stAppViewContainer"],
+section.main,
+div[data-testid="stMainBlockContainer"] {
+    background: var(--bg-canvas) !important;
+    color: var(--text-primary) !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.main .block-container,
+div[data-testid="block-container"] {
+    background: var(--bg-canvas) !important;
+    color: var(--text-primary) !important;
+    padding-top: 5rem !important;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6,
+div[data-testid="stMarkdown"] h1,
+div[data-testid="stMarkdown"] h2,
+div[data-testid="stMarkdown"] h3,
+div[data-testid="stMarkdown"] h4 {
+    color: var(--text-primary) !important;
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    font-weight: 700;
+}
+
+/* KPI metric cards (Streamlit Native Fallback) */
 div[data-testid="stMetric"] {
-    background: #FFFFFF;
-    border: 1px solid #E5E7EB;
-    border-radius: 14px;
-    padding: 18px 22px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    background: var(--bg-surface) !important;
+    border: 1px solid var(--border-subtle) !important;
+    border-radius: 14px !important;
+    padding: 18px 22px !important;
+    box-shadow: var(--shadow-elevation) !important;
+    transition: all 0.2s ease;
+}
+
+div[data-testid="stMetric"]:hover {
+    border-color: var(--border-focused) !important;
 }
 
 div[data-testid="stMetric"] label {
-    color: #6B7280 !important;
-    font-size: 0.78rem !important;
-    font-weight: 500 !important;
+    color: var(--text-muted) !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
 div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-    font-size: 2rem !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 1.9rem !important;
     font-weight: 700 !important;
-    color: #0D9488 !important;
+    color: var(--text-primary) !important;
+    font-variant-numeric: tabular-nums;
 }
 
-/* Sidebar styling */
+/* Bento Card Grid System */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.bento-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow-elevation);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.bento-card:hover {
+    border-color: var(--border-focused);
+    transform: translateY(-2px);
+}
+
+.bento-title {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+}
+
+.bento-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--accent-indigo);
+    background: rgba(79, 70, 229, 0.10);
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.bento-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
+    word-break: break-word;
+    margin: 4px 0;
+}
+
+.bento-delta {
+    font-size: 0.70rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.delta-up { background: rgba(5, 150, 105, 0.12); color: var(--delta-positive); }
+.delta-down { background: rgba(225, 29, 72, 0.12); color: var(--delta-negative); }
+
+.sparkline-svg {
+    width: 100%;
+    height: 36px;
+    stroke: var(--accent-indigo);
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.percentile-bar-bg {
+    width: 100%;
+    height: 5px;
+    background: var(--bg-surface-elevated);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.percentile-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-indigo));
+    border-radius: 3px;
+}
+
+/* Stage Badges */
+.stage-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.stage-intro { background: rgba(5, 150, 105, 0.12); color: var(--stage-intro); border: 1px solid rgba(5, 150, 105, 0.3); }
+.stage-growth { background: rgba(2, 132, 199, 0.12); color: var(--stage-growth); border: 1px solid rgba(2, 132, 199, 0.3); }
+.stage-mature { background: rgba(124, 58, 237, 0.12); color: var(--stage-mature); border: 1px solid rgba(124, 58, 237, 0.3); }
+.stage-shakeout { background: rgba(217, 119, 6, 0.12); color: var(--stage-shakeout); border: 1px solid rgba(217, 119, 6, 0.3); }
+.stage-decline { background: rgba(225, 29, 72, 0.12); color: var(--stage-decline); border: 1px solid rgba(225, 29, 72, 0.3); }
+
+/* Citations Pill */
+.citation-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(79, 70, 229, 0.12);
+    border: 1px solid var(--accent-indigo);
+    color: var(--accent-indigo);
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* Sidebar */
 section[data-testid="stSidebar"] {
-    background: #F8FAFC;
-    border-right: 1px solid #E5E7EB;
+    background: var(--bg-surface) !important;
+    border-right: 1px solid var(--border-subtle) !important;
 }
 
 section[data-testid="stSidebar"] h1 {
-    color: #0D9488;
-    font-size: 1.3rem;
-    font-weight: 700;
+    color: var(--text-primary) !important;
+    font-size: 1.25rem;
+    font-weight: 800;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid #0D9488;
+    border-bottom: 2px solid var(--accent-indigo);
     margin-bottom: 1rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Tab styling */
-button[data-baseweb="tab"] {
+/* Buttons */
+button[kind="primary"] {
+    background: var(--accent-indigo) !important;
+    border-color: var(--accent-indigo) !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
     font-weight: 600 !important;
 }
 
-/* Page header consistency */
-div[data-testid="stMarkdown"] h3:first-of-type {
-    color: #111827;
-    font-size: 1.6rem;
-    font-weight: 700;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-/* Expander styling */
-details[data-testid="stExpander"] summary {
-    font-weight: 600;
-    color: #374151;
-}
-
-/* Button primary */
-button[kind="primary"] {
-    background: #0D9488 !important;
-    border-color: #0D9488 !important;
-}
-
 button[kind="primary"]:hover {
-    background: #0F766E !important;
-    border-color: #0F766E !important;
-}
-
-/* Dark mode overrides */
-.dark-mode {
-    --bg: #1F2937;
-    --card-bg: #374151;
-    --text: #F3F4F6;
-    --border: #4B5563;
+    background: #4338ca !important;
+    border-color: #4338ca !important;
+    box-shadow: var(--shadow-glow);
 }
 
 /* Download buttons */
 div.stDownloadButton > button {
-    background: #0D9488 !important;
-    color: white !important;
-    border: none !important;
+    background: var(--bg-surface-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-subtle) !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
 }
 
 div.stDownloadButton > button:hover {
-    background: #0F766E !important;
+    background: var(--bg-surface) !important;
+    border-color: var(--accent-indigo) !important;
 }
 
-/* NEW-badge helper (inline HTML snippet in st.markdown) */
+/* NEW badge */
 .new-badge {
     display: inline-block;
-    background: #FFB020;
+    background: var(--new);
     color: #111;
     font-weight: 700;
     font-size: 10px;
@@ -104,24 +290,85 @@ div.stDownloadButton > button:hover {
     vertical-align: middle;
 }
 
-/* Vintage pills for Data Explorer rows (Phase 3) */
-.pill-thesis {
-    display: inline-block;
-    background: #EEF2F7;
-    color: #274066;
-    border: 1px solid #C7D2FE;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 10px;
+/* Antigravity-Style Working / Reasoning Indicator */
+@keyframes antigravity-pulse {
+    0% { transform: scale(0.95); opacity: 0.7; box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.35); }
+    50% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 12px 3px rgba(79, 70, 229, 0.5); }
+    100% { transform: scale(0.95); opacity: 0.7; box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.35); }
 }
 
-.pill-cmie-2025 {
-    display: inline-block;
-    background: #FFF4DC;
-    color: #8A5A00;
-    border: 1px solid #F5C97A;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 10px;
+@keyframes antigravity-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+
+.antigravity-working-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(79, 70, 229, 0.10);
+    border: 1px solid rgba(79, 70, 229, 0.28);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
     font-weight: 600;
+    color: var(--accent-indigo);
+    margin-bottom: 12px;
+}
+
+.antigravity-dot {
+    width: 8px;
+    height: 8px;
+    background: #4f46e5;
+    border-radius: 50%;
+    animation: antigravity-pulse 1.4s infinite ease-in-out;
+}
+
+.antigravity-blink-text {
+    animation: antigravity-blink 1.2s infinite ease-in-out;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.80rem;
+    font-weight: 700;
+    color: var(--accent-indigo);
+    letter-spacing: 0.02em;
+}
+
+/* Custom Glassmorphic Status Widget Styling */
+div[data-testid="stStatusWidget"] {
+    background: var(--bg-surface) !important;
+    border: 1px solid rgba(79, 70, 229, 0.22) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
+    padding: 10px 14px !important;
+    margin-bottom: 12px !important;
+}
+
+div[data-testid="stStatusWidget"] summary {
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    font-size: 0.85rem !important;
+}
+
+div[data-testid="stStatusWidget"] div[data-testid="stMarkdown"] p {
+    font-size: 0.82rem !important;
+    color: var(--text-secondary) !important;
+}
+
+/* Bento Zero-State Starter Cards */
+.starter-bento-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: var(--shadow-elevation);
+}
+.starter-bento-card:hover {
+    border-color: var(--accent-indigo);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.12);
 }

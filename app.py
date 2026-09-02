@@ -125,7 +125,18 @@ ensure_session_state()
 # ── Sidebar: Global filters ──
 from helpers import PANEL_LABELS as panel_label_map
 with st.sidebar:
-    st.markdown("# LifeCycle Leverage")
+    _sb_hcol1, _sb_hcol2 = st.columns([3, 1])
+    with _sb_hcol1:
+        st.markdown("# LifeCycle Leverage")
+    with _sb_hcol2:
+        _cur_t = st.session_state.get("theme", "light")
+        _t_icon = "🌙" if _cur_t == "light" else "☀️"
+        if st.button(_t_icon, key="quick_theme_toggle", help=f"Switch to {'Dark' if _cur_t == 'light' else 'Light'} theme"):
+            _next_t = "dark" if _cur_t == "light" else "light"
+            st.session_state.theme = _next_t
+            if _username:
+                db.save_user_pref(_username, "app", {"theme": _next_t})
+            st.rerun()
     st.divider()
 
     # Dataset selectbox — native Streamlit widget triggers proper rerun + state propagation
@@ -290,9 +301,10 @@ if _user_obj.get("role") == "viewer":
 _role_display = _user_obj.get("role", "viewer").title()
 _now_str      = datetime.now(_tz.utc).strftime("%a %d %b %Y · %H:%M UTC")
 
-_header_bg   = "#ffffff" if _theme == "light" else "#0f1117"
-_header_text = "#111827" if _theme == "light" else "#f3f4f6"
-_header_sub  = "#6B7280" if _theme == "light" else "#9ca3af"
+_header_bg   = "rgba(255, 255, 255, 0.9)" if _theme == "light" else "rgba(16, 20, 30, 0.9)"
+_header_text = "#0F172A" if _theme == "light" else "#F8FAFC"
+_header_sub  = "#64748B" if _theme == "light" else "#94A3B8"
+_accent_grad = "linear-gradient(135deg, #4F46E5, #0891B2)" if _theme == "light" else "linear-gradient(135deg, #6366F1, #06B6D4)"
 
 st.markdown(f"""
 <div id="lc-navbar" style="
@@ -303,40 +315,44 @@ st.markdown(f"""
     z-index: 1000001;
     height: 64px;
     background: {_header_bg};
-    border-bottom: 3px solid #0D9488;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.07);
-    padding: 0 1.5rem;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid {'rgba(226, 232, 240, 0.8)' if _theme == 'light' else 'rgba(255, 255, 255, 0.08)'};
+    box-shadow: {'0 2px 10px rgba(0,0,0,0.04)' if _theme == 'light' else '0 4px 20px rgba(0,0,0,0.35)'};
+    padding: 0 1.75rem;
     display: flex;
     align-items: center;
-    gap: 2rem;
-    font-size: 15px;
+    gap: 1.5rem;
+    font-size: 14px;
     color: {_header_text};
-    font-family: inherit;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 ">
-    <span style="font-weight:700; color:#0D9488; font-size:18px; white-space:nowrap;">LifeCycle Leverage<span style="font-size:11px;color:#6B7280;font-weight:400;margin-left:6px;">v{_APP_VERSION}</span></span>
-    <span style="background:#0D9488;color:white;border-radius:6px;padding:5px 12px;font-size:14px;font-weight:600;white-space:nowrap;">
-        &#128202;&nbsp;{_panel_labels_map.get(_qp_panel, _qp_panel)}
+    <span style="font-family:'Plus Jakarta Sans', sans-serif; font-weight:800; background:{_accent_grad}; -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:18px; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+        💎 LifeCycle Leverage<span style="font-size:11px;color:{_header_sub};font-weight:600;margin-left:6px;border:1px solid {'#e2e8f0' if _theme == 'light' else 'rgba(255,255,255,0.1)'};padding:2px 6px;border-radius:6px;-webkit-text-fill-color:initial;">v{_APP_VERSION}</span>
     </span>
-    <span style="white-space:nowrap;"><strong>{_display_name}</strong>&nbsp;&middot;&nbsp;{_role_display}</span>
-    <span style="margin-left:auto; color:{_header_sub}; font-size:14px; white-space:nowrap;">{_now_str}</span>
+    <span style="background:{'rgba(79, 70, 229, 0.1)' if _theme == 'light' else 'rgba(99, 102, 241, 0.15)'};color:{'#4F46E5' if _theme == 'light' else '#818CF8'};border:1px solid {'rgba(79, 70, 229, 0.3)' if _theme == 'light' else 'rgba(99, 102, 241, 0.3)'};border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;white-space:nowrap;">
+        🏷️&nbsp;{_panel_labels_map.get(_qp_panel, _qp_panel)}
+    </span>
+    <span style="white-space:nowrap; color:{_header_sub};"><strong>{_display_name}</strong> &middot; <span style="text-transform:capitalize;">{_role_display}</span></span>
+    <span style="margin-left:auto; color:{_header_sub}; font-size:13px; font-family:'JetBrains Mono', monospace; white-space:nowrap;">{_now_str}</span>
     <button
         onclick="(function(){{var btns=document.querySelectorAll('section[data-testid=stSidebar] button');for(var b of btns){{if(b.innerText.includes('Sign out')){{b.click();return;}}}}}})()"
         style="
-            background:#dc2626;
-            color:white;
-            font-weight:700;
-            font-size:14px;
-            border:none;
-            border-radius:8px;
-            padding:0 18px;
-            height:40px;
-            cursor:pointer;
-            white-space:nowrap;
-            box-shadow:0 2px 4px rgba(220,38,38,0.3);
+            background: {'rgba(244,63,94,0.08)' if _theme == 'light' else 'rgba(244,63,94,0.12)'};
+            color: {'#E11D48' if _theme == 'light' else '#FB7185'};
+            border: 1px solid {'rgba(225,29,72,0.25)' if _theme == 'light' else 'rgba(244,63,94,0.3)'};
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 8px;
+            padding: 0 14px;
+            height: 34px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
         "
-        onmouseover="this.style.background='#b91c1c'"
-        onmouseout="this.style.background='#dc2626'"
-    >&#9211;&nbsp; Sign out</button>
+        onmouseover="this.style.background='rgba(244,63,94,0.2)'"
+        onmouseout="this.style.background={'\"rgba(244,63,94,0.08)\"' if _theme == 'light' else '\"rgba(244,63,94,0.12)\"'}"
+    >Sign Out</button>
 </div>
 <style>
 /* ROW 2: Streamlit native header pushed below our 64px navbar */

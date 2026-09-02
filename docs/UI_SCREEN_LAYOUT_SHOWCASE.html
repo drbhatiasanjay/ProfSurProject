@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LifeCycle Leverage — UI Design Layout Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root[data-theme="dark"] {
+      --bg-canvas: #0B0E14;
+      --bg-sidebar: #10141E;
+      --bg-surface: #141824;
+      --bg-surface-elevated: #1C2234;
+      --bg-glass: rgba(20, 24, 36, 0.75);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-focused: rgba(99, 102, 241, 0.5);
+      --text-primary: #F8FAFC;
+      --text-secondary: #94A3B8;
+      --text-muted: #64748B;
+      --accent-indigo: #6366F1;
+      --accent-cyan: #06B6D4;
+      --delta-positive: #10B981;
+      --delta-negative: #F43F5E;
+      --stage-intro: #10B981;
+      --stage-growth: #0EA5E9;
+      --stage-mature: #8B5CF6;
+      --stage-shakeout: #F59E0B;
+      --stage-decline: #F43F5E;
+      --shadow-elevation: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
+      --shadow-glow: 0 0 15px rgba(99, 102, 241, 0.25);
+    }
+    :root[data-theme="light"] {
+      --bg-canvas: #F8FAFC;
+      --bg-sidebar: #FFFFFF;
+      --bg-surface: #FFFFFF;
+      --bg-surface-elevated: #F1F5F9;
+      --bg-glass: rgba(255, 255, 255, 0.85);
+      --border-subtle: rgba(226, 232, 240, 0.9);
+      --border-focused: rgba(79, 70, 229, 0.5);
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-muted: #94A3B8;
+      --accent-indigo: #4F46E5;
+      --accent-cyan: #0891B2;
+      --delta-positive: #059669;
+      --delta-negative: #E11D48;
+      --stage-intro: #059669;
+      --stage-growth: #0284C7;
+      --stage-mature: #7C3AED;
+      --stage-shakeout: #D97706;
+      --stage-decline: #E11D48;
+      --shadow-elevation: 0 4px 16px -2px rgba(0, 0, 0, 0.06);
+      --shadow-glow: 0 0 12px rgba(79, 70, 229, 0.15);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 320px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .sidebar-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand-title {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-indigo), var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .theme-toggle-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      transition: all 0.2s ease;
+    }
+    .theme-toggle-btn:hover {
+      border-color: var(--accent-indigo);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .sidebar-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 18px; }
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    .control-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+
+    .select-capsule {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .search-input {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      outline: none;
+    }
+    .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface-elevated);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .chip.active { background: var(--accent-indigo); color: #FFF; border-color: var(--accent-indigo); }
+
+    /* Navigation Grouping */
+    .nav-section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
+    .nav-item {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-bottom: 2px;
+    }
+    .nav-item:hover {
+      background: var(--bg-surface-elevated);
+      color: var(--text-primary);
+    }
+    .nav-item.active {
+      background: var(--bg-surface-elevated);
+      color: var(--text-primary);
+      font-weight: 600;
+      border-left: 3px solid var(--accent-indigo);
+    }
+
+    /* Main Container */
+    .main-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .navbar {
+      height: 60px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .navbar-title { font-size: 0.95rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .status-pill {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--delta-positive);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .content-canvas {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Bento Grid */
+    .bento-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .bento-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--shadow-elevation);
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .bento-card:hover {
+      border-color: var(--border-focused);
+      transform: translateY(-2px);
+    }
+    .bento-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bento-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .bento-delta {
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    .delta-up { background: rgba(16, 185, 129, 0.15); color: var(--delta-positive); }
+    .delta-down { background: rgba(244, 63, 94, 0.15); color: var(--delta-negative); }
+
+    .sparkline-svg {
+      width: 100%;
+      height: 36px;
+      stroke: var(--accent-indigo);
+      fill: none;
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .percentile-bar-bg {
+      width: 100%;
+      height: 6px;
+      background: var(--bg-surface-elevated);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .percentile-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-indigo));
+      border-radius: 3px;
+    }
+
+    /* Hero / Split Sections */
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+    }
+    .glass-panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: var(--shadow-elevation);
+    }
+    .panel-header {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* AI Studio Mock */
+    .ai-chat-turn {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      padding: 20px;
+      border-radius: 14px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-elevation);
+    }
+    .stat-callout-box {
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+    }
+    .action-dock {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 8px;
+    }
+    .action-btn-group {
+      display: flex;
+      gap: 8px;
+    }
+    .action-pill-btn {
+      padding: 5px 12px;
+      border-radius: 8px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+    .action-pill-btn:hover {
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+      border-color: var(--accent-indigo);
+    }
+    .glowing-followup-pill {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .glowing-followup-pill:hover {
+      border-color: var(--accent-indigo);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-1px);
+    }
+
+    .formula-capsule {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-canvas);
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      font-size: 0.85rem;
+      color: var(--accent-cyan);
+    }
+    .citation-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid var(--accent-indigo);
+      color: var(--accent-indigo);
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .screen-view { display: none; }
+    .screen-view.active { display: flex; flex-direction: column; gap: 24px; }
+  </style>
+</head>
+<body>
+
+  <!-- Left Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand-title">💎 LifeCycle Leverage</div>
+      <button class="theme-toggle-btn" id="themeToggle" title="Toggle Theme">🌙</button>
+    </div>
+
+    <div class="sidebar-body">
+      <div class="control-group">
+        <label class="control-label">Active Dataset Vintage</label>
+        <select class="select-capsule">
+          <option>(2001-25)_April26 (Run 3)</option>
+          <option>Latest (2001–present)</option>
+          <option>Thesis (2001–2024)</option>
+          <option>US S&P Sample</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Company Quick-Search</label>
+        <input class="search-input" placeholder="Search 401 firms (e.g. Reliance)..." />
+        <div class="chip-row">
+          <span class="chip active">All</span>
+          <span class="chip">Nifty 50</span>
+          <span class="chip">Top Borrowers</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Life Stage Filter</label>
+        <div class="chip-row">
+          <span class="chip active" style="color:var(--stage-intro)">🟢 Intro</span>
+          <span class="chip active" style="color:var(--stage-growth)">🔵 Growth</span>
+          <span class="chip active" style="color:var(--stage-mature)">🟣 Mature</span>
+          <span class="chip active" style="color:var(--stage-shakeout)">🟠 Shake</span>
+          <span class="chip active" style="color:var(--stage-decline)">🔴 Dec</span>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="control-label">Regime Shocks</label>
+        <div class="chip-row">
+          <span class="chip active">⚡ GFC '08</span>
+          <span class="chip active">🏛️ IBC '16</span>
+          <span class="chip active">🦠 COVID '20</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tree -->
+      <div>
+        <div class="nav-section-title">🏛️ Executive & Discovery</div>
+        <div class="nav-item" onclick="switchScreen('screen-overview')"><span>🗺️</span> Overview</div>
+        <div class="nav-item active" onclick="switchScreen('screen-dashboard')"><span>📊</span> Executive Dashboard</div>
+        <div class="nav-item" onclick="switchScreen('screen-peer')"><span>🎯</span> Peer Benchmarks</div>
+        <div class="nav-item" onclick="switchScreen('screen-data')"><span>🗄️</span> Data Explorer</div>
+
+        <div class="nav-section-title">🔬 Quantitative Lab</div>
+        <div class="nav-item" onclick="switchScreen('screen-econ')"><span>📐</span> Econometrics Lab</div>
+        <div class="nav-item" onclick="switchScreen('screen-gmm')"><span>🧪</span> Advanced GMM</div>
+        <div class="nav-item" onclick="switchScreen('screen-ml')"><span>🤖</span> Machine Learning & SHAP</div>
+
+        <div class="nav-section-title">🕸️ Dynamics & Graph</div>
+        <div class="nav-item" onclick="switchScreen('screen-transitions')"><span>🔄</span> Transitions & Stickiness</div>
+        <div class="nav-item" onclick="switchScreen('screen-kg')"><span>🌌</span> Knowledge Graph V2</div>
+
+        <div class="nav-section-title">🎯 Decision & Advisory</div>
+        <div class="nav-item" onclick="switchScreen('screen-scenarios')"><span>🎮</span> Scenarios Simulator</div>
+        <div class="nav-item" onclick="switchScreen('screen-board')"><span>📑</span> Board Deck Studio</div>
+        <div class="nav-item" onclick="switchScreen('screen-ai')"><span>💬</span> AI Copilot Studio</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Canvas -->
+  <main class="main-wrapper">
+    <header class="navbar">
+      <div class="navbar-title">
+        <span id="activePageName">📊 Executive Command Center</span>
+        <span class="status-pill">● 401 Firms · 7,820 Obs Synced</span>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500; display:flex; align-items:center; gap:14px;">
+        <span>Role: <strong style="color:var(--text-primary)">Admin / Researcher</strong></span>
+        <span style="cursor:pointer; color:var(--text-muted); font-size:0.8rem; padding:4px 10px; border:1px solid var(--border-subtle); border-radius:6px;">Sign Out</span>
+      </div>
+    </header>
+
+    <div class="content-canvas">
+
+      <!-- SCREEN 1: DASHBOARD -->
+      <div class="screen-view active" id="screen-dashboard">
+        <!-- Bento Grid -->
+        <div class="bento-grid">
+          <div class="bento-card">
+            <div class="bento-title">Active Universe <span>401 FIRMS</span></div>
+            <div class="bento-value">7,820 <span class="bento-delta delta-up">100% BALANCED</span></div>
+            <svg class="sparkline-svg"><polyline points="0,28 30,22 60,25 90,14 120,18 150,8 180,12 210,4 240,6" /></svg>
+            <div class="percentile-bar-bg"><div class="percentile-bar-fill" style="width: 100%"></div></div>
+          </div>
+
+          <div class="bento-card">
+            <div class="bento-title">Average Leverage <span>DEBT/TA</span></div>
+            <div class="bento-value">34.2% <span class="bento-delta delta-up">+1.4pp YoY</span></div>
+            <svg class="sparkline-svg" style="stroke:var(--accent-cyan)"><polyline points="0,12 30,16 60,10 90,24 120,20 150,18 180,8 210,14 240,10" /></svg>
+            <div class="percentile-bar-bg"><div class="percentile-bar-fill" style="width: 72%"></div></div>
+          </div>
+
+          <div class="bento-card">
+            <div class="bento-title">Median Profitability <span>ROA</span></div>
+            <div class="bento-value">12.8% <span class="bento-delta delta-down">-0.3pp YoY</span></div>
+            <svg class="sparkline-svg" style="stroke:var(--stage-growth)"><polyline points="0,8 30,12 60,16 90,14 120,20 150,22 180,26 210,24 240,28" /></svg>
+            <div class="percentile-bar-bg"><div class="percentile-bar-fill" style="width: 55%"></div></div>
+          </div>
+
+          <div class="bento-card">
+            <div class="bento-title">Dominant Life Stage <span>DICKINSON</span></div>
+            <div class="bento-value" style="color:var(--stage-mature)">Mature <span class="bento-delta" style="background:rgba(139,92,246,0.2);color:var(--stage-mature)">44% Panel</span></div>
+            <svg class="sparkline-svg" style="stroke:var(--stage-mature)"><polyline points="0,20 30,18 60,14 90,12 120,10 150,8 180,6 210,4 240,4" /></svg>
+            <div class="percentile-bar-bg"><div class="percentile-bar-fill" style="width: 44%; background:var(--stage-mature)"></div></div>
+          </div>
+        </div>
+
+        <!-- Split Chart Row -->
+        <div class="grid-2col">
+          <div class="glass-panel">
+            <div class="panel-header">
+              <span>📈 Financial Leverage Over Time with Macro Regime Shocks</span>
+              <span style="font-size:0.75rem; color:var(--text-muted)">2001 - 2025</span>
+            </div>
+            <div style="height: 260px; display:flex; align-items:center; justify-content:center; border: 1px dashed var(--border-subtle); border-radius:8px; font-size:0.9rem; color:var(--text-muted); flex-direction:column; gap:8px;">
+              <div>[ Radiant Plotly Multi-Trace Chart: Mean vs Median Leverage ]</div>
+              <div style="display:flex; gap:12px; font-size:0.75rem;">
+                <span style="color:var(--delta-negative)">■ 2008 GFC Ribbon</span>
+                <span style="color:var(--accent-cyan)">■ 2016 IBC Ribbon</span>
+                <span style="color:var(--stage-shakeout)">■ 2020 COVID Ribbon</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-panel">
+            <div class="panel-header">
+              <span>🎯 Life-Stage Composition</span>
+              <span style="font-size:0.75rem; color:var(--stage-mature)">Dickinson Method</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>🟣 Mature Stage</span><strong>44% (176 Firms)</strong></div>
+              <div class="percentile-bar-bg"><div class="percentile-bar-fill" style="width:44%; background:var(--stage-mature)"></div></div>
+
+              <div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>🔵 Growth Stage</span><strong>28% (112 Firms)</strong></div>
+              <div class="percentile-bar-bg"><div class="percentile-bar-fill" style="width:28%; background:var(--stage-growth)"></div></div>
+
+              <div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>🟢 Intro Stage</span><strong>12% (48 Firms)</strong></div>
+              <div class="percentile-bar-bg"><div class="percentile-bar-fill" style="width:12%; background:var(--stage-intro)"></div></div>
+
+              <div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>🟠 Shakeout Stage</span><strong>11% (44 Firms)</strong></div>
+              <div class="percentile-bar-bg"><div class="percentile-bar-fill" style="width:11%; background:var(--stage-shakeout)"></div></div>
+
+              <div style="display:flex; justify-content:space-between; font-size:0.85rem;"><span>🔴 Decline Stage</span><strong>5% (21 Firms)</strong></div>
+              <div class="percentile-bar-bg"><div class="percentile-bar-fill" style="width:5%; background:var(--stage-decline)"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 19: AI COPILOT STUDIO -->
+      <div class="screen-view" id="screen-ai">
+        <div class="glass-panel">
+          <div class="panel-header">
+            <span>💬 AI Financial Research Assistant Studio</span>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <span style="font-size:0.75rem; color:var(--text-muted);">Context: [■■■■□□] 4/6 Turns (2,410 Tokens)</span>
+              <span class="chip active">🎓 Researcher Mode</span>
+              <span class="chip">💼 CFO Advisory Mode</span>
+            </div>
+          </div>
+
+          <div class="ai-chat-turn">
+            <div style="font-weight: 600; font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">👤 Research Question</div>
+            <div style="color:var(--text-primary); font-size:0.95rem; font-weight:500;">
+              What is the mean leverage for Maturity-stage firms?
+            </div>
+          </div>
+
+          <div class="ai-chat-turn" style="background:var(--bg-surface);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div style="font-weight: 700; font-size:0.95rem; color:var(--accent-indigo); display:flex; align-items:center; gap:6px;">
+                🤖 AI Copilot (Grounded in (2001-25)_April26 Panel)
+              </div>
+              <span class="chip" style="background:rgba(99,102,241,0.1); color:var(--accent-indigo); border:1px solid var(--accent-indigo)">🏷️ Latest (2001-2025) · 401 Firms</span>
+            </div>
+
+            <p style="font-size:0.9rem; line-height:1.6; color:var(--text-secondary);">
+              The mean financial leverage for firms in the <strong>🟣 Mature</strong> stage across the panel is:
+            </p>
+
+            <!-- Stat Bento Capsule inside Chat Output -->
+            <div class="stat-callout-box">
+              <div>
+                <div style="font-size:0.75rem; font-weight:600; text-transform:uppercase; color:var(--text-muted);">Mature Stage Mean Leverage</div>
+                <div style="font-family:'JetBrains Mono', monospace; font-size:1.8rem; font-weight:700; color:var(--stage-mature);">18.8% <span style="font-size:0.85rem; font-weight:500; color:var(--text-muted);">Book Debt / TA</span></div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:0.8rem; font-weight:600; color:var(--delta-positive);">Δ -3.2pp vs Growth Stage</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;">[ ───●──────── 42nd Percentile ]</div>
+              </div>
+            </div>
+
+            <p style="font-size:0.9rem; line-height:1.6; color:var(--text-secondary);">
+              <strong>Theoretical Mechanism:</strong> Mature firms accumulate substantial internal retained earnings, significantly reducing demand for external debt financing (consistent with the <em>Pecking Order Hypothesis</em>).
+            </p>
+
+            <div class="formula-capsule">
+              Lev_it = α_i + β_1 Prof_it (-0.342***) + β_2 Tang_it (0.281***) + η_i + ε_it
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <span style="font-size:0.75rem; color:var(--text-muted)">Academic Citations:</span>
+              <span class="citation-tag">🎓 Myers & Majluf (1984)</span>
+              <span class="citation-tag">🎓 Dickinson (2011)</span>
+              <span class="citation-tag">🎓 Rajan & Zingales (1995)</span>
+            </div>
+
+            <div style="padding: 10px 14px; background:var(--bg-canvas); border-radius:8px; font-size:0.8rem; color:var(--text-muted); display:flex; justify-content:space-between; align-items:center;">
+              <span>🔍 Data Provenance: Scoped SQLite View (<code>v_active_financials</code>)</span>
+              <span style="color:var(--accent-indigo); cursor:pointer;">[ 14ms · 176 Rows Scanned ▼ ]</span>
+            </div>
+
+            <!-- Unified Action Dock -->
+            <div class="action-dock">
+              <div class="action-btn-group">
+                <button class="action-pill-btn">📋 Copy Markdown</button>
+                <button class="action-pill-btn">💾 Save Report (.md)</button>
+                <button class="action-pill-btn">🔄 Retry</button>
+                <button class="action-pill-btn">👍 Helpful</button>
+              </div>
+              <div style="font-size:0.75rem; color:var(--text-muted); font-family:'JetBrains Mono', monospace;">
+                ⚡ Gemini 1.5 Pro · 3.4s · 342 tokens
+              </div>
+            </div>
+          </div>
+
+          <!-- Compact Glowing Follow-Up Action Pills -->
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:8px;">
+            <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted);">
+              💡 Continue Exploring (Click to run):
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <span class="glowing-followup-pill">📊 Compare All 5 Stages ➔</span>
+              <span class="glowing-followup-pill">⚖️ Pecking Order vs Trade-Off Mechanism ➔</span>
+              <span class="glowing-followup-pill">🏭 Sector Breakdown (Energy vs IT) ➔</span>
+            </div>
+          </div>
+
+          <!-- Prompt Cockpit -->
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px; padding:12px; background:var(--bg-surface-elevated); border:1px solid var(--border-subtle); border-radius:12px;">
+            <div style="display:flex; gap:8px;">
+              <span class="chip active" style="font-size:0.7rem;">📎 Active Filters: Energy · 2001-2025</span>
+              <span class="chip" style="font-size:0.7rem;">🎓 Citations: ON</span>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <input class="search-input" style="flex:1; background:var(--bg-canvas);" placeholder="Ask any question about capital structure determinants, GMM speed of adjustment, or firm debt..." />
+              <button class="theme-toggle-btn" style="width:auto; padding:0 24px; background:var(--accent-indigo); color:#FFF; font-weight:600; font-size:0.85rem; border-radius:8px;">Send 🚀</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 8: ECONOMETRICS LAB -->
+      <div class="screen-view" id="screen-econ">
+        <div class="glass-panel">
+          <div class="panel-header"><span>🔬 Econometrics Lab: Pooled OLS vs Fixed Effects vs Random Effects</span></div>
+          <div class="bento-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="bento-card">
+              <div class="bento-title">Pooled OLS Model</div>
+              <div class="bento-value">0.428 <span style="font-size:0.85rem; color:var(--text-muted)">R²</span></div>
+              <p style="font-size:0.8rem; color:var(--text-muted)">F-Stat: 184.2 (p < 0.001)</p>
+            </div>
+            <div class="bento-card" style="border-color:var(--accent-indigo); box-shadow:var(--shadow-glow);">
+              <div class="bento-title" style="color:var(--accent-indigo)">⭐ Fixed Effects (Within)</div>
+              <div class="bento-value">0.612 <span style="font-size:0.85rem; color:var(--text-muted)">R²</span></div>
+              <p style="font-size:0.8rem; color:var(--accent-indigo)">Preferred Model (Hausman p < 0.001)</p>
+            </div>
+            <div class="bento-card">
+              <div class="bento-title">Random Effects (GLS)</div>
+              <div class="bento-value">0.584 <span style="font-size:0.85rem; color:var(--text-muted)">R²</span></div>
+              <p style="font-size:0.8rem; color:var(--text-muted)">Wald χ²: 312.4 (p < 0.001)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Placeholder generic container for other screens -->
+      <div class="screen-view" id="screen-generic">
+        <div class="glass-panel" style="text-align:center; padding: 60px 20px;">
+          <h2 style="font-size:1.4rem; margin-bottom:12px;" id="genericScreenTitle">Screen Wireframe</h2>
+          <p style="color:var(--text-secondary); max-width:600px; margin:0 auto 20px;">
+            This screen is fully specified in the <strong>SCREEN_DESIGN_LAYOUTS.md</strong> document. Click below to inspect the interactive live dashboard or AI studio.
+          </p>
+          <button class="theme-toggle-btn" style="width:auto; padding:8px 24px; margin:0 auto; background:var(--accent-indigo); color:#FFF; font-weight:600;" onclick="switchScreen('screen-dashboard')">Back to Executive Dashboard</button>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // Theme toggle logic
+    const themeBtn = document.getElementById('themeToggle');
+    themeBtn.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      themeBtn.innerText = next === 'dark' ? '🌙' : '☀️';
+    });
+
+    // Screen navigation logic
+    function switchScreen(screenId) {
+      document.querySelectorAll('.screen-view').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+      const target = document.getElementById(screenId);
+      if (target) {
+        target.classList.add('active');
+      } else {
+        const gen = document.getElementById('screen-generic');
+        gen.classList.add('active');
+        document.getElementById('genericScreenTitle').innerText = screenId.replace('screen-', '').toUpperCase() + ' SCREEN';
+      }
+
+      const pageMap = {
+        'screen-dashboard': '📊 Executive Command Center',
+        'screen-ai': '💬 AI Financial Copilot Studio',
+        'screen-econ': '📐 Econometrics Lab & Forest Plots',
+        'screen-overview': '🗺️ Platform Overview & Flow',
+        'screen-peer': '🎯 Peer Benchmarks & Radar Matrix',
+        'screen-data': '🗄️ Panel Data Explorer',
+        'screen-gmm': '🧪 Advanced Dynamic GMM',
+        'screen-ml': '🤖 Machine Learning & SHAP',
+        'screen-transitions': '🔄 Transitions & Markov Stickiness',
+        'screen-kg': '🌌 OCaml Knowledge Graph V2',
+        'screen-scenarios': '🎮 Scenarios Simulator',
+        'screen-board': '📑 Board Deck Studio'
+      };
+      if (pageMap[screenId]) {
+        document.getElementById('activePageName').innerText = pageMap[screenId];
+      }
+    }
+  </script>
+</body>
+</html>

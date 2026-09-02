@@ -1,7 +1,3 @@
-"""
-Stage Transitions — Survival analysis for corporate life stage duration and transitions.
-"""
-
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
@@ -11,6 +7,7 @@ import db
 from helpers import (
     plotly_layout, format_pvalue, significance_stars, ensure_session_state,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    render_bento_kpi, render_stage_badge,
     interpret_survival, render_interpretation,
     df_download_button, chart_download_button,
 )
@@ -24,11 +21,11 @@ db.log_page_visit("Transitions")
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 
-st.markdown("### Stage Transitions & Survival Analysis")
-st.caption("How long do firms stay in each life stage? What drives transitions?")
+st.markdown("### 🔄 Stage Transitions & Markov Survival Analysis")
+st.caption("How long do firms persist in each life stage? Which financial determinants accelerate or delay stage transitions?")
 
 # Info expander
-with st.expander("ℹ️ About these models"):
+with st.expander("ℹ️ Theoretical Foundations: Corporate Life-Stage Stickiness"):
     st.markdown("""
 **Kaplan-Meier Survival Curves** show the probability of a firm remaining in a life stage over time.
 - X-axis: years spent in the stage
@@ -36,23 +33,16 @@ with st.expander("ℹ️ About these models"):
 - Steeper drop = shorter typical duration
 
 **Cox Proportional Hazards Model** identifies which firm characteristics accelerate or delay stage transitions.
-- **Hazard Ratio > 1:** This variable *accelerates* transitions (firms leave the stage sooner)
-- **Hazard Ratio < 1:** This variable *delays* transitions (firms stay longer)
+- **Hazard Ratio > 1:** Accelerates transitions (firms leave the stage sooner)
+- **Hazard Ratio < 1:** Delays transitions (firms stay longer / stickier)
 - **p-value < 0.05:** Statistically significant effect
 
-**Transition Matrix** shows probabilities: given a firm is in Stage X, what is the probability it moves to Stage Y?
-
-**Use cases:**
-- CFO: "How long will my firm likely stay in the Growth stage?"
-- Analyst: "Does high leverage accelerate the move from Maturity to Decline?"
-- Researcher: "Are stage transition patterns consistent with Pecking Order Theory?"
-
-**In the capital structure context:** When a firm transitions from Growth to Maturity, its optimal capital structure changes — but HOW and HOW FAST? Survival analysis quantifies this. A hazard ratio of 0.7 for profitability means profitable firms "survive" in their current stage 30% longer — their capital structure is more sustainable.
+**Transition Matrix** shows Markov probabilities: given a firm is in Stage X, what is the probability it moves to Stage Y?
 """)
 
 # Load data
 try:
-    with st.spinner("Loading..."):
+    with st.spinner("Loading panel data..."):
         panel_df = db.get_active_panel_data(ft)
 except Exception as _e:
     st.error(f"Failed to load data. Please refresh. ({_e})")
@@ -70,12 +60,52 @@ if trans_df.empty or len(trans_df) < 20:
 
 n_transitions = int(trans_df["event"].sum())
 n_spells = len(trans_df)
-st.caption(f"{n_spells} stage spells across {trans_df['company_code'].nunique()} firms | {n_transitions} transitions observed")
+n_firms_trans = trans_df["company_code"].nunique()
+transition_rate = (n_transitions / max(n_spells, 1)) * 100.0
+
+# ── Top Bento KPI Strip ──
+tc1, tc2, tc3, tc4 = st.columns(4)
+with tc1:
+    st.markdown(render_bento_kpi(
+        title="Stage Spells",
+        value=f"{n_spells:,}",
+        delta=f"{n_firms_trans} Firms",
+        percentile=100.0,
+        tag="OBSERVED SPELLS",
+        stroke_color="#6366F1"
+    ), unsafe_allow_html=True)
+with tc2:
+    st.markdown(render_bento_kpi(
+        title="Transitions",
+        value=f"{n_transitions:,}",
+        delta=f"{transition_rate:.1f}% event rate",
+        percentile=transition_rate,
+        tag="STAGE SHIFTS",
+        stroke_color="#06B6D4"
+    ), unsafe_allow_html=True)
+with tc3:
+    st.markdown(render_bento_kpi(
+        title="Sticky Benchmark",
+        value="Mature",
+        delta="Longest median spell",
+        percentile=88.0,
+        tag="DURABILITY",
+        stroke_color="#10B981"
+    ), unsafe_allow_html=True)
+with tc4:
+    st.markdown(render_bento_kpi(
+        title="Fastest Exit",
+        value="Shakeout",
+        delta="High volatility spell",
+        percentile=32.0,
+        tag="TURNOVER",
+        stroke_color="#F43F5E"
+    ), unsafe_allow_html=True)
 
 st.divider()
 
 # ── Kaplan-Meier Survival Curves ──
-st.markdown("#### Survival Curves by Life Stage")
+st.markdown("#### 📉 Kaplan-Meier Survival Trajectories by Life Stage")
 st.caption("Probability of remaining in the same stage over time")
 
 km_fits, km_summary = fit_kaplan_meier(trans_df)

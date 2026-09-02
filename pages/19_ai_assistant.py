@@ -297,38 +297,38 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
     _render_answer_context(key_prefix)
 
 
-def _render_response_actions(content: str, key_prefix: str, regenerate_question: str = "", message_id=None, feedback=None) -> None:
-    """Expose lightweight answer actions without coupling them to an LLM."""
-    action_cols = st.columns([1.15, 1.15, 1.15, 1.25, 3.5])
+def _render_response_actions(content: str, key_prefix: str, regenerate_question: str = "", message_id=None, feedback=None, elapsed_s=None, model_name=None) -> None:
+    """Render unified response action dock with aligned buttons and model latency telemetry."""
+    action_cols = st.columns([1.1, 1.1, 1.1, 1.2, 3.5])
     with action_cols[0]:
         st.download_button(
-            "Save",
+            "💾 Save",
             data=str(content or ""),
-            file_name="ai_answer.md",
+            file_name="ai_analysis_report.md",
             mime="text/markdown",
             key=f"{key_prefix}_download",
-            help="Save this answer as Markdown",
+            help="Save this response as Markdown",
         )
     with action_cols[1]:
-        _copy_payload = base64.b64encode(str(content or "").encode("utf-8")).decode("ascii")
-        components.html(
-            f"""<button style='font:inherit;padding:0.4rem 0.7rem;border:1px solid #d1d5db;border-radius:0.4rem;background:white;cursor:pointer;white-space:nowrap' onclick=\"navigator.clipboard.writeText(atob('{_copy_payload}')).then(() => this.innerText='Copied')\">Copy</button>""",
-            height=38,
-        )
-    with action_cols[2]:
-        if regenerate_question and st.button("Retry", key=f"{key_prefix}_regenerate", help="Run the same question again"):
+        if regenerate_question and st.button("🔄 Retry", key=f"{key_prefix}_regenerate", help="Re-run this question"):
             st.session_state["_pending_followup"] = regenerate_question
             st.rerun()
-    with action_cols[3]:
+    with action_cols[2]:
         feedback_key = f"{key_prefix}_feedback"
-        if st.button("Helpful", key=feedback_key, help="Mark this answer as helpful"):
+        if st.button("👍 Helpful", key=feedback_key, help="Mark this response as accurate and helpful"):
             st.session_state[feedback_key] = "submitted"
             if message_id:
                 db.set_chat_message_feedback(message_id, "useful")
-            st.toast("Thanks for the feedback")
-    with action_cols[4]:
+            st.toast("Feedback recorded ✓")
+    with action_cols[3]:
         if st.session_state.get(feedback_key) == "submitted":
-            st.caption("Feedback recorded")
+            st.caption("✓ Feedback saved")
+    with action_cols[4]:
+        if model_name:
+            _mu = str(model_name).lower()
+            _m_label = "Gemini 1.5 Pro" if "gemini" in _mu else ("Claude 3.5 Sonnet" if "sonnet" in _mu else ("Claude 3.5 Haiku" if "haiku" in _mu else "Ollama Local"))
+            _s_label = f" · {elapsed_s}s" if elapsed_s else ""
+            st.caption(f"⚡ {_m_label}{_s_label}")
 
 
 def _render_answer_context(key_prefix: str) -> None:
@@ -339,22 +339,30 @@ def _render_answer_context(key_prefix: str) -> None:
     industries = ", ".join(filters.get("industry_groups", [])) or "All industries"
     stages = ", ".join(filters.get("life_stages", [])) or "All life stages"
     backend = str(st.session_state.get("p19_backend", "gemini")).title()
-    with st.expander("Answer context", expanded=False):
+    with st.expander("🔍 Data Scope & Provenance", expanded=False):
         st.caption(
-            f"Panel: {panel_mode}  |  Years: {years[0]}-{years[1]}  |  "
-            f"Industries: {industries}  |  Life stages: {stages}  |  Backend: {backend}"
+            f"Panel Vintage: {panel_mode}  |  Years: {years[0]}–{years[1]}  |  "
+            f"Industries: {industries}  |  Life stages: {stages}  |  LLM Engine: {backend}"
         )
 
 
 _panel_label = {
     "run3": "April 2026 panel",
-    "thesis": "Thesis panel",
-    "latest": "Latest panel",
+    "thesis": "Thesis panel (2001–2024)",
+    "latest": "Latest panel (2001–present)",
     "us_av_2024": "US S&P panel",
 }.get(st.session_state.get("panel_mode", "thesis"), st.session_state.get("panel_mode", "thesis"))
-_header_cols = st.columns([2.4, 1.2, 1.2, 1.2])
+
+_hist = st.session_state.get('chat_history', [])
+_turns_cnt = min(len(_hist), 6)
+_token_est = sum(len(str(t.get('content', '')))//4 for t in _hist)
+_blocks_filled = min(_turns_cnt, 6)
+_blocks_empty = max(0, 6 - _blocks_filled)
+_gauge = f"[{'■' * _blocks_filled}{'□' * _blocks_empty}]"
+
+_header_cols = st.columns([2.4, 1.2, 1.2, 1.6])
 with _header_cols[0]:
-    st.markdown("**Current research workspace**")
+    st.markdown("**💬 AI Financial Research Studio**")
     st.caption(_panel_label)
 with _header_cols[1]:
     st.caption("Mode")
@@ -363,8 +371,8 @@ with _header_cols[2]:
     st.caption("Backend")
     st.markdown(f"**{st.session_state.get('p19_backend', 'gemini').title()}**")
 with _header_cols[3]:
-    st.caption("Context")
-    st.markdown(f"**{min(len(st.session_state.get('chat_history', [])), 6)} recent turns**")
+    st.caption("Context Capacity")
+    st.markdown(f"**{_gauge} {_turns_cnt}/6 Turns** ({_token_est:,} Tok)")
 
 # ── Sidebar controls ─────────────────────────────────────────────────────────
 with st.sidebar:
@@ -476,7 +484,7 @@ with st.sidebar:
         _is_active = _sess["chat_session_id"] == st.session_state.get("chat_session_id")
         _archive_marker = " (archived)" if _sess.get("archived") else ""
         _label = f"{'▶ ' if _is_active else ''}{_sess['title'] or 'New chat'}{_archive_marker}"
-        _sc1, _sc2, _sc3 = st.columns([4, 1, 1])
+        _sc1, _sc2 = st.columns([5, 1])
         with _sc1:
             if st.button(_label, key=f"sess_{_sess['chat_session_id']}", use_container_width=True):
                 st.session_state["chat_session_id"] = _sess["chat_session_id"]
@@ -489,16 +497,7 @@ with st.sidebar:
                     st.session_state["_followup_suggestions"] = _loaded[-1]["followups"]
                 st.rerun()
         with _sc2:
-            if st.button(
-                "Restore" if _sess.get("archived") else "Archive",
-                key=f"archive_{_sess['chat_session_id']}",
-            ):
-                db.set_chat_session_archived(
-                    _sess["chat_session_id"], not bool(_sess.get("archived"))
-                )
-                st.rerun()
-        with _sc3:
-            if st.button("🗑", key=f"del_{_sess['chat_session_id']}"):
+            if st.button("🗑", key=f"del_{_sess['chat_session_id']}", help="Delete conversation"):
                 db.delete_chat_session(_sess["chat_session_id"])
                 if _is_active:
                     st.session_state.pop("chat_session_id", None)
@@ -529,15 +528,24 @@ _STARTER_QUESTIONS = {
     ],
 }
 
-# ── Display history ───────────────────────────────────────────────────────────
+# ── Zero-State Bento Starter Cards ────────────────────────────────────────────
 if not st.session_state["chat_history"]:
-    _role_key = (st.session_state.get("user") or {}).get("role", "researcher")
-    _starters = _STARTER_QUESTIONS.get(_role_key, _STARTER_QUESTIONS["researcher"])
-    st.caption("💡 **Try asking:**")
-    for _sq in _starters:
-        if st.button(_sq, use_container_width=True, key=f"starter_{hash(_sq)}"):
-            st.session_state["_pending_followup"] = _sq
-            st.rerun()
+    st.markdown("##### 💡 Suggested Econometric Inquiries")
+    _starters_meta = [
+        {"icon": "📊", "title": "Industry Distributions", "query": "Which 10 industries carry the highest leverage across the panel and why?"},
+        {"icon": "🔬", "title": "Theory Validation", "query": "Explain how profitability tests Pecking Order vs Trade-Off theory in this panel."},
+        {"icon": "📉", "title": "Crisis Comparison", "query": "Compare leverage patterns during GFC 2008 and COVID-19 2020 across life stages."},
+    ]
+    _scols = st.columns(3)
+    for _idx, _sm in enumerate(_starters_meta):
+        with _scols[_idx]:
+            if st.button(
+                f"{_sm['icon']} **{_sm['title']}**\n\n{_sm['query']}",
+                use_container_width=True,
+                key=f"bento_starter_{_idx}",
+            ):
+                st.session_state["_pending_followup"] = _sm["query"]
+                st.rerun()
 
 _previous_user_question = ""
 for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
@@ -550,25 +558,18 @@ for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
                 regenerate_question=_previous_user_question,
                 message_id=turn.get("id"),
                 feedback=turn.get("feedback"),
+                elapsed_s=turn.get("elapsed_s"),
+                model_name=turn.get("model_used"),
             )
         else:
             st.markdown(turn["content"])
             _previous_user_question = turn.get("content", "")
-        if turn["role"] == "assistant" and turn.get("model_used"):
-            _mu = str(turn["model_used"]).lower()
-            if "gemini" in _mu:
-                _model_short = "Gemini"
-            elif "haiku" in _mu:
-                _model_short = "Haiku"
-            else:
-                _model_short = "Sonnet"
-            st.caption(f"*{_model_short} · {turn.get('elapsed_s', '?')}s*")
 
-# ── Persistent followup chips (survive rerenders via session_state) ──────────
+# ── Persistent followup chips ──
 _stored_fups = st.session_state.get("_followup_suggestions", [])
 if _stored_fups:
-    st.caption("💡 Continue exploring:")
-    _fup_cols = st.columns(3)
+    st.caption("💡 **Continue exploring:**")
+    _fup_cols = st.columns(min(3, len(_stored_fups)))
     for _idx, _fq in enumerate(_stored_fups[:3]):
         with _fup_cols[_idx]:
             if st.button(_fq, key=f"fq_{hash(_fq)}_{len(st.session_state['chat_history'])}", use_container_width=True):
@@ -576,10 +577,7 @@ if _stored_fups:
                 st.session_state.pop("_followup_suggestions", None)
                 st.rerun()
 
-# CFO mode: offer to add the last AI reply to the board deck. Rendered from
-# session_state — not inline right after the stream — because the chip
-# persistence rerun (below, after every answer) would otherwise skip a
-# button only defined in the run that already ended.
+# CFO mode: offer to add the last AI reply to the board deck.
 _last_qa = st.session_state.get("_last_qa")
 if mode == "CFO" and _last_qa:
     if st.button("➕ Add to Board Deck", key=f"brd_{len(st.session_state['chat_history'])}"):
@@ -631,6 +629,7 @@ if user_q:
         messages.append({"role": _context_turn["role"], "content": _context_content})
     messages.append({"role": "user", "content": user_q})
 
+
     # Model routing based on query classification
     q_type = classify_query(user_q)
     if backend == "gemini":
@@ -652,6 +651,19 @@ if user_q:
     _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
     _t0 = time.time()
     with st.chat_message("assistant"):
+        _working_pill = st.empty()
+        _working_pill.markdown(
+            '<div class="antigravity-working-pill"><span class="antigravity-dot"></span><span class="antigravity-blink-text">Working...</span> <span>Querying financial database & synthesizing econometrics</span></div>',
+            unsafe_allow_html=True,
+        )
+
+        _status_box = st.status("⚡ Financial Copilot Reasoning Trace", expanded=True)
+        with _status_box:
+            st.write("🔍 Parsing econometric parameters & selecting active panel scope...")
+            if should_generate_chart(user_q):
+                st.write("📊 Retrieving multi-series life-stage & industry distributions...")
+            st.write("💡 Grounding analysis with corporate capital structure theory...")
+
         _placeholder = st.empty()
         _buf = []
         _chart_found = None
@@ -707,19 +719,30 @@ if user_q:
             )
         _stream = stream_with_fallback(_stream, _fallback_stream)
 
+        _first_chunk = True
         for _chunk in _stream:
             _chunk_text, _chunk_chart = normalize_assistant_chunk(_chunk)
             if _chunk_chart and _chart_found is None:
                 _chart_found = _chunk_chart
             if _chunk_text:
-                _buf.append(_chunk_text)
-                _render_assistant_content(
-                    {"content": "".join(_buf)},
-                    f"stream_{len(st.session_state['chat_history'])}",
-                    placeholder=_placeholder,
-                )
+                if _first_chunk:
+                    _working_pill.empty()  # Seamlessly remove working pill once output flows
+                    _first_chunk = False
+                _words = _chunk_text.split(" ")
+                if len(_words) > 12 and len(_buf) == 0:
+                    # Smooth progressive typing reveal for pre-synthesized blocks
+                    for _w_idx, _w in enumerate(_words):
+                        _buf.append(_w + (" " if _w_idx < len(_words) - 1 else ""))
+                        if _w_idx % 3 == 0 or _w_idx == len(_words) - 1:
+                            _placeholder.markdown("".join(_buf) + " ▌")
+                            time.sleep(0.012)
+                else:
+                    _buf.append(_chunk_text)
+                    _placeholder.markdown("".join(_buf) + " ▌")
+        _working_pill.empty()
         full = "".join(_buf)
         _elapsed = round(time.time() - _t0, 1)
+        _status_box.update(label=f"✓ Reasoning complete ({_elapsed}s)", state="complete", expanded=False)
 
         # If chart was not received as a tool event, check if model embedded a JSON chart spec in text or if table can be parsed
         normalized = normalize_assistant_response(

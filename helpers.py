@@ -105,7 +105,7 @@ def format_coef_table(coef_df):
     return display
 
 
-# ── UI chrome helpers ──
+# ── UI chrome & Macro presentation helpers ──
 
 def new_badge(text: str = "NEW") -> str:
     """Inline amber 'NEW' badge. Render via `st.markdown(new_badge(), unsafe_allow_html=True)`.
@@ -113,6 +113,153 @@ def new_badge(text: str = "NEW") -> str:
     Styling lives in `assets/style_light.css` and `assets/style_dark.css` under `.new-badge`.
     """
     return f'<span class="new-badge">{text}</span>'
+
+
+def render_sparkline_svg(data, width=240, height=36, stroke_color=None) -> str:
+    """Compute inline SVG polyline for metric sparklines. Returns SVG string or empty string."""
+    if not data or len(data) < 2:
+        return ""
+    clean_data = [float(x) for x in data if x is not None and not pd.isna(x)]
+    if len(clean_data) < 2:
+        return ""
+    min_val = min(clean_data)
+    max_val = max(clean_data)
+    val_range = max_val - min_val
+    n = len(clean_data)
+
+    points = []
+    for i, val in enumerate(clean_data):
+        x = (i / (n - 1)) * width
+        if val_range > 0:
+            norm = (val - min_val) / val_range
+            y = (height - 8) - (norm * (height - 8)) + 4
+        else:
+            y = height / 2.0
+        points.append(f"{x:.1f},{y:.1f}")
+
+    pts_str = " ".join(points)
+    style_attr = f' style="stroke:{stroke_color}"' if stroke_color else ""
+    return f'<svg class="sparkline-svg" viewBox="0 0 {width} {height}"{style_attr}><polyline points="{pts_str}" /></svg>'
+
+
+def render_bento_kpi(
+    title: str,
+    value: str,
+    delta: str | None = None,
+    sparkline_data: list[float] | None = None,
+    percentile: float | None = None,
+    tag: str | None = None,
+    help_text: str | None = None,
+    stroke_color: str | None = None,
+) -> str:
+    """Render a modern Bento Grid KPI capsule with embedded sparkline and percentile bar."""
+    delta_html = ""
+    if delta:
+        d_str = str(delta).strip()
+        delta_class = "delta-down" if d_str.startswith("-") or "▼" in d_str else "delta-up"
+        delta_html = f'<span class="bento-delta {delta_class}">{d_str}</span>'
+
+    spark_html = render_sparkline_svg(sparkline_data or [], stroke_color=stroke_color) if sparkline_data else ""
+
+    pct_html = ""
+    if percentile is not None and not pd.isna(percentile):
+        pct_clamped = max(0.0, min(100.0, float(percentile)))
+        pct_str = f"{pct_clamped:.0f}%" if pct_clamped.is_integer() else f"{pct_clamped:.1f}%"
+        pct_html = f'<div class="percentile-bar-bg" title="{pct_clamped:.0f}th Percentile"><div class="percentile-bar-fill" style="width:{pct_str}"></div></div>'
+
+    tag_html = f'<span class="bento-tag">{tag}</span>' if tag else ""
+    help_attr = f' title="{help_text}"' if help_text else ""
+
+    return f'<div class="bento-card"{help_attr}><div class="bento-title"><span>{title}</span>{tag_html}</div><div class="bento-value"><span>{value}</span>{delta_html}</div>{spark_html}{pct_html}</div>'
+
+
+def render_stage_badge(stage: str) -> str:
+    """Render an animated glowing badge mapped to corporate life stage semantics."""
+    s = str(stage).strip()
+    s_lower = s.lower()
+    if "intro" in s_lower or "startup" in s_lower:
+        cls = "stage-intro"
+        icon = "🟢"
+    elif "growth" in s_lower:
+        cls = "stage-growth"
+        icon = "🔵"
+    elif "mature" in s_lower or "maturity" in s_lower:
+        cls = "stage-mature"
+        icon = "🟣"
+    elif "shake" in s_lower:
+        cls = "stage-shakeout"
+        icon = "🟠"
+    elif "dec" in s_lower:
+        cls = "stage-decline"
+        icon = "🔴"
+    else:
+        cls = "stage-mature"
+        icon = "🏷️"
+    return f'<span class="stage-badge {cls}">{icon} {s}</span>'
+
+
+ACADEMIC_CITATIONS_CORPUS = {
+    "rajan_zingales_1995": {
+        "title": "What Do We Know About Capital Structure? Some Evidence from International Data",
+        "authors": "Rajan, R. G., & Zingales, L.",
+        "journal": "The Journal of Finance, 50(5), 1421-1460",
+        "year": 1995,
+        "key_finding": "Identified the four universal determinants of leverage: tangibility, market-to-book, size, and profitability across G7 economies.",
+    },
+    "myers_1984": {
+        "title": "The Capital Structure Puzzle",
+        "authors": "Myers, S. C.",
+        "journal": "The Journal of Finance, 39(3), 574-592",
+        "year": 1984,
+        "key_finding": "Formulated the Pecking Order Theory: firms prefer internal financing over debt, and debt over equity due to asymmetric information costs.",
+    },
+    "myers_majluf_1984": {
+        "title": "Corporate Financing and Investment Decisions When Firms Have Information That Investors Do Not Have",
+        "authors": "Myers, S. C., & Majluf, N. S.",
+        "journal": "Journal of Financial Economics, 13(2), 187-221",
+        "year": 1984,
+        "key_finding": "Information asymmetry causes equity underpricing, making retained earnings the lowest-cost capital source.",
+    },
+    "dickinson_2011": {
+        "title": "Cash Flow Patterns as a Proxy for Firm Life Cycle",
+        "authors": "Dickinson, V.",
+        "journal": "The Accounting Review, 86(6), 1969-1994",
+        "year": 2011,
+        "key_finding": "Established corporate life stages (Intro, Growth, Mature, Shakeout, Decline) based on the signs of Operating, Investing, and Financing cash flows.",
+    },
+    "jensen_meckling_1976": {
+        "title": "Theory of the Firm: Managerial Behavior, Agency Costs and Ownership Structure",
+        "authors": "Jensen, M. C., & Meckling, W. H.",
+        "journal": "Journal of Financial Economics, 3(4), 305-360",
+        "year": 1976,
+        "key_finding": "Agency costs of free cash flow create a disciplinary role for debt in mature corporations.",
+    },
+    "frank_goyal_2009": {
+        "title": "Capital Structure Decisions: Which Factors Are Reliably Important?",
+        "authors": "Frank, M. Z., & Goyal, V. K.",
+        "journal": "Financial Management, 38(1), 1-37",
+        "year": 2009,
+        "key_finding": "Core factors reliably explaining leverage across thousands of firms include industry median leverage, market-to-book, tangibility, profits, size, and expected inflation.",
+    },
+}
+
+
+def render_citation_pill(author_year: str, paper_key: str) -> str:
+    """Render an interactive citation tag with popover title."""
+    clean_label = str(author_year).replace("&", "&amp;")
+    meta = ACADEMIC_CITATIONS_CORPUS.get(paper_key, {})
+    title_tip = meta.get("title", "Academic Literature Reference").replace('"', '&quot;')
+    return f'<span class="citation-tag" data-paper="{paper_key}" title="{title_tip}">🎓 {clean_label}</span>'
+
+
+def render_latex_card(equation_latex: str, title: str = "Econometric Specification", interpretation: str = "") -> str:
+    """Render syntax-highlighted LaTeX formula card."""
+    interp_html = f'<div style="font-size:0.8rem; color:var(--text-secondary); margin-top:6px;">{interpretation}</div>' if interpretation else ''
+    return f'''<div class="formula-capsule" style="margin:10px 0; padding:12px 16px; border-radius:10px;">
+    <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-muted); margin-bottom:6px;">📐 {title}</div>
+    <div style="font-family:\'JetBrains Mono\', monospace; font-size:0.92rem; color:var(--accent-cyan);">{equation_latex}</div>
+    {interp_html}
+</div>'''
 
 
 # Human-friendly labels for the sidebar Panel radio. Used by app.py for the radio
@@ -572,44 +719,46 @@ def _current_theme() -> str:
 def plotly_layout_light(title="", height=400, year_range=None):
     _t = 65 if title else 30
     layout = dict(
-        title=dict(text=title, font=dict(size=15, color=NEUTRAL), x=0, xanchor="left", pad=dict(l=4)),
-        font=dict(family="Inter, system-ui, sans-serif", size=12, color=NEUTRAL),
-        plot_bgcolor=BG_LIGHT,
-        paper_bgcolor=BG_CARD,
+        title=dict(text=title, font=dict(family="Plus Jakarta Sans, Inter, sans-serif", size=15, color="#0F172A"), x=0, xanchor="left", pad=dict(l=4)),
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#475569"),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=20, t=_t, b=60),
         height=height,
         legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
         modebar=dict(orientation="h", bgcolor="rgba(255,255,255,0.7)",
-                     activecolor=PRIMARY, color=NEUTRAL),
+                     activecolor="#4F46E5", color="#64748B"),
+        xaxis=dict(gridcolor="rgba(226, 232, 240, 0.8)", zerolinecolor="rgba(226, 232, 240, 0.8)"),
+        yaxis=dict(gridcolor="rgba(226, 232, 240, 0.8)", zerolinecolor="rgba(226, 232, 240, 0.8)"),
         hovermode="x unified",
     )
     if year_range is not None and len(year_range) == 2:
-        layout["xaxis"] = {"range": [year_range[0], year_range[1]]}
+        layout["xaxis"]["range"] = [year_range[0], year_range[1]]
     return layout
 
 
 def plotly_layout_dark(title="", height=400, year_range=None):
     _t = 65 if title else 30
-    xaxis_cfg = dict(gridcolor=BORDER_DARK, zerolinecolor=BORDER_DARK,
-                     tickcolor=MUTED_DARK, tickfont=dict(color=MUTED_DARK),
-                     title=dict(font=dict(color=TEXT_DARK)))
+    xaxis_cfg = dict(gridcolor="rgba(255, 255, 255, 0.08)", zerolinecolor="rgba(255, 255, 255, 0.08)",
+                     tickcolor="#94A3B8", tickfont=dict(color="#94A3B8"),
+                     title=dict(font=dict(color="#F8FAFC")))
     if year_range is not None and len(year_range) == 2:
         xaxis_cfg["range"] = [year_range[0], year_range[1]]
     return dict(
-        title=dict(text=title, font=dict(size=15, color="#ffffff"), x=0, xanchor="left", pad=dict(l=4)),
-        font=dict(family="Inter, system-ui, sans-serif", size=12, color=TEXT_DARK),
-        plot_bgcolor=BG_DARK,
-        paper_bgcolor=PANEL_DARK,
+        title=dict(text=title, font=dict(family="Plus Jakarta Sans, Inter, sans-serif", size=15, color="#F8FAFC"), x=0, xanchor="left", pad=dict(l=4)),
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#94A3B8"),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=20, t=_t, b=60),
         height=height,
         legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5,
-                    font=dict(color=TEXT_DARK)),
-        modebar=dict(orientation="h", bgcolor="rgba(26,29,36,0.7)",
-                     activecolor=ACCENT, color=MUTED_DARK),
+                    font=dict(color="#F8FAFC")),
+        modebar=dict(orientation="h", bgcolor="rgba(20, 24, 36, 0.7)",
+                     activecolor="#6366F1", color="#94A3B8"),
         xaxis=xaxis_cfg,
-        yaxis=dict(gridcolor=BORDER_DARK, zerolinecolor=BORDER_DARK,
-                   tickcolor=MUTED_DARK, tickfont=dict(color=MUTED_DARK),
-                   title=dict(font=dict(color=TEXT_DARK))),
+        yaxis=dict(gridcolor="rgba(255, 255, 255, 0.08)", zerolinecolor="rgba(255, 255, 255, 0.08)",
+                   tickcolor="#94A3B8", tickfont=dict(color="#94A3B8"),
+                   title=dict(font=dict(color="#F8FAFC"))),
         hovermode="x unified",
     )
 

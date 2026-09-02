@@ -4,7 +4,7 @@ Two backends: Ollama (local, zero-egress, default in dev) and Anthropic
 (Claude Haiku 4.5, default in Cloud Run prod). Both expose a generator
 yielding string chunks compatible with st.write_stream().
 
-Context builders produce <=900 token grounded prompts — no hallucination
+Context builders produce <=900 token grounded prompts - no hallucination
 surface. CFO mode injects company + peer metrics; Researcher mode injects
 panel OLS outputs + descriptive statistics.
 """
@@ -12,6 +12,7 @@ panel OLS outputs + descriptive statistics.
 import json
 import re
 import os
+import functools
 import typing
 from typing import Iterator, Generator, Literal, Optional, List, Dict, Union, Any
 
@@ -91,6 +92,7 @@ _THESIS_BLOCK = (
 CONTEXT_BUDGET_TOKENS = 1500
 
 
+@functools.lru_cache(maxsize=64)
 def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
     """Build a token-bounded (<= 900 tokens) context string for a single company.
 
@@ -187,6 +189,7 @@ def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
         return f"Context unavailable: {type(e).__name__}: {e}{GROUNDING_FOOTER}"
 
 
+@functools.lru_cache(maxsize=16)
 def build_panel_context(panel_mode: str = "thesis") -> str:
     """Build a token-bounded (<= 900 tokens) panel-level context string.
 

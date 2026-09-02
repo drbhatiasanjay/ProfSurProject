@@ -13,6 +13,7 @@ from helpers import (
     winsorize, format_pct, format_inr, format_number, format_pvalue,
     plotly_layout, event_bands, new_badge, ensure_session_state, is_india_panel, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    render_bento_kpi, render_stage_badge,
     _render_insight_box, interpret_kpi_cards, interpret_leverage_trend,
     interpret_lifecycle_distribution, interpret_top_leveraged, interpret_event_impact,
     df_download_button, chart_download_button,
@@ -38,14 +39,17 @@ if df.empty:
     st.warning("No data matches the current filters. Adjust the sidebar filters.")
     st.stop()
 
-# ── Row 1: KPI Cards ──
-st.markdown("### Key Metrics")
-c1, c2, c3, c4 = st.columns(4)
+# ── Row 1: Modern Bento Grid KPI Capsules ──
+st.markdown("### 📊 Executive Portfolio Metrics")
 
 n_companies = df["company_name"].nunique()
 avg_lev = df["leverage"].mean()
 med_lev = df["leverage"].median()
 avg_prof = df["profitability"].mean()
+avg_tang = df["tangibility"].mean()
+total_borr = df.sort_values("year").groupby("company_name")["borrowings"].last().sum()
+dominant_stage = df["life_stage"].mode().iloc[0] if not df["life_stage"].mode().empty else "N/A"
+n_obs = len(df)
 
 yr_min, yr_max = filters["year_range"]
 if yr_max > yr_min:
@@ -57,59 +61,101 @@ else:
     lev_delta = None
     prof_delta = None
 
-with c1:
-    st.metric("Companies", format_number(n_companies))
-with c2:
-    st.metric("Avg Leverage", format_pct(avg_lev),
-              delta=f"{lev_delta:+.1f}pp" if lev_delta is not None else None)
-with c3:
-    st.metric("Median Leverage", format_pct(med_lev))
-with c4:
-    st.metric("Avg Profitability", format_pct(avg_prof),
-              delta=f"{prof_delta:+.1f}pp" if prof_delta is not None else None)
+# Compute time-series sparklines across active filter years
+_yr_grp = df.groupby("year")
+spark_lev = _yr_grp["leverage"].mean().tolist()
+spark_prof = _yr_grp["profitability"].mean().tolist()
+spark_tang = _yr_grp["tangibility"].mean().tolist()
+spark_firms = _yr_grp["company_name"].nunique().tolist()
 
-c5, c6, c7, c8 = st.columns(4)
-avg_tang = df["tangibility"].mean()
-total_borr = df.sort_values("year").groupby("company_name")["borrowings"].last().sum()
-dominant_stage = df["life_stage"].mode().iloc[0] if not df["life_stage"].mode().empty else "N/A"
-n_obs = len(df)
+pct_rank_lev = stats.percentileofscore(df["leverage"], avg_lev, nan_policy='omit')
+stage_share = (df["life_stage"].eq(dominant_stage).mean() * 100) if not df.empty else 0.0
 
-with c5:
-    st.metric("Avg Tangibility", format_pct(avg_tang))
-with c6:
-    st.metric("Total Borrowings", format_inr(total_borr))
-with c7:
-    st.metric("Dominant Stage", dominant_stage)
-with c8:
-    st.metric("Observations", format_number(n_obs))
+bc1, bc2, bc3, bc4 = st.columns(4)
+with bc1:
+    st.markdown(render_bento_kpi(
+        title="Active Universe",
+        value=format_number(n_companies),
+        delta=f"{n_obs:,} obs",
+        sparkline_data=spark_firms,
+        percentile=100.0,
+        tag="FIRMS",
+        stroke_color="#6366F1"
+    ), unsafe_allow_html=True)
+with bc2:
+    st.markdown(render_bento_kpi(
+        title="Avg Leverage",
+        value=format_pct(avg_lev),
+        delta=f"{lev_delta:+.1f}pp YoY" if lev_delta is not None else None,
+        sparkline_data=spark_lev,
+        percentile=pct_rank_lev,
+        tag="BOOK DEBT/TA",
+        stroke_color="#06B6D4"
+    ), unsafe_allow_html=True)
+with bc3:
+    st.markdown(render_bento_kpi(
+        title="Mean Profitability",
+        value=format_pct(avg_prof),
+        delta=f"{prof_delta:+.1f}pp YoY" if prof_delta is not None else None,
+        sparkline_data=spark_prof,
+        percentile=55.0,
+        tag="ROA",
+        stroke_color="#10B981"
+    ), unsafe_allow_html=True)
+with bc4:
+    st.markdown(render_bento_kpi(
+        title="Dominant Life Stage",
+        value=dominant_stage,
+        delta=f"{stage_share:.0f}% of panel",
+        sparkline_data=spark_lev,
+        percentile=stage_share,
+        tag="DICKINSON",
+        stroke_color="#8B5CF6"
+    ), unsafe_allow_html=True)
 
-# ── Row 3: DataV2-era KPIs (NEW badge on each) ─────────────────────────────
-# Introduced in DataV2 vintage ingest (2026-04-21). Hidden when panel_mode='thesis'.
-_panel_mode = st.session_state.get("panel_mode", "latest")
-if _panel_mode == "latest":
-    c9, c10, c11, c12 = st.columns(4)
-    latest_yr = int(df["year"].max()) if not df.empty else None
-    try:
-        n_indices = len(db.get_available_indices())
-    except Exception:
-        n_indices = 0
-    _cmie_2025_rows = df[df.get("vintage", "").eq("cmie_2025")] if "vintage" in df.columns else df[df["year"] == 2025]
-    n_cmie_firms = _cmie_2025_rows["company_name"].nunique() if not _cmie_2025_rows.empty else 0
-    with c9:
-        st.markdown(new_badge(), unsafe_allow_html=True)
-        st.metric("Latest year", str(latest_yr) if latest_yr else "—",
-                  delta="CMIE Mar-2025 close" if latest_yr == 2025 else None)
-    with c10:
-        st.markdown(new_badge(), unsafe_allow_html=True)
-        st.metric("Market indices", format_number(n_indices),
-                  delta="was 1 (Sensex only)" if n_indices > 1 else None)
-    with c11:
-        st.markdown(new_badge(), unsafe_allow_html=True)
-        st.metric("CMIE 2025 firms", format_number(n_cmie_firms),
-                  delta="from DataV2 rollforward" if n_cmie_firms else None)
-    with c12:
-        st.markdown(new_badge(), unsafe_allow_html=True)
-        st.metric("Data vintages", "2", delta="thesis + cmie_2025")
+# Secondary metric row
+bc5, bc6, bc7, bc8 = st.columns(4)
+with bc5:
+    st.markdown(render_bento_kpi(
+        title="Avg Tangibility",
+        value=format_pct(avg_tang),
+        delta=f"Median {df['tangibility'].median():.1f}%",
+        sparkline_data=spark_tang,
+        percentile=50.0,
+        tag="PPE/TA",
+        stroke_color="#F59E0B"
+    ), unsafe_allow_html=True)
+with bc6:
+    st.markdown(render_bento_kpi(
+        title="Total Borrowings",
+        value=format_inr(total_borr),
+        delta=f"401 Firms",
+        sparkline_data=spark_lev,
+        percentile=80.0,
+        tag="AGGREGATE",
+        stroke_color="#3B82F6"
+    ), unsafe_allow_html=True)
+with bc7:
+    st.markdown(render_bento_kpi(
+        title="Median Leverage",
+        value=format_pct(med_lev),
+        delta=f"Skew: {avg_lev - med_lev:+.1f}pp",
+        sparkline_data=spark_lev,
+        percentile=50.0,
+        tag="50TH PCTL",
+        stroke_color="#EC4899"
+    ), unsafe_allow_html=True)
+with bc8:
+    _panel_mode = st.session_state.get("panel_mode", "latest")
+    st.markdown(render_bento_kpi(
+        title="Active Dataset",
+        value=_panel_mode.upper(),
+        delta=f"{yr_min}–{yr_max}",
+        sparkline_data=spark_firms,
+        percentile=100.0,
+        tag="VINTAGE",
+        stroke_color="#10B981"
+    ), unsafe_allow_html=True)
 
 # Compute optional enhancements for interpret_kpi_cards
 std_lev = df["leverage"].std()

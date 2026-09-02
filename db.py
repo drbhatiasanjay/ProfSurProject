@@ -33,9 +33,16 @@ def is_cmie_lab_enabled() -> bool:
         return False
 
 
-# Set WAL mode once at import time, not per-connection
+# Set WAL mode and performance indexes once at import time
 _init_conn = sqlite3.connect(DB_PATH)
 _init_conn.execute("PRAGMA journal_mode=WAL")
+try:
+    _init_conn.execute("CREATE INDEX IF NOT EXISTS idx_fin_vint_stage_lev ON financials(panel_vintage, life_stage, leverage)")
+    _init_conn.execute("CREATE INDEX IF NOT EXISTS idx_fin_vint_yr_lev ON financials(panel_vintage, year, leverage)")
+    _init_conn.execute("CREATE INDEX IF NOT EXISTS idx_comp_code_ind ON companies(company_code, industry_group)")
+    _init_conn.commit()
+except Exception:
+    pass
 _init_conn.close()
 
 

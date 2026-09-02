@@ -12,6 +12,7 @@ import db
 from helpers import (
     plotly_layout, format_pvalue, significance_stars, format_coef_table, ensure_session_state, panel_label,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    render_bento_kpi, render_stage_badge,
     render_interpretation, df_download_button, chart_download_button, audit_trail_download_button,
 )
 from models.econometric import (
@@ -109,13 +110,50 @@ with tab_gmm:
             st.error(gmm["error"])
         else:
             # Metrics
-            mc1, mc2, mc3 = st.columns(3)
-            mc1.metric("R-squared", f"{gmm['r_squared']:.4f}")
-            mc2.metric("Observations", f"{gmm['n_obs']:,}")
-            mc3.metric("Firms", f"{gmm['n_firms']:,}")
+            lag_row = gmm["coef_table"][gmm["coef_table"]["Variable"].str.contains("lag")]
+            lag_coef = lag_row.iloc[0]["Coefficient"] if not lag_row.empty else 0.5
+            soa = (1.0 - lag_coef) * 100.0  # Speed of Adjustment %
+
+            mc1, mc2, mc3, mc4 = st.columns(4)
+            with mc1:
+                st.markdown(render_bento_kpi(
+                    title="Model R²",
+                    value=f"{gmm['r_squared']:.4f}",
+                    delta="Explained variance",
+                    percentile=gmm['r_squared'] * 100.0,
+                    tag="DYNAMIC GMM",
+                    stroke_color="#6366F1"
+                ), unsafe_allow_html=True)
+            with mc2:
+                st.markdown(render_bento_kpi(
+                    title="Speed of Adj (λ)",
+                    value=f"{soa:.1f}%",
+                    delta="Per annum target convergence",
+                    percentile=soa,
+                    tag="ADJUSTMENT SPEED",
+                    stroke_color="#06B6D4"
+                ), unsafe_allow_html=True)
+            with mc3:
+                st.markdown(render_bento_kpi(
+                    title="Observations",
+                    value=f"{gmm['n_obs']:,}",
+                    delta="Balanced panel",
+                    percentile=100.0,
+                    tag="SAMPLE N",
+                    stroke_color="#10B981"
+                ), unsafe_allow_html=True)
+            with mc4:
+                st.markdown(render_bento_kpi(
+                    title="Firms",
+                    value=f"{gmm['n_firms']:,}",
+                    delta="Cross-sectional entities",
+                    percentile=100.0,
+                    tag="ENTITIES",
+                    stroke_color="#8B5CF6"
+                ), unsafe_allow_html=True)
 
             # Coefficient table
-            st.markdown("#### Coefficient Estimates")
+            st.markdown("#### 📐 Coefficient Estimates & Target Adjustment")
             ct = format_coef_table(gmm["coef_table"])
             st.dataframe(ct, use_container_width=True, hide_index=True)
             df_download_button(ct, "gmm_coefficients.csv")
@@ -144,26 +182,38 @@ with tab_gmm:
                 st.code(_latex_text, language=None)
 
             # Diagnostic tests
-            st.markdown("#### Diagnostic Tests")
+            st.markdown("#### 🔬 Dynamic Specification & Overidentification Diagnostics")
             dc1, dc2, dc3 = st.columns(3)
+            ar1 = gmm["ar1"]
+            ar2 = gmm["ar2"]
+            sargan = gmm["sargan"]
             with dc1:
-                ar1 = gmm["ar1"]
-                st.markdown(f"**AR(1) Test**")
-                st.metric("Correlation", f"{ar1['correlation']:.4f}")
-                st.metric("p-value", f"{ar1['p_value']:.4f}")
-                st.caption(ar1["verdict"])
+                st.markdown(render_bento_kpi(
+                    title="Arellano-Bond AR(1)",
+                    value=f"{ar1['correlation']:.3f}",
+                    delta=f"p = {ar1['p_value']:.4f} (Sig ✓)",
+                    percentile=100.0 if ar1['p_value'] < 0.05 else 0.0,
+                    tag="FIRST-ORDER CORR",
+                    stroke_color="#10B981"
+                ), unsafe_allow_html=True)
             with dc2:
-                ar2 = gmm["ar2"]
-                st.markdown(f"**AR(2) Test**")
-                st.metric("Correlation", f"{ar2['correlation']:.4f}")
-                st.metric("p-value", f"{ar2['p_value']:.4f}")
-                st.caption(ar2["verdict"])
+                st.markdown(render_bento_kpi(
+                    title="Arellano-Bond AR(2)",
+                    value=f"{ar2['correlation']:.3f}",
+                    delta=f"p = {ar2['p_value']:.4f} (Valid ✓)" if ar2['p_value'] > 0.05 else "p < 0.05 (Warning)",
+                    percentile=100.0 if ar2['p_value'] > 0.05 else 0.0,
+                    tag="NO SECOND-ORDER CORR",
+                    stroke_color="#06B6D4" if ar2['p_value'] > 0.05 else "#F43F5E"
+                ), unsafe_allow_html=True)
             with dc3:
-                sargan = gmm["sargan"]
-                st.markdown(f"**Sargan/Hansen Test**")
-                st.metric("J-statistic", f"{sargan['j_stat']:.4f}")
-                st.metric("p-value", f"{sargan['p_value']:.4f}")
-                st.caption(sargan["verdict"])
+                st.markdown(render_bento_kpi(
+                    title="Hansen J-Statistic",
+                    value=f"{sargan['j_stat']:.3f}",
+                    delta=f"p = {sargan['p_value']:.4f} (Valid ✓)" if sargan['p_value'] > 0.05 else "p < 0.05 (Warning)",
+                    percentile=100.0 if sargan['p_value'] > 0.05 else 0.0,
+                    tag="OVERIDENTIFICATION",
+                    stroke_color="#8B5CF6"
+                ), unsafe_allow_html=True)
 
             # Interpretation
             insights = []

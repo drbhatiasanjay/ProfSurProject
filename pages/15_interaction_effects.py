@@ -20,6 +20,7 @@ from helpers import (
     plotly_layout, format_pvalue, format_coef_table,
     ensure_session_state, panel_label,
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    render_bento_kpi, render_stage_badge,
     render_interpretation, new_badge, df_download_button, chart_download_button,
 )
 from models.interaction import run_cross_term_ols, simple_slopes, run_stage_moderation_ols
@@ -109,13 +110,44 @@ with tab_cross:
         with st.spinner("Fitting cross-term model…"):
             ct = run_cross_term_ols(panel_df)
 
-        # ── Metrics ──────────────────────────────────────────────────────────
+        # ── Metrics Bento Grid ────────────────────────────────────────────────
         mc1, mc2, mc3, mc4 = st.columns(4)
-        mc1.metric("R²", f"{ct['r_squared']:.4f}")
-        mc2.metric("Adj R²", f"{ct['adj_r_squared']:.4f}")
-        mc3.metric("Observations", f"{ct['n_obs']:,}")
-        mc4.metric("Firms", f"{ct['n_firms']:,}")
-        st.caption(f"F-stat = {ct['f_stat']:.2f},  p = {format_pvalue(ct['f_pvalue'])}")
+        with mc1:
+            st.markdown(render_bento_kpi(
+                title="Model R²",
+                value=f"{ct['r_squared']:.4f}",
+                delta=f"F={ct['f_stat']:.2f}",
+                percentile=ct['r_squared'] * 100.0,
+                tag="CROSS-TERM",
+                stroke_color="#6366F1"
+            ), unsafe_allow_html=True)
+        with mc2:
+            st.markdown(render_bento_kpi(
+                title="Adjusted R²",
+                value=f"{ct['adj_r_squared']:.4f}",
+                delta=f"p = {format_pvalue(ct['f_pvalue'])}",
+                percentile=ct['adj_r_squared'] * 100.0,
+                tag="DF ADJUSTED",
+                stroke_color="#06B6D4"
+            ), unsafe_allow_html=True)
+        with mc3:
+            st.markdown(render_bento_kpi(
+                title="Observations",
+                value=f"{ct['n_obs']:,}",
+                delta="Balanced panel",
+                percentile=100.0,
+                tag="SAMPLE N",
+                stroke_color="#10B981"
+            ), unsafe_allow_html=True)
+        with mc4:
+            st.markdown(render_bento_kpi(
+                title="Sample Firms",
+                value=f"{ct['n_firms']:,}",
+                delta="Unique entities",
+                percentile=100.0,
+                tag="ENTITIES",
+                stroke_color="#8B5CF6"
+            ), unsafe_allow_html=True)
 
         # ── Coefficient Table ─────────────────────────────────────────────────
         st.markdown("#### Coefficient Estimates (HC1 Robust SEs)")

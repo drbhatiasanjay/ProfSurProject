@@ -7,7 +7,12 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import db
-from helpers import plotly_layout, format_pct, ensure_session_state, panel_label, PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG, _render_insight_box, df_download_button, chart_download_button, audit_trail_download_button
+from helpers import (
+    plotly_layout, format_pct, ensure_session_state, panel_label,
+    PRIMARY, SECONDARY, ACCENT, STAGE_COLORS, PLOTLY_CONFIG,
+    render_bento_kpi, render_stage_badge,
+    _render_insight_box, df_download_button, chart_download_button, audit_trail_download_button,
+)
 from models.scenario_regression import compute_leverage_ols_coefs, leverage_predictor_sample_means
 from models.llm_adapters import generate_page_insights
 
@@ -114,12 +119,18 @@ st.divider()
 res_left, res_right = st.columns([1, 2])
 
 with res_left:
-    st.markdown("#### Predicted Leverage")
-    st.metric("Predicted", format_pct(predicted), delta=f"{predicted - 21.0:+.1f}pp vs sample mean")
+    st.markdown("#### 🎯 Model Forecast")
+    st.markdown(render_bento_kpi(
+        title="Predicted Leverage",
+        value=format_pct(predicted),
+        delta=f"{predicted - 21.0:+.1f}pp vs sample mean",
+        percentile=min(100.0, max(0.0, predicted * 2.0)),
+        tag=f"R² = {coefs.get('r_squared', 0):.3f}",
+        stroke_color="#6366F1" if predicted <= 35 else "#F43F5E"
+    ), unsafe_allow_html=True)
 
-    st.markdown("**Model Info**")
-    st.caption(f"R-squared: {coefs.get('r_squared', 0):.3f}")
-    st.caption(f"Observations: {coefs.get('n_obs', 0):,}")
+    st.markdown("**Model Specification**")
+    st.caption(f"Panel sample size: {coefs.get('n_obs', 0):,} observations")
 
     st.markdown("**Equation**")
     eq_parts = [f"{coefs['intercept']:.2f}"]

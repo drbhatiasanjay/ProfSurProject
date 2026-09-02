@@ -12,6 +12,7 @@ import db
 from helpers import (
     format_coef_table, format_pvalue, significance_stars,
     plotly_layout, ensure_session_state, panel_label, is_india_panel, STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
+    render_bento_kpi, render_stage_badge,
     interpret_econometric, render_interpretation, _render_insight_box,
     df_download_button, chart_download_button, audit_trail_download_button,
 )
@@ -356,37 +357,47 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
         hausman = results["hausman"]
         bp = results["bp_lm"]
 
-        st.markdown("#### Auto-Suggestion Results")
+        st.markdown("#### 🏆 Diagnostic Tests & Auto-Suggestion")
 
-        # Diagnostic test cards
+        bp_val_fmt = f"{bp['lm_stat']:.1e}" if abs(bp['lm_stat']) >= 1e4 else f"{bp['lm_stat']:.2f}"
+        h_val_fmt = f"{hausman['chi2']:.1e}" if abs(hausman['chi2']) >= 1e4 else f"{hausman['chi2']:.2f}"
+
+        # Diagnostic test cards using Bento KPIs
         dc1, dc2, dc3 = st.columns(3)
         with dc1:
-            st.markdown("**Breusch-Pagan LM**")
-            st.metric("LM Statistic", f"{bp['lm_stat']:.2f}")
-            st.caption(f"p = {format_pvalue(bp['lm_pvalue'])}")
-            if bp["lm_pvalue"] < 0.05:
-                st.success("Panel effects detected")
-            else:
-                st.info("No panel effects — OLS adequate")
+            st.markdown(render_bento_kpi(
+                title="Breusch-Pagan LM",
+                value=bp_val_fmt,
+                delta="Panel effects present" if bp["lm_pvalue"] < 0.05 else "No panel effects",
+                percentile=100.0 if bp["lm_pvalue"] < 0.05 else 0.0,
+                tag=f"p = {format_pvalue(bp['lm_pvalue'])}",
+                stroke_color="#06B6D4"
+            ), unsafe_allow_html=True)
 
         with dc2:
-            st.markdown("**Hausman Test**")
-            st.metric("Chi-squared", f"{hausman['chi2']:.2f}")
-            st.caption(f"p = {format_pvalue(hausman['p_value'])}, df = {hausman['df']}")
-            if hausman["p_value"] < 0.05:
-                st.success("Fixed Effects preferred")
-            else:
-                st.info("Random Effects preferred")
+            st.markdown(render_bento_kpi(
+                title="Hausman Test",
+                value=h_val_fmt,
+                delta="FE Preferred" if hausman["p_value"] < 0.05 else "RE Preferred",
+                percentile=100.0 if hausman["p_value"] < 0.05 else 50.0,
+                tag=f"df = {hausman['df']}",
+                stroke_color="#6366F1"
+            ), unsafe_allow_html=True)
 
         with dc3:
-            st.markdown("**Recommendation**")
-            st.metric("Best Model", rec)
-            st.caption(hausman["verdict"])
+            st.markdown(render_bento_kpi(
+                title="Econometric Verdict",
+                value=rec,
+                delta="Optimal panel estimator",
+                percentile=100.0,
+                tag="RECOMMENDED",
+                stroke_color="#10B981"
+            ), unsafe_allow_html=True)
 
         st.divider()
 
         # Model comparison table
-        st.markdown("#### Model Comparison")
+        st.markdown("#### Model Comparison Matrix")
         st.dataframe(results["comparison"], hide_index=True, use_container_width=True)
         df_download_button(results["comparison"], "model_comparison.csv")
 
@@ -406,32 +417,67 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
             best = model_map[model_choice](panel_df, x_cols=selected_x)
 
     # ── Display Results ──
-    st.markdown(f"#### {best['type']} Results")
+    st.markdown(f"#### 📐 {best['type']} Parameter Estimates")
 
-    # Metrics row — second cell adapts to whichever R² flavour the model exposes
+    # Metrics row using Bento KPI Cards
     mc1, mc2, mc3, mc4 = st.columns(4)
     with mc1:
-        # Robust regression returns a pseudo-R²; label it as such
-        r2_label = "Pseudo R²" if best["type"].startswith("Robust M") else "R-squared"
-        st.metric(r2_label, f"{best['r_squared']:.4f}")
+        r2_label = "Pseudo R²" if best["type"].startswith("Robust M") else "R-Squared"
+        st.markdown(render_bento_kpi(
+            title=r2_label,
+            value=f"{best['r_squared']:.4f}",
+            delta="Goodness of fit",
+            percentile=best['r_squared'] * 100.0,
+            tag="EXPLAINED VAR",
+            stroke_color="#6366F1"
+        ), unsafe_allow_html=True)
     with mc2:
         r2w = best.get("r_squared_within")
         if r2w is not None:
-            st.metric("Within R-squared", f"{r2w:.4f}")
+            st.markdown(render_bento_kpi(
+                title="Within R²",
+                value=f"{r2w:.4f}",
+                delta="Within-firm fit",
+                percentile=r2w * 100.0,
+                tag="FIXED EFFECTS",
+                stroke_color="#06B6D4"
+            ), unsafe_allow_html=True)
         elif best["type"].startswith("Robust M"):
-            # Show how many observations got downweighted by the M-estimator
-            st.metric(
-                "Downweighted obs",
-                f"{best.get('n_downweighted', 0):,}",
-                delta=f"min weight {best.get('weight_min', 1.0):.2f}",
-                delta_color="off",
-            )
+            st.markdown(render_bento_kpi(
+                title="Downweighted Obs",
+                value=f"{best.get('n_downweighted', 0):,}",
+                delta=f"min wt {best.get('weight_min', 1.0):.2f}",
+                percentile=25.0,
+                tag="ROBUST M",
+                stroke_color="#F59E0B"
+            ), unsafe_allow_html=True)
         else:
-            st.metric("Adj R-squared", f"{best.get('adj_r_squared', 0):.4f}")
+            st.markdown(render_bento_kpi(
+                title="Adj R-Squared",
+                value=f"{best.get('adj_r_squared', 0):.4f}",
+                delta="Degrees of freedom penalty",
+                percentile=best.get('adj_r_squared', 0) * 100.0,
+                tag="ADJUSTED",
+                stroke_color="#8B5CF6"
+            ), unsafe_allow_html=True)
     with mc3:
-        st.metric("Observations", f"{best['n_obs']:,}")
+        st.markdown(render_bento_kpi(
+            title="Total Observations",
+            value=f"{best['n_obs']:,}",
+            delta="Balanced sample",
+            percentile=100.0,
+            tag="SAMPLE N",
+            stroke_color="#10B981"
+        ), unsafe_allow_html=True)
     with mc4:
-        st.metric("Firms", f"{best['n_firms']}")
+        st.markdown(render_bento_kpi(
+            title="Sample Firms",
+            value=f"{best['n_firms']}",
+            delta="Panel cross-section",
+            percentile=100.0,
+            tag="ENTITIES",
+            stroke_color="#EC4899"
+        ), unsafe_allow_html=True)
 
     st.divider()
 
