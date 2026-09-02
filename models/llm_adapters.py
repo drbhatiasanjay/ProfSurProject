@@ -379,10 +379,11 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
         )
         text = md + footer
         if count_tokens(text) > CONTEXT_BUDGET_TOKENS:
+            md_pruned = md.replace(f"- YoY Profitability Trajectory (mean/median): {yoy_lines}\n", "")
             short = "\n".join(
                 f"- {p}: coef={float(coefs.get(p, 0.0)):+.3f}" for p in PREDICTORS
             )
-            text = md.replace(coef_lines, short) + footer
+            text = md_pruned.replace(coef_lines, short) + footer
         return text
     except Exception as e:
         return f"## PANEL OVERVIEW unavailable: {type(e).__name__}: {e}{GROUNDING_FOOTER}"

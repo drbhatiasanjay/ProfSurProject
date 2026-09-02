@@ -20,6 +20,9 @@
 debug_*.png
 gcp_*.png
 _*_b64.txt
+*.png
+*.mp4
+scratch/
 
 # Batch results, unpacked zips, verification frames
 batch_result/
