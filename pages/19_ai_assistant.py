@@ -2,6 +2,7 @@
 Page 19 — AI Financial Assistant.
 Full-screen dedicated chat interface grounded in the capital structure panel data.
 """
+import os
 import time
 import uuid as _uuid
 import copy
