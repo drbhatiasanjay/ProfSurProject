@@ -619,13 +619,13 @@ if user_q:
     with st.chat_message("user"):
         st.markdown(user_q)
 
-    # Keep provider context compact. Long prior chart answers cause models to
-    # echo old headings/tables and materially increase first-token latency.
+    # Keep provider context compact and turn-isolated. Long prior chart answers cause models to
+    # echo old headings/tables and repeat earlier topics.
     messages = []
-    for _context_turn in st.session_state["chat_history"][:-1][-6:]:
-        _context_content = str(_context_turn.get("content", ""))
-        if _context_turn.get("role") == "assistant" and len(_context_content) > 1800:
-            _context_content = _context_content[:1800].rstrip() + "..."
+    for _context_turn in st.session_state["chat_history"][:-1][-4:]:
+        _context_content = str(_context_turn.get("content", "")).strip()
+        if _context_turn.get("role") == "assistant" and len(_context_content) > 800:
+            _context_content = _context_content[:800].rstrip() + "..."
         messages.append({"role": _context_turn["role"], "content": _context_content})
     messages.append({"role": "user", "content": user_q})
 

@@ -1228,6 +1228,7 @@ def stream_gemini_agent(
             "6. DYNAMIC CFO COUNTERFACTUAL STRESS TESTING: Whenever the user asks 'What-If' macro/operating shock questions (e.g. 'What happens if RBI hikes rates 100 bps?', 'Simulate a 15% margin drop on Tata Motors', 'What is our debt headroom?'), YOU MUST call run_cfo_stress_simulation to compute covenant floors, ICR, headroom in ₹ Cr, and the 3-point C-suite action playbook.\n"
             "7. Cite sources using [Source: Theory], [Source: Latest (2001-2025)], or [Source: OLS Model] where appropriate.\n"
             "8. The interactive charting system is fully supported and operational. NEVER output apologies or statements claiming you are unable to generate charts or graphs.\n"
+            "9. CONVERSATION SCOPE & TURN ISOLATION: Focus STRICTLY and EXCLUSIVELY on answering the LATEST user prompt. NEVER preface your response with recaps, summaries, or repetitions of previous conversation turns or previous tool calls (e.g. NEVER say 'Here is the analysis for [Previous Company] and [Current Subject]'). Treat each new prompt as a focused task.\n"
         )
 
         effective_system = f"{role_preamble}\n\n{agent_instructions}\n\n{get_database_schema_summary()}\n\n{clean_context}"
