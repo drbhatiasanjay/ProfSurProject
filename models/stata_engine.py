@@ -691,7 +691,29 @@ def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
         xvar = clean_tokens[1] if len(clean_tokens) > 1 else "profitability"
         return _handle_scatter({"depvar": depvar, "indepvars": [xvar], "raw": raw}, df)
 
-    # Connected line plot over time (e.g. Stata2.jpeg: twoway connected leverage prof year)
+    # Connected line plot over time (e.g. twoway connected var1 var2 ... varN year)
+    ALIAS_MAP = {
+        "prof": "profitability",
+        "profit": "profitability",
+        "tang": "tangibility",
+        "tangible": "tangibility",
+        "size": "log_size",
+        "logsize": "log_size",
+        "lnsize": "log_size",
+        "ln_size": "log_size",
+        "div": "dividend",
+        "dvnd": "dividend",
+        "dividends": "dividend",
+        "lev": "leverage",
+        "lev_pct": "leverage",
+        "tax_shield": "tax_shield",
+        "taxshield": "tax_shield",
+        "interest": "interest",
+        "int": "interest",
+        "pbit": "pbit",
+        "pbt": "pbt",
+    }
+
     clean_tokens = []
     for t in re.split(r"[\s()|,]+", raw):
         cleaned = t.strip().lower()
@@ -700,33 +722,38 @@ def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
 
     time_col = "year" if "year" in df.columns else None
     y_vars = []
+    display_names = {}
+
     for t in clean_tokens:
         if t in ("year", "time", "date"):
             time_col = t
-        elif t in df.columns or (t == "prof" and "profitability" in df.columns):
-            actual_col = "profitability" if t == "prof" and "profitability" in df.columns else t
-            if actual_col not in y_vars:
-                y_vars.append(actual_col)
+            continue
+        mapped_col = ALIAS_MAP.get(t, t)
+        if mapped_col in df.columns and mapped_col != time_col:
+            if mapped_col not in y_vars:
+                y_vars.append(mapped_col)
+                display_names[mapped_col] = t if t in ALIAS_MAP else mapped_col
 
     if not y_vars:
         y_vars = [c for c in ["leverage", "profitability"] if c in df.columns]
+        display_names = {"leverage": "leverage", "profitability": "prof"}
 
     if time_col and y_vars:
         grouped = df.groupby(time_col)[y_vars].mean().reset_index()
         cats = [str(y) for y in grouped[time_col]]
         series_list = []
         for v in y_vars:
-            display_name = "prof" if v == "profitability" else v
+            d_name = display_names.get(v, v)
             vals = grouped[v].copy()
             # If leverage is in percentage > 1.0 and compared to decimal metrics, scale to decimal (0.0 - 1.0)
-            if v == "leverage" and vals.mean() > 1.0:
+            if v == "leverage" and vals.mean() > 1.0 and any(grouped[other].mean() < 1.0 for other in y_vars if other != "leverage"):
                 vals = vals / 100.0
             series_list.append({
-                "name": display_name,
+                "name": d_name,
                 "values": [round(float(val), 4) for val in vals],
             })
 
-        title_vars = " ".join(["leverage", "prof"] if "profitability" in y_vars and "leverage" in y_vars else [("prof" if x == "profitability" else x) for x in y_vars])
+        title_vars = " ".join([display_names.get(x, x) for x in y_vars])
         spec_res = generate_chat_chart(
             chart_type="line",
             title=f"twoway connected {title_vars} {time_col}",
@@ -739,7 +766,7 @@ def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
             "status": "success",
             "command": parsed["raw"],
             "chart_spec": spec_res.get("chart_spec"),
-            "ascii_output": f"Generated Stata twoway line plot for {title_vars} over {time_col} ({len(cats)} periods).",
+            "ascii_output": f"Generated Stata twoway line plot for {title_vars} over {time_col} ({len(cats)} periods, {len(y_vars)} series).",
         }
 
     return {"status": "error", "ascii_output": "r(198); invalid twoway syntax or variables not found"}
