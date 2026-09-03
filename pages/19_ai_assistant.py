@@ -500,6 +500,18 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
             _render_chart_card(turn["chart_spec"], f"{key_prefix}_chart")
         elif turn.get("fig"):
             st.plotly_chart(turn["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
+
+        # Render dynamic econometric reasoning and theoretical interpretation
+        interp = turn.get("interpretation")
+        if not interp and turn.get("content"):
+            c_text = str(turn.get("content", ""))
+            if "```stata" in c_text and c_text.count("```") >= 2:
+                parts = c_text.split("```")
+                if len(parts) >= 3 and parts[2].strip():
+                    interp = parts[2].strip()
+        if interp:
+            st.markdown(interp)
+
         _render_answer_context(key_prefix)
         return
 
@@ -522,6 +534,12 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
                 cmd_line = stata_lines[0]
                 body = "\n".join(stata_lines[1:])
                 _render_stata_terminal_in_chat(cmd_line, body)
+            if chart:
+                _render_chart_card(chart, f"{key_prefix}_chart")
+                chart = None
+            elif turn.get("fig"):
+                st.plotly_chart(turn["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
+                turn["fig"] = None
             if after.strip():
                 st.markdown(after.strip())
         else:
@@ -891,13 +909,18 @@ if user_q:
         exec_cmd = _q_clean if _q_clean.startswith(".") else f". {_q_clean}"
         stata_res = execute_stata_command(exec_cmd)
         ascii_text = stata_res.get("ascii_output", "")
+        interpretation = stata_res.get("interpretation", "")
         reply_content = f"```stata\n{exec_cmd}\n\n{ascii_text}\n```"
+        if interpretation:
+            reply_content += f"\n\n{interpretation}"
+
         st_turn = {
             "role": "assistant",
             "content": reply_content,
             "stata_command": exec_cmd,
             "stata_output": ascii_text,
-            "model_used": "Stata-Engine (Open Source)",
+            "interpretation": interpretation,
+            "model_used": "Stata-Engine (Econometric Inference)",
             "elapsed_s": 0.05,
             "followups": ["esttab, se r2 star", "coefplot, drop(_cons) xline(0)", "summarize leverage roa, detail"],
         }
