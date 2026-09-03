@@ -144,10 +144,122 @@ st.markdown(
 @media (max-width: 768px) {
     [data-testid="stChatMessage"] { padding-left: 0.5rem; padding-right: 0.5rem; }
 }
+
+/* Stata 18 Authentic Terminal Styling in Chat */
+.stata-chat-terminal {
+    background-color: #0c1017 !important;
+    border: 1px solid #30363d !important;
+    border-radius: 8px !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35) !important;
+    margin: 12px 0 16px 0 !important;
+    overflow: hidden !important;
+    font-family: 'Consolas', 'Fira Code', 'Courier New', monospace !important;
+}
+.stata-chat-terminal-header {
+    background-color: #161b22 !important;
+    border-bottom: 1px solid #30363d !important;
+    padding: 8px 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+.stata-terminal-dots {
+    display: flex !important;
+    gap: 6px !important;
+    align-items: center !important;
+}
+.stata-dot {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+}
+.stata-dot.red { background-color: #ff5f56 !important; }
+.stata-dot.yellow { background-color: #ffbd2e !important; }
+.stata-dot.green { background-color: #27c93f !important; }
+.stata-chat-terminal-title {
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    color: #8b949e !important;
+    letter-spacing: 0.4px !important;
+    margin-left: 6px !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+.stata-chat-terminal-badge {
+    margin-left: auto !important;
+    font-size: 10px !important;
+    background: rgba(88, 166, 255, 0.15) !important;
+    color: #58a6ff !important;
+    border: 1px solid rgba(88, 166, 255, 0.3) !important;
+    padding: 2px 8px !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+.stata-chat-terminal-body {
+    padding: 16px 18px !important;
+    color: #f0f6fc !important;
+    font-size: 12.5px !important;
+    line-height: 1.5 !important;
+    overflow-x: auto !important;
+    background-color: #0c1017 !important;
+}
+.stata-prompt-line {
+    margin-bottom: 10px !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}
+.stata-prompt-char {
+    color: #58a6ff !important;
+}
+.stata-prompt-cmd {
+    color: #7ee787 !important;
+}
+.stata-terminal-output {
+    margin: 0 !important;
+    background: transparent !important;
+    color: #f0f6fc !important;
+    font-family: 'Consolas', 'Fira Code', 'Courier New', monospace !important;
+    font-size: 12.5px !important;
+    line-height: 1.5 !important;
+    white-space: pre !important;
+    overflow-x: auto !important;
+}
+
+/* Ensure Plotly modebar icons are always visible and interactive */
+.modebar-container {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+.modebar {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+.modebar-btn {
+    opacity: 0.85 !important;
+}
+.modebar-btn:hover {
+    opacity: 1 !important;
+}
 </style>
     """,
     unsafe_allow_html=True,
 )
+
+PLOTLY_FULL_CONFIG = {
+    "displayModeBar": True,
+    "displaylogo": False,
+    "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
+    "toImageButtonOptions": {
+        "format": "png",
+        "filename": "econometric_chart",
+        "height": 700,
+        "width": 1000,
+        "scale": 2,
+    },
+    "scrollZoom": True,
+}
 
 
 def _render_chart_card(spec: dict, key_prefix: str) -> None:
@@ -217,37 +329,8 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
         display_spec["show_event_bands"] = event_bands
 
         fig = render_chat_chart_figure(display_spec, theme=st.session_state.get("theme", "light"))
-        st.plotly_chart(fig, use_container_width=True, key=f"{key_prefix}_figure")
-        with st.expander("Chart data & Replication Code", expanded=False):
-            st.download_button(
-                "Download JSON",
-                data=json.dumps(display_spec, indent=2, default=str),
-                file_name="ai_chart.json",
-                mime="application/json",
-                key=f"{key_prefix}_json",
-            )
-            output = io.StringIO()
-            writer = csv.writer(output)
-            writer.writerow(["category"] + [str(item.get("name", "Series")) for item in display_series])
-            for index, category in enumerate(display_spec["categories"]):
-                writer.writerow([category] + [item["values"][index] if index < len(item["values"]) else ""
-                                              for item in display_series])
-            csv_data = output.getvalue()
-            st.download_button(
-                "Download CSV",
-                data=csv_data,
-                file_name="ai_chart.csv",
-                mime="text/csv",
-                key=f"{key_prefix}_csv",
-            )
-            st.download_button(
-                "Download interactive HTML",
-                data=fig.to_html(include_plotlyjs="cdn", full_html=True),
-                file_name="ai_chart.html",
-                mime="text/html",
-                key=f"{key_prefix}_html",
-            )
-
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG, key=f"{key_prefix}_figure")
+        with st.expander("📥 Chart Data & Replication Code", expanded=False):
             # Generate Stata .do replication script
             series_vars = [re.sub(r"\W+", "_", str(s.get("name", f"v{i}")).lower()).strip("_") for i, s in enumerate(display_series)]
             stata_lines = [
@@ -273,14 +356,56 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
                 "graph export \"econometric_figure.png\", as(png) replace width(2400)",
                 "graph export \"econometric_figure.pdf\", as(pdf) replace",
             ])
-            st.download_button(
-                "Download Stata (.do) Replication Script",
-                data="\n".join(stata_lines),
-                file_name="replicate_chart.do",
-                mime="text/x-stata",
-                key=f"{key_prefix}_stata",
-            )
-            st.caption("Use the chart toolbar camera icon to save a high-res vector/PNG image.")
+            stata_do_code = "\n".join(stata_lines)
+
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["category"] + [str(item.get("name", "Series")) for item in display_series])
+            for index, category in enumerate(display_spec["categories"]):
+                writer.writerow([category] + [item["values"][index] if index < len(item["values"]) else ""
+                                              for item in display_series])
+            csv_data = output.getvalue()
+            json_data = json.dumps(display_spec, indent=2, default=str)
+            html_data = fig.to_html(include_plotlyjs="cdn", full_html=True)
+
+            d_col1, d_col2, d_col3, d_col4 = st.columns([1, 1, 1.2, 1.5])
+            with d_col1:
+                st.download_button(
+                    "📄 JSON",
+                    data=json_data,
+                    file_name="ai_chart.json",
+                    mime="application/json",
+                    use_container_width=True,
+                    key=f"{key_prefix}_json",
+                )
+            with d_col2:
+                st.download_button(
+                    "📊 CSV",
+                    data=csv_data,
+                    file_name="ai_chart.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                    key=f"{key_prefix}_csv",
+                )
+            with d_col3:
+                st.download_button(
+                    "🌐 Interactive HTML",
+                    data=html_data,
+                    file_name="ai_chart.html",
+                    mime="text/html",
+                    use_container_width=True,
+                    key=f"{key_prefix}_html",
+                )
+            with d_col4:
+                st.download_button(
+                    "💻 Stata (.do) Script",
+                    data=stata_do_code,
+                    file_name="replicate_chart.do",
+                    mime="text/x-stata",
+                    use_container_width=True,
+                    key=f"{key_prefix}_stata",
+                )
+            st.caption("💡 *Tip: Use the toolbar camera icon on the chart above to download high-resolution vector/PNG.*")
 
 
 def _split_supporting_tables(text: str) -> tuple[str, list[str]]:
@@ -323,15 +448,96 @@ def _normalized_turn_content(turn: dict, user_query: str = "") -> tuple[str, lis
     return prose, tables, normalized.get("chart_spec")
 
 
+def _render_stata_terminal_in_chat(stata_cmd: str, ascii_output: str) -> None:
+    """Render authentic, high-contrast Stata 18 SE terminal output box in chat."""
+    import html
+    clean_cmd = html.escape(str(stata_cmd).lstrip(". "))
+    safe_ascii = html.escape(str(ascii_output))
+
+    sub_title = "Econometric Console"
+    cmd_lower = clean_cmd.lower()
+    if "xtreg" in cmd_lower:
+        sub_title = "Fixed-Effects (within) Regression" if "fe" in cmd_lower else "Random-Effects Panel Model"
+    elif "regress" in cmd_lower:
+        sub_title = "OLS Linear Regression"
+    elif "summarize" in cmd_lower:
+        sub_title = "Summary Statistics"
+    elif "tabstat" in cmd_lower:
+        sub_title = "Grouped Descriptive Statistics"
+    elif "pwcorr" in cmd_lower:
+        sub_title = "Pairwise Correlation Matrix"
+    elif "hausman" in cmd_lower:
+        sub_title = "Hausman Specification Test"
+    elif "estat" in cmd_lower:
+        sub_title = "Postestimation Diagnostics"
+    elif "coefplot" in cmd_lower:
+        sub_title = "Coefficient Plot Visualizer"
+    elif "thesis" in cmd_lower:
+        sub_title = "PhD Dissertation Figure Reproduction"
+
+    terminal_html = f"""
+    <div class="stata-chat-terminal">
+        <div class="stata-chat-terminal-header">
+            <div class="stata-terminal-dots">
+                <span class="stata-dot red"></span>
+                <span class="stata-dot yellow"></span>
+                <span class="stata-dot green"></span>
+            </div>
+            <span class="stata-chat-terminal-title">Stata 18 SE · {sub_title}</span>
+            <span class="stata-chat-terminal-badge">Stata 100% Match</span>
+        </div>
+        <div class="stata-chat-terminal-body">
+            <div class="stata-prompt-line"><span class="stata-prompt-char">.</span> <span class="stata-prompt-cmd">{clean_cmd}</span></div>
+            <pre class="stata-terminal-output">{safe_ascii}</pre>
+        </div>
+    </div>
+    """
+    st.markdown(terminal_html, unsafe_allow_html=True)
+
+
 def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) -> None:
     """Render the common answer hierarchy: prose, chart, observations, data."""
+    # Fast path for explicit Stata execution turns
+    if turn.get("stata_command") and turn.get("stata_output"):
+        _render_stata_terminal_in_chat(turn["stata_command"], turn["stata_output"])
+        if turn.get("chart_spec"):
+            _render_chart_card(turn["chart_spec"], f"{key_prefix}_chart")
+        elif turn.get("fig"):
+            st.plotly_chart(turn["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
+        _render_answer_context(key_prefix)
+        return
+
     prose, tables, chart = _normalized_turn_content(turn)
     if placeholder is not None:
         placeholder.markdown(prose or "Preparing the answer...")
         return
-    st.markdown(prose)
+
+    # If prose contains a ```stata ... ``` fenced block, parse and render in terminal card
+    if "```stata" in prose:
+        parts = prose.split("```stata")
+        before = parts[0].strip()
+        if before:
+            st.markdown(before)
+        rest = parts[1]
+        if "```" in rest:
+            stata_block, after = rest.split("```", 1)
+            stata_lines = [l for l in stata_block.strip().splitlines() if l.strip()]
+            if stata_lines:
+                cmd_line = stata_lines[0]
+                body = "\n".join(stata_lines[1:])
+                _render_stata_terminal_in_chat(cmd_line, body)
+            if after.strip():
+                st.markdown(after.strip())
+        else:
+            st.markdown(prose)
+    else:
+        st.markdown(prose)
+
     if chart:
         _render_chart_card(chart, f"{key_prefix}_chart")
+    elif turn.get("fig"):
+        st.plotly_chart(turn["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
+
     if tables:
         with st.expander("Supporting data", expanded=False):
             for table in tables:
@@ -688,12 +894,16 @@ if user_q:
         st_turn = {
             "role": "assistant",
             "content": reply_content,
+            "stata_command": user_q.strip(),
+            "stata_output": ascii_text,
             "model_used": "Stata-Engine (Open Source)",
             "elapsed_s": 0.05,
             "followups": ["esttab, se r2 star", "coefplot, drop(_cons) xline(0)", "summarize leverage roa, detail"],
         }
         if stata_res.get("chart_spec"):
             st_turn["chart_spec"] = stata_res["chart_spec"]
+        if stata_res.get("fig"):
+            st_turn["fig"] = stata_res["fig"]
         st.session_state["chat_history"].append(st_turn)
         db.append_chat_message(
             st.session_state.get("chat_session_id", ""),

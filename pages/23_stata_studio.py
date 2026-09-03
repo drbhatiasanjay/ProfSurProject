@@ -92,6 +92,20 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+PLOTLY_FULL_CONFIG = {
+    "displayModeBar": True,
+    "displaylogo": False,
+    "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
+    "toImageButtonOptions": {
+        "format": "png",
+        "filename": "stata_studio_chart",
+        "height": 700,
+        "width": 1000,
+        "scale": 2,
+    },
+    "scrollZoom": True,
+}
+
 st.markdown("### 💻 Stata Studio")
 st.caption("Autonomous Stata Command Line & Econometric Publication Suite · Open-source mathematical parity with Stata 17/18")
 
@@ -218,12 +232,12 @@ with tab_cli:
 
     # In-terminal chart rendering if generated (e.g. twoway, coefplot, or calibrated thesis figure)
     if last_res.get("fig"):
-        st.plotly_chart(last_res["fig"], use_container_width=True)
+        st.plotly_chart(last_res["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
     elif last_res.get("chart_spec"):
         from models.agent_tools import render_chat_chart_figure
         fig = render_chat_chart_figure(last_res["chart_spec"], theme=st.session_state.get("theme", "light"))
         if fig:
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
 
     # Command History Expander
     with st.expander("📜 Stata Command History in this Session", expanded=False):
