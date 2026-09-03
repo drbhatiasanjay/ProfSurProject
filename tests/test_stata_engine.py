@@ -40,6 +40,7 @@ def sample_panel_df():
                 "dividend": max(0.0, np.random.normal(25.0, 5.0)),
                 "size": size,
                 "log_size": size,
+                "ibc_2016": 1 if y >= 2016 else 0,
                 "life_stage": "Maturity" if f in (101, 102) else ("Growth" if f in (103, 104) else "Decline"),
             })
     return pd.DataFrame(rows)
@@ -229,3 +230,22 @@ def test_execute_thesis_figures(sample_panel_df):
     assert "fig" in res83
     assert res83["fig"].layout.height == 700
     assert "Figure 8.3" in res83["ascii_output"]
+
+
+def test_dynamic_variable_aliases_and_comma_free_options(sample_panel_df):
+    from models.stata_engine import execute_stata_command, parse_stata_command
+
+    # 1. Comma-free option parsing
+    p = parse_stata_command(". xtreg leverage profitability tangibility fe cluster(company_code)")
+    assert p["options"].get("fe") is True
+    assert p["options"].get("cluster") == "company_code"
+    assert "fe" not in p["indepvars"]
+
+    # 2. Dynamic variable alias resolution
+    res = execute_stata_command("xtreg leverage prof tang logsize ibc2016", df=sample_panel_df)
+    assert res["status"] == "success"
+    assert "profitability" in res["coefficients"]
+    assert "tangibility" in res["coefficients"]
+    assert "log_size" in res["coefficients"]
+    assert "ibc_2016" in res["coefficients"]
+

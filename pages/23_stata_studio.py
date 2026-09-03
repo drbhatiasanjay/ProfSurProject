@@ -160,48 +160,74 @@ with tab_cli:
     st.markdown("### ⚡ Interactive Stata Terminal")
     st.caption("Type any standard Stata econometric or summary command below, or click any pre-configured template.")
 
+    # Initialize in session_state if not present
+    if "stata_cmd_input" not in st.session_state:
+        st.session_state["stata_cmd_input"] = "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"
+
     # Quick Template Buttons
     col_q1, col_q2, col_q3 = st.columns(3)
-    quick_cmd = None
     with col_q1:
         if st.button("📊 . xtreg leverage roa tang size, fe cluster(id)", use_container_width=True):
-            quick_cmd = "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"
+            st.session_state["stata_cmd_input"] = "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
         if st.button("📈 . xtreg leverage roa tang size, re", use_container_width=True):
-            quick_cmd = "xtreg leverage profitability tangibility log_size, re"
+            st.session_state["stata_cmd_input"] = "xtreg leverage profitability tangibility log_size, re"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
     with col_q2:
         if st.button("🧪 . hausman fe re", use_container_width=True):
-            quick_cmd = "hausman fe re"
+            st.session_state["stata_cmd_input"] = "hausman fe re"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
         if st.button("🔍 . estat vif", use_container_width=True):
-            quick_cmd = "estat vif"
+            st.session_state["stata_cmd_input"] = "estat vif"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
     with col_q3:
         if st.button("📋 . summarize leverage roa tang, detail", use_container_width=True):
-            quick_cmd = "summarize leverage profitability tangibility, detail"
+            st.session_state["stata_cmd_input"] = "summarize leverage profitability tangibility, detail"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
         if st.button("🔗 . pwcorr leverage roa tang size, sig", use_container_width=True):
-            quick_cmd = "pwcorr leverage profitability tangibility log_size, sig star(0.05)"
+            st.session_state["stata_cmd_input"] = "pwcorr leverage profitability tangibility log_size, sig star(0.05)"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
 
     with st.expander("📚 PhD Dissertation Figure Replications (Chapters 5 & 8) — 1-Click Stata Command & Graph", expanded=False):
         col_th1, col_th2 = st.columns(2)
         with col_th1:
             if st.button("📊 Fig 5.1: Stage-Wise Profile (thesis fig51)", use_container_width=True):
-                quick_cmd = "thesis fig51"
+                st.session_state["stata_cmd_input"] = "thesis fig51"
+                st.session_state["_trigger_stata_run"] = True
+                st.rerun()
             if st.button("📈 Fig 5.2: 2001–2024 Year-Wise Trends (thesis fig52)", use_container_width=True):
-                quick_cmd = "thesis fig52"
+                st.session_state["stata_cmd_input"] = "thesis fig52"
+                st.session_state["_trigger_stata_run"] = True
+                st.rerun()
             if st.button("🧪 Fig 5.3: ANOVA Means of Leverage (tabstat leverage by stage)", use_container_width=True):
-                quick_cmd = "tabstat leverage, by(life_stage)"
+                st.session_state["stata_cmd_input"] = "tabstat leverage, by(life_stage)"
+                st.session_state["_trigger_stata_run"] = True
+                st.rerun()
         with col_th2:
             if st.button("📉 Fig 8.3: Leverage vs Profit & Tangibility (thesis fig83)", use_container_width=True):
-                quick_cmd = "thesis fig83"
+                st.session_state["stata_cmd_input"] = "thesis fig83"
+                st.session_state["_trigger_stata_run"] = True
+                st.rerun()
             if st.button("📈 Fig 8.3B: Leverage vs Tangibility (scatter)", use_container_width=True):
-                quick_cmd = "scatter leverage tangibility"
+                st.session_state["stata_cmd_input"] = "scatter leverage tangibility"
+                st.session_state["_trigger_stata_run"] = True
+                st.rerun()
             if st.button("🏛 Full Thesis Model: FE Panel Regression + coefplot", use_container_width=True):
-                quick_cmd = "xtreg leverage profitability tangibility log_size tax_shield, fe cluster(company_code)"
+                st.session_state["stata_cmd_input"] = "xtreg leverage profitability tangibility log_size tax_shield, fe cluster(company_code)"
+                st.session_state["_trigger_stata_run"] = True
+                st.rerun()
 
     # Command Input Bar
     c_in1, c_in2 = st.columns([5, 1])
     with c_in1:
         typed_cmd = st.text_input(
             "Stata Command Prompt:",
-            value=quick_cmd if quick_cmd else "",
             placeholder=". xtreg leverage profitability tangibility log_size, fe cluster(company_code)",
             key="stata_cmd_input",
             label_visibility="collapsed",
@@ -209,9 +235,16 @@ with tab_cli:
     with c_in2:
         run_clicked = st.button("▶ Run Command", use_container_width=True, type="primary")
 
-    active_cmd = quick_cmd or (typed_cmd if run_clicked or (typed_cmd and typed_cmd != st.session_state.get("_prev_cmd")) else None)
+    trigger_run = st.session_state.pop("_trigger_stata_run", False)
+    active_cmd = (typed_cmd or "").strip()
 
-    if active_cmd:
+    # Trigger execution if:
+    # 1. '▶ Run Command' was clicked
+    # 2. A template button triggered execution
+    # 3. User pressed Enter with a new command
+    should_run = (run_clicked or trigger_run or (active_cmd and active_cmd != st.session_state.get("_prev_cmd", "").strip())) and bool(active_cmd)
+
+    if should_run:
         st.session_state["_prev_cmd"] = active_cmd
         with st.spinner(f"Executing: {active_cmd}..."):
             t0 = time.time()

@@ -22,16 +22,134 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 _STORED_ESTIMATES = {}
 _LAST_ESTIMATE = None
 
+COMMON_VAR_ALIASES = {
+    "prof": "profitability",
+    "profit": "profitability",
+    "roa": "profitability",
+    "roe": "profitability",
+    "ebitda": "profitability",
+    "tang": "tangibility",
+    "tangible": "tangibility",
+    "ppe": "tangibility",
+    "fa": "tangibility",
+    "fixed_assets": "tangibility",
+    "size": "log_size",
+    "logsize": "log_size",
+    "lnsize": "log_size",
+    "ln_size": "log_size",
+    "log_assets": "log_size",
+    "assets": "log_size",
+    "firmsize": "firm_size",
+    "firm_size": "firm_size",
+    "ibc": "ibc_2016",
+    "ibc2016": "ibc_2016",
+    "ibc_post": "ibc_2016",
+    "post_ibc": "ibc_2016",
+    "postibc": "ibc_2016",
+    "gfc": "gfc",
+    "gfc2008": "gfc",
+    "crisis": "gfc",
+    "covid": "covid_dummy",
+    "covid19": "covid_dummy",
+    "covid2020": "covid_dummy",
+    "coviddummy": "covid_dummy",
+    "covid_dummy": "covid_dummy",
+    "tax": "tax",
+    "taxrate": "tax",
+    "tax_rate": "tax",
+    "etr": "tax",
+    "taxshield": "tax_shield",
+    "tax_shield": "tax_shield",
+    "ndts": "tax_shield",
+    "div": "dividend",
+    "dividend": "dividend",
+    "payout": "dividend",
+    "lev": "leverage",
+    "leverage": "leverage",
+    "debt": "leverage",
+    "debt_ratio": "leverage",
+    "de": "leverage",
+    "debt_equity": "leverage",
+    "td_ta": "leverage",
+    "stage": "life_stage",
+    "lifestage": "life_stage",
+    "life_stage": "life_stage",
+    "ind": "industry_group",
+    "industry": "industry_group",
+    "sector": "industry_group",
+    "industry_group": "industry_group",
+    "borrowings": "borrowings",
+    "borrowing": "borrowings",
+    "tot_debt": "borrowings",
+    "total_liabilities": "total_liabilities",
+    "totalliabilities": "total_liabilities",
+    "liabilities": "total_liabilities",
+    "cash": "cash_holdings",
+    "cashholdings": "cash_holdings",
+    "cash_holdings": "cash_holdings",
+    "interest": "interest",
+    "int": "interest",
+    "int_rate": "int_rate",
+    "intrate": "int_rate",
+    "int_rate_lt": "int_rate_lt",
+    "intratelt": "int_rate_lt",
+    "promoter": "promoter_share",
+    "promoters": "promoter_share",
+    "promoter_share": "promoter_share",
+    "market_return": "market_return",
+    "mkt_return": "market_return",
+    "return": "market_return",
+    "year": "year",
+    "yr": "year",
+    "company_code": "company_code",
+    "firm": "company_code",
+    "id": "company_code",
+    "company": "company_code",
+}
+
+
+def resolve_panel_variable(var_name: str, valid_columns) -> str | None:
+    """Resolve user-typed variable names, abbreviations, and aliases to actual DataFrame column names."""
+    if not var_name or not isinstance(var_name, str):
+        return None
+    raw = var_name.strip()
+    low = raw.lower()
+    valid_cols_list = list(valid_columns)
+
+    # 1. Exact match
+    if raw in valid_cols_list:
+        return raw
+
+    # 2. Case-insensitive match
+    for col in valid_cols_list:
+        if low == col.lower():
+            return col
+
+    # 3. Known alias dictionary match
+    if low in COMMON_VAR_ALIASES:
+        target = COMMON_VAR_ALIASES[low]
+        if target in valid_cols_list:
+            return target
+
+    # 4. Normalized match (stripping underscores, hyphens, and whitespace)
+    clean_no_under = re.sub(r"[_\-\s]", "", low)
+    for col in valid_cols_list:
+        if clean_no_under == re.sub(r"[_\-\s]", "", col.lower()):
+            return col
+
+    # 5. Stata prefix abbreviation match (e.g. 'prof' -> 'profitability', 'tang' -> 'tangibility')
+    prefix_matches = [col for col in valid_cols_list if col.lower().startswith(low)]
+    if len(prefix_matches) == 1:
+        return prefix_matches[0]
+
+    return None
+
 
 def parse_stata_command(cmd_str: str) -> dict:
     """Parse a Stata command string into verb, depvar, indepvars, and options.
 
-    Examples:
-        "xtreg leverage roa tang size, fe cluster(company_code)"
-        ". summarize leverage profitability, detail"
-        "pwcorr leverage roa tang, sig star(0.05)"
-        "esttab m1 m2, se r2 star"
-        "export dta using mydata.dta"
+    Supports standard Stata syntax with comma (', fe cluster(id)') as well as
+    comma-free option syntax ('xtreg leverage prof tang fe cluster(id)').
     """
     if not cmd_str or not isinstance(cmd_str, str):
         return {"cmd": "", "depvar": "", "indepvars": [], "options": {}, "raw": ""}
@@ -64,6 +182,21 @@ def parse_stata_command(cmd_str: str) -> dict:
         for opt_name, opt_val in opt_matches:
             opt_key = opt_name.lower()
             options[opt_key] = opt_val if opt_val else True
+    else:
+        # Check if options were written without a preceding comma at the tail of tokens
+        # e.g. 'xtreg leverage profitability tangibility fe cluster(company_code)'
+        known_option_flags = {"fe", "re", "be", "robust", "detail", "sig", "nocons", "noconstant"}
+        known_option_funcs = {"cluster", "vce", "by", "over", "star", "level"}
+        kept_tokens = []
+        for tok in tokens:
+            m_opt_arg = re.match(r"^(\w+)\(([^)]*)\)$", tok)
+            if m_opt_arg and m_opt_arg.group(1).lower() in known_option_funcs:
+                options[m_opt_arg.group(1).lower()] = m_opt_arg.group(2)
+            elif tok.lower() in known_option_flags:
+                options[tok.lower()] = True
+            else:
+                kept_tokens.append(tok)
+        tokens = kept_tokens
 
     # Identify depvar and indepvars based on command semantics
     depvar = ""
@@ -449,7 +582,12 @@ def generate_stata_inference(parsed: dict, result: dict, df: pd.DataFrame) -> st
 # ── Stata Command Handlers ──
 
 def _handle_summarize(parsed: dict, df: pd.DataFrame) -> dict:
-    vars_to_sum = [v for v in parsed["indepvars"] if v in df.columns]
+    raw_vars = parsed.get("indepvars", [])
+    vars_to_sum = []
+    for v in raw_vars:
+        rv = resolve_panel_variable(v, df.columns)
+        if rv and rv not in vars_to_sum:
+            vars_to_sum.append(rv)
     if not vars_to_sum:
         # Default to continuous numeric columns
         vars_to_sum = [c for c in ["leverage", "profitability", "tangibility", "log_size", "tax", "dividend"] if c in df.columns]
@@ -518,10 +656,16 @@ def _handle_summarize(parsed: dict, df: pd.DataFrame) -> dict:
 
 
 def _handle_tabstat(parsed: dict, df: pd.DataFrame) -> dict:
-    vars_to_tab = [v for v in parsed["indepvars"] if v in df.columns]
+    raw_vars = parsed.get("indepvars", [])
+    vars_to_tab = []
+    for v in raw_vars:
+        rv = resolve_panel_variable(v, df.columns)
+        if rv and rv not in vars_to_tab:
+            vars_to_tab.append(rv)
     if not vars_to_tab:
         vars_to_tab = ["leverage", "profitability"]
-    by_var = str(parsed["options"].get("by", "life_stage"))
+    by_opt = parsed["options"].get("by", "life_stage")
+    by_var = resolve_panel_variable(str(by_opt), df.columns) or "life_stage"
     if by_var not in df.columns:
         by_var = "life_stage" if "life_stage" in df.columns else df.columns[0]
 
@@ -570,7 +714,12 @@ def _handle_tabstat(parsed: dict, df: pd.DataFrame) -> dict:
 
 
 def _handle_pwcorr(parsed: dict, df: pd.DataFrame) -> dict:
-    vars_to_corr = [v for v in parsed["indepvars"] if v in df.columns]
+    raw_vars = parsed.get("indepvars", [])
+    vars_to_corr = []
+    for v in raw_vars:
+        rv = resolve_panel_variable(v, df.columns)
+        if rv and rv not in vars_to_corr:
+            vars_to_corr.append(rv)
     if len(vars_to_corr) < 2:
         vars_to_corr = [c for c in ["leverage", "profitability", "tangibility", "log_size", "tax"] if c in df.columns]
 
@@ -640,8 +789,13 @@ def _build_coefplot_chart_spec(est: dict, drop_cons: bool = True) -> dict:
 
 def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
     global _LAST_ESTIMATE
-    depvar = parsed["depvar"] or "leverage"
-    indepvars = [v for v in parsed["indepvars"] if v in df.columns]
+    depvar = resolve_panel_variable(parsed.get("depvar"), df.columns) or "leverage"
+    raw_vars = parsed.get("indepvars", [])
+    indepvars = []
+    for v in raw_vars:
+        rv = resolve_panel_variable(v, df.columns)
+        if rv and rv not in indepvars:
+            indepvars.append(rv)
     if not indepvars:
         indepvars = ["profitability", "tangibility", "log_size"]
 
@@ -717,8 +871,13 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     global _LAST_ESTIMATE
     from linearmodels.panel import PanelOLS, RandomEffects
 
-    depvar = parsed["depvar"] or "leverage"
-    indepvars = [v for v in parsed["indepvars"] if v in df.columns]
+    depvar = resolve_panel_variable(parsed.get("depvar"), df.columns) or "leverage"
+    raw_vars = parsed.get("indepvars", [])
+    indepvars = []
+    for v in raw_vars:
+        rv = resolve_panel_variable(v, df.columns)
+        if rv and rv not in indepvars:
+            indepvars.append(rv)
     if not indepvars:
         indepvars = ["profitability", "tangibility", "log_size"]
 
@@ -897,11 +1056,13 @@ def _handle_coefplot(parsed: dict, df: pd.DataFrame) -> dict:
 
 
 def _handle_scatter(parsed: dict, df: pd.DataFrame) -> dict:
-    depvar = parsed.get("depvar")
+    raw_dep = parsed.get("depvar")
+    depvar = resolve_panel_variable(raw_dep, df.columns) or raw_dep
     indepvars = parsed.get("indepvars", [])
     if not depvar or not indepvars:
         return {"status": "error", "message": "Syntax: scatter <yvar> <xvar>", "ascii_output": "r(102); too few variables specified"}
-    xvar = indepvars[0]
+    raw_x = indepvars[0]
+    xvar = resolve_panel_variable(raw_x, df.columns) or raw_x
     if depvar not in df.columns or xvar not in df.columns:
         return {"status": "error", "message": f"Variables {depvar} or {xvar} not found", "ascii_output": "r(111); variable not found"}
 
@@ -928,7 +1089,8 @@ def _handle_scatter(parsed: dict, df: pd.DataFrame) -> dict:
 
 
 def _handle_histogram(parsed: dict, df: pd.DataFrame) -> dict:
-    varname = parsed.get("depvar") or (parsed.get("indepvars", [""])[0] if parsed.get("indepvars") else "")
+    raw_var = parsed.get("depvar") or (parsed.get("indepvars", [""])[0] if parsed.get("indepvars") else "")
+    varname = resolve_panel_variable(raw_var, df.columns) or raw_var
     if not varname or varname not in df.columns:
         return {"status": "error", "message": f"Variable {varname} not found", "ascii_output": "r(111); variable not found"}
     series = pd.to_numeric(df[varname], errors="coerce").dropna().tolist()
