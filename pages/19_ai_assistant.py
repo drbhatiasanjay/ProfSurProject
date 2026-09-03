@@ -881,16 +881,21 @@ if user_q:
     st.session_state["chat_history"].append({"role": "user", "content": user_q})
     db.append_chat_message(st.session_state.get("chat_session_id", ""), "user", user_q)
 
-    # Fast direct execution if query starts with Stata prompt '.'
-    if user_q.strip().startswith("."):
+    # Fast direct execution if query starts with Stata prompt '.' or recognized Stata command
+    _q_clean = user_q.strip()
+    _stata_verbs = ("twoway", "xtreg", "regress", "reg ", "summarize", "sum ", "tabstat", "pwcorr", "correlate", "corr ", "hausman", "estat", "estimates", "esttab", "coefplot", "scatter", "histogram", "hist ", "export", "thesis")
+    is_stata_cmd = _q_clean.startswith(".") or any(_q_clean.lower().startswith(v) for v in _stata_verbs)
+
+    if is_stata_cmd:
         from models.stata_engine import execute_stata_command
-        stata_res = execute_stata_command(user_q)
+        exec_cmd = _q_clean if _q_clean.startswith(".") else f". {_q_clean}"
+        stata_res = execute_stata_command(exec_cmd)
         ascii_text = stata_res.get("ascii_output", "")
-        reply_content = f"```stata\n{user_q.strip()}\n\n{ascii_text}\n```"
+        reply_content = f"```stata\n{exec_cmd}\n\n{ascii_text}\n```"
         st_turn = {
             "role": "assistant",
             "content": reply_content,
-            "stata_command": user_q.strip(),
+            "stata_command": exec_cmd,
             "stata_output": ascii_text,
             "model_used": "Stata-Engine (Open Source)",
             "elapsed_s": 0.05,
