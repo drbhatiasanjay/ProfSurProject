@@ -257,20 +257,73 @@ with tab_cli:
     last_res = st.session_state.get("stata_last_result", {})
     last_cmd = st.session_state["stata_history"][-1][0] if st.session_state["stata_history"] else "xtreg leverage roa tang size, fe"
     import html
+    from models.rich_chat_renderer import (
+        render_rich_terminal_html,
+        render_detailed_economic_commentary_html,
+        render_theory_scorecard_html,
+        render_academic_vault_html,
+    )
+    from models.chart_switcher_engine import (
+        build_forest_plot,
+        build_beta_rank_bars,
+    )
+
     ascii_out = last_res.get("ascii_output", "No output generated.")
-    safe_ascii = html.escape(ascii_out)
-    clean_cmd = html.escape(last_cmd.lstrip('. '))
-    terminal_html = f'<div class="stata-terminal-box"><span class="stata-prompt-prefix">. {clean_cmd}</span><br><br><pre style="margin:0; background:transparent; color:#f0f6fc; font-family:inherit; white-space:pre-wrap;">{safe_ascii}</pre></div>'
+    clean_cmd = last_cmd.lstrip('. ')
+    current_theme = st.session_state.get("theme", "light")
+
+    terminal_html = render_rich_terminal_html(ascii_out, f"Stata 18 SE · {clean_cmd}", theme=current_theme)
     st.markdown(terminal_html, unsafe_allow_html=True)
 
-    # In-terminal chart rendering if generated (e.g. twoway, coefplot, or calibrated thesis figure)
-    if last_res.get("fig"):
+    # Intelligent Chart Switcher if regression or compatible charts present
+    compat = last_res.get("compatible_charts", [])
+    coefs = last_res.get("coefficients", {})
+    if compat and coefs:
+        c_sw1, c_sw2 = st.columns([3, 2])
+        with c_sw1:
+            st.markdown("""
+            <div style="font-size: 13px; font-weight: 700; color: #0284C7; margin-top: 6px;">
+                📊 Visual Engine · Data-Gated Chart Switcher
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-muted, #64748B);">
+                Switch between mathematically permitted econometric representations
+            </div>
+            """, unsafe_allow_html=True)
+        with c_sw2:
+            chart_options = [c["label"] for c in compat]
+            selected_label = st.selectbox(
+                "Select Visualization:",
+                chart_options,
+                index=0,
+                key=f"stata_studio_chart_switcher_{clean_cmd[:20]}",
+                label_visibility="collapsed",
+            )
+        selected_id = next((c["id"] for c in compat if c["label"] == selected_label), "forest_plot")
+
+        if selected_id == "beta_rank_bars":
+            fig = build_beta_rank_bars(coefs, theme=current_theme)
+        else:
+            fig = build_forest_plot(coefs, theme=current_theme)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
+        st.caption("🛡️ *Compatibility Rule Enforced:* Only mathematically permissible regression representations are displayed. Non-continuous charts (Donut, Pie, Stacked Area) are automatically excluded.")
+    elif last_res.get("fig"):
         st.plotly_chart(last_res["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
     elif last_res.get("chart_spec"):
         from models.agent_tools import render_chat_chart_figure
-        fig = render_chat_chart_figure(last_res["chart_spec"], theme=st.session_state.get("theme", "light"))
+        fig = render_chat_chart_figure(last_res["chart_spec"], theme=current_theme)
         if fig:
             st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
+
+    # Render Detailed Economic Commentary
+    scorecard = last_res.get("theory_scorecard", [])
+    if scorecard:
+        st.markdown(render_detailed_economic_commentary_html(scorecard, theme=current_theme), unsafe_allow_html=True)
+        st.markdown(render_theory_scorecard_html(scorecard, theme=current_theme), unsafe_allow_html=True)
+
+    # Render Academic Literature Vault & Citations
+    lit_eval = last_res.get("literature_eval", {})
+    if lit_eval and lit_eval.get("citations"):
+        st.markdown(render_academic_vault_html(lit_eval["citations"], theme=current_theme), unsafe_allow_html=True)
 
     # Command History Expander
     with st.expander("📜 Stata Command History in this Session", expanded=False):

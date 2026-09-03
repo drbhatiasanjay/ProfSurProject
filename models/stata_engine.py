@@ -958,6 +958,47 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         "result_obj": res,
     }
     estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
+
+    # Attach literature evaluation and chart switcher alternatives
+    try:
+        from models.econometric_literature_vault import evaluate_econometric_result
+        from models.chart_switcher_engine import get_compatible_chart_types
+
+        lit_eval = evaluate_econometric_result(
+            model_type=m_type,
+            depvar=depvar,
+            indepvars=indepvars,
+            coefficients=coefs,
+            f_stat=f_stat,
+            f_pval=f_pval,
+            r2=r2_w if is_fe else r2_o,
+            n_obs=n_obs,
+            n_groups=n_groups,
+        )
+        scorecard = []
+        for ev in lit_eval.get("evaluations", []):
+            if ev["is_sig"]:
+                status_str = "✅ VALIDATED (Stronger Sensitivity)" if "higher" in ev.get("comparison", "") else "✅ VALIDATED (Theory Confirmed)"
+            else:
+                status_str = "INCONCLUSIVE (p > 0.05)"
+            scorecard.append({
+                "variable": ev["label"],
+                "raw_var": ev["variable"],
+                "theory": ev["theory"],
+                "benchmark": f"{ev['primary_study']['authors']} ({ev['primary_study']['year']}): beta = {ev['primary_study']['benchmark_beta']:+.2f}" if ev.get("primary_study") else "Empirical Covariate",
+                "beta": f"{ev['beta']:.4f} (t = {ev['t_stat']:.2f})",
+                "status": status_str,
+                "is_sig": ev["is_sig"],
+            })
+
+        estimate_obj["literature_eval"] = lit_eval
+        estimate_obj["theory_scorecard"] = scorecard
+        estimate_obj["compatible_charts"] = get_compatible_chart_types("regression", payload={"y_fitted": None})
+    except Exception as e:
+        estimate_obj["literature_eval"] = None
+        estimate_obj["theory_scorecard"] = []
+        estimate_obj["compatible_charts"] = [{"id": "forest_plot", "label": "Forest Plot (95% CI)"}]
+
     _LAST_ESTIMATE = estimate_obj
     store_key = "fe" if is_fe else "re"
     _STORED_ESTIMATES[store_key] = estimate_obj

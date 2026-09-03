@@ -99,6 +99,24 @@ div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
     font-variant-numeric: tabular-nums;
 }
 
+/* Stata Studio Rich Terminal & Economic Cards High-Contrast Overrides */
+.stata-rich-terminal-card,
+div.stata-rich-terminal-card {
+    background-color: #0D1117 !important;
+    border: 1px solid #30363D !important;
+    border-radius: 8px !important;
+}
+
+.stata-rich-terminal-card pre,
+.stata-rich-terminal-card code,
+.stata-rich-terminal-card span,
+.stata-rich-terminal-card pre code,
+.stata-rich-terminal-card pre span {
+    color: #F0F6FC !important;
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
 /* Bento Card Grid System */
 .bento-grid {
     display: grid;

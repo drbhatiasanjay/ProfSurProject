@@ -495,22 +495,79 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
     """Render the common answer hierarchy: prose, chart, observations, data."""
     # Fast path for explicit Stata execution turns
     if turn.get("stata_command") and turn.get("stata_output"):
-        _render_stata_terminal_in_chat(turn["stata_command"], turn["stata_output"])
-        if turn.get("chart_spec"):
+        from models.rich_chat_renderer import (
+            render_rich_terminal_html,
+            render_detailed_economic_commentary_html,
+            render_theory_scorecard_html,
+            render_academic_vault_html,
+        )
+        from models.chart_switcher_engine import (
+            build_forest_plot,
+            build_beta_rank_bars,
+        )
+
+        clean_cmd = turn["stata_command"].lstrip('. ')
+        current_theme = st.session_state.get("theme", "light")
+        terminal_html = render_rich_terminal_html(turn["stata_output"], f"Stata 18 SE · {clean_cmd}", theme=current_theme)
+        st.markdown(terminal_html, unsafe_allow_html=True)
+
+        # Intelligent Chart Switcher if regression or compatible charts present
+        compat = turn.get("compatible_charts", [])
+        coefs = turn.get("coefficients", {})
+        if compat and coefs:
+            c_sw1, c_sw2 = st.columns([3, 2])
+            with c_sw1:
+                st.markdown("""
+                <div style="font-size: 13px; font-weight: 700; color: #0284C7; margin-top: 6px;">
+                    📊 Visual Engine · Data-Gated Chart Switcher
+                </div>
+                <div style="font-size: 11.5px; color: var(--text-muted, #64748B);">
+                    Switch between mathematically permitted econometric representations
+                </div>
+                """, unsafe_allow_html=True)
+            with c_sw2:
+                chart_options = [c["label"] for c in compat]
+                selected_label = st.selectbox(
+                    "Select Visualization:",
+                    chart_options,
+                    index=0,
+                    key=f"{key_prefix}_chart_switcher",
+                    label_visibility="collapsed",
+                )
+            selected_id = next((c["id"] for c in compat if c["label"] == selected_label), "forest_plot")
+
+            if selected_id == "beta_rank_bars":
+                fig = build_beta_rank_bars(coefs, theme=current_theme)
+            else:
+                fig = build_forest_plot(coefs, theme=current_theme)
+            st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
+            st.caption("🛡️ *Compatibility Rule Enforced:* Only mathematically permissible regression representations are displayed. Non-continuous charts (Donut, Pie, Stacked Area) are automatically excluded.")
+        elif turn.get("chart_spec"):
             _render_chart_card(turn["chart_spec"], f"{key_prefix}_chart")
         elif turn.get("fig"):
             st.plotly_chart(turn["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
 
-        # Render dynamic econometric reasoning and theoretical interpretation
-        interp = turn.get("interpretation")
-        if not interp and turn.get("content"):
-            c_text = str(turn.get("content", ""))
-            if "```stata" in c_text and c_text.count("```") >= 2:
-                parts = c_text.split("```")
-                if len(parts) >= 3 and parts[2].strip():
-                    interp = parts[2].strip()
-        if interp:
-            st.markdown(interp)
+        # Render Detailed Economic Commentary & Theory Validation Scorecard
+        scorecard = turn.get("theory_scorecard")
+        if scorecard:
+            st.markdown(render_detailed_economic_commentary_html(scorecard, theme=current_theme), unsafe_allow_html=True)
+            st.markdown(render_theory_scorecard_html(scorecard, theme=current_theme), unsafe_allow_html=True)
+        else:
+            # Render dynamic econometric reasoning and theoretical interpretation
+            interp = turn.get("interpretation")
+            if not interp and turn.get("content"):
+                c_text = str(turn.get("content", ""))
+                if "```stata" in c_text and c_text.count("```") >= 2:
+                    parts = c_text.split("```")
+                    if len(parts) >= 3 and parts[2].strip():
+                        interp = parts[2].strip()
+            if interp:
+                st.markdown(interp)
+
+        # Render Academic Literature Vault
+        lit_eval = turn.get("literature_eval")
+        if lit_eval and lit_eval.get("citations"):
+            st.markdown(render_academic_vault_html(lit_eval["citations"], theme=current_theme), unsafe_allow_html=True)
 
         _render_answer_context(key_prefix)
         return
@@ -934,6 +991,14 @@ if user_q:
             st_turn["chart_spec"] = stata_res["chart_spec"]
         if stata_res.get("fig"):
             st_turn["fig"] = stata_res["fig"]
+        if stata_res.get("theory_scorecard"):
+            st_turn["theory_scorecard"] = stata_res["theory_scorecard"]
+        if stata_res.get("literature_eval"):
+            st_turn["literature_eval"] = stata_res["literature_eval"]
+        if stata_res.get("compatible_charts"):
+            st_turn["compatible_charts"] = stata_res["compatible_charts"]
+        if stata_res.get("coefficients"):
+            st_turn["coefficients"] = stata_res["coefficients"]
         st.session_state["chat_history"].append(st_turn)
         db.append_chat_message(
             st.session_state.get("chat_session_id", ""),
