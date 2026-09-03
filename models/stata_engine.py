@@ -679,19 +679,70 @@ def _handle_histogram(parsed: dict, df: pd.DataFrame) -> dict:
 
 
 def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
+    from models.agent_tools import generate_chat_chart
     raw = parsed.get("raw", "")
     tokens = parsed.get("indepvars", [])
-    if "scatter" in tokens:
-        s_idx = tokens.index("scatter")
-        sub_tokens = tokens[s_idx:]
-        depvar = sub_tokens[1] if len(sub_tokens) > 1 else ""
-        xvar = sub_tokens[2] if len(sub_tokens) > 2 else ""
-        parsed_scatter = {"depvar": depvar, "indepvars": [xvar] if xvar else [], "raw": raw}
-        return _handle_scatter(parsed_scatter, df)
-    elif len(tokens) >= 2:
-        parsed_scatter = {"depvar": tokens[0], "indepvars": tokens[1:], "raw": raw}
-        return _handle_scatter(parsed_scatter, df)
-    return {"status": "error", "message": "Syntax: twoway scatter <yvar> <xvar>", "ascii_output": "r(198); invalid twoway syntax"}
+    raw_lower = raw.lower()
+
+    # Check for scatter plot
+    if "scatter" in raw_lower:
+        clean_tokens = [t.strip("()|,") for t in tokens if t.strip("()|,") and t.strip("()|,").lower() not in ("scatter", "twoway", "connected", "line")]
+        depvar = clean_tokens[0] if len(clean_tokens) > 0 else "leverage"
+        xvar = clean_tokens[1] if len(clean_tokens) > 1 else "profitability"
+        return _handle_scatter({"depvar": depvar, "indepvars": [xvar], "raw": raw}, df)
+
+    # Connected line plot over time (e.g. Stata2.jpeg: twoway connected leverage prof year)
+    clean_tokens = []
+    for t in re.split(r"[\s()|,]+", raw):
+        cleaned = t.strip().lower()
+        if cleaned and cleaned not in ("twoway", "connected", "line", "sort", "by", "mean", "ytitle", "xtitle", "ylabel", "xlabel", "legend", "scheme", "graphregion"):
+            clean_tokens.append(cleaned)
+
+    time_col = "year" if "year" in df.columns else None
+    y_vars = []
+    for t in clean_tokens:
+        if t in ("year", "time", "date"):
+            time_col = t
+        elif t in df.columns or (t == "prof" and "profitability" in df.columns):
+            actual_col = "profitability" if t == "prof" and "profitability" in df.columns else t
+            if actual_col not in y_vars:
+                y_vars.append(actual_col)
+
+    if not y_vars:
+        y_vars = [c for c in ["leverage", "profitability"] if c in df.columns]
+
+    if time_col and y_vars:
+        grouped = df.groupby(time_col)[y_vars].mean().reset_index()
+        cats = [str(y) for y in grouped[time_col]]
+        series_list = []
+        for v in y_vars:
+            display_name = "prof" if v == "profitability" else v
+            vals = grouped[v].copy()
+            # If leverage is in percentage > 1.0 and compared to decimal metrics, scale to decimal (0.0 - 1.0)
+            if v == "leverage" and vals.mean() > 1.0:
+                vals = vals / 100.0
+            series_list.append({
+                "name": display_name,
+                "values": [round(float(val), 4) for val in vals],
+            })
+
+        title_vars = " ".join(["leverage", "prof"] if "profitability" in y_vars and "leverage" in y_vars else [("prof" if x == "profitability" else x) for x in y_vars])
+        spec_res = generate_chat_chart(
+            chart_type="line",
+            title=f"twoway connected {title_vars} {time_col}",
+            x_axis_label=time_col,
+            y_axis_label="Mean",
+            categories=cats,
+            series=series_list,
+        )
+        return {
+            "status": "success",
+            "command": parsed["raw"],
+            "chart_spec": spec_res.get("chart_spec"),
+            "ascii_output": f"Generated Stata twoway line plot for {title_vars} over {time_col} ({len(cats)} periods).",
+        }
+
+    return {"status": "error", "ascii_output": "r(198); invalid twoway syntax or variables not found"}
 
 
 def _handle_esttab(parsed: dict, df: pd.DataFrame) -> dict:
@@ -749,28 +800,6 @@ def _handle_export(parsed: dict, df: pd.DataFrame) -> dict:
     return {"status": "error", "message": "Syntax: export dta using <filename>", "ascii_output": "r(198); invalid export syntax"}
 
 
-def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
-    from models.agent_tools import generate_chat_chart
-    # Default time series chart
-    if "year" in df.columns and "leverage" in df.columns:
-        grouped = df.groupby("year")["leverage"].mean().reset_index()
-        cats = [str(y) for y in grouped["year"]]
-        vals = [round(float(v), 3) for v in grouped["leverage"]]
-        spec_res = generate_chat_chart(
-            chart_type="line",
-            title="twoway connected leverage year",
-            x_axis_label="Year",
-            y_axis_label="Mean Leverage (%)",
-            categories=cats,
-            series=[{"name": "Leverage", "values": vals}],
-        )
-        return {
-            "status": "success",
-            "command": parsed["raw"],
-            "chart_spec": spec_res.get("chart_spec"),
-            "ascii_output": f"Generated Stata twoway visualization ({len(cats)} time periods).",
-        }
-    return {"status": "error", "ascii_output": "r(198); variable year or leverage not found"}
 
 
 def _handle_thesis(parsed: dict, df: pd.DataFrame) -> dict:
