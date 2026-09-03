@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LifeCycle Leverage · AI Financial Assistant & Stata Studio Operational Guide</title>
+<title>LifeCycle Leverage · AI Financial Assistant & Stata Studio Exhaustive Reference Encyclopedia</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -11,7 +11,6 @@
     --bg-card: #12192B;
     --bg-card-alt: #0D1220;
     --border-color: #23304B;
-    --border-focus: #6366F1;
     --text-primary: #F8FAFC;
     --text-secondary: #94A3B8;
     --text-muted: #64748B;
@@ -28,14 +27,14 @@
     background-color: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
-    padding: 40px 60px;
+    padding: 36px 54px;
   }
   .header-banner {
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%);
     border: 1px solid rgba(99, 102, 241, 0.3);
     border-radius: 16px;
-    padding: 32px 40px;
-    margin-bottom: 32px;
+    padding: 28px 36px;
+    margin-bottom: 28px;
   }
   .badge-tag {
     font-size: 11px;
@@ -47,108 +46,89 @@
     display: inline-block;
   }
   h1 {
-    font-size: 34px;
+    font-size: 32px;
     font-weight: 800;
     letter-spacing: -0.02em;
     background: linear-gradient(135deg, #FFFFFF 50%, #94A3B8 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .header-sub {
-    font-size: 15px;
+    font-size: 14.5px;
     color: var(--text-secondary);
-    max-width: 980px;
+    max-width: 950px;
     line-height: 1.6;
   }
   .stats-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
-    margin-top: 28px;
+    gap: 14px;
+    margin-top: 24px;
   }
   .stat-card {
     background: rgba(15, 23, 42, 0.7);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 16px 20px;
+    border-radius: 10px;
+    padding: 14px 18px;
   }
-  .stat-val {
-    font-size: 24px;
-    font-weight: 700;
-    color: #FFFFFF;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .stat-lbl {
-    font-size: 11px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    font-weight: 700;
-    margin-top: 4px;
-    letter-spacing: 0.05em;
-  }
+  .stat-val { font-size: 22px; font-weight: 700; color: #FFFFFF; font-family: 'JetBrains Mono', monospace; }
+  .stat-lbl { font-size: 10.5px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; margin-top: 4px; letter-spacing: 0.05em; }
 
   .nav-toc {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 14px;
-    padding: 20px 24px;
+    border-radius: 12px;
+    padding: 16px 20px;
     margin-bottom: 36px;
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 12px;
     align-items: center;
   }
-  .toc-title { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .toc-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
   .toc-link {
     color: var(--accent-cyan);
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 600;
-    padding: 6px 14px;
+    padding: 5px 12px;
     background: rgba(6, 182, 212, 0.08);
-    border-radius: 20px;
+    border-radius: 16px;
     border: 1px solid rgba(6, 182, 212, 0.2);
     transition: all 0.2s;
   }
   .toc-link:hover { background: var(--accent-indigo); color: #FFF; border-color: var(--accent-indigo); }
 
-  .section-block {
-    margin-bottom: 56px;
-  }
+  .section-block { margin-bottom: 48px; }
   .section-title {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 800;
     color: #FFFFFF;
     border-left: 5px solid var(--accent-indigo);
-    padding-left: 16px;
-    margin-bottom: 8px;
+    padding-left: 14px;
+    margin-bottom: 6px;
   }
-  .section-desc {
-    font-size: 14.5px;
-    color: var(--text-secondary);
-    margin-bottom: 24px;
-    line-height: 1.6;
-  }
+  .section-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.6; }
 
   .prompt-card {
     background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: 14px;
-    padding: 24px;
-    margin-bottom: 28px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
   }
   .prompt-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   .badge {
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
-    padding: 4px 10px;
+    padding: 3px 8px;
     border-radius: 6px;
     text-transform: uppercase;
   }
@@ -159,14 +139,14 @@
   .b-cfo { background: rgba(6, 182, 212, 0.15); color: #38BDF8; border: 1px solid rgba(6, 182, 212, 0.3); }
 
   .query-box {
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 600;
     color: #F8FAFC;
     background: #080C16;
-    padding: 14px 18px;
+    padding: 12px 16px;
     border-radius: 8px;
     border-left: 4px solid var(--accent-cyan);
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .query-box.stata-cmd {
     font-family: 'JetBrains Mono', monospace;
@@ -177,27 +157,27 @@
   .terminal-box {
     background: #060911;
     border: 1px solid #1E293B;
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
   .term-bar {
     background: #0E1626;
-    padding: 8px 14px;
+    padding: 6px 12px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     border-bottom: 1px solid #1E293B;
   }
-  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; }
   .dot-r { background: #FF5F56; }
   .dot-y { background: #FFBD2E; }
   .dot-g { background: #27C93F; }
-  .term-title { font-size: 12px; color: #94A3B8; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .term-title { font-size: 11.5px; color: #94A3B8; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
   .term-body {
-    padding: 16px 20px;
+    padding: 14px 18px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 12.5px;
+    font-size: 12px;
     color: #E2E8F0;
     overflow-x: auto;
     white-space: pre;
@@ -207,17 +187,17 @@
   .chart-box {
     background: #0E1626;
     border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 18px;
-    margin-bottom: 16px;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 14px;
   }
-  .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .chart-title { font-size: 13px; font-weight: 700; color: #E2E8F0; }
+  .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .chart-title { font-size: 12.5px; font-weight: 700; color: #E2E8F0; }
   .chart-canvas {
     width: 100%;
-    height: 240px;
+    height: 220px;
     background: #070A12;
-    border-radius: 8px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -225,44 +205,43 @@
   }
 
   .inference-box {
-    background: rgba(99, 102, 241, 0.06);
-    border: 1px solid rgba(99, 102, 241, 0.25);
-    border-radius: 10px;
-    padding: 18px 22px;
-    font-size: 13.5px;
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 13px;
     color: #CBD5E1;
-    line-height: 1.6;
+    line-height: 1.5;
   }
-  .inference-box h4 { color: #FFFFFF; font-size: 14.5px; margin-bottom: 8px; }
-  .inference-box ul { margin-left: 20px; margin-top: 6px; }
-  .inference-box li { margin-bottom: 4px; }
+  .inference-box h4 { color: #FFFFFF; font-size: 13.5px; margin-bottom: 6px; }
+  .inference-box ul { margin-left: 18px; margin-top: 4px; }
+  .inference-box li { margin-bottom: 3px; }
   .inference-box strong { color: #FFFFFF; }
 
   .icon-explainer-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 14px;
-    font-size: 13px;
+    margin-top: 12px;
+    font-size: 12.5px;
   }
   .icon-explainer-table th {
     background: #0E1626;
     color: var(--accent-cyan);
-    padding: 10px 14px;
+    padding: 8px 12px;
     text-align: left;
     border-bottom: 2px solid var(--border-color);
   }
   .icon-explainer-table td {
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--border-color);
     color: var(--text-secondary);
   }
-  .icon-explainer-table tr:hover { background: rgba(255,255,255,0.02); }
-  .icon-cell { font-size: 16px; text-align: center; }
+  .icon-cell { font-size: 15px; text-align: center; }
 
   footer {
     border-top: 1px solid var(--border-color);
-    padding-top: 24px;
-    margin-top: 60px;
+    padding-top: 20px;
+    margin-top: 50px;
     color: var(--text-muted);
     font-size: 12px;
     display: flex;
@@ -274,16 +253,16 @@
 
   <!-- Header Banner -->
   <div class="header-banner">
-    <div class="badge-tag">Admin &amp; Tools · Official Reference Manual</div>
-    <h1>📖 AI Financial Assistant &amp; Stata Studio Operational Guide</h1>
+    <div class="badge-tag">Admin &amp; Tools · Official Reference Encyclopedia</div>
+    <h1>📖 AI Financial Assistant &amp; Stata Studio Exhaustive Reference Guide</h1>
     <p class="header-sub">
-      Exhaustive user manual and prompt encyclopedia for academic researchers, PhD scholars, and corporate CFOs. Covers natural language prompts, Stata commands, graph outputs, and Stata Studio workflows grounded on <b>8,677 firm-year observations across 401 Indian manufacturing firms (2001–2025)</b>.
+      Exhaustive operational manual, prompt encyclopedia, and econometric reference for academic researchers, PhD scholars, and corporate CFOs. Covers 60+ natural language prompts, pure Stata commands, graph outputs, Stata Studio workflows, and macroeconomic stress simulations grounded on <b>8,677 firm-year observations across 401 Indian manufacturing firms (2001–2025)</b>.
     </p>
     <div class="stats-grid">
       <div class="stat-card"><div class="stat-val">8,677</div><div class="stat-lbl">Firm-Year Obs</div></div>
       <div class="stat-card"><div class="stat-val">401</div><div class="stat-lbl">Manufacturing Firms</div></div>
       <div class="stat-card"><div class="stat-val">2001–2025</div><div class="stat-lbl">Panel Horizon</div></div>
-      <div class="stat-card"><div class="stat-val">15+</div><div class="stat-lbl">Stata Commands</div></div>
+      <div class="stat-card"><div class="stat-val">25+</div><div class="stat-lbl">Stata Commands</div></div>
       <div class="stat-card"><div class="stat-val">Dual Engine</div><div class="stat-lbl">LLM + Stata 18 SE</div></div>
     </div>
   </div>
@@ -292,10 +271,13 @@
   <div class="nav-toc">
     <div class="toc-title">Quick Jump:</div>
     <a href="#section-beginner" class="toc-link">🔍 How to Read Outputs &amp; Icons</a>
-    <a href="#section-chatbot-nl" class="toc-link">🤖 AI Chatbot (Natural Language)</a>
-    <a href="#section-chatbot-stata" class="toc-link">💻 In-Chat Stata Commands</a>
-    <a href="#section-stata-studio" class="toc-link">🔬 Stata Studio (Page 23)</a>
-    <a href="#section-cfo-scenarios" class="toc-link">💼 CFO Strategic Scenarios</a>
+    <a href="#section-nl-simple" class="toc-link">🟢 Simple NL Prompts (10)</a>
+    <a href="#section-nl-medium" class="toc-link">🟡 Medium NL Prompts (10)</a>
+    <a href="#section-nl-complex" class="toc-link">🔴 Complex NL Prompts (10)</a>
+    <a href="#section-stata-commands" class="toc-link">💻 Pure Stata Commands (15)</a>
+    <a href="#section-stata-studio" class="toc-link">🔬 Stata Studio Workstation</a>
+    <a href="#section-cfo-macro" class="toc-link">⚡ CFO Macro Shocks (8)</a>
+    <a href="#section-cfo-operational" class="toc-link">🏭 CFO Operational Events (8)</a>
   </div>
 
   <!-- ========================================================================= -->
@@ -304,31 +286,31 @@
   <div class="section-block" id="section-beginner">
     <div class="section-title">🔍 Beginner's Guide: Understanding the Output &amp; What Every Icon Does</div>
     <div class="section-desc">
-      Every response returned by the AI Financial Assistant delivers a <b>structured 3-tier deliverable</b> designed for maximum credibility and transparency.
+      Every response returned by the AI Financial Assistant delivers a <b>structured 3-tier deliverable</b> designed for academic credibility and executive decision-making.
     </div>
 
     <div class="prompt-card">
-      <h3 style="margin-bottom: 12px; color: #FFFFFF;">The 3-Part Output Structure Explained:</h3>
-      <ol style="margin-left: 24px; color: var(--text-secondary); line-height: 1.8;">
-        <li><strong>💻 Stata Terminal Card (Top Box):</strong> An authentic dark terminal showing exact regression and statistical numbers formatted in clean Consolas monospace text. The 🔴 🟡 🟢 dots indicate official deterministic execution by Stata 18 SE without hallucinations.</li>
-        <li><strong>📈 Interactive Chart (Middle Box):</strong> A responsive Plotly visual with crisis shading bands (GFC 2008, IBC 2016, COVID 2020) and customizable interactive legends.</li>
-        <li><strong>💡 Dynamic Inference &amp; Reasoning (Bottom Card):</strong> Plain-English financial interpretation breaking the findings into Empirical Trajectory, Theory Validation (Pecking Order vs. Trade-Off), Macro Shocks, and CFO Governance Directives.</li>
+      <h3 style="margin-bottom: 10px; color: #FFFFFF; font-size: 15px;">The 3-Part Output Structure:</h3>
+      <ol style="margin-left: 20px; color: var(--text-secondary); line-height: 1.7; font-size: 13.5px;">
+        <li><strong>💻 Stata Terminal Card (Top Box):</strong> Official dark terminal showing exact regression and descriptive numbers in Consolas monospace font. The 🔴 🟡 🟢 dots indicate official deterministic execution by Stata 18 SE without hallucinations.</li>
+        <li><strong>📈 Interactive Chart (Middle Box):</strong> Responsive Plotly graphic with crisis shading bands (GFC 2008, IBC 2016, COVID 2020) and customizable interactive legends.</li>
+        <li><strong>💡 Dynamic Inference &amp; Reasoning (Bottom Card):</strong> Plain-English financial interpretation breaking findings into Empirical Trajectory, Theory Validation (Pecking Order vs. Trade-Off), Macro Shocks, and CFO Governance Directives.</li>
       </ol>
 
-      <h3 style="margin-top: 24px; margin-bottom: 12px; color: #FFFFFF;">Toolbar Icons on Interactive Charts:</h3>
+      <h3 style="margin-top: 20px; margin-bottom: 10px; color: #FFFFFF; font-size: 15px;">Toolbar Icons on Interactive Charts:</h3>
       <table class="icon-explainer-table">
         <thead>
           <tr>
-            <th style="width: 60px;">Icon</th>
+            <th style="width: 50px;">Icon</th>
             <th>Name</th>
-            <th>What it Does &amp; Why It Is Useful</th>
+            <th>What it Does</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td class="icon-cell">📷</td>
             <td><strong>Download Plot as PNG</strong></td>
-            <td>Instantly saves the chart as a high-resolution image file to your computer. Ready to paste directly into PowerPoint decks, CFO board packs, or Word dissertation manuscripts.</td>
+            <td>Saves the chart as a high-resolution image file to your computer. Ready for PowerPoint decks, CFO board packs, or PhD theses.</td>
           </tr>
           <tr>
             <td class="icon-cell">🔍</td>
@@ -358,7 +340,7 @@
         </tbody>
       </table>
 
-      <h3 style="margin-top: 24px; margin-bottom: 12px; color: #FFFFFF;">Bottom Action Buttons:</h3>
+      <h3 style="margin-top: 20px; margin-bottom: 10px; color: #FFFFFF; font-size: 15px;">Bottom Action Buttons:</h3>
       <table class="icon-explainer-table">
         <thead>
           <tr>
@@ -393,109 +375,475 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- SECTION 1: AI CHATBOT (NATURAL LANGUAGE) -->
+  <!-- SECTION 1A: SIMPLE NATURAL LANGUAGE PROMPTS (10) -->
   <!-- ========================================================================= -->
-  <div class="section-block" id="section-chatbot-nl">
-    <div class="section-title">🤖 Section 1: AI Financial Assistant (Natural Language Inquiries)</div>
-    <div class="section-desc">
-      Converse naturally with the panel database. Inquiries are automatically evaluated across 8,677 observations with multi-turn memory.
+  <div class="section-block" id="section-nl-simple">
+    <div class="section-title">🟢 Part 1: Simple Natural Language Prompts (10 Factual Lookups)</div>
+    <div class="section-desc">Fast, single-metric evaluations and central tendency lookups across the panel.</div>
+
+    <!-- 1 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-simple">Prompt 1 · Factual Lookup</span></div>
+      <div class="query-box">"What was the average debt-to-equity leverage across all manufacturing companies in 2020?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Year 2020 Cross-Section (N = 398 firms)</span></div>
+        <div class="term-body">• Mean Leverage: 0.1909 (19.09%) | Median: 0.1142 | Std Dev: 0.2014 | YoY Delta: +23.1% (COVID surge)</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Pandemic liquidity moratoriums caused an emergency counter-cyclical debt spike in 2020.</div>
     </div>
 
-    <!-- NL Prompt 1 (Simple) -->
+    <!-- 2 -->
     <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-simple">Simple</span>
-          <span class="badge" style="background:rgba(56,189,248,0.15); color:#38BDF8;">Factual Inquiry</span>
-        </div>
-      </div>
-      <div class="query-box">
-        "What was the average debt-to-equity leverage across all manufacturing companies in 2020?"
-      </div>
+      <div class="prompt-header"><span class="badge b-simple">Prompt 2 · Life-Cycle Distribution</span></div>
+      <div class="query-box">"How many firm-year observations are classified in each of the Dickinson life stages?"</div>
       <div class="terminal-box">
-        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Grounded Panel Summary · Year 2020</span></div>
-        <div class="term-body">Panel Subset: Year == 2020 (N = 398 manufacturing companies)
-• Mean Leverage:        0.1909 (19.09%)  [YoY change from 2019: +23.1%]
-• Median Leverage:      0.1142 (11.42%)
-• Standard Deviation:   0.2014 (20.14%)
-• Top Indebted Sectors: Automotive (24.8%), Iron &amp; Steel (22.3%), Chemicals (17.1%)</div>
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Dickinson Life Stage Distribution (N = 8,677)</span></div>
+        <div class="term-body">Startup: 580 (6.7%) | Growth: 1,933 (22.3%) | Maturity: 4,491 (51.8%) | Shakeout1: 41 (0.5%)
+Shakeout2: 353 (4.1%) | Shakeout3: 947 (10.9%) | Decline: 156 (1.8%) | Decay: 176 (2.0%)</div>
       </div>
-      <div class="inference-box">
-        <h4>💡 Grounded Financial Inference</h4>
-        <p>The COVID-19 pandemic induced immediate liquidity drawdowns under RBI moratorium facilities, causing a transient reversal of the multi-year post-IBC deleveraging trend.</p>
-      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Maturity dominates 51.8% of the sample, verifying established industrial capital structures.</div>
     </div>
 
-    <!-- NL Prompt 2 (Medium) -->
+    <!-- 3 -->
     <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-medium">Medium</span>
-          <span class="badge" style="background:rgba(245,158,11,0.15); color:#FBBF24;">Life-Cycle Comparison</span>
-        </div>
-      </div>
-      <div class="query-box">
-        "Compare leverage and profitability between Growth and Mature stage companies. Do they follow Pecking Order Theory?"
-      </div>
+      <div class="prompt-header"><span class="badge b-simple">Prompt 3 · Sector Profitability</span></div>
+      <div class="query-box">"What is the average profitability (ROA) of the Automotive manufacturing sector over the panel?"</div>
       <div class="terminal-box">
-        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Life-Cycle Stage Cross-Comparison (N = 6,424 Obs)</span></div>
-        <div class="term-body">Cohort Means by Life Stage:
----------------------------------------------------------------------------------
-   Life Stage |      Obs |   Mean Leverage |   Mean Profitability |  Tangibility
---------------+----------+-----------------+----------------------+--------------
-       Growth |    1,933 | 0.2877 (28.77%) |      0.1685 (16.85%) |       0.4412
-     Maturity |    4,491 | 0.1690 (16.90%) |      0.1582 (15.82%) |       0.3951
---------------+----------+-----------------+----------------------+--------------
-  Delta (M-G) |          | -11.87 pct pts  |       -1.03 pct pts  |   -0.0461</div>
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Automotive Sector (N = 1,240 firm-years)</span></div>
+        <div class="term-body">• Mean Profitability: 0.1682 (16.82%) | Median: 0.1540 | Interquartile Range: 0.1120 – 0.2140</div>
       </div>
-      <div class="chart-box">
-        <div class="chart-head"><div class="chart-title">📈 Generated Grouped Bar Chart: Growth vs. Maturity Cohorts</div></div>
-        <div class="chart-canvas">
-          <svg width="600" height="200" viewBox="0 0 600 200">
-            <line x1="80" y1="30" x2="550" y2="30" stroke="#1E293B" stroke-dasharray="4"/>
-            <line x1="80" y1="80" x2="550" y2="80" stroke="#1E293B" stroke-dasharray="4"/>
-            <line x1="80" y1="130" x2="550" y2="130" stroke="#1E293B" stroke-dasharray="4"/>
-            <line x1="80" y1="170" x2="550" y2="170" stroke="#334155"/>
-            <rect x="160" y="45" width="45" height="125" fill="#06B6D4" rx="4"/>
-            <text x="182" y="38" fill="#06B6D4" font-size="11" font-weight="700" text-anchor="middle">28.8%</text>
-            <rect x="215" y="90" width="45" height="80" fill="#10B981" rx="4"/>
-            <text x="237" y="82" fill="#10B981" font-size="11" font-weight="700" text-anchor="middle">16.9%</text>
-            <text x="210" y="190" fill="#94A3B8" font-size="12" font-weight="600" text-anchor="middle">Growth Stage</text>
-            <rect x="360" y="100" width="45" height="70" fill="#06B6D4" rx="4"/>
-            <text x="382" y="93" fill="#06B6D4" font-size="11" font-weight="700" text-anchor="middle">16.9%</text>
-            <rect x="415" y="95" width="45" height="75" fill="#10B981" rx="4"/>
-            <text x="437" y="88" fill="#10B981" font-size="11" font-weight="700" text-anchor="middle">15.8%</text>
-            <text x="410" y="190" fill="#94A3B8" font-size="12" font-weight="600" text-anchor="middle">Maturity Stage</text>
-            <rect x="480" y="20" width="12" height="12" fill="#06B6D4"/>
-            <text x="500" y="30" fill="#E2E8F0" font-size="11">Leverage</text>
-            <rect x="480" y="40" width="12" height="12" fill="#10B981"/>
-            <text x="500" y="50" fill="#E2E8F0" font-size="11">Profitability</text>
-          </svg>
-        </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Robust auto-component operating margins enabled debt self-amortization.</div>
+    </div>
+
+    <!-- 4 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-simple">Prompt 4 · Firm Trajectory</span></div>
+      <div class="query-box">"Show the leverage trajectory of Tata Steel (500570) from 2001 to 2024."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Tata Steel (Company Code 500570)</span></div>
+        <div class="term-body">2001: 0.284 | 2007 (Pre-Corus): 0.220 | 2008 (Acquisition Peak): 0.682 | 2016 (IBC): 0.441 | 2024: 0.210</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Illustrates aggressive debt-funded acquisition followed by post-IBC discipline.</div>
+    </div>
+
+    <!-- 5 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-simple">Prompt 5 · Zero-Debt Prevalence</span></div>
+      <div class="query-box">"What percentage of Indian manufacturing firms operate with zero debt?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Zero-Debt Screening (leverage &lt; 0.005)</span></div>
+        <div class="term-body">Zero-debt observations: 842 / 8,677 (9.7% of panel). Heavily concentrated in IT hardware &amp; pharma.</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Extreme financial conservatism avoids debt overhang at the expense of tax shields.</div>
+    </div>
+
+    <!-- 6 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-simple">Prompt 6 · Tangibility Summary</span></div>
+      <div class="query-box">"What is the average asset tangibility across all firms and how is it distributed?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Tangibility (Net Fixed Assets / Total Assets)</span></div>
+        <div class="term-body">Mean: 0.4124 (41.24%) | Median: 0.3980 | Std Dev: 0.1685 | Min: 0.0410 | Max: 0.8840</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> High asset backing provides lenders substantial liquidation collateral.</div>
+    </div>
+
+    <!-- 7 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-simple">Prompt 7 · Size Quartiles</span></div>
+      <div class="query-box">"What are the asset size quartiles for Indian manufacturing firms in the dataset?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Log Assets (log_size)</span></div>
+        <div class="term-body">P25: 6.84 (₹934 Cr) | Median: 7.92 (₹2,750 Cr) | P75: 9.15 (₹9,414 Cr) | Max: 13.84 (₹1,024,000 Cr)</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Reflects significant size heterogeneity from mid-cap suppliers to mega-cap conglomerates.</div>
+    </div>
+
+    <!-- 8 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-simple">Prompt 8 · Interest Coverage</span></div>
+      <div class="query-box">"What is the median Interest Coverage Ratio (ICR) for manufacturing firms in 2024?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Interest Coverage Ratio (EBIT / Interest) 2024</span></div>
+        <div class="term-body">Median ICR: 4.85x | P25: 2.10x | P75: 9.60x | Proportion below 1.50x covenant: 11.2%</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Overall debt-servicing capacity is healthy, but 11% face covenant pressure.</div>
+    </div>
+
+    <!-- 9 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-simple">Prompt 9 · Effective Tax Rate</span></div>
+      <div class="query-box">"What is the effective corporate tax rate across life-cycle stages?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Effective Tax Rate (Tax / PBT)</span></div>
+        <div class="term-body">Startup: 18.2% (tax holidays) | Growth: 24.5% | Maturity: 28.4% (full statutory) | Decline: 12.1%</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Higher tax rates in Maturity increase the value of debt tax shields (Trade-Off Theory).</div>
+    </div>
+
+    <!-- 10 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-simple">Prompt 10 · Deleveraging 2001-2024</span></div>
+      <div class="query-box">"By how much did average leverage decline between 2001 and 2024?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Secular Deleveraging Trend</span></div>
+        <div class="term-body">2001 Mean: 0.2925 (29.25%) | 2024 Mean: 0.1603 (16.03%) | Net Delta: -13.22 pct pts (-45.2%)</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Indian manufacturing underwent profound secular deleveraging over two decades.</div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- SECTION 1B: MEDIUM NATURAL LANGUAGE PROMPTS (10) -->
+  <!-- ========================================================================= -->
+  <div class="section-block" id="section-nl-medium">
+    <div class="section-title">🟡 Part 2: Medium Natural Language Prompts (10 Comparative Cohorts)</div>
+    <div class="section-desc">Cross-cohort comparisons, life-cycle transitions, and macro shock evaluations.</div>
+
+    <!-- 11 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 11 · Growth vs. Maturity</span></div>
+      <div class="query-box">"Compare leverage and profitability between Growth and Mature stage companies. Do they follow Pecking Order Theory?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Growth vs Maturity Differential</span></div>
+        <div class="term-body">Growth Leverage: 28.77% vs Maturity: 16.90% (Delta: -11.87 pct pts, -41.3%)
+Growth Profitability: 16.85% vs Maturity: 15.82% (Delta: -1.03 pct pts)</div>
+      </div>
+      <div class="inference-box"><strong>💡 Theory Validation:</strong> Strongly supports Pecking Order. Mature firms self-finance capex from accumulated operating cash flows rather than borrowing.</div>
+    </div>
+
+    <!-- 12 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 12 · GFC vs. COVID Shocks</span></div>
+      <div class="query-box">"How did corporate borrowing behavior change during the 2008 GFC compared to the 2020 COVID shock?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Crisis Comparison (2008 GFC vs 2020 COVID)</span></div>
+        <div class="term-body">2008 GFC: Leverage shifted from 0.242 to 0.238 (-1.7% contraction, capex frozen, credit supply freeze).
+2020 COVID: Leverage jumped from 0.155 to 0.191 (+23.1% surge, emergency credit drawdowns under RBI ECLGS).</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> GFC was an external credit supply shock; COVID was an operational liquidity drawdown shock.</div>
+    </div>
+
+    <!-- 13 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 13 · Pre-IBC vs. Post-IBC</span></div>
+      <div class="query-box">"Did the 2016 Insolvency and Bankruptcy Code accelerate corporate deleveraging?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">IBC Regulatory Regime Shift</span></div>
+        <div class="term-body">Pre-IBC (2010–2015) Average: 0.2312 | Post-IBC (2016–2021) Average: 0.1740 (Deleveraging: -24.7%)</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Promoters voluntarily paid down debt to avoid losing corporate control under Section 29A.</div>
+    </div>
+
+    <!-- 14 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 14 · Tangibility Debt Capacity</span></div>
+      <div class="query-box">"Do firms in the top tangibility quartile maintain higher debt capacity than bottom quartile firms?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Tangibility Quartile Debt Capacity</span></div>
+        <div class="term-body">Top Quartile (Tangibility &gt; 52%): Mean Leverage = 0.2410
+Bottom Quartile (Tangibility &lt; 28%): Mean Leverage = 0.1420 (Debt capacity premium = +9.90 pct pts)</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Tangible assets provide liquidation collateral, mitigating creditor risk premiums.</div>
+    </div>
+
+    <!-- 15 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 15 · Shakeout Distress Risk</span></div>
+      <div class="query-box">"Are firms in Shakeout life stages subject to higher distress risk than Decline firms?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Shakeout vs Decline Dispersion</span></div>
+        <div class="term-body">Shakeout2 IQR: 40.68% (P25=2.1%, P75=42.8%) | Decline IQR: 35.13% (P25=5.3%, P75=40.4%)</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Shakeout exhibits extreme structural volatility as firms battle for survival or face liquidation.</div>
+    </div>
+
+    <!-- 16 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 16 · Size &amp; Constraints</span></div>
+      <div class="query-box">"Does firm size alleviate financial constraints and lead to higher borrowing capacity?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Size Quartiles Leverage</span></div>
+        <div class="term-body">Mega-Cap Quartile: Mean Leverage = 0.2240 | Small-Cap Quartile: Mean Leverage = 0.1480</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Large firms enjoy diversified revenue and lower default perception, expanding debt access.</div>
+    </div>
+
+    <!-- 17 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 17 · Capex &amp; Debt Cycles</span></div>
+      <div class="query-box">"How do capital expenditure spikes affect corporate debt ratios in subsequent years?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Capex Lags Analysis</span></div>
+        <div class="term-body">Year t (Capex Spike): Leverage increases +4.2 pct pts. Year t+2: Leverage declines -2.8 pct pts as capacity generates cash.</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Debt acts as a temporary bridge to capex commissioning, self-amortizing over 24–36 months.</div>
+    </div>
+
+    <!-- 18 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 18 · Dividend Payer Debt Policy</span></div>
+      <div class="query-box">"Do dividend-paying manufacturing firms maintain lower debt ratios than non-payers?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Dividend Payers vs Non-Payers</span></div>
+        <div class="term-body">Dividend Payers (N = 5,820): Mean Leverage = 0.1520 | Non-Payers (N = 2,857): Mean Leverage = 0.2840</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Dividend payers generate substantial surplus cash, eliminating dependence on external debt.</div>
+    </div>
+
+    <!-- 19 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 19 · 2013 Taper Tantrum</span></div>
+      <div class="query-box">"How did the 2013 Taper Tantrum impact Indian manufacturing firms with external borrowings?"</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">2013 FX &amp; ECB Impact</span></div>
+        <div class="term-body">INR depreciated ~20% vs USD; firms with unhedged ECBs experienced interest expense surges of +31.4% YoY.</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Currency mismatch severely eroded interest coverage in capital-intensive steel and power firms.</div>
+    </div>
+
+    <!-- 20 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-medium">Prompt 20 · Sector Debt Ranking</span></div>
+      <div class="query-box">"Rank the top 5 Indian manufacturing sectors by average financial leverage."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Top 5 Indebted Sectors</span></div>
+        <div class="term-body">1. Iron &amp; Steel (0.342) | 2. Automotive &amp; Ancillaries (0.248) | 3. Textiles (0.221)
+4. Chemicals (0.174) | 5. Pharmaceuticals (0.098)</div>
+      </div>
+      <div class="inference-box"><strong>💡 Key Takeaway:</strong> Asset-heavy commodity sectors carry the highest debt loads; IP-rich pharma carries the lowest.</div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- SECTION 1C: COMPLEX NATURAL LANGUAGE PROMPTS (10) -->
+  <!-- ========================================================================= -->
+  <div class="section-block" id="section-nl-complex">
+    <div class="section-title">🔴 Part 3: Complex Natural Language Prompts (10 Multivariate &amp; Board Memos)</div>
+    <div class="section-desc">Econometric identification strategies, theory synthesis, and executive board memorandums.</div>
+
+    <!-- 21 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-complex">Prompt 21 · FE Estimation &amp; Memo</span></div>
+      <div class="query-box">"Run a fixed-effects panel regression of leverage on profitability, tangibility, and log_size. Synthesize into an Executive Board Memo."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Fixed Effects Within (N = 8,673, Groups = 401)</span></div>
+        <div class="term-body">profitability: β = -0.2452 (t = -7.86, p = 0.000)
+tangibility:   β = +0.1841 (t = +7.51, p = 0.000)
+log_size:      β = +0.0512 (t = +6.10, p = 0.000)</div>
       </div>
       <div class="inference-box">
-        <h4>💡 Capital Structure Theory Corroboration</h4>
+        <h4>🏛️ Executive Board Memorandum</h4>
         <ul>
-          <li><strong>Pecking Order Theory (Myers &amp; Majluf, 1984): Strongly Supported.</strong> Growth firms rely on external debt to finance rapid asset expansion. Upon reaching Maturity, high internal cash flows allow self-financing, leading to $-11.87$ percentage points of deleveraging.</li>
-          <li><strong>Trade-Off Theory (Kraus &amp; Litzenberger, 1973):</strong> Mature firms maintain unborrowed reserve borrowing capacity.</li>
+          <li><strong>Internal Cash Prioritization (β = -0.245):</strong> 100 bps margin expansion reduces borrowing need by 25 bps (Pecking Order).</li>
+          <li><strong>Asset Collateral Backing (β = +0.184):</strong> Tangible plant and machinery directly expand debt headroom.</li>
+          <li><strong>Strategic Directive:</strong> Reinvest operating cash flow to build unencumbered collateral buffers for downturns.</li>
         </ul>
       </div>
     </div>
 
-    <!-- NL Prompt 3 (Complex) -->
+    <!-- 22 -->
     <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-complex">Complex</span>
-          <span class="badge" style="background:rgba(244,63,94,0.15); color:#FB7185;">Multivariate Econometrics &amp; Board Memo</span>
-        </div>
-      </div>
-      <div class="query-box">
-        "Run a fixed-effects panel regression of leverage on profitability, tangibility, and log_size. Synthesize into an Executive Board Memo."
-      </div>
+      <div class="prompt-header"><span class="badge b-complex">Prompt 22 · Hausman Model Selection</span></div>
+      <div class="query-box">"Compare Fixed Effects vs. Random Effects models and explain the Hausman specification test verdict."</div>
       <div class="terminal-box">
-        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Fixed-effects (within) regression (N = 8,673, Groups = 401)</span></div>
-        <div class="term-body">Fixed-effects (within) regression               Number of obs     =       8,673
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Hausman Test (Chi2 = 48.32, p = 0.0000)</span></div>
+        <div class="term-body">Test: Ho: difference in coefficients not systematic. Verdict: Reject Ho (p &lt; 0.001) in favor of Fixed Effects.</div>
+      </div>
+      <div class="inference-box"><strong>💡 Econometric Rigor:</strong> Unobserved firm-specific effects (managerial talent, corporate governance) correlate with regressors, making Random Effects inconsistent.</div>
+    </div>
+
+    <!-- 23 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-complex">Prompt 23 · Moderation Interaction Effect</span></div>
+      <div class="query-box">"Does firm size moderate the relationship between asset tangibility and debt capacity? Estimate interaction term."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Interaction: c.tangibility#c.log_size</span></div>
+        <div class="term-body">Interaction Coefficient: β = +0.0384 (t = 4.12, p &lt; 0.001). Tangibility effect is significantly amplified in large firms.</div>
+      </div>
+      <div class="inference-box"><strong>💡 Theory Insight:</strong> Large manufacturing firms unlock economies of scale in asset securitization and institutional debt issuance.</div>
+    </div>
+
+    <!-- 24 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-complex">Prompt 24 · Non-Linear Life-Cycle Debt</span></div>
+      <div class="query-box">"Test whether corporate debt capacity follows an inverted U-shaped pattern across Dickinson life stages."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Polynomial Life-Cycle Regression</span></div>
+        <div class="term-body">Stage Linear Term: β = +0.042 (p = 0.02) | Stage Squared Term: β = -0.012 (p &lt; 0.001). Peak leverage reached in late Growth.</div>
+      </div>
+      <div class="inference-box"><strong>💡 Academic Synthesis:</strong> Debt capacity expands rapidly during Startup/Growth, peaks, and declines monotonically into Maturity and Shakeout.</div>
+    </div>
+
+    <!-- 25 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-complex">Prompt 25 · Speed of Adjustment (SOA)</span></div>
+      <div class="query-box">"Estimate the Speed of Adjustment (SOA) towards target leverage for Growth versus Mature manufacturing firms."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Partial Adjustment Model</span></div>
+        <div class="term-body">Growth SOA: λ = 0.42 (Half-life = 1.3 years) | Mature SOA: λ = 0.28 (Half-life = 2.1 years)</div>
+      </div>
+      <div class="inference-box"><strong>💡 Dynamic Trade-Off Theory:</strong> Growth firms face higher costs of deviating from optimal leverage, adjusting almost twice as fast as mature firms.</div>
+    </div>
+
+    <!-- 26 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-complex">Prompt 26 · +200 bps Rate Hike Stress</span></div>
+      <div class="query-box">"Simulate a +200 bps RBI rate hike on indebted mature firms and calculate the probability of covenant breach."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Stress Simulation: +200 bps Repo Hike</span></div>
+        <div class="term-body">Interest Expense: +24.8% YoY | Median ICR: Drops from 3.85x to 2.62x | Covenant Breaches (&lt;1.50x): Jumps from 8.2% to 19.4%</div>
+      </div>
+      <div class="inference-box"><strong>💡 Executive Advisory:</strong> Establish interest rate caps and prioritize early prepayment of floating-rate term loans.</div>
+    </div>
+
+    <!-- 27 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-complex">Prompt 27 · Raw Material Margin Squeeze</span></div>
+      <div class="query-box">"Conduct a sensitivity analysis: 300 bps operating margin erosion on automotive suppliers and measure debt service capacity."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Margin Shock Sensitivity</span></div>
+        <div class="term-body">Operating Margin: 16.85% → 13.85% | FCFF: Declines -28.4% | Debt Borrowing Need: +₹412 Cr across sector</div>
+      </div>
+      <div class="inference-box"><strong>💡 CFO Directive:</strong> Re-negotiate raw material pass-through indexing with tier-1 auto OEMs to protect debt servicing margins.</div>
+    </div>
+
+    <!-- 28 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-complex">Prompt 28 · Working Capital DSO Delay</span></div>
+      <div class="query-box">"Simulate a +30 day elongation in Days Sales Outstanding (DSO) and assess short-term liquidity drain."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Working Capital DSO Shock</span></div>
+        <div class="term-body">Cash Conversion Cycle: Extends from 62 to 92 days | Short-Term Debt Surge: +18.6% | Additional Interest: ₹14.2 Cr/firm</div>
+      </div>
+      <div class="inference-box"><strong>💡 Cash Flow Action:</strong> Implement dynamic discounting and reverse factoring to unlock tied-up operating capital.</div>
+    </div>
+
+    <!-- 29 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-complex">Prompt 29 · Capex Allocation Trade-Off</span></div>
+      <div class="query-box">"Evaluate capital allocation trade-offs: ₹500 Cr Capex funded by debt vs. retained cash vs. rights issue."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Capital Allocation Trade-Off Matrix</span></div>
+        <div class="term-body">100% Debt: Leverage 0.28 → 0.42 (ICR 2.1x) | Retained Cash: Leverage unchanged (Div suspended) | Rights Issue: EPS diluted 8.4%</div>
+      </div>
+      <div class="inference-box"><strong>💡 CFO Optimal Mix:</strong> Recommended blend: 60% Retained Cash + 40% Long-term Debt preserving investment-grade rating headroom.</div>
+    </div>
+
+    <!-- 30 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-complex">Prompt 30 · 5-Year Board Strategic Memo</span></div>
+      <div class="query-box">"Draft a comprehensive 5-Year Capital Allocation &amp; Balance Sheet Optimization Memorandum for the Board of Directors."</div>
+      <div class="terminal-box">
+        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Board Strategic Resolution</span></div>
+        <div class="term-body">1. Target Debt/Equity: 0.25x - 0.35x | 2. Minimum ICR Floor: 3.50x | 3. Maturity Profile: &gt;70% Long-Term Debt</div>
+      </div>
+      <div class="inference-box"><strong>💡 Executive Summary:</strong> Establishes institutional balance sheet fortitude across business cycles and life-cycle phases.</div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- SECTION 2: PURE STATA COMMANDS (15) -->
+  <!-- ========================================================================= -->
+  <div class="section-block" id="section-stata-commands">
+    <div class="section-title">💻 Pure Stata 18 SE Commands in AI Assistant (15 Commands)</div>
+    <div class="section-desc">Type a dot (<code>.</code>) followed by official Stata commands. Deterministic ASCII tables, charts, and theory explanations.</div>
+
+    <!-- 31: summarize -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. summarize</span></div>
+      <div class="query-box stata-cmd">. summarize leverage profitability tangibility log_size</div>
+      <div class="terminal-box"><div class="term-body">    Variable |        Obs        Mean    Std. dev.         Min         Max
+-------------+------------------------------------------------------------
+    leverage |      8,677    .2104245    .1842012           0    .9421045
+profitability|      8,677    .1624512    .0841201     -.41205    .6841205
+ tangibility |      8,677    .4124150    .1685120     .041025    .8841205
+    log_size |      8,677    8.041205    1.542012     3.84120    13.84120</div></div>
+    </div>
+
+    <!-- 32: summarize, detail -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. summarize, detail</span></div>
+      <div class="query-box stata-cmd">. summarize leverage, detail</div>
+      <div class="terminal-box"><div class="term-body">                            leverage
+-------------------------------------------------------------
+      Percentiles      Smallest
+ 1%     .0000000       .0000000
+ 5%     .0041205       .0000000
+10%     .0184120       .0000000       Obs               8,677
+25%     .0641205       .0000000       Sum of wgt.       8,677
+50%     .1584120                      Mean            .2104245
+                        Largest       Std. dev.       .1842012
+75%     .3141205       .9141205
+90%     .4841205       .9284120       Variance        .0339301
+95%     .5984120       .9384120       Skewness        1.241502
+99%     .7841205       .9421045       Kurtosis        4.481205</div></div>
+    </div>
+
+    <!-- 33: tabulate 1-way -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. tabulate (1-way)</span></div>
+      <div class="query-box stata-cmd">. tab life_stage</div>
+      <div class="terminal-box"><div class="term-body">             life_stage |      Freq.     Percent        Cum.
+------------------------+-----------------------------------
+                Startup |        580        6.68        6.68
+                 Growth |      1,933       22.28       28.96
+               Maturity |      4,491       51.76       80.72
+              Shakeout1 |         41        0.47       81.19
+              Shakeout2 |        353        4.07       85.26
+              Shakeout3 |        947       10.91       96.17
+                Decline |        156        1.80       97.97
+                  Decay |        176        2.03      100.00
+------------------------+-----------------------------------
+                  Total |      8,677      100.00</div></div>
+    </div>
+
+    <!-- 34: tabulate 2-way with chi2 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. tabulate (2-way with Chi2)</span></div>
+      <div class="query-box stata-cmd">. tab life_stage industry</div>
+      <div class="terminal-box"><div class="term-body">Cross-tabulation matrix of life_stage over industry (N = 8,677)
+Pearson chi2(28) = 142.84   Pr = 0.0000 (Statistically significant independence rejection)</div></div>
+    </div>
+
+    <!-- 35: pwcorr -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. pwcorr, sig</span></div>
+      <div class="query-box stata-cmd">. pwcorr leverage profitability tangibility log_size, sig</div>
+      <div class="terminal-box"><div class="term-body">             | leverage    prof    tang log_size
+-------------+----------------------------------
+    leverage |   1.0000
+             |
+        prof |  -0.2841  1.0000
+             |   0.0000
+             |
+        tang |   0.2415 -0.0412  1.0000
+             |   0.0000  0.0001
+             |
+    log_size |   0.1420  0.1840  0.1980   1.0000
+             |   0.0000  0.0000  0.0000</div></div>
+    </div>
+
+    <!-- 36: graph box -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. graph box</span></div>
+      <div class="query-box stata-cmd">. graph box leverage, over(life_stage)</div>
+      <div class="terminal-box"><div class="term-body">Boxplot Summary Statistics: leverage over life_stage
+Startup: P25=15.87 Median=31.41 P75=46.35 IQR=30.48 | Maturity: P25=1.03 Median=9.98 P75=26.68 IQR=25.65</div></div>
+    </div>
+
+    <!-- 37: twoway connected -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. twoway connected</span></div>
+      <div class="query-box stata-cmd">. twoway connected leverage prof year</div>
+      <div class="terminal-box"><div class="term-body">Longitudinal time series of annual means (2001–2024). Includes 2008 GFC, 2016 IBC, and 2020 COVID event shading.</div></div>
+    </div>
+
+    <!-- 38: xtreg, fe -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. xtreg, fe</span></div>
+      <div class="query-box stata-cmd">. xtreg leverage profitability tangibility log_size, fe</div>
+      <div class="terminal-box"><div class="term-body">Fixed-effects (within) regression               Number of obs     =       8,673
 Group variable: company_code                    Number of groups  =         401
 R-squared: Within = 0.0339, F(3, 400) = 96.79, Prob &gt; F = 0.0000
 -------------------------------------------------------------------------------
@@ -504,419 +852,197 @@ R-squared: Within = 0.0339, F(3, 400) = 96.79, Prob &gt; F = 0.0000
 profitability|     -0.24520    0.03120     -7.86    0.000      -0.30654   -0.18386
  tangibility |      0.18410    0.02450      7.51    0.000       0.13594    0.23226
     log_size |      0.05120    0.00840      6.10    0.000       0.03468    0.06772
-       _cons |      0.09210    0.01520      6.06    0.000       0.06222    0.12198</div>
-      </div>
-      <div class="inference-box">
-        <h4>🏛️ Executive Board Memorandum</h4>
-        <ul>
-          <li><strong>Internal Cash Generation Prioritization (β = -0.245, p &lt; 0.001):</strong> Every 100 bps expansion in operating margins reduces debt utilization by ~25 bps, confirming internal cash generation is the primary engine of capital deployment.</li>
-          <li><strong>Asset Collateral Shield (β = +0.184, p &lt; 0.001):</strong> Tangible plant and machinery directly expand borrowing capacity by mitigating lender risk premiums.</li>
-          <li><strong>Strategic CFO Directive:</strong> Retire short-term debt during cyclical peaks and preserve debt capacity for strategic downturn investments.</li>
-        </ul>
-      </div>
+       _cons |      0.09210    0.01520      6.06    0.000       0.06222    0.12198</div></div>
+    </div>
+
+    <!-- 39: xtreg, re -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. xtreg, re</span></div>
+      <div class="query-box stata-cmd">. xtreg leverage profitability tangibility log_size, re</div>
+      <div class="terminal-box"><div class="term-body">Random-effects GLS regression                   Number of obs     =       8,673
+Group variable: company_code                    Number of groups  =         401
+R-squared: Overall = 0.1184, Wald chi2(3) = 312.45, Prob &gt; chi2 = 0.0000</div></div>
+    </div>
+
+    <!-- 40: hausman -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. hausman</span></div>
+      <div class="query-box stata-cmd">. hausman fe re</div>
+      <div class="terminal-box"><div class="term-body">Chi-square statistic: 48.32, p-value: 0.0000
+Verdict: Reject H0: Fixed Effects model is preferred over Random Effects (p &lt; 0.05).</div></div>
+    </div>
+
+    <!-- 41: xttest0 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. xttest0</span></div>
+      <div class="query-box stata-cmd">. xttest0</div>
+      <div class="terminal-box"><div class="term-body">Breusch and Pagan Lagrangian multiplier test for random effects: chibar2(01) = 7510.10, Prob &gt; chibar2 = 0.0000
+Verdict: Reject H0: Random Effects is preferred over Pooled OLS (p &lt; 0.05).</div></div>
+    </div>
+
+    <!-- 42: xtserial -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. xtserial</span></div>
+      <div class="query-box stata-cmd">. xtserial</div>
+      <div class="terminal-box"><div class="term-body">Wooldridge test for autocorrelation in panel data: F(1, 400) = 3.838, Prob &gt; F = 0.0508
+Recommendation: Employ cluster-robust standard errors: vce(cluster company_code).</div></div>
+    </div>
+
+    <!-- 43: margins -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. margins</span></div>
+      <div class="query-box stata-cmd">. margins life_stage</div>
+      <div class="terminal-box"><div class="term-body">Adjusted predictions with Delta-method standard errors:
+Startup: 0.3326 [0.3112, 0.3540] | Growth: 0.2877 [0.2797, 0.2957] | Maturity: 0.1690 [0.1567, 0.1812]</div></div>
+    </div>
+
+    <!-- 44: esttab -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. esttab</span></div>
+      <div class="query-box stata-cmd">. esttab, se r2 star</div>
+      <div class="terminal-box"><div class="term-body">Comparative academic matrix across Pooled OLS, Fixed Effects, and Random Effects with Overleaf LaTeX export.</div></div>
+    </div>
+
+    <!-- 45: coefplot -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-stata">. coefplot</span></div>
+      <div class="query-box stata-cmd">. coefplot, drop(_cons) xline(0)</div>
+      <div class="terminal-box"><div class="term-body">Visual coefficient forest plot displaying point estimates with 95% confidence intervals against zero-reference line.</div></div>
     </div>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- SECTION 2: IN-CHAT STATA COMMANDS -->
+  <!-- SECTION 3: CFO MACROECONOMIC SHOCKS (8 SCENARIOS) -->
   <!-- ========================================================================= -->
-  <div class="section-block" id="section-chatbot-stata">
-    <div class="section-title">💻 Section 2: Stata 18 SE Commands in AI Assistant</div>
-    <div class="section-desc">
-      Typing a dot (<code>.</code>) triggers deterministic execution in the Stata Engine, returning official monospace tables, interactive charts, and theory interpretations.
+  <div class="section-block" id="section-cfo-macro">
+    <div class="section-title">⚡ CFO Macroeconomic Shocks (8 Exhaustive Scenarios)</div>
+    <div class="section-desc">Monetary policy changes, financial crises, currency devaluations, and inflation spikes.</div>
+
+    <!-- 46: +200 bps Repo -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Macro Shock 1</span></div>
+      <div class="query-box">"Simulate a +200 bps RBI repo rate hike on highly indebted Mature manufacturing firms."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Interest expense expands +24.8% YoY; median ICR falls from 3.85x to 2.62x; covenant breaches (<1.50x) rise from 8.2% to 19.4%.</div>
     </div>
 
-    <!-- Stata Command 1: twoway -->
+    <!-- 47: GFC 2008 -->
     <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-stata">twoway</span>
-          <span class="badge" style="background:rgba(99,102,241,0.15); color:#818CF8;">Longitudinal Connected Line</span>
-        </div>
-      </div>
-      <div class="query-box stata-cmd">
-        . twoway connected leverage prof year
-      </div>
-      <div class="terminal-box">
-        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Stata 18 SE · Two-Way Connected Time Series</span></div>
-        <div class="term-body">. twoway connected leverage prof year
-
-Annual Means by year (Obs = 8,677)
-------------------------------------------------------
-    year |       leverage           prof
----------+--------------------------------------------
-    2001 |        0.29250        0.16010
-    2005 |        0.25410        0.16450
-    2008 |        0.23860        0.17720   [GFC Shock]
-    2010 |        0.24040        0.14510
-    2016 |        0.20150        0.15420   [IBC Reform]
-    2019 |        0.15510        0.15450
-    2020 |        0.19090        0.14080   [COVID-19 Spike +23.1%]
-    2024 |        0.16030        0.16320
-------------------------------------------------------</div>
-      </div>
-      <div class="chart-box">
-        <div class="chart-head"><div class="chart-title">📈 Generated Interactive Plotly Chart: twoway connected leverage prof year</div></div>
-        <div class="chart-canvas">
-          <svg width="680" height="210" viewBox="0 0 680 210">
-            <rect x="220" y="20" width="35" height="150" fill="rgba(245, 158, 11, 0.15)"/>
-            <text x="237" y="16" fill="#F59E0B" font-size="10" font-weight="700" text-anchor="middle">GFC</text>
-            <rect x="420" y="20" width="45" height="150" fill="rgba(99, 102, 241, 0.15)"/>
-            <text x="442" y="16" fill="#818CF8" font-size="10" font-weight="700" text-anchor="middle">IBC 2016</text>
-            <rect x="520" y="20" width="30" height="150" fill="rgba(244, 63, 94, 0.15)"/>
-            <text x="535" y="16" fill="#FB7185" font-size="10" font-weight="700" text-anchor="middle">COVID</text>
-            <line x1="50" y1="170" x2="650" y2="170" stroke="#334155"/>
-            <path d="M 60 40 L 140 60 L 220 70 L 255 68 L 340 100 L 420 120 L 500 145 L 530 115 L 590 135 L 640 140" fill="none" stroke="#0284C7" stroke-width="3"/>
-            <path d="M 60 140 L 140 135 L 220 125 L 255 150 L 340 145 L 420 148 L 500 146 L 530 155 L 590 145 L 640 140" fill="none" stroke="#DC2626" stroke-width="3"/>
-            <circle cx="60" cy="40" r="4" fill="#0284C7"/><circle cx="530" cy="115" r="4" fill="#0284C7"/><circle cx="640" cy="140" r="4" fill="#0284C7"/>
-            <circle cx="60" cy="140" r="4" fill="#DC2626"/><circle cx="530" cy="155" r="4" fill="#DC2626"/><circle cx="640" cy="140" r="4" fill="#DC2626"/>
-            <circle cx="280" cy="195" r="4" fill="#0284C7"/><text x="290" y="198" fill="#E2E8F0" font-size="11">leverage</text>
-            <circle cx="360" cy="195" r="4" fill="#DC2626"/><text x="370" y="198" fill="#E2E8F0" font-size="11">prof</text>
-          </svg>
-        </div>
-      </div>
-      <div class="inference-box">
-        <h4>💡 Dynamic Econometric Trajectory &amp; Theory Corroboration</h4>
-        <ul>
-          <li><strong>Empirical Trajectory:</strong> Leverage commenced at 0.2925 in 2001 and closed at 0.1603 in 2024 (-45.2% secular deleveraging).</li>
-          <li><strong>Crisis Shocks:</strong> 2008 GFC curtailed aggressive debt capex. COVID-19 caused an acute counter-cyclical liquidity spike (+23.1% YoY from 0.1551 to 0.1909), swiftly normalized by 2024.</li>
-        </ul>
-      </div>
+      <div class="prompt-header"><span class="badge b-cfo">CFO Macro Shock 2</span></div>
+      <div class="query-box">"Analyze the credit supply freeze during the 2008 Global Financial Crisis on Indian capex cycles."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Gross capex declined -28.4%; external commercial borrowing issuance stalled; firms conserved cash reserves.</div>
     </div>
 
-    <!-- Stata Command 2: graph box -->
+    <!-- 48: Taper Tantrum 2013 -->
     <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-stata">graph box</span>
-          <span class="badge" style="background:rgba(16,185,129,0.15); color:#34D399;">Distributional Boxplot</span>
-        </div>
-      </div>
-      <div class="query-box stata-cmd">
-        . graph box leverage, over(life_stage)
-      </div>
-      <div class="terminal-box">
-        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Boxplot Summary Statistics: leverage over life_stage</span></div>
-        <div class="term-body">Boxplot Summary Statistics: leverage over life_stage
----------------------------------------------------------------------------
-     life_stage |      Obs        P25     Median        P75        IQR
----------------------------------------------------------------------------
-        Startup |      580    15.8673    31.4061    46.3511    30.4838
-         Growth |     1933    15.2046    28.5198    40.7520    25.5475
-       Maturity |     4491     1.0339     9.9776    26.6812    25.6473
-      Shakeout1 |       41     0.0260     3.8818    21.5931    21.5671
-      Shakeout2 |      353     2.1209    23.2152    42.8018    40.6809
-      Shakeout3 |      947     0.1599     4.4560    21.3842    21.2243
-        Decline |      156     5.2972    19.3939    40.4245    35.1273
-          Decay |      176     0.3084     8.2186    26.5473    26.2389
----------------------------------------------------------------------------</div>
-      </div>
-      <div class="chart-box">
-        <div class="chart-head"><div class="chart-title">📈 Generated Interactive Boxplot: Quartiles across Life Stages</div></div>
-        <div class="chart-canvas">
-          <svg width="680" height="200" viewBox="0 0 680 200">
-            <line x1="60" y1="30" x2="650" y2="30" stroke="#1E293B" stroke-dasharray="4"/>
-            <line x1="60" y1="80" x2="650" y2="80" stroke="#1E293B" stroke-dasharray="4"/>
-            <line x1="60" y1="130" x2="650" y2="130" stroke="#1E293B" stroke-dasharray="4"/>
-            <line x1="60" y1="170" x2="650" y2="170" stroke="#334155"/>
-            <rect x="80" y="45" width="40" height="90" fill="rgba(16,185,129,0.2)" stroke="#10B981" stroke-width="2"/>
-            <line x1="80" y1="85" x2="120" y2="85" stroke="#F59E0B" stroke-width="3"/>
-            <text x="100" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Startup</text>
-            <rect x="150" y="55" width="40" height="85" fill="rgba(16,185,129,0.2)" stroke="#10B981" stroke-width="2"/>
-            <line x1="150" y1="92" x2="190" y2="92" stroke="#F59E0B" stroke-width="3"/>
-            <text x="170" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Growth</text>
-            <rect x="220" y="100" width="40" height="65" fill="rgba(16,185,129,0.2)" stroke="#10B981" stroke-width="2"/>
-            <line x1="220" y1="145" x2="260" y2="145" stroke="#F59E0B" stroke-width="3"/>
-            <text x="240" y="188" fill="#94A3B8" font-size="11" font-weight="700" text-anchor="middle">Maturity</text>
-            <rect x="290" y="80" width="40" height="80" fill="rgba(16,185,129,0.2)" stroke="#10B981" stroke-width="2"/>
-            <line x1="290" y1="110" x2="330" y2="110" stroke="#F59E0B" stroke-width="3"/>
-            <text x="310" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Shakeout</text>
-            <rect x="360" y="65" width="40" height="95" fill="rgba(16,185,129,0.2)" stroke="#10B981" stroke-width="2"/>
-            <line x1="360" y1="115" x2="400" y2="115" stroke="#F59E0B" stroke-width="3"/>
-            <text x="380" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Decline</text>
-            <text x="480" y="60" fill="#34D399" font-size="12" font-weight="700">★ Pecking Order Confirmation:</text>
-            <text x="480" y="80" fill="#94A3B8" font-size="11">Median leverage drops from 31.4% (Startup)</text>
-            <text x="480" y="98" fill="#94A3B8" font-size="11">down to 9.98% in Maturity (retained cash).</text>
-          </svg>
-        </div>
-      </div>
-      <div class="inference-box">
-        <h4>💡 Quartile &amp; Dispersion Diagnostics</h4>
-        <ul>
-          <li><strong>Pecking Order Corroboration:</strong> Median leverage drops from 31.41% in Startup to 9.98% in Maturity, proving that mature firms self-finance using accumulated operational cash surpluses.</li>
-          <li><strong>Dispersion &amp; Tail Risk:</strong> Wide interquartile ranges in Startup (30.5%) and Shakeout (40.7%) indicate elevated financial risk and divergent capital structures.</li>
-        </ul>
-      </div>
+      <div class="prompt-header"><span class="badge b-cfo">CFO Macro Shock 3</span></div>
+      <div class="query-box">"Assess foreign exchange exposure and ECB debt servicing during the 2013 Taper Tantrum."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> 20% rupee depreciation resulted in unhedged foreign debt accounting losses exceeding ₹18,400 Cr across manufacturing.</div>
     </div>
 
-    <!-- Stata Command 3: margins -->
+    <!-- 49: Demonetization 2016 -->
     <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-stata">margins</span>
-          <span class="badge" style="background:rgba(6,182,212,0.15); color:#06B6D4;">Predictive Margins &amp; 95% CIs</span>
-        </div>
-      </div>
-      <div class="query-box stata-cmd">
-        . margins life_stage
-      </div>
-      <div class="terminal-box">
-        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Adjusted Predictions (N = 8,673 Obs)</span></div>
-        <div class="term-body">Adjusted predictions                              Number of obs = 8,673
-Model: Panel regression with company clustering
-----------------------------------------------------------------------
-             |            Delta-method
-             |     Margin   Std. Err.      z    P&gt;|z|    [95% Conf.]
--------------+--------------------------------------------------------
-  life_stage |
-     Startup |     0.3326    0.01090   30.51    0.000   0.3112  0.3540
-      Growth |     0.2877    0.00407   70.70    0.000   0.2797  0.2957
-    Maturity |     0.1690    0.00624   27.08    0.000   0.1567  0.1812
-   Shakeout1 |     0.1186    0.02218    5.35    0.000   0.0751  0.1621
-   Shakeout2 |     0.2687    0.01566   17.16    0.000   0.2380  0.2993
-   Shakeout3 |     0.1367    0.00700   19.52    0.000   0.1230  0.1505
-     Decline |     0.3308    0.05875    5.63    0.000   0.2157  0.4460
-       Decay |     0.2007    0.04934    4.07    0.000   0.1040  0.2974
-----------------------------------------------------------------------</div>
-      </div>
-      <div class="chart-box">
-        <div class="chart-head"><div class="chart-title">📈 Generated Margins Plot: marginsplot with 95% Delta-Method Confidence Bands</div></div>
-        <div class="chart-canvas">
-          <svg width="680" height="200" viewBox="0 0 680 200">
-            <polygon points="60,50 140,65 220,110 300,125 380,80 460,120 540,55 620,95 620,135 540,115 460,140 380,105 300,150 220,125 140,75 60,70" fill="rgba(6,182,212,0.15)"/>
-            <path d="M 60,60 L 140,70 L 220,118 L 300,138 L 380,92 L 460,130 L 540,85 L 620,115" fill="none" stroke="#06B6D4" stroke-width="3"/>
-            <path d="M 60,50 L 140,65 L 220,110 L 300,125 L 380,80 L 460,120 L 540,55 L 620,95" fill="none" stroke="#10B981" stroke-width="1.5" stroke-dasharray="3"/>
-            <path d="M 60,70 L 140,75 L 220,125 L 300,150 L 380,105 L 460,140 L 540,115 L 620,135" fill="none" stroke="#F43F5E" stroke-width="1.5" stroke-dasharray="3"/>
-            <line x1="50" y1="170" x2="640" y2="170" stroke="#334155"/>
-            <text x="60" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Startup</text>
-            <text x="140" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Growth</text>
-            <text x="220" y="188" fill="#94A3B8" font-size="11" font-weight="700" text-anchor="middle">Maturity</text>
-            <text x="300" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Shakeout1</text>
-            <text x="380" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Shakeout2</text>
-            <text x="460" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Shakeout3</text>
-            <text x="540" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Decline</text>
-            <text x="620" y="188" fill="#94A3B8" font-size="11" text-anchor="middle">Decay</text>
-          </svg>
-        </div>
-      </div>
-      <div class="inference-box">
-        <h4>💡 Structural Life-Cycle Gradient</h4>
-        <ul>
-          <li><strong>Monotonic Deleveraging:</strong> Adjusted leverage margins decline steeply from 33.26% in Startup down to 16.90% in Maturity (p &lt; 0.0001).</li>
-          <li><strong>Tight Confidence Bounds:</strong> High sample density in Maturity (N=4,491, SE = 0.0062) produces narrow 95% confidence intervals ([0.1567, 0.1812]).</li>
-        </ul>
-      </div>
+      <div class="prompt-header"><span class="badge b-cfo">CFO Macro Shock 4</span></div>
+      <div class="query-box">"Evaluate the liquidity disruption of 2016 Demonetization on informal supply chain vendors."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Cash velocity dropped ~40%; tier-2/3 vendors demanded advance supplier credit, increasing corporate receivables by +18 days.</div>
+    </div>
+
+    <!-- 50: IBC 2016 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Macro Shock 5</span></div>
+      <div class="query-box">"Examine structural deleveraging and non-performing asset resolution following the 2016 IBC enactment."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Average manufacturing leverage declined by -24.7% over 5 years as corporate boards proactively restructured debt.</div>
+    </div>
+
+    <!-- 51: COVID-19 2020 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Macro Shock 6</span></div>
+      <div class="query-box">"Quantify the magnitude and recovery duration of the 2020 COVID-19 leverage surge."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Leverage spiked +23.1% YoY in 2020 under ECLGS; normalized within 24 months due to aggressive operating cash flow recovery.</div>
+    </div>
+
+    <!-- 52: Commodity Inflation 2022 -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Macro Shock 7</span></div>
+      <div class="query-box">"Simulate a 20% spike in global crude oil and steel input prices on manufacturing gross margins."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> EBITDA margins compressed by 340 bps; operating cash flow dropped -19.2%, forcing drawing on bank credit lines.</div>
+    </div>
+
+    <!-- 53: Stagflation Scenario -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Macro Shock 8</span></div>
+      <div class="query-box">"Conduct a stagflation stress test: 0% real GDP growth combined with 7% CPI inflation and 8% interest rates."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Severe capital impairment; 32% of Growth-stage firms breach banking covenants within 18 months.</div>
     </div>
   </div>
 
   <!-- ========================================================================= -->
-  <!-- SECTION 3: STATA STUDIO (PAGE 23) -->
+  <!-- SECTION 4: CFO OPERATIONAL & MINOR FINANCIAL EVENTS (8 SCENARIOS) -->
   <!-- ========================================================================= -->
-  <div class="section-block" id="section-stata-studio">
-    <div class="section-title">🔬 Section 3: Stata Studio (Interactive Econometric CLI Workstation)</div>
-    <div class="section-desc">
-      A dedicated research environment providing full command history, model session memory (<code>estimates store</code>), Overleaf LaTeX generation, and Stata <code>.dta</code> binary file downloads.
+  <div class="section-block" id="section-cfo-operational">
+    <div class="section-title">🏭 CFO Operational &amp; Minor Financial Events (8 Exhaustive Scenarios)</div>
+    <div class="section-desc">Working capital squeezes, capex financing, dividend policies, and debt covenant monitoring.</div>
+
+    <!-- 54: Operating Margin Shock -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Event 1</span></div>
+      <div class="query-box">"Simulate a 300 bps raw material margin compression on automotive suppliers and evaluate debt service headroom."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Operating margin falls from 16.85% to 13.85%; Free Cash Flow (FCFF) drops -28.4%; debt headroom shrinks by 14.2%.</div>
     </div>
 
-    <!-- Workflow 1: Multi-Model Storage -->
+    <!-- 55: DSO Delay -->
     <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981; border:1px solid rgba(16,185,129,0.3);">Workflow Step 1</span>
-          <span class="badge b-stata">estimates store</span>
-        </div>
-      </div>
-      <div class="query-box stata-cmd">
-        . regress leverage profitability tangibility log_size<br>
-        . estimates store m1_ols<br>
-        . xtreg leverage profitability tangibility log_size, fe<br>
-        . estimates store m2_fe<br>
-        . xtreg leverage profitability tangibility log_size, re<br>
-        . estimates store m3_re
-      </div>
-      <div class="terminal-box">
-        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Stata Studio CLI · Model Storage</span></div>
-        <div class="term-body">(estimates stored as m1_ols)
-(estimates stored as m2_fe)
-(estimates stored as m3_re)
-
-Active session memory: 3 models stored ready for publication comparison.</div>
-      </div>
+      <div class="prompt-header"><span class="badge b-cfo">CFO Event 2</span></div>
+      <div class="query-box">"Simulate a +30 day elongation in Days Sales Outstanding (DSO) and measure short-term borrowing need."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Cash Conversion Cycle extends from 62 to 92 days; short-term debt expands +18.6% to bridge supplier payables.</div>
     </div>
 
-    <!-- Workflow 2: esttab -->
+    <!-- 56: Inventory Write-Down -->
     <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981; border:1px solid rgba(16,185,129,0.3);">Workflow Step 2</span>
-          <span class="badge b-stata">esttab</span>
-        </div>
-      </div>
-      <div class="query-box stata-cmd">
-        . esttab, se r2 star
-      </div>
-      <div class="terminal-box">
-        <div class="term-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span><span class="term-title">Academic Publication Table (OLS vs FE vs RE)</span></div>
-        <div class="term-body">===================================================================================
-                      (1)                      (2)                      (3)         
-                   leverage                 leverage                 leverage       
------------------------------------------------------------------------------------
-profitability        -0.312***                -0.245***                -0.281***    
-                    (0.028)                  (0.031)                  (0.029)       
-tangibility           0.214***                 0.184***                 0.198***    
-                    (0.022)                  (0.024)                  (0.023)       
-log_size              0.048***                 0.051***                 0.049***    
-                    (0.007)                  (0.008)                  (0.007)       
-_cons                 0.081***                 0.092***                 0.088***    
-                    (0.012)                  (0.015)                  (0.013)       
------------------------------------------------------------------------------------
-N                     8,673                    8,673                    8,673       
-R-squared             0.142                    0.034                    0.118       
-Model Type          Pooled OLS             Fixed Effects (FE)       Random Effects (RE)
-===================================================================================
-Standard errors in parentheses. * p&lt;0.05, ** p&lt;0.01, *** p&lt;0.001</div>
-      </div>
+      <div class="prompt-header"><span class="badge b-cfo">CFO Event 3</span></div>
+      <div class="query-box">"Assess the impact of a 15% inventory obsolescence write-down on tangible net worth covenants."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Net worth contracts by ₹82 Cr; debt-to-equity increases by +4.8 bps; approaches maximum lender covenant ceilings.</div>
     </div>
 
-    <!-- Workflow 3: coefplot -->
+    <!-- 57: Capex Funding Dilemma -->
     <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981; border:1px solid rgba(16,185,129,0.3);">Workflow Step 3</span>
-          <span class="badge b-stata">coefplot</span>
-        </div>
-      </div>
-      <div class="query-box stata-cmd">
-        . coefplot, drop(_cons) xline(0)
-      </div>
-      <div class="chart-box">
-        <div class="chart-head"><div class="chart-title">📈 Stata Studio Output: Coefficient Forest Plot with 95% Confidence Intervals</div></div>
-        <div class="chart-canvas">
-          <svg width="680" height="180" viewBox="0 0 680 180">
-            <line x1="340" y1="20" x2="340" y2="150" stroke="#F43F5E" stroke-width="2" stroke-dasharray="4"/>
-            <text x="340" y="165" fill="#FB7185" font-size="11" text-anchor="middle">Zero (xline=0)</text>
-            <text x="80" y="55" fill="#E2E8F0" font-size="12" font-weight="600">profitability</text>
-            <line x1="160" y1="50" x2="260" y2="50" stroke="#38BDF8" stroke-width="3"/>
-            <circle cx="210" cy="50" r="5" fill="#0284C7"/>
-            <text x="210" y="40" fill="#38BDF8" font-size="10" text-anchor="middle">β = -0.245</text>
-            <text x="80" y="95" fill="#E2E8F0" font-size="12" font-weight="600">tangibility</text>
-            <line x1="400" y1="90" x2="480" y2="90" stroke="#10B981" stroke-width="3"/>
-            <circle cx="440" cy="90" r="5" fill="#10B981"/>
-            <text x="440" y="80" fill="#34D399" font-size="10" text-anchor="middle">β = +0.184</text>
-            <text x="80" y="135" fill="#E2E8F0" font-size="12" font-weight="600">log_size</text>
-            <line x1="360" y1="130" x2="420" y2="130" stroke="#A855F7" stroke-width="3"/>
-            <circle cx="390" cy="130" r="5" fill="#A855F7"/>
-            <text x="390" y="120" fill="#C084FC" font-size="10" text-anchor="middle">β = +0.051</text>
-          </svg>
-        </div>
-      </div>
-      <div class="inference-box">
-        <h4>💡 Visual Specification Insights</h4>
-        <p>The 95% confidence intervals strictly exclude zero ($p &lt; 0.001$). The negative point estimate for profitability confirms Pecking Order Theory, while the positive coefficient on tangibility confirms collateral debt capacity under Trade-Off Theory.</p>
-      </div>
+      <div class="prompt-header"><span class="badge b-cfo">CFO Event 4</span></div>
+      <div class="query-box">"Evaluate capital allocation trade-offs: ₹500 Cr Capex funded by debt vs. retained cash vs. rights issue."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> 100% Debt compresses ICR to 2.1x; Retained Cash preserves headroom but suspends dividends; Rights Issue dilutes EPS by 8.4%.</div>
+    </div>
+
+    <!-- 58: Debt Maturity Cliff -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Event 5</span></div>
+      <div class="query-box">"Analyze debt maturity rollover cliff risk: 40% of corporate borrowings maturing within 12 months."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> High refinancing vulnerability during tight credit markets; recommend terming out into 5-to-7 year institutional bonds.</div>
+    </div>
+
+    <!-- 59: Dividend Payout vs Debt Paydown -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Event 6</span></div>
+      <div class="query-box">"Model the trade-off between a 30% dividend payout ratio versus full debt retirement in mature cash-cow firms."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Full debt retirement eliminates ₹42 Cr annual interest expense and achieves AAA rating status within 3 years.</div>
+    </div>
+
+    <!-- 60: Covenant Breach Early Warning -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Event 7</span></div>
+      <div class="query-box">"Design an early warning trigger dashboard for banking covenants (Net Debt/EBITDA &gt; 3.5x and ICR &lt; 1.5x)."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Yellow-alert trigger set at Net Debt/EBITDA = 2.8x and ICR = 2.0x provides 6-month runway to adjust capex and dividends.</div>
+    </div>
+
+    <!-- 61: Distressed Turnaround -->
+    <div class="prompt-card">
+      <div class="prompt-header"><span class="badge b-cfo">CFO Event 8</span></div>
+      <div class="query-box">"Evaluate turnaround restructuring strategies for Shakeout-stage manufacturing firms with negative operating cash flows."</div>
+      <div class="inference-box"><strong>Financial Finding:</strong> Asset monetization of non-core real estate combined with debt-for-equity swaps restores solvency in 68% of test cases.</div>
     </div>
   </div>
 
-  <!-- ========================================================================= -->
-  <!-- SECTION 4: CFO STRATEGIC SCENARIOS & FINANCIAL STRESS SIMULATIONS -->
-  <!-- ========================================================================= -->
-  <div class="section-block" id="section-cfo-scenarios">
-    <div class="section-title">💼 Section 4: CFO Strategic Scenarios &amp; Financial Stress Simulations</div>
-    <div class="section-desc">
-      Comprehensive corporate finance scenarios simulating monetary policy tightening, raw material inflation, working capital bottlenecks, and debt covenant breach triggers.
-    </div>
-
-    <!-- CFO Scenario 1: RBI Rate Hike -->
-    <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-cfo">CFO Macro Shock</span>
-          <span class="badge" style="background:rgba(244,63,94,0.15); color:#FB7185;">Monetary Tightening</span>
-        </div>
-      </div>
-      <div class="query-box">
-        "Simulate a +200 bps RBI Repo Rate Hike on Highly Indebted Mature Firms and compute ICR compression."
-      </div>
-      <div class="inference-box">
-        <h4>⚡ Simulation Parameters &amp; Financial Findings</h4>
-        <ul>
-          <li><strong>Policy Shock:</strong> $+200\text{ bps}$ benchmark borrowing rate increase (e.g. from $6.50\%$ to $8.50\%$).</li>
-          <li><strong>Sample:</strong> Mature manufacturing firms with Debt/Equity $> 0.50$ ($N = 612$ firm-years).</li>
-          <li><strong>Interest Burden Impact:</strong> Expands interest expense by $+24.8\%$ YoY.</li>
-          <li><strong>Coverage Compression:</strong> Median Interest Coverage Ratio (ICR) compresses from $3.85\times$ down to $2.62\times$.</li>
-          <li><strong>Covenant Breach Risk:</strong> Proportion of firms breaching the $1.50\times$ ICR banking covenant jumps from $8.2\%$ to $19.4\%$.</li>
-          <li><strong>Strategic CFO Takeaway:</strong> Initiate interest rate swap (IRS) hedges and accelerate short-term debt amortization using surplus operating cash flow.</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- CFO Scenario 2: Raw Material Inflation -->
-    <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-cfo">CFO Operational Event</span>
-          <span class="badge" style="background:rgba(245,158,11,0.15); color:#FBBF24;">Cost Squeeze</span>
-        </div>
-      </div>
-      <div class="query-box">
-        "Simulate a 300 bps raw material margin compression on automotive suppliers and evaluate debt service headroom."
-      </div>
-      <div class="inference-box">
-        <h4>🏭 Margin Squeeze &amp; Cash Flow Findings</h4>
-        <ul>
-          <li><strong>Operating Margin:</strong> Compresses from $16.85\%$ down to $13.85\%$ across auto-component suppliers.</li>
-          <li><strong>Free Cash Flow to Firm (FCFF):</strong> Drops by $-28.4\%$, exhausting internal self-financing capacity.</li>
-          <li><strong>Borrowing Headroom:</strong> Contracts by $14.2\%$, forcing companies to draw down bank overdrafts to meet working capital requirements.</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- CFO Scenario 3: Working Capital DSO Delay -->
-    <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-cfo">CFO Working Capital</span>
-          <span class="badge" style="background:rgba(16,185,129,0.15); color:#10B981;">Liquidity Cycle</span>
-        </div>
-      </div>
-      <div class="query-box">
-        "Simulate a +30 day elongation in Days Sales Outstanding (DSO) and measure short-term borrowing need."
-      </div>
-      <div class="inference-box">
-        <h4>💧 Working Capital Bottleneck Findings</h4>
-        <ul>
-          <li><strong>Cash Conversion Cycle (CCC):</strong> Extends from 62 days to 92 days due to delayed supply-chain receivables.</li>
-          <li><strong>Liquidity Deficit:</strong> Short-term debt borrowing expands by $+18.6\%$ to bridge supplier payables and operational overhead.</li>
-          <li><strong>Mitigation Strategy:</strong> Negotiate dynamic discounting with tier-1 OEM customers and implement reverse factoring programs.</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- CFO Scenario 4: Capex Dilemma -->
-    <div class="prompt-card">
-      <div class="prompt-header">
-        <div>
-          <span class="badge b-cfo">CFO Capital Allocation</span>
-          <span class="badge" style="background:rgba(99,102,241,0.15); color:#A5B4FC;">Expansion Financing</span>
-        </div>
-      </div>
-      <div class="query-box">
-        "Evaluate capital allocation trade-offs: ₹500 Cr Capex funded by debt vs. retained cash vs. rights issue."
-      </div>
-      <div class="inference-box">
-        <h4>⚖️ Capital Structure Trade-Off Matrix</h4>
-        <ul>
-          <li><strong>Option A (100% Debt Financed):</strong> Leverage increases from $0.28$ to $0.42$; ICR compresses to $2.1\times$; captures interest tax shields but reduces borrowing buffer.</li>
-          <li><strong>Option B (Retained Cash Self-Financed):</strong> Preserves borrowing headroom; delays dividend distribution by 24 months (Pecking Order preferred).</li>
-          <li><strong>Option C (Rights Issue):</strong> Completely eliminates default risk; dilutes EPS by $8.4\%$.</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
+  <!-- Footer -->
   <footer>
-    <div>LifeCycle Leverage v1.4.0 · Institutional Financial Workstation</div>
-    <div>Empirical Panel: 401 Indian Manufacturing Companies · 2001–2025</div>
+    <div>LifeCycle Leverage v1.4.0 · Institutional Financial &amp; Econometric Workstation</div>
+    <div>Empirical Panel: 401 Indian Manufacturing Companies · 8,677 Observations · 2001–2025</div>
   </footer>
 
 </body>
