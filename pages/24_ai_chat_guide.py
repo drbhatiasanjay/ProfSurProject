@@ -4,6 +4,7 @@ Exhaustive reference manual, prompt encyclopedia, and econometric guide for rese
 Grounded on 8,677 firm-year observations across 401 Indian manufacturing firms (2001–2025).
 """
 
+import os
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
@@ -12,6 +13,13 @@ import db
 
 require_role("admin", "researcher", "viewer", "cfo", "guest")
 db.log_page_visit("ai_chat_guide")
+
+# ── Load offline guide HTML ──
+_guide_html_path = os.path.join(os.path.dirname(__file__), "..", "docs", "AI_Financial_Chat_and_Stata_Guide.html")
+_guide_html_content = ""
+if os.path.exists(_guide_html_path):
+    with open(_guide_html_path, "r", encoding="utf-8") as _f:
+        _guide_html_content = _f.read()
 
 # ── Top Custom Styling ──────────────────────────────────────────────────────────
 st.markdown("""
@@ -122,19 +130,32 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ── Header Bar ────────────────────────────────────────────────────────────────
-st.markdown("""
-<div class="guide-header">
-    <div style="font-size:12px; color:#818CF8; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">
-        Admin & Tools · Official Reference Manual
+# ── Header Bar with Download Button ───────────────────────────────────────────
+col_head, col_dl = st.columns([4.2, 1.3])
+with col_head:
+    st.markdown("""
+    <div class="guide-header" style="margin-bottom: 12px;">
+        <div style="font-size:12px; color:#818CF8; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px;">
+            Admin & Tools · Official Reference Manual
+        </div>
+        <div class="guide-title">📖 AI Financial Chat & Stata Studio Operational Guide</div>
+        <div class="guide-subtitle">
+            Exhaustive operational manual, prompt encyclopedia, and econometric reference for academic researchers, PhD scholars, and corporate CFOs.
+            Grounded on <b>8,677 firm-year observations</b> across <b>401 Indian manufacturing firms (2001–2025)</b>.
+        </div>
     </div>
-    <div class="guide-title">📖 AI Financial Chat & Stata Studio Operational Guide</div>
-    <div class="guide-subtitle">
-        Exhaustive operational manual, prompt encyclopedia, and econometric reference for academic researchers, PhD scholars, and corporate CFOs.
-        Grounded on <b>8,677 firm-year observations</b> across <b>401 Indian manufacturing firms (2001–2025)</b>.
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
+with col_dl:
+    st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+    st.download_button(
+        label="📥 Download Guide (.html)",
+        data=_guide_html_content,
+        file_name="AI_Financial_Chat_and_Stata_Guide.html",
+        mime="text/html",
+        help="Download this complete guide as a self-contained offline HTML manual for your laptop.",
+        use_container_width=True,
+    )
+    st.caption("Offline Manual for Desktop")
 
 # ── Stats Strip ───────────────────────────────────────────────────────────────
 c1, c2, c3, c4, c5 = st.columns(5)
