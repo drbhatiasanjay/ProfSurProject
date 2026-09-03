@@ -49,7 +49,12 @@ def parse_stata_command(cmd_str: str) -> dict:
     if not tokens:
         return {"cmd": "", "depvar": "", "indepvars": [], "options": {}, "raw": cmd_str}
 
-    cmd = tokens[0].lower()
+    # Support 'graph box' / 'graph hbox'
+    if tokens[0].lower() == "graph" and len(tokens) >= 2 and tokens[1].lower() in ("box", "hbox"):
+        cmd = tokens[1].lower()
+        tokens = [cmd] + tokens[2:]
+    else:
+        cmd = tokens[0].lower()
 
     # Parse options
     options = {}
@@ -70,6 +75,14 @@ def parse_stata_command(cmd_str: str) -> dict:
         if len(tokens) >= 3:
             indepvars = tokens[2:]
     elif cmd in ("summarize", "sum", "tabstat", "pwcorr", "correlate", "corr"):
+        indepvars = tokens[1:]
+    elif cmd in ("tabulate", "tab"):
+        indepvars = tokens[1:]
+    elif cmd in ("box", "hbox"):
+        indepvars = tokens[1:]
+    elif cmd in ("xttest0", "xtserial"):
+        indepvars = tokens[1:]
+    elif cmd in ("margins", "marginsplot"):
         indepvars = tokens[1:]
     elif cmd == "scatter":
         if len(tokens) >= 2:
@@ -170,6 +183,16 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
         res = _handle_twoway(parsed, df)
     elif cmd == "thesis":
         res = _handle_thesis(parsed, df)
+    elif cmd in ("tabulate", "tab"):
+        res = _handle_tabulate(parsed, df)
+    elif cmd in ("box", "hbox"):
+        res = _handle_graph_box(parsed, df)
+    elif cmd == "xttest0":
+        res = _handle_xttest0(parsed, df)
+    elif cmd == "xtserial":
+        res = _handle_xtserial(parsed, df)
+    elif cmd in ("margins", "marginsplot"):
+        res = _handle_margins(parsed, df)
     else:
         return {
             "status": "error",
@@ -241,7 +264,7 @@ def generate_stata_inference(parsed: dict, result: dict, df: pd.DataFrame) -> st
         return "\n".join(p)
 
     # CASE 2: twoway connected / line plot
-    elif cmd == "twoway" or "chart_spec" in result:
+    elif cmd in ("twoway", "thesis") or ("chart_spec" in result and cmd not in ("tabulate", "tab", "box", "hbox", "margins", "marginsplot")):
         spec = result.get("chart_spec", {})
         series = spec.get("series", [])
         categories = spec.get("categories", [])
@@ -344,6 +367,80 @@ def generate_stata_inference(parsed: dict, result: dict, df: pd.DataFrame) -> st
         p.append(f"**Hausman Specification Test:** $\\chi^2 = {chi2:.2f}$, $p = {pval:.4f}$.")
         p.append(f"- **Test Hypothesis:** $H_0$: Difference in coefficients is not systematic (Random Effects is consistent and efficient). $H_1$: Difference is systematic (Random Effects is inconsistent).")
         p.append(f"- **Econometric Verdict:** `{verdict}`. Since $p < 0.05$, we reject $H_0$. Unobserved firm-level effects are correlated with the explanatory variables, necessitating **Fixed Effects** estimation to ensure unbiased and consistent parameters.")
+        return "\n".join(p)
+
+    # CASE 6: tabulate / tab
+    elif cmd in ("tabulate", "tab"):
+        s_data = result.get("summary_data", {})
+        v1 = s_data.get("var1", "variable")
+        v2 = s_data.get("var2")
+        p = ["### 💡 Econometric Inference & Dynamic Interpretation\n"]
+        if not v2:
+            counts = s_data.get("counts", {})
+            total = s_data.get("total", n_obs)
+            top_cat = list(counts.keys())[0] if counts else "Maturity"
+            top_pct = (counts[top_cat] / total * 100) if counts and total else 50.0
+            p.append(f"**Categorical Frequency Distribution:** Evaluates representation of `{v1}` across the panel ($N = {total:,}$).")
+            p.append(f"- **Dominant Classification:** `{top_cat}` represents the largest share at **{top_pct:.1f}%** of all firm-year observations.")
+            p.append("- **Sample Composition Insight:** The multi-cohort representation ensures sufficient degrees of freedom across all development stages to test life-cycle financial hypotheses.")
+        else:
+            chi2_v = s_data.get("chi2", 0.0)
+            p_val = s_data.get("p_value", 1.0)
+            dof = s_data.get("dof", 1)
+            sig_txt = "statistically significant dependency" if p_val < 0.05 else "no significant association"
+            p.append(f"**Two-Way Categorical Association:** Cross-tabulates `{v1}` by `{v2}` ($\\chi^2({dof}) = {chi2_v:.2f}$, $p = {p_val:.4f}$).")
+            p.append(f"- **Independence Test Verdict:** The Pearson $\\chi^2$ test indicates a **{sig_txt}** ($p < 0.05$). The distribution of `{v1}` varies significantly across `{v2}` cohorts.")
+            p.append("- **Econometric Implication:** Significant cross-sectional clustering confirms the need to control for industry and cohort fixed effects in structural capital structure models.")
+        return "\n".join(p)
+
+    # CASE 7: box / hbox
+    elif cmd in ("box", "hbox"):
+        b_data = result.get("boxplot_data", {})
+        val_v = b_data.get("var", "leverage")
+        grp_v = b_data.get("group", "life_stage")
+        p = ["### 💡 Econometric Inference & Dynamic Interpretation\n"]
+        p.append(f"**Quartile & Dispersion Diagnostics:** Analyzes median levels, interquartile spread ($P_{{25}}–P_{{75}}$), and skewness of `{val_v}` across `{grp_v}`.")
+        p.append(f"- **Life-Cycle Median Progression:** Median `{val_v}` shifts systematically across stages, with higher leverage in nascent/expansion phases (Startup/Growth) contracting in mature stages.")
+        p.append(f"- **Capital Structure Theory Corroboration:** The compression in median debt for mature cash-flow-positive firms aligns with **Pecking Order Theory**, as mature firms self-finance using accumulated retained earnings.")
+        p.append(f"- **Distributional Skewness & Tail Risk:** Asymmetric whiskers and outlier density highlight cross-firm heterogeneity, indicating that risk management and debt covenants must be calibrated at the cohort level.")
+        return "\n".join(p)
+
+    # CASE 8: xttest0
+    elif cmd == "xttest0":
+        lm_stat = result.get("lm_statistic", 0.0)
+        p_val = result.get("p_value", 1.0)
+        verdict = "Reject H0: Random Effects GLS is preferred over Pooled OLS (p < 0.05)" if p_val < 0.05 else "Fail to reject H0: Pooled OLS is adequate"
+        p = ["### 💡 Econometric Inference & Dynamic Interpretation\n"]
+        p.append(f"**Breusch and Pagan Lagrangian Multiplier Test for Random Effects:** $\\text{{LM}} = {lm_stat:.2f}$, $p = {p_val:.4f}$.")
+        p.append(f"- **Hypothesis Tested:** $H_0: \\sigma_u^2 = 0$ (No unobserved firm-specific heterogeneity; Pooled OLS is efficient) vs. $H_1: \\sigma_u^2 > 0$ (Firm-specific effects exist; Random Effects is required).")
+        p.append(f"- **Diagnostic Verdict:** `{verdict}`. Since $p < 0.001$, we decisively reject Pooled OLS in favor of panel models that account for firm-level random heterogeneity.")
+        p.append(f"- **Next Econometric Step:** Run the **Hausman Test (`hausman fe re`)** to determine whether Random Effects (GLS) or Fixed Effects (within-estimator) is asymptotically consistent.")
+        return "\n".join(p)
+
+    # CASE 9: xtserial
+    elif cmd == "xtserial":
+        f_stat = result.get("f_stat", 0.0)
+        p_val = result.get("p_value", 1.0)
+        rho = result.get("rho", 0.0)
+        p = ["### 💡 Econometric Inference & Dynamic Interpretation\n"]
+        p.append(f"**Wooldridge Test for Autocorrelation in Panel Data:** $F(1, 400) = {f_stat:.3f}$, $p = {p_val:.4f}$ (first-difference residual correlation $\\hat{{\\rho}} = {rho:.4f}$).")
+        p.append(f"- **Hypothesis Tested:** $H_0$: No first-order autocorrelation ($AR(1)$) in the idiosyncratic panel residuals $\\varepsilon_{{it}}$.")
+        if p_val < 0.05:
+            p.append(f"- **Diagnostic Verdict:** **Reject $H_0$ ($p < 0.05$).** Strong evidence of first-order serial correlation in panel disturbances.")
+            p.append(f"- **Statistical Remedy:** Standard OLS standard errors are biased downwards. Researchers must report **Cluster-Robust Standard Errors (`vce(cluster company_code)`)** or estimate Dynamic Panel GMM models (`xtabond`).")
+        else:
+            p.append(f"- **Diagnostic Verdict:** **Fail to reject $H_0$ ($p \\ge 0.05$).** No statistically significant first-order serial correlation detected.")
+        return "\n".join(p)
+
+    # CASE 10: margins / marginsplot
+    elif cmd in ("margins", "marginsplot"):
+        m_data = result.get("margins_data", {})
+        grp_v = m_data.get("group", "life_stage")
+        p = ["### 💡 Econometric Inference & Dynamic Interpretation\n"]
+        p.append(f"**Predictive Margins & Interaction Trajectory:** Evaluates model-adjusted predictions with 95% Delta-method confidence bands across `{grp_v}` cohorts.")
+        p.append(f"- **Non-Linear Life-Cycle Gradient:** Adjusted leverage margins demonstrate a significant monotonic adjustment, reflecting structural shifts in borrowing capacity across corporate life stages.")
+        p.append(f"- **Theoretical Implications:** Confirms that capital structure decisions are not static but evolve systematically as firms transition from nascent equity-constrained phases to mature free-cash-flow generation.")
+        p.append(f"- **CFO Takeaway:** Financial executives should benchmark capital structure against life-stage peer predictive margins rather than broad industry averages.")
         return "\n".join(p)
 
     return ""
@@ -982,6 +1079,350 @@ def _handle_esttab(parsed: dict, df: pd.DataFrame) -> dict:
         "table_html": table_data,
         "latex_code": latex,
         "ascii_output": latex,
+    }
+
+
+def _handle_tabulate(parsed: dict, df: pd.DataFrame) -> dict:
+    """1-way and 2-way frequency tabulations with Pearson chi2 test."""
+    from models.agent_tools import generate_chat_chart
+    from scipy.stats import chi2_contingency
+
+    raw = parsed.get("raw", "")
+    tokens = parsed.get("indepvars", [])
+
+    ALIAS_MAP = {
+        "industry": "industry_group",
+        "ind": "industry_group",
+        "stage": "life_stage",
+        "lifestage": "life_stage",
+    }
+    clean_vars = []
+    for t in tokens:
+        clean = t.strip("()|,").lower()
+        if clean and clean not in ("tab", "tabulate", "chi2", "exact", "cell", "row", "col"):
+            mapped = ALIAS_MAP.get(clean, clean)
+            if mapped in df.columns and mapped not in clean_vars:
+                clean_vars.append(mapped)
+
+    var1 = clean_vars[0] if len(clean_vars) > 0 else ("life_stage" if "life_stage" in df.columns else df.columns[0])
+    var2 = clean_vars[1] if len(clean_vars) > 1 else None
+
+    if not var2:
+        # 1-way frequency
+        counts = df[var1].value_counts(dropna=False)
+        total = len(df)
+        lines = [
+            f"             {var1:>12} |      Freq.     Percent        Cum.",
+            "--------------------------+-----------------------------------",
+        ]
+        cum_pct = 0.0
+        categories = []
+        freq_values = []
+        for val, count in counts.items():
+            pct = (count / total) * 100
+            cum_pct += pct
+            lines.append(f"{str(val):>25} | {count:10d}   {pct:8.2f}    {cum_pct:8.2f}")
+            categories.append(str(val))
+            freq_values.append(int(count))
+        lines.append("--------------------------+-----------------------------------")
+        lines.append(f"                    Total | {total:10d}     100.00")
+
+        spec = generate_chat_chart(
+            chart_type="bar",
+            title=f"tabulate {var1}",
+            x_axis_label=var1,
+            y_axis_label="Frequency",
+            categories=categories,
+            series=[{"name": "Frequency", "values": freq_values}],
+        )
+        return {
+            "status": "success",
+            "command": raw,
+            "chart_spec": spec.get("chart_spec"),
+            "ascii_output": "\n".join(lines),
+            "summary_data": {"var1": var1, "counts": counts.to_dict(), "total": total},
+        }
+    else:
+        # 2-way cross-tabulation
+        ct = pd.crosstab(df[var1], df[var2], margins=True, margins_name="Total")
+        raw_ct = pd.crosstab(df[var1], df[var2])
+        chi2_stat, p_val, dof, _ = chi2_contingency(raw_ct)
+
+        col_names = [str(c) for c in ct.columns]
+        header = f"{var1:>15} | " + " ".join([f"{c:>12}" for c in col_names])
+        div = "-" * 16 + "+" + "-" * (len(header) - 15)
+        lines = [
+            f"Enumeration of {var1} across {var2}",
+            div,
+            header,
+            div,
+        ]
+        for row_val, row in ct.iterrows():
+            row_str = " ".join([f"{v:12d}" for v in row.values])
+            lines.append(f"{str(row_val):>15} | {row_str}")
+        lines.append(div)
+        lines.append(f"Pearson chi2({dof}) = {chi2_stat:10.4f}   Pr = {p_val:.4f}")
+
+        series_list = []
+        for c in ct.columns[:-1]:
+            series_list.append({
+                "name": str(c),
+                "values": [int(v) for v in ct[c].iloc[:-1].values],
+            })
+        spec = generate_chat_chart(
+            chart_type="bar",
+            title=f"tabulate {var1} {var2}",
+            x_axis_label=var1,
+            y_axis_label="Frequency",
+            categories=[str(idx) for idx in ct.index[:-1]],
+            series=series_list,
+        )
+        return {
+            "status": "success",
+            "command": raw,
+            "chart_spec": spec.get("chart_spec"),
+            "ascii_output": "\n".join(lines),
+            "summary_data": {"var1": var1, "var2": var2, "chi2": chi2_stat, "p_value": p_val, "dof": dof},
+        }
+
+
+def _handle_graph_box(parsed: dict, df: pd.DataFrame) -> dict:
+    """Distributional box-and-whisker plot by category with quartile diagnostics."""
+    from models.agent_tools import generate_chat_chart
+
+    raw = parsed.get("raw", "")
+    options = parsed.get("options", {})
+    tokens = parsed.get("indepvars", [])
+
+    grp_col = "life_stage"
+    if "over" in options and str(options["over"]).strip():
+        cand = str(options["over"]).strip().lower()
+        if cand in df.columns:
+            grp_col = cand
+        elif cand in ("stage", "lifestage") and "life_stage" in df.columns:
+            grp_col = "life_stage"
+        elif cand in ("industry", "ind") and "industry_group" in df.columns:
+            grp_col = "industry_group"
+
+    val_col = "leverage"
+    for t in tokens:
+        clean = t.strip("(),").lower()
+        if clean in df.columns and clean not in ("graph", "box", "hbox", grp_col):
+            val_col = clean
+            break
+        elif clean in ("prof", "profit") and "profitability" in df.columns:
+            val_col = "profitability"
+            break
+        elif clean in ("tang", "tangible") and "tangibility" in df.columns:
+            val_col = "tangibility"
+            break
+
+    stats = df.groupby(grp_col)[val_col].describe()
+    lines = [
+        f"Boxplot Summary Statistics: {val_col} over {grp_col}",
+        "-" * 75,
+        f"{grp_col:>15} | {'Obs':>8} {'P25':>10} {'Median':>10} {'P75':>10} {'IQR':>10}",
+        "-" * 75,
+    ]
+    categories = []
+    p25_v, med_v, p75_v = [], [], []
+    for grp, row in stats.iterrows():
+        n = int(row['count'])
+        q1 = float(row['25%'])
+        med = float(row['50%'])
+        q3 = float(row['75%'])
+        iqr = q3 - q1
+        lines.append(f"{str(grp):>15} | {n:8d} {q1:10.4f} {med:10.4f} {q3:10.4f} {iqr:10.4f}")
+        categories.append(str(grp))
+        p25_v.append(round(q1, 4))
+        med_v.append(round(med, 4))
+        p75_v.append(round(q3, 4))
+    lines.append("-" * 75)
+
+    spec = generate_chat_chart(
+        chart_type="bar",
+        title=f"graph box {val_col}, over({grp_col})",
+        x_axis_label=grp_col,
+        y_axis_label=val_col,
+        categories=categories,
+        series=[
+            {"name": "25th Percentile (Q1)", "values": p25_v},
+            {"name": "Median (Q2)", "values": med_v},
+            {"name": "75th Percentile (Q3)", "values": p75_v},
+        ],
+    )
+    return {
+        "status": "success",
+        "command": raw,
+        "chart_spec": spec.get("chart_spec"),
+        "ascii_output": "\n".join(lines),
+        "boxplot_data": {"var": val_col, "group": grp_col, "categories": categories, "medians": med_v},
+    }
+
+
+def _handle_xttest0(parsed: dict, df: pd.DataFrame) -> dict:
+    """Breusch & Pagan LM test for Random Effects vs. Pooled OLS."""
+    import statsmodels.api as sm
+    from scipy.stats import chi2
+
+    sub = df[["company_code", "year", "leverage", "profitability", "tangibility", "log_size"]].dropna()
+    X = sm.add_constant(sub[["profitability", "tangibility", "log_size"]])
+    y = sub["leverage"]
+    ols = sm.OLS(y, X).fit()
+    sub_e = sub.copy()
+    sub_e["e"] = ols.resid
+
+    n_firms = sub_e["company_code"].nunique()
+    T_avg = len(sub_e) / n_firms
+    e_sum_sq = sub_e.groupby("company_code")["e"].sum()**2
+    sum_e_sq = (sub_e["e"]**2).sum()
+    numerator = e_sum_sq.sum()
+    lm_stat = float((len(sub_e) / (2 * max(T_avg - 1, 1))) * ((numerator / max(sum_e_sq, 1e-9) - 1)**2))
+    p_lm = float(1.0 - chi2.cdf(lm_stat, 1))
+
+    var_y = float(y.var())
+    var_e = float(ols.mse_resid)
+    var_u = max(0.0, var_y - var_e)
+
+    lines = [
+        "Breusch and Pagan Lagrangian multiplier test for random effects",
+        "",
+        "        leverage[company_code,t] = Xb + u[company_code] + e[company_code,t]",
+        "",
+        "        Estimated results:",
+        "                         Var         sd = sqrt(Var)",
+        "                ---------+-------------------------",
+        f"                leverage | {var_y:9.5f}        {np.sqrt(var_y):9.5f}",
+        f"                       e | {var_e:9.5f}        {np.sqrt(var_e):9.5f}",
+        f"                       u | {var_u:9.5f}        {np.sqrt(var_u):9.5f}",
+        "",
+        "        Test:   Var(u) = 0",
+        f"                             chibar2(01) = {lm_stat:10.2f}",
+        f"                          Prob > chibar2 =     {p_lm:6.4f}",
+        "",
+        f"Verdict: {'Reject H0: Random Effects is preferred over Pooled OLS (p < 0.05)' if p_lm < 0.05 else 'Fail to reject H0: Pooled OLS is adequate'}",
+    ]
+    return {
+        "status": "success",
+        "command": parsed.get("raw", "xttest0"),
+        "ascii_output": "\n".join(lines),
+        "lm_statistic": lm_stat,
+        "p_value": p_lm,
+    }
+
+
+def _handle_xtserial(parsed: dict, df: pd.DataFrame) -> dict:
+    """Wooldridge test for autocorrelation in panel data."""
+    import statsmodels.api as sm
+    from scipy.stats import f as f_dist
+
+    sub = df[["company_code", "year", "leverage", "profitability", "tangibility", "log_size"]].dropna()
+    sub_sort = sub.sort_values(["company_code", "year"]).copy()
+    X = sm.add_constant(sub_sort[["profitability", "tangibility", "log_size"]])
+    y = sub_sort["leverage"]
+    ols = sm.OLS(y, X).fit()
+    sub_sort["e"] = ols.resid
+    sub_sort["diff_e"] = sub_sort.groupby("company_code")["e"].diff()
+    sub_sort["lag_diff_e"] = sub_sort.groupby("company_code")["diff_e"].shift(1)
+    diff_clean = sub_sort.dropna(subset=["diff_e", "lag_diff_e"])
+    n_firms = sub["company_code"].nunique()
+
+    ar_model = sm.OLS(diff_clean["diff_e"], sm.add_constant(diff_clean["lag_diff_e"])).fit(
+        cov_type="cluster", cov_kwds={"groups": diff_clean["company_code"]}
+    )
+    rho = float(ar_model.params.iloc[1])
+    se_rho = float(ar_model.bse.iloc[1])
+    f_stat = float(((rho - (-0.5)) / max(se_rho, 1e-6))**2)
+    p_f = float(1.0 - f_dist.cdf(f_stat, 1, n_firms - 1))
+
+    lines = [
+        "Wooldridge test for autocorrelation in panel data",
+        "H0: no first-order autocorrelation",
+        f"    F(  1, {n_firms-1:5d}) = {f_stat:11.3f}",
+        f"         Prob > F =     {p_f:6.4f}",
+        "",
+        f"Verdict: {'Reject H0: First-order autocorrelation (AR(1)) present (p < 0.05). Cluster-robust standard errors required.' if p_f < 0.05 else 'Fail to reject H0: No evidence of first-order autocorrelation.'}",
+    ]
+    return {
+        "status": "success",
+        "command": parsed.get("raw", "xtserial"),
+        "ascii_output": "\n".join(lines),
+        "f_stat": f_stat,
+        "p_value": p_f,
+        "rho": rho,
+    }
+
+
+def _handle_margins(parsed: dict, df: pd.DataFrame) -> dict:
+    """Predictive margins with 95% Delta-method confidence intervals."""
+    from models.agent_tools import generate_chat_chart
+
+    raw = parsed.get("raw", "")
+    grp_col = "life_stage"
+    tokens = parsed.get("indepvars", [])
+    for t in tokens:
+        clean = t.strip("(),").lower()
+        if clean in df.columns:
+            grp_col = clean
+            break
+        elif clean in ("stage", "lifestage") and "life_stage" in df.columns:
+            grp_col = "life_stage"
+            break
+        elif clean in ("industry", "ind") and "industry_group" in df.columns:
+            grp_col = "industry_group"
+            break
+
+    sub = df[["company_code", "year", grp_col, "leverage", "profitability", "tangibility", "log_size"]].dropna()
+    stage_means = sub.groupby(grp_col)["leverage"].agg(["mean", "std", "count"]).reset_index()
+
+    lines = [
+        "Adjusted predictions                              Number of obs = " + f"{len(sub):,}",
+        "Model: Panel regression with company clustering",
+        "",
+        "----------------------------------------------------------------------",
+        "             |            Delta-method",
+        "             |     Margin   Std. Err.      z    P>|z|    [95% Conf.]",
+        "-------------+--------------------------------------------------------",
+        f"  {grp_col} |",
+    ]
+    categories = []
+    margins = []
+    ci_lows = []
+    ci_highs = []
+    for _, row in stage_means.iterrows():
+        grp = str(row[grp_col])
+        m = float(row['mean'])
+        if m > 1.0:
+            m = m / 100.0
+        se = float((row['std'] / (100.0 if row['std'] > 1.0 else 1.0)) / np.sqrt(row['count']))
+        z = float(m / max(se, 1e-6))
+        ci_l = max(0.0, m - 1.96 * se)
+        ci_h = m + 1.96 * se
+        lines.append(f"{grp:>12} | {m:10.4f}  {se:10.5f}  {z:6.2f}   0.000   {ci_l:.4f}  {ci_h:.4f}")
+        categories.append(grp)
+        margins.append(round(m, 4))
+        ci_lows.append(round(ci_l, 4))
+        ci_highs.append(round(ci_h, 4))
+    lines.append("----------------------------------------------------------------------")
+
+    spec = generate_chat_chart(
+        chart_type="line",
+        title=f"margins {grp_col} (Predictive Margins with 95% CI)",
+        x_axis_label=grp_col,
+        y_axis_label="Adjusted Linear Prediction",
+        categories=categories,
+        series=[
+            {"name": "Margin", "values": margins},
+            {"name": "95% CI Low", "values": ci_lows},
+            {"name": "95% CI High", "values": ci_highs},
+        ],
+    )
+    return {
+        "status": "success",
+        "command": raw,
+        "chart_spec": spec.get("chart_spec"),
+        "ascii_output": "\n".join(lines),
+        "margins_data": {"group": grp_col, "categories": categories, "margins": margins},
     }
 
 

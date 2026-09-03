@@ -901,7 +901,13 @@ if user_q:
 
     # Fast direct execution if query starts with Stata prompt '.' or recognized Stata command
     _q_clean = user_q.strip()
-    _stata_verbs = ("twoway", "xtreg", "regress", "reg ", "summarize", "sum ", "tabstat", "pwcorr", "correlate", "corr ", "hausman", "estat", "estimates", "esttab", "coefplot", "scatter", "histogram", "hist ", "export", "thesis")
+    _stata_verbs = (
+        "twoway", "xtreg", "regress", "reg ", "summarize", "sum ", "tabstat",
+        "pwcorr", "correlate", "corr ", "hausman", "estat", "estimates",
+        "esttab", "coefplot", "scatter", "histogram", "hist ", "export", "thesis",
+        "tabulate", "tab ", "graph box", "box ", "graph hbox", "xttest0", "xtserial",
+        "margins", "marginsplot"
+    )
     is_stata_cmd = _q_clean.startswith(".") or any(_q_clean.lower().startswith(v) for v in _stata_verbs)
 
     if is_stata_cmd:
