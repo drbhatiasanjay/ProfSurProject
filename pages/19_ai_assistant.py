@@ -185,18 +185,6 @@ st.markdown(
     margin-left: 6px !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
 }
-.stata-chat-terminal-badge {
-    margin-left: auto !important;
-    font-size: 10px !important;
-    background: rgba(88, 166, 255, 0.15) !important;
-    color: #58a6ff !important;
-    border: 1px solid rgba(88, 166, 255, 0.3) !important;
-    padding: 2px 8px !important;
-    border-radius: 12px !important;
-    font-weight: 600 !important;
-    letter-spacing: 0.3px !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-}
 .stata-chat-terminal-body {
     padding: 16px 18px !important;
     color: #f0f6fc !important;
@@ -216,15 +204,24 @@ st.markdown(
 .stata-prompt-cmd {
     color: #7ee787 !important;
 }
+.stata-chat-terminal [data-testid="stMarkdownPre"],
+.stata-chat-terminal pre,
+.stata-chat-terminal .stata-terminal-output,
+[data-testid="stChatMessage"] .stata-chat-terminal [data-testid="stMarkdownPre"],
+[data-testid="stChatMessage"] .stata-chat-terminal pre,
+[data-testid="stChatMessage"] .stata-terminal-output,
 .stata-terminal-output {
     margin: 0 !important;
     background: transparent !important;
     color: #f0f6fc !important;
     font-family: 'Consolas', 'Fira Code', 'Courier New', monospace !important;
     font-size: 12.5px !important;
-    line-height: 1.5 !important;
+    line-height: 1.45 !important;
     white-space: pre !important;
     overflow-x: auto !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    display: block !important;
 }
 
 /* Ensure Plotly modebar icons are always visible and interactive */
@@ -475,23 +472,22 @@ def _render_stata_terminal_in_chat(stata_cmd: str, ascii_output: str) -> None:
     elif "thesis" in cmd_lower:
         sub_title = "PhD Dissertation Figure Reproduction"
 
-    terminal_html = f"""
-    <div class="stata-chat-terminal">
-        <div class="stata-chat-terminal-header">
-            <div class="stata-terminal-dots">
-                <span class="stata-dot red"></span>
-                <span class="stata-dot yellow"></span>
-                <span class="stata-dot green"></span>
-            </div>
-            <span class="stata-chat-terminal-title">Stata 18 SE · {sub_title}</span>
-            <span class="stata-chat-terminal-badge">Stata 100% Match</span>
-        </div>
-        <div class="stata-chat-terminal-body">
-            <div class="stata-prompt-line"><span class="stata-prompt-char">.</span> <span class="stata-prompt-cmd">{clean_cmd}</span></div>
-            <pre class="stata-terminal-output">{safe_ascii}</pre>
-        </div>
-    </div>
-    """
+    terminal_html = (
+        '<div class="stata-chat-terminal">\n'
+        '<div class="stata-chat-terminal-header">\n'
+        '<div class="stata-terminal-dots">\n'
+        '<span class="stata-dot red"></span>\n'
+        '<span class="stata-dot yellow"></span>\n'
+        '<span class="stata-dot green"></span>\n'
+        '</div>\n'
+        f'<span class="stata-chat-terminal-title">Stata 18 SE · {sub_title}</span>\n'
+        '</div>\n'
+        '<div class="stata-chat-terminal-body">\n'
+        f'<div class="stata-prompt-line"><span class="stata-prompt-char">.</span> <span class="stata-prompt-cmd">{clean_cmd}</span></div>\n'
+        f'<pre class="stata-terminal-output" style="white-space: pre !important; overflow-x: auto !important; margin: 0; padding: 0; font-family: \'Consolas\', \'Courier New\', monospace !important; word-break: normal !important; overflow-wrap: normal !important;">{safe_ascii}</pre>\n'
+        '</div>\n'
+        '</div>'
+    )
     st.markdown(terminal_html, unsafe_allow_html=True)
 
 

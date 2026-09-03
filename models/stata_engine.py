@@ -402,9 +402,9 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
         "-------------+----------------------------------   Adj R-squared   =     " + f"{result.rsquared_adj:6.4f}",
         f"       Total | {ss_total:16.4f}  {df_total:5d}  {ss_total/max(df_total,1):11.4f}   Root MSE        =     {math.sqrt(ms_resid):6.4f}",
         "",
-        "------------------------------------------------------------------------------",
-        f"{depvar:>12} | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]",
-        "-------------+----------------------------------------------------------------",
+        "---------------------------------------------------------------------------------------------",
+        f"{depvar:>13} | {'Coefficient':>12}   {'Std. err.':>9}   {'t':>7}   {'P>|t|':>6}     {'[95% conf. interval]':>22}",
+        "--------------+-------------------------------------------------------------------------------",
     ]
 
     coefs = {}
@@ -415,10 +415,10 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
         p = result.pvalues[var]
         ci_low, ci_high = result.conf_int().loc[var]
         v_name = "_cons" if var == "const" else var
-        lines.append(f"{v_name:>12} |  {c:10.5f}  {se:9.6f}  {t:7.2f}   {p:5.3f}    {ci_low:10.5f}  {ci_high:10.5f}")
+        lines.append(f"{v_name:>13} | {c:12.5f}   {se:9.6f}   {t:7.2f}   {p:6.3f}     {ci_low:9.5f}    {ci_high:9.5f}")
         coefs[v_name] = {"coef": float(c), "se": float(se), "t": float(t), "p": float(p), "ci_low": float(ci_low), "ci_high": float(ci_high)}
 
-    lines.append("------------------------------------------------------------------------------")
+    lines.append("--------------+-------------------------------------------------------------------------------")
 
     estimate_obj = {
         "model_type": "OLS",
@@ -495,9 +495,9 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         f"     Overall = {r2_o:6.4f}                                         max =         25",
         f"F({len(indepvars)}, {n_groups-1}) = {f_stat:6.2f}                               Prob > F          =     {f_pval:6.4f}",
         "(Std. err. adjusted for clustering in company_code)" if is_fe else "",
-        "------------------------------------------------------------------------------",
-        f"{depvar:>12} | Coefficient  Std. err.      t    P>|t|     [95% conf. interval]",
-        "-------------+----------------------------------------------------------------",
+        "---------------------------------------------------------------------------------------------",
+        f"{depvar:>13} | {'Coefficient':>12}   {'Std. err.':>9}   {'t':>7}   {'P>|t|':>6}     {'[95% conf. interval]':>22}",
+        "--------------+-------------------------------------------------------------------------------",
     ]
 
     coefs = {}
@@ -508,10 +508,10 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         p = res.pvalues[var]
         ci_low, ci_high = res.conf_int().loc[var]
         v_name = "_cons" if var == "const" else var
-        lines.append(f"{v_name:>12} |  {c:10.5f}  {se:9.6f}  {t:7.2f}   {p:5.3f}    {ci_low:10.5f}  {ci_high:10.5f}")
+        lines.append(f"{v_name:>13} | {c:12.5f}   {se:9.6f}   {t:7.2f}   {p:6.3f}     {ci_low:9.5f}    {ci_high:9.5f}")
         coefs[v_name] = {"coef": float(c), "se": float(se), "t": float(t), "p": float(p), "ci_low": float(ci_low), "ci_high": float(ci_high)}
 
-    lines.append("------------------------------------------------------------------------------")
+    lines.append("--------------+-------------------------------------------------------------------------------")
 
     estimate_obj = {
         "model_type": m_type,
