@@ -196,7 +196,7 @@ with tab_chatbot:
         # Prompt 1
         with st.expander("📌 Prompt 1: 'What was the average debt-to-equity leverage across all manufacturing companies in 2020?'", expanded=True):
             st.code("What was the average debt-to-equity leverage across all manufacturing companies in 2020?", language="text")
-            st.markdown("""
+            st.markdown(r"""
             **Expected Stata Output Box:**
             ```text
             Panel Subset: Year == 2020 (N = 398 manufacturing companies)
@@ -248,7 +248,7 @@ with tab_chatbot:
         # Prompt 2
         with st.expander("📌 Prompt: 'How many companies are classified in the Mature life-cycle stage?'"):
             st.code("How many companies are classified in the Mature life-cycle stage?", language="text")
-            st.markdown("""
+            st.markdown(r"""
             **Output:**
             - **4,491 firm-year observations** (representing **51.8%** of the entire 8,677 observation panel).
             - Average firm size: $\\ln(\\text{Assets}) = 8.14$; Tangibility: $39.5\\%$; Profitability: $15.82\\%$.
@@ -304,7 +304,7 @@ with tab_chatbot:
         # Prompt 5
         with st.expander("📌 Prompt: 'How did corporate borrowing behavior change during the 2008 GFC compared to the 2020 COVID shock?'"):
             st.code("How did corporate borrowing behavior change during the 2008 GFC compared to the 2020 COVID shock?", language="text")
-            st.markdown("""
+            st.markdown(r"""
             **Output:**
             - **2008 GFC:** Global liquidity contraction restricted debt issuance; leverage decreased slightly as capital expenditure plans were frozen.
             - **2020 COVID-19:** Counter-cyclical debt surge ($+23.1\\%$ YoY) driven by operational cash flow deficits and RBI emergency credit line guarantees (ECLGS).
@@ -317,7 +317,7 @@ with tab_chatbot:
         # Prompt 6
         with st.expander("📌 Prompt: 'Run a fixed-effects panel regression of leverage on profitability, tangibility, and log_size. Synthesize into an Executive Board Memo.'", expanded=True):
             st.code("Run a fixed-effects panel regression of leverage on profitability, tangibility, and log_size. Synthesize into an Executive Board Memo.", language="text")
-            st.markdown("""
+            st.markdown(r"""
             **Stata Terminal Box:**
             ```text
             Fixed-effects (within) regression               Number of obs     =       8,673
@@ -349,7 +349,7 @@ with tab_stata_studio:
     st.markdown("---")
     st.markdown("#### 🛠️ Full 6-Step Research Workflow Guide")
 
-    st.markdown("""
+    st.markdown(r"""
     | Step | Action | Stata Command | Research Objective |
     | :--- | :--- | :--- | :--- |
     | **1** | Descriptive Exploration | `. summarize leverage prof tang log_size` | Inspect central tendency, standard deviations, and sample completeness. |
@@ -434,7 +434,7 @@ with tab_cfo_scenarios:
     # Macro Scenario 1
     with st.expander("⚡ Simulation: 'Simulate a +200 bps RBI Repo Rate Hike on Highly Indebted Mature Firms'", expanded=True):
         st.code("Simulate a +200 bps RBI Repo Rate Hike on Highly Indebted Mature Firms and compute ICR compression.", language="text")
-        st.markdown("""
+        st.markdown(r"""
         **Simulation Parameters:**
         - Policy Shock: $+200\\text{ bps}$ benchmark borrowing rate increase (e.g. from $6.50\\%$ to $8.50\\%$).
         - Sample: Mature manufacturing firms with Debt/Equity $> 0.50$ ($N = 612$ firm-years).
@@ -449,7 +449,7 @@ with tab_cfo_scenarios:
     # Macro Scenario 2
     with st.expander("⚡ Simulation: 'Analyze the impact of the 2016 Insolvency and Bankruptcy Code (IBC) on corporate leverage'"):
         st.code("Compare pre-IBC (2010–2015) vs. post-IBC (2016–2021) corporate leverage and non-performing asset resolution.", language="text")
-        st.markdown("""
+        st.markdown(r"""
         **Empirical Findings:**
         - **Pre-IBC Leverage (2010–2015):** Average leverage $= 0.2312$; zombie firms continued borrowing under regulatory forbearance.
         - **Post-IBC Leverage (2016–2021):** Average leverage declined to $0.1740$ ($-24.7\\%$ structural deleveraging).
@@ -462,7 +462,7 @@ with tab_cfo_scenarios:
     # Minor Scenario 1
     with st.expander("🏭 Simulation: 'Raw Material Inflation Shock: 300 bps Operating Margin Erosion'"):
         st.code("Simulate a 300 bps raw material margin compression on automotive suppliers and evaluate debt service capacity.", language="text")
-        st.markdown("""
+        st.markdown(r"""
         **Impact Analysis:**
         - Operating Margin drops from $16.85\\%$ to $13.85\\%$.
         - Free Cash Flow to Firm (FCFF) declines by $-28.4\\%$, forcing firms to draw on working capital overdrafts.
@@ -472,7 +472,7 @@ with tab_cfo_scenarios:
     # Minor Scenario 2
     with st.expander("🏭 Simulation: 'Working Capital Squeeze: +30 Days Receivable Collection Delay'"):
         st.code("Simulate a +30 day elongation in Days Sales Outstanding (DSO) and measure short-term liquidity drain.", language="text")
-        st.markdown("""
+        st.markdown(r"""
         **Impact Analysis:**
         - Cash conversion cycle extends from 62 days to 92 days.
         - Short-term borrowing increases by $+18.6\\%$ to fund inventory and supplier payables.
@@ -481,7 +481,7 @@ with tab_cfo_scenarios:
     # Minor Scenario 3
     with st.expander("🏭 Simulation: 'Capex Funding Dilemma: Debt Financing vs. Retained Cash vs. Rights Issue'"):
         st.code("Evaluate capital allocation trade-offs for a ₹500 Cr manufacturing plant expansion in the Growth phase.", language="text")
-        st.markdown("""
+        st.markdown(r"""
         **Trade-off Matrix:**
         1. **100% Debt Financed:** Leverage increases from $0.28$ to $0.42$; ICR compresses to $2.1\\times$; optimal if tax shield exceeds bankruptcy risk.
         2. **Retained Earnings Self-Financed:** Preserves borrowing headroom; delays dividend distribution by 24 months (Pecking Order preferred).
