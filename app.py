@@ -274,6 +274,7 @@ admin_activity      = st.Page("pages/16_admin_activity.py",    title="Activity L
 board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck",          icon=":material/description:")
 ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
 stata_studio        = st.Page("pages/23_stata_studio.py",       title="Stata Studio",        icon=":material/terminal:")
+ai_chat_guide       = st.Page("pages/24_ai_chat_guide.py",      title="AI Chat Guide",       icon=":material/menu_book:")
 # knowledge_graph2  = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")  # temporarily hidden
 nav = st.navigation({
     "": [
@@ -287,6 +288,7 @@ nav = st.navigation({
     "Admin & Tools": [
         admin_activity, settings,
         workbench, bulk_upload,
+        ai_chat_guide,
     ],
 })
 
