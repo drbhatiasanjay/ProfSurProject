@@ -762,11 +762,34 @@ def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
             categories=cats,
             series=series_list,
         )
+
+        # Build Stata tabular list of means (like Stata's collapse / tabstat output)
+        col_header = f"{time_col:>8} | " + "  ".join([f"{display_names.get(x, x):>14}" for x in y_vars])
+        divider_len = max(len(col_header), 50)
+        divider = "-" * 9 + "+" + "-" * (divider_len - 8)
+
+        table_lines = [
+            f"Annual Means by {time_col} (Obs = {len(df):,})",
+            divider,
+            col_header,
+            divider,
+        ]
+        for _, row in grouped.iterrows():
+            t_val = str(int(row[time_col])) if isinstance(row[time_col], (int, float)) and not pd.isna(row[time_col]) else str(row[time_col])
+            vals_str = []
+            for v in y_vars:
+                val = row[v]
+                if v == "leverage" and val > 1.0 and any(grouped[other].mean() < 1.0 for other in y_vars if other != "leverage"):
+                    val = val / 100.0
+                vals_str.append(f"{val:14.5f}")
+            table_lines.append(f"{t_val:>8} | " + "  ".join(vals_str))
+        table_lines.append(divider)
+
         return {
             "status": "success",
             "command": parsed["raw"],
             "chart_spec": spec_res.get("chart_spec"),
-            "ascii_output": f"Generated Stata twoway line plot for {title_vars} over {time_col} ({len(cats)} periods, {len(y_vars)} series).",
+            "ascii_output": "\n".join(table_lines),
         }
 
     return {"status": "error", "ascii_output": "r(198); invalid twoway syntax or variables not found"}
