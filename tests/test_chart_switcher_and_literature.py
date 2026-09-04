@@ -132,3 +132,38 @@ def test_literature_evaluation_engine():
     assert "statistically significant" in synth
     assert "Pecking Order Theory" in synth
     assert "Trade-Off Theory" in synth
+
+
+def test_get_relevant_vault_citations():
+    from models.econometric_literature_vault import get_relevant_vault_citations
+    from models.rich_chat_renderer import render_academic_vault_html
+
+    # Test 1: Life cycle question
+    c_life = get_relevant_vault_citations("How does leverage vary across Dickinson life cycle stages?")
+    assert any("Dickinson" in c for c in c_life)
+
+    # Test 2: Profitability & Pecking Order question
+    c_prof = get_relevant_vault_citations("Why does operating profitability reduce debt under Pecking Order?")
+    assert any("Myers" in c for c in c_prof)
+    assert any("Rajan" in c for c in c_prof)
+    assert any("Reserve Bank" in c for c in c_prof)
+
+    # Test 3: Tangibility & Collateral question
+    c_tang = get_relevant_vault_citations("Explain why asset tangibility expands bank collateral under IBC")
+    assert any("Titman" in c for c in c_tang)
+    assert any("IBBI" in c for c in c_tang)
+
+    # Test 4: Firm Size question
+    c_size = get_relevant_vault_citations("What is the impact of firm size and corporate bond market access?")
+    assert any("Fama" in c for c in c_size)
+    assert any("SEBI" in c for c in c_size)
+
+    # Test 5: Vault rendering with custom title for AI Chatbot
+    html_custom = render_academic_vault_html(
+        c_prof,
+        theme="light",
+        title="📚 Peer-Reviewed Literature & Institutional Benchmark Vault"
+    )
+    assert "📚 Peer-Reviewed Literature & Institutional Benchmark Vault" in html_custom
+    assert "JOURNAL OF FINANCE" in html_custom
+    assert "INSTITUTIONAL REPORT" in html_custom

@@ -237,12 +237,13 @@ def render_theory_scorecard_html(scorecard_data: List[Dict[str, Any]], theme: st
 """)
 
 
-def render_academic_vault_html(citations: List[str], theme: str = "light") -> str:
+def render_academic_vault_html(citations: List[str], theme: str = "light", title: Optional[str] = None) -> str:
     """Renders the formal Academic Citations & Literature Cross-Reference Drawer."""
     if not citations:
         return ""
 
     is_dark = str(theme).lower() == "dark"
+    vault_title = title or "📚 Part 3: Peer-Reviewed Literature & Institutional Cross-Reference Vault"
 
     card_bg = "rgba(15, 23, 42, 0.5)" if is_dark else "#FFFFFF"
     card_border = "#1E293B" if is_dark else "#E2E8F0"
@@ -295,7 +296,7 @@ def render_academic_vault_html(citations: List[str], theme: str = "light") -> st
     return clean_html(f"""
 <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 8px; padding: 16px 20px; margin-bottom: 14px; box-shadow: {card_shadow};">
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-<div style="font-size: 12.5px; font-weight: 700; color: {title_color};">📚 Part 3: Peer-Reviewed Literature & Institutional Cross-Reference Vault</div>
+<div style="font-size: 12.5px; font-weight: 700; color: {title_color};">{vault_title}</div>
 <div style="font-size: 11px; background: {btn_bg}; color: {btn_color}; border: 1px solid {btn_border}; padding: 3px 8px; border-radius: 4px;">🌐 Crossref / OpenAlex DOI Verified</div>
 </div>
 {entries_content}

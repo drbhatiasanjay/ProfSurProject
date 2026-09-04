@@ -613,6 +613,27 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
         with st.expander("Supporting data", expanded=False):
             for table in tables:
                 st.markdown(table)
+
+    # 📚 Dynamic Academic Literature & Institutional Benchmark Vault
+    lit_citations = turn.get("literature_citations")
+    if not lit_citations:
+        from models.econometric_literature_vault import get_relevant_vault_citations
+        user_q = str(turn.get("question") or "")
+        combined_text = f"{user_q} {prose}"
+        lit_citations = get_relevant_vault_citations(combined_text)
+
+    if lit_citations:
+        from models.rich_chat_renderer import render_academic_vault_html
+        current_theme = st.session_state.get("theme", "light")
+        st.markdown(
+            render_academic_vault_html(
+                lit_citations,
+                theme=current_theme,
+                title="📚 Peer-Reviewed Literature & Institutional Benchmark Vault"
+            ),
+            unsafe_allow_html=True
+        )
+
     _render_answer_context(key_prefix)
 
 

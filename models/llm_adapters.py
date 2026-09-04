@@ -51,10 +51,11 @@ _PANEL_DISPLAY_LABELS = {
 
 def _grounding_footer(panel_label: str) -> str:
     return (
-        "\n\nINSTRUCTIONS: Answer ONLY from the three knowledge blocks above.\n"
+        "\n\nINSTRUCTIONS: Answer from the grounded knowledge blocks above.\n"
         "For every factual claim or interpretive point, append a citation in brackets "
-        "using one of these three tags:\n"
+        "using one of these tags:\n"
         f"  [Source: Theory] — for theory, methodology, Dickinson classification, hypotheses\n"
+        f"  [Source: Literature Vault] — for peer-reviewed benchmarks & institutional reports (RBI, IBBI, SEBI)\n"
         f"  [Source: {panel_label}] — for panel statistics, stage means, company KPIs, peer metrics\n"
         f"  [Source: OLS Model] — for regression coefficients, R², model outputs\n"
         "If asked about something not in the context, say exactly: "
@@ -68,7 +69,7 @@ GROUNDING_FOOTER = _grounding_footer("DATA")
 
 # ── Static thesis knowledge block (A) — injected into every context ───────────
 # Covers: Dickinson life-stage classification, core theories, thesis scope,
-# and directional hypotheses. Token cost ~160 tokens — well within 900 budget.
+# directional hypotheses, and peer-reviewed Literature Vault benchmarks.
 _THESIS_BLOCK = (
     "## [SOURCE: Theory] Theoretical & Methodological Framework\n"
     "**Life Stage Classification (Dickinson 2011) — cash-flow sign patterns:**\n"
@@ -85,6 +86,11 @@ _THESIS_BLOCK = (
     "→ H: tangibility ↑ = leverage ↑ (positive coef, collateral value)\n"
     "- Agency Theory (Jensen & Meckling 1976): debt disciplines free cash flow "
     "→ effect varies by life stage\n\n"
+    "**Literature Vault Empirical Benchmarks & Institutional Findings:**\n"
+    "- Profitability & Cash: Rajan & Zingales (1995), Booth et al. (2001), RBI Reports (2023).\n"
+    "- Tangibility & Collateral: Titman & Wessels (1988), IBBI CIRP recovery reports (2022).\n"
+    "- Scale & Deleveraging: Fama & French (2002), SEBI Surveys (2023), Kumar & Dawar (2015).\n"
+    "- Panel Econometrics: Wooldridge (2010 FE), Baltagi (2021 Hausman), Cameron & Trivedi (2022 robust).\n\n"
     "**Study scope:** Indian listed firms, multi-year panel. "
     "Dependent variable: leverage = Debt / Total Assets × 100.\n"
 )
