@@ -82,21 +82,37 @@ Created detailed project note at:
 
 ---
 
-## Files in Project
+# ProfSurProject — Session Log (2026-09-04)
 
+## 1. Milestones Completed & Deployed
+1. **Literature Vault in AI Assistant (`pages/19_ai_assistant.py`):**
+   - Appended non-destructive, collapsible Peer-Reviewed Literature Vault drawer under conversational chat responses.
+   - Grounded responses against 10+ core finance papers (Myers & Majluf 1984, Jensen & Meckling 1976, Rajan & Zingales 1995, IBBI 2022).
+2. **Stata Studio Interactive Suite (`pages/08_stata_studio.py`):**
+   - Implemented 4-way Chart Switcher (Forest Plot, Beta Bar, Radar, Scatter).
+   - Added 3-tier scholarly commentary (Economic Mechanism, Theoretical Assessment, Literature Comparison).
+3. **Stata Academic Guide (`pages/24_stata_academic_guide.py`):**
+   - Live with full command references and top-level PDF/HTML download button.
+4. **Token Optimization & Context Preservation System:**
+   - Created root `AGENTS.md` with the **Ponytail Minimal-Code Decision Ladder** and **Concise Engineer Rules**.
+   - Streamlined `CLAUDE.md` to save ~1,400 input tokens on every turn.
+   - Built unified CLI `scripts/project_ops.py` (`status`, `test --fast`, `push`, `verify`).
+   - Built `scripts/gen_bulk_doc.py` to offload bulk HTML/markdown generation to Gemini 1.5 Flash.
+
+## 2. Verified Deployments & Git State
+- **Git HEAD:** `e722ca5` (`master` in sync with `origin/master`).
+- **Google Cloud Run:** Revision `lifecycle-leverage-00173-jq4` serving 100% traffic at `https://lifecycle-leverage-779655496440.us-east1.run.app`.
+- **Test Suite:** 86/86 targeted tests passing (100% green).
+- **Default Auth:** `profsurkumar` / `Pass@123`.
+
+## 3. Recommended Next Session Starting Tasks
+- [ ] Task A: Enhance **Page 17: Board Deck Export** / **Page 18: Company Navigator**.
+- [ ] Task B: Review/extend **`docs/CHART_SWITCHER_ACADEMIC_PROTOTYPE.html`** into additional dashboard views.
+- [ ] Task C: Ingest CMIE 2025 rollforward updates via `scripts/project_ops.py`.
+
+---
+
+### 📋 Paste-Ready Handoff Prompt for Next Session:
+```text
+Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (100% deployed to GCP). Follow AGENTS.md Ponytail minimal-code and concise rules. Use scripts/project_ops.py for operations. What would you like to build next?
 ```
-ProfSurProject/
-├── DETERMINANTS OF CAPITAL STRUCTURE OVER CORPORATE LIFE STAGES.docx  (thesis)
-├── sp401nf24y_furtherEd_oldCLS.dta   (raw Stata data)
-├── load_to_db.py                      (ETL script)
-├── capital_structure.db               (SQLite database)
-└── SESSION_LOG.md                     (this file)
-```
-
-## Next Steps
-
-- [ ] Build a dashboard (Streamlit / Power BI / web app)
-- [ ] Replicate thesis regressions (FE, RE, System GMM)
-- [ ] Winsorize leverage outliers (1st/99th percentile)
-- [ ] Visualize leverage trends across life stages over time
-- [ ] Ownership structure deep-dive
