@@ -167,3 +167,13 @@ def test_get_relevant_vault_citations():
     assert "📚 Peer-Reviewed Literature & Institutional Benchmark Vault" in html_custom
     assert "JOURNAL OF FINANCE" in html_custom
     assert "INSTITUTIONAL REPORT" in html_custom
+
+
+def test_page_17_board_export_enhancements():
+    import pathlib
+    src = pathlib.Path("pages/17_board_export.py").read_text(encoding="utf-8")
+    assert "render_bento_kpi" in src
+    assert "get_relevant_vault_citations" in src
+    assert "render_academic_vault_html" in src
+    assert "Topic 1 Visual Mode" in src
+

@@ -10,14 +10,21 @@ Here the company is the SUBJECT; the 401-firm panel is the PEER CONTEXT.
 
 import streamlit as st
 import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
 
 import db
 from helpers import (
     ensure_session_state, require_role, plotly_layout,
     PLOTLY_CONFIG, STAGE_COLORS, render_interpretation, new_badge,
     df_download_button, chart_download_button,
+    render_bento_kpi, render_stage_badge,
+    PRIMARY, SECONDARY, ACCENT, NEUTRAL,
 )
 from models.board_export import TOPIC_BUILDERS, TOPIC_LABELS, build_topic_ai_narrative
+from models.econometric_literature_vault import get_relevant_vault_citations
+from models.rich_chat_renderer import render_academic_vault_html
 import models.pptx_generator as pptx_generator
 
 ensure_session_state()
@@ -107,22 +114,97 @@ company_info = {
     "last_year":     int(_latest.get("year", 2024)),
 }
 
-# ── STEP 3: Snapshot header ───────────────────────────────────────────────────
+# ── STEP 3: Snapshot header & Executive Bento Grid ────────────────────────────
+stage = company_info["current_stage"]
+stage_color = STAGE_COLORS.get(stage, "#0D9488")
+lev_val = float(_latest.get("leverage", 0) or 0)
+prof_val = float(_latest.get("profitability", 0) or 0)
+tang_val = float(_latest.get("tangibility", 0) or 0)
+pbit_val = float(_latest.get("pbit", 0) or 0)
+int_val = float(_latest.get("interest_amt", 0) or 0)
+ic_val = (pbit_val / int_val) if int_val > 0 else (np.nan if pbit_val == 0 else 99.9)
+
+n_peers = len(peers_df) if peers_df is not None else 0
+peer_lev_med = float(peers_df["leverage"].median()) if peers_df is not None and not peers_df.empty and "leverage" in peers_df.columns else lev_val
+peer_prof_med = float(peers_df["profitability"].median()) if peers_df is not None and not peers_df.empty and "profitability" in peers_df.columns else prof_val
+
+from scipy import stats
+def _calc_pct(series, val):
+    clean = series.dropna() if series is not None else pd.Series([], dtype=float)
+    return int(stats.percentileofscore(clean, val, kind="rank")) if not clean.empty else 50
+
+lev_pct = _calc_pct(peers_df["leverage"] if peers_df is not None and not peers_df.empty else None, lev_val)
+prof_pct = _calc_pct(peers_df["profitability"] if peers_df is not None and not peers_df.empty else None, prof_val)
+tang_pct = _calc_pct(peers_df["tangibility"] if peers_df is not None and not peers_df.empty else None, tang_val)
+
+df_hist = company_df.sort_values("year").tail(5)
+lev_spark = (df_hist["leverage"] * 100).dropna().tolist() if "leverage" in df_hist.columns else []
+prof_spark = (df_hist["profitability"] * 100).dropna().tolist() if "profitability" in df_hist.columns else []
+tang_spark = (df_hist["tangibility"] * 100).dropna().tolist() if "tangibility" in df_hist.columns else []
+
 with col_info:
-    stage = company_info["current_stage"]
-    stage_color = STAGE_COLORS.get(stage, "#0D9488")
-    lev_val = _latest.get("leverage", 0)
-    prof_val = _latest.get("profitability", 0)
-    n_peers = len(peers_df) if peers_df is not None else 0
     st.markdown(
-        f"""<div style="background:#F0FDFA;border-left:4px solid {stage_color};padding:10px 14px;border-radius:4px;font-size:13px;">
-        <b>{selected_name}</b><br>
-        Stage: <b style="color:{stage_color}">{stage}</b> &nbsp;·&nbsp; {company_info['last_year']}<br>
-        Leverage: <b>{lev_val*100:.1f}%</b> &nbsp;·&nbsp; Profitability: <b>{prof_val*100:.1f}%</b><br>
-        Peer group: <b>{n_peers} firms</b>
+        f"""<div style="background:#F0FDFA;border-left:4px solid {stage_color};padding:10px 14px;border-radius:6px;font-size:13px;">
+        <b>{selected_name}</b> &nbsp;·&nbsp; <span style="background:{stage_color}22;color:{stage_color};padding:2px 6px;border-radius:4px;font-weight:600;">{stage}</span><br>
+        Industry: <b>{company_info['industry'] or 'Panel Cohort'}</b> &nbsp;·&nbsp; Fiscal Year: <b>{company_info['last_year']}</b><br>
+        Peer Benchmark: <b>{n_peers} firms</b> in same life-cycle stage
         </div>""",
         unsafe_allow_html=True,
     )
+
+# Executive Bento KPI Row
+bcol1, bcol2, bcol3, bcol4 = st.columns(4)
+with bcol1:
+    lev_delta = f"{(lev_val - peer_lev_med)*100:+.1f}% vs peer med"
+    st.markdown(render_bento_kpi(
+        title="Leverage (Total Debt / Assets)",
+        value=f"{lev_val*100:.1f}%",
+        delta=lev_delta,
+        sparkline_data=lev_spark,
+        percentile=lev_pct,
+        tag=f"{lev_pct}th Pctile",
+        help_text="Book leverage vs life-stage peers",
+        stroke_color=PRIMARY,
+    ), unsafe_allow_html=True)
+
+with bcol2:
+    prof_delta = f"{(prof_val - peer_prof_med)*100:+.1f}% vs peer med"
+    st.markdown(render_bento_kpi(
+        title="Operating ROA (PBIT / Assets)",
+        value=f"{prof_val*100:.1f}%",
+        delta=prof_delta,
+        sparkline_data=prof_spark,
+        percentile=prof_pct,
+        tag=f"{prof_pct}th Pctile",
+        help_text="Operating profitability vs life-stage peers",
+        stroke_color=SECONDARY,
+    ), unsafe_allow_html=True)
+
+with bcol3:
+    st.markdown(render_bento_kpi(
+        title="Asset Tangibility (PPE / Assets)",
+        value=f"{tang_val*100:.1f}%",
+        delta=f"P{tang_pct}",
+        sparkline_data=tang_spark,
+        percentile=tang_pct,
+        tag="Collateral Base",
+        help_text="Fixed asset proportion available for debt collateralization",
+        stroke_color=ACCENT,
+    ), unsafe_allow_html=True)
+
+with bcol4:
+    ic_tag = "Robust Safety" if (pd.notna(ic_val) and ic_val >= 3.0) else ("Moderate Cover" if (pd.notna(ic_val) and ic_val >= 1.5) else "Elevated Risk")
+    ic_str = f"{ic_val:.1f}x" if pd.notna(ic_val) and ic_val < 90 else (">50x" if ic_val >= 90 else "N/A")
+    st.markdown(render_bento_kpi(
+        title="Interest Coverage (EBIT / Interest)",
+        value=ic_str,
+        delta=ic_tag,
+        sparkline_data=[],
+        percentile=min(100, max(10, int(ic_val * 15))) if (pd.notna(ic_val) and ic_val < 50) else 95,
+        tag="Debt Servicing",
+        help_text="Ability of operating earnings to service debt interest burden",
+        stroke_color="#10B981" if ic_tag == "Robust Safety" else "#F59E0B",
+    ), unsafe_allow_html=True)
 
 st.divider()
 
@@ -209,9 +291,94 @@ if st.session_state.get("deck_previewed"):
             with st.spinner(f"Building Topic {tid}…"):
                 topic_data = builder(company_df, company_info, peers_df, full_panel, stage_summary)
 
-            for _fig_idx, fig in enumerate(topic_data.get("figs", [])):
-                st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
-                chart_download_button(fig, f"board_topic{tid}_chart{_fig_idx + 1}.png")
+            if tid == 1:
+                t1_view = st.radio(
+                    "Topic 1 Visual Mode",
+                    ["📈 5-Yr Trends & Indicators", "🕸️ Peer Benchmark Radar", "📊 Peer Quartile Distribution"],
+                    horizontal=True,
+                    key="p17_t1_vmode",
+                    label_visibility="collapsed",
+                )
+                if t1_view == "🕸️ Peer Benchmark Radar":
+                    # Multi-factor Radar vs 50th percentile peer median
+                    categories = ["Leverage", "Profitability", "Tangibility", "Debt Coverage", "Size", "Growth"]
+                    size_pct = _calc_pct(peers_df["size"] if peers_df is not None and "size" in peers_df.columns else None, _latest.get("size", 0))
+                    growth_pct = _calc_pct(peers_df["growth"] if peers_df is not None and "growth" in peers_df.columns else None, _latest.get("growth", 0))
+                    firm_pcts = [lev_pct, prof_pct, tang_pct, min(100, max(0, int(ic_val * 15))) if pd.notna(ic_val) else 50, size_pct, growth_pct]
+                    # Close the loop
+                    categories_loop = categories + [categories[0]]
+                    firm_loop = firm_pcts + [firm_pcts[0]]
+                    peer_loop = [50, 50, 50, 50, 50, 50, 50]
+
+                    fig_radar = go.Figure()
+                    fig_radar.add_trace(go.Scatterpolar(
+                        r=firm_loop,
+                        theta=categories_loop,
+                        fill='toself',
+                        fillcolor=f"{stage_color}33",
+                        line=dict(color=stage_color, width=2.5),
+                        name=f"{selected_name} (Percentile)",
+                    ))
+                    fig_radar.add_trace(go.Scatterpolar(
+                        r=peer_loop,
+                        theta=categories_loop,
+                        line=dict(color="#9CA3AF", width=1.5, dash="dash"),
+                        name="Peer Cohort Median (50th Pctile)",
+                    ))
+                    fig_radar.update_layout(
+                        polar=dict(
+                            radialaxis=dict(visible=True, range=[0, 100], ticksuffix="%"),
+                        ),
+                        showlegend=True,
+                        **plotly_layout(f"{selected_name} — Comprehensive Factor Radar vs Life-Stage Peers", height=420),
+                    )
+                    st.plotly_chart(fig_radar, use_container_width=True, config=PLOTLY_CONFIG)
+                    chart_download_button(fig_radar, "board_topic1_radar.png")
+
+                elif t1_view == "📊 Peer Quartile Distribution":
+                    # Peer comparison distribution bars
+                    metric_labels = ["Leverage (%)", "ROA (%)", "Tangibility (%)"]
+                    fig_dist = go.Figure()
+                    for m_idx, (m_col, m_label, m_val) in enumerate([
+                        ("leverage", "Leverage", lev_val),
+                        ("profitability", "ROA", prof_val),
+                        ("tangibility", "Tangibility", tang_val),
+                    ]):
+                        if peers_df is not None and m_col in peers_df.columns:
+                            p_clean = peers_df[m_col].dropna() * 100
+                            q25, q50, q75 = p_clean.quantile([0.25, 0.50, 0.75])
+                            fig_dist.add_trace(go.Box(
+                                x=p_clean,
+                                y=[m_label] * len(p_clean),
+                                orientation='h',
+                                name=f"{m_label} Peers",
+                                marker_color=PRIMARY if m_idx == 0 else (SECONDARY if m_idx == 1 else ACCENT),
+                                boxpoints=False,
+                                showlegend=False,
+                            ))
+                            fig_dist.add_trace(go.Scatter(
+                                x=[m_val * 100],
+                                y=[m_label],
+                                mode='markers',
+                                marker=dict(color='#DC2626', size=14, symbol='diamond', line=dict(color='white', width=1.5)),
+                                name=f"{selected_name}",
+                                showlegend=(m_idx == 0),
+                            ))
+                    fig_dist.update_layout(
+                        xaxis_title="Ratio Value (%)",
+                        **plotly_layout(f"{selected_name} vs Life-Stage Peer Distributions (Interquartile Range)", height=320),
+                    )
+                    st.plotly_chart(fig_dist, use_container_width=True, config=PLOTLY_CONFIG)
+                    chart_download_button(fig_dist, "board_topic1_distribution.png")
+
+                else:
+                    for _fig_idx, fig in enumerate(topic_data.get("figs", [])):
+                        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+                        chart_download_button(fig, f"board_topic{tid}_chart{_fig_idx + 1}.png")
+            else:
+                for _fig_idx, fig in enumerate(topic_data.get("figs", [])):
+                    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
+                    chart_download_button(fig, f"board_topic{tid}_chart{_fig_idx + 1}.png")
 
             for _tbl_idx, tbl in enumerate(topic_data.get("tables", [])):
                 if tbl is not None and not tbl.empty:
@@ -239,6 +406,18 @@ if st.session_state.get("deck_previewed"):
 
         except Exception as exc:
             st.error(f"Topic {tid} could not render: {exc}")
+
+    # ── Scholarly Governance & Literature Benchmark Knowledge Vault ────────────
+    st.markdown("---")
+    _theme = "dark" if st.session_state.get("dark_mode") or st.session_state.get("theme_mode") == "dark" else "light"
+    vault_cits = get_relevant_vault_citations("pecking order trade off dynamic speed of adjustment dickinson flannery rangan frank goyal kumar")
+    if vault_cits:
+        vault_html = render_academic_vault_html(
+            vault_cits,
+            theme=_theme,
+            title="📚 Peer-Reviewed Literature Benchmark Knowledge Vault (Corporate Capital Structure & Board Strategy)"
+        )
+        st.markdown(vault_html, unsafe_allow_html=True)
 
     # ── Topic 13 AI: LLM-powered recommendations ──────────────────────────────
     st.markdown("---")
