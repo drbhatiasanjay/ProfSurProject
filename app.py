@@ -59,144 +59,246 @@ def _login():
     st.markdown(
         """
         <style>
-        /* Focused auth surface; application navigation appears after sign-in. */
-        .stApp, [data-testid="stAppViewContainer"], section.main {
-            background:
-                radial-gradient(circle at 78% 12%, rgba(99,102,241,.28), transparent 28rem),
-                radial-gradient(circle at 12% 88%, rgba(14,165,233,.16), transparent 24rem),
-                #081225 !important;
+        /* Sleek Ultra-Compact Centered Auth Frame (Zero Scroll) */
+        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], section.main {
+            background: #060b13 !important;
+            background-image: 
+                radial-gradient(at 50% 0%, rgba(56, 189, 248, 0.14) 0px, transparent 55%),
+                radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.12) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%) !important;
+            color: #f1f5f9 !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            overflow: hidden !important;
         }
-        section[data-testid="stSidebar"], header[data-testid="stHeader"] { display: none !important; }
-        [data-testid="stAppViewContainer"] .main .block-container {
-            max-width: 520px;
-            padding-top: 10vh;
-            padding-bottom: 10vh;
+        [data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stSidebarNav"], header[data-testid="stHeader"] {
+            display: none !important;
         }
-        [data-testid="stMarkdownContainer"] h2 {
-            color: #f8fafc !important;
-            font-size: clamp(2rem, 5vw, 3rem) !important;
-            letter-spacing: -.045em;
-            line-height: 1.05;
-            margin: .7rem 0 .65rem;
+        section.main {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
-        [data-testid="stCaptionContainer"] {
-            color: #a9b7cf !important;
-            font-size: .96rem !important;
-            line-height: 1.6 !important;
+        html body .stApp div[data-testid="stMainBlockContainer"],
+        html body .stApp div[data-testid="block-container"],
+        html body .stApp .main .block-container,
+        [data-testid="stMainBlockContainer"] {
+            max-width: 390px !important;
+            width: 390px !important;
+            margin: auto !important;
+            padding: 22px 24px 16px 24px !important;
+            background: #0d1527 !important;
+            border: 1px solid rgba(56, 189, 248, 0.25) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.85), 0 0 30px rgba(56, 189, 248, 0.08) !important;
+        }
+        .auth-brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 2px 10px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 16px;
+            color: #38bdf8;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .auth-title,
+        html body .stApp h1.auth-title,
+        html body .stApp .auth-title {
+            font-size: 1.35rem !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.03em !important;
+            color: #ffffff !important;
+            margin: 0 0 2px 0 !important;
+            line-height: 1.15 !important;
+        }
+        .auth-subtitle,
+        html body .stApp .auth-subtitle {
+            color: #94a3b8 !important;
+            font-size: 0.78rem !important;
+            line-height: 1.35 !important;
+            margin-bottom: 12px !important;
+        }
+        /* Pill Segmented Switcher for Sign In / Create Account */
+        div[data-testid="stRadio"] div[role="radiogroup"] {
+            display: flex !important;
+            width: 100% !important;
+            gap: 6px !important;
+            background: #020617 !important;
+            padding: 3px !important;
+            border-radius: 10px !important;
+            border: 1px solid rgba(148, 163, 184, 0.2) !important;
+            margin-bottom: 12px !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label {
+            flex: 1 !important;
+            text-align: center !important;
+            padding: 6px 10px !important;
+            border-radius: 7px !important;
+            background: transparent !important;
+            cursor: pointer !important;
+            margin: 0 !important;
+            justify-content: center !important;
+            border: 1px solid transparent !important;
+            white-space: nowrap !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) {
+            background: rgba(56, 189, 248, 0.18) !important;
+            border: 1px solid rgba(56, 189, 248, 0.45) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label span,
+        div[data-testid="stRadio"] div[role="radiogroup"] > label p,
+        div[data-testid="stRadio"] div[role="radiogroup"] > label div {
+            color: #94a3b8 !important;
+            font-size: 0.80rem !important;
+            font-weight: 600 !important;
+            white-space: nowrap !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) span,
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) p,
+        div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) div {
+            color: #38bdf8 !important;
+            font-weight: 700 !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] input[type="radio"],
+        div[data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child:not(:only-child) {
+            display: none !important;
         }
         [data-testid="stForm"] {
-            background: rgba(15, 29, 54, .78);
-            border: 1px solid rgba(148,163,184,.22);
-            border-radius: 22px;
-            padding: 1.6rem 1.7rem;
-            box-shadow: 0 24px 80px rgba(0,0,0,.32);
-            backdrop-filter: blur(18px);
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
         }
         [data-testid="stForm"] label, [data-testid="stTextInput"] label {
-            color: #dbeafe !important;
+            color: #e2e8f0 !important;
+            font-size: 0.78rem !important;
             font-weight: 600 !important;
+            margin-bottom: 2px !important;
         }
         [data-testid="stTextInput"] input {
-            background: rgba(2, 8, 23, .55) !important;
+            background: #020617 !important;
             color: #f8fafc !important;
-            border: 1px solid rgba(148,163,184,.3) !important;
-            border-radius: 11px !important;
+            border: 1px solid rgba(148, 163, 184, 0.28) !important;
+            border-radius: 8px !important;
+            padding: 7px 11px !important;
+            font-size: 0.86rem !important;
         }
-        [data-testid="stButton"] button {
-            min-height: 3rem;
-            border-radius: 12px !important;
+        [data-testid="stTextInput"] input::placeholder {
+            color: #64748b !important;
+            opacity: 1 !important;
+        }
+        [data-testid="stTextInput"] input:focus {
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 0 1px #38bdf8 !important;
+        }
+        [data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button {
+            border-radius: 8px !important;
             font-weight: 700 !important;
-            transition: transform .18s ease, box-shadow .18s ease !important;
+            font-size: 0.86rem !important;
+            min-height: 2.3rem !important;
+            margin-top: 6px !important;
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+            border: 1px solid rgba(56, 189, 248, 0.4) !important;
+            color: #ffffff !important;
+            transition: all 0.2s ease !important;
         }
-        [data-testid="stButton"] button:hover {
+        [data-testid="stButton"] button:hover, [data-testid="stFormSubmitButton"] button:hover {
             transform: translateY(-1px);
-            box-shadow: 0 10px 26px rgba(79,70,229,.28);
+            box-shadow: 0 6px 18px rgba(2, 132, 199, 0.35) !important;
+            border-color: #38bdf8 !important;
         }
-        [data-testid="stAlert"] {
-            background: rgba(30, 58, 95, .6) !important;
-            border: 1px solid rgba(125,211,252,.24) !important;
-            color: #dbeafe !important;
+        .auth-footer-note {
+            text-align: center;
+            font-size: 0.70rem;
+            color: #64748b;
+            margin-top: 10px;
+            letter-spacing: 0.02em;
         }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
     st.markdown(
-        '<div style="display:flex;align-items:center;gap:.7rem;color:#c7d2fe;font-size:.82rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;">'
-        '<span style="display:grid;place-items:center;width:2.15rem;height:2.15rem;border-radius:12px;background:linear-gradient(135deg,#6366f1,#22d3ee);box-shadow:0 8px 28px rgba(99,102,241,.38);font-size:1.15rem;">↗</span>'
-        'LEVERAGEDEBTAI</div>',
+        """
+        <div style="text-align:center;">
+            <div class="auth-brand-badge">⚡ LeverageDebtAI · Powered by EOLABS.IN</div>
+            <h1 class="auth-title">Welcome Back</h1>
+            <div class="auth-subtitle">Evidence-led debt &amp; capital structure intelligence</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
-    st.markdown("## Welcome to LeverageDebtAI")
-    st.caption("Evidence-led debt and capital-structure intelligence for researchers, finance teams, and boards.")
-    step = st.session_state.get("auth_step", "welcome")
-    if step != "welcome":
-        steps = {"existing": ("Sign in", "1"), "new": ("Account details", "1"), "verify": ("Verify email", "2"), "password": ("Set password", "3")}
-        current_label, current_number = steps.get(step, ("Secure access", "1"))
-        st.markdown(
-            f'<div style="display:flex;align-items:center;gap:.65rem;margin:1.35rem 0 .35rem;color:#a5b4fc;font-size:.76rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;">'
-            f'<span style="display:grid;place-items:center;width:1.6rem;height:1.6rem;border:1px solid #818cf8;border-radius:50%;">{current_number}</span>'
-            f'<span>{current_label}</span><span style="height:1px;flex:1;background:rgba(148,163,184,.28);"></span>'
-            f'<span style="color:#7183a8;letter-spacing:.02em;text-transform:none;">Secure access</span></div>',
-            unsafe_allow_html=True,
+
+    step = st.session_state.get("auth_step", "auth_card")
+
+    if step == "auth_card":
+        auth_tab = st.radio(
+            "Access Mode",
+            ["Sign In", "Create Account"],
+            horizontal=True,
+            label_visibility="collapsed",
         )
 
-    if step == "welcome":
-        st.markdown("### How would you like to continue?")
-        if st.button("I already have an account", use_container_width=True, type="primary"):
-            st.session_state["auth_step"] = "existing"
-            st.rerun()
-        if st.button("Create a new account", use_container_width=True):
-            st.session_state["auth_step"] = "new"
-            st.rerun()
-        st.info("New accounts are verified by a one-time email code. Passwords are never emailed.")
+        if auth_tab == "Sign In":
+            with st.form("login_form"):
+                identifier = st.text_input("Username or email", placeholder="username or user@domain.com", autocomplete="off")
+                password = st.text_input("Password", type="password", placeholder="Enter password", autocomplete="off")
+                submitted = st.form_submit_button("Sign In →", type="primary", use_container_width=True)
+            if submitted:
+                user = _auth.authenticate(identifier, password)
+                if user:
+                    _complete_login(user)
+                else:
+                    st.error("Invalid credentials. Please verify your username/email and password.")
+
+        else:
+            with st.form("enrollment_form"):
+                username = st.text_input("Username", placeholder="e.g. jsmith", help="3–30 lowercase letters, numbers, dots, dashes.", autocomplete="off")
+                email = st.text_input("Email address", placeholder="name@domain.com", autocomplete="off")
+                phone = st.text_input("Phone number", placeholder="+1 (555) 019-2834", autocomplete="off")
+                submitted = st.form_submit_button("Send Verification Code →", type="primary", use_container_width=True)
+            if submitted:
+                try:
+                    user = _auth.enroll_user(username, email, phone)
+                    _auth.issue_email_code(user["id"])
+                    st.session_state["pending_auth_user"] = user
+                    st.session_state["auth_step"] = "verify"
+                    st.rerun()
+                except _auth.AuthValidationError as error:
+                    st.error(str(error))
+                except RuntimeError:
+                    st.error("Email delivery service temporarily unavailable. Please try again.")
+
+        st.markdown('<div class="auth-footer-note">🔒 Confidential Platform · ISO-27001 · <strong style="color:#38bdf8;">Powered by EOLABS.IN</strong></div>', unsafe_allow_html=True)
         return
 
-    if st.button("← Back"):
-        st.session_state["auth_step"] = "welcome"
+    # Multi-step Verification sub-flows
+    if st.button("← Return to Sign In"):
+        st.session_state["auth_step"] = "auth_card"
         st.rerun()
-
-    if step == "existing":
-        st.markdown("### Sign in")
-        with st.form("login_form"):
-            identifier = st.text_input("Username or email", autocomplete="username")
-            password = st.text_input("Password", type="password", autocomplete="current-password")
-            submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
-        if submitted:
-            user = _auth.authenticate(identifier, password)
-            if user:
-                _complete_login(user)
-            else:
-                st.error("Sign-in details are incorrect or the account is unavailable.")
-        return
-
-    if step == "new":
-        st.markdown("### Create your account")
-        with st.form("enrollment_form"):
-            username = st.text_input("Username", help="3–30 lowercase letters, numbers, dots, dashes, or underscores.")
-            email = st.text_input("Email address", autocomplete="email")
-            phone = st.text_input("Phone number", placeholder="+919876543210", autocomplete="tel")
-            submitted = st.form_submit_button("Send verification code", type="primary", use_container_width=True)
-        if submitted:
-            try:
-                user = _auth.enroll_user(username, email, phone)
-                _auth.issue_email_code(user["id"])
-                st.session_state["pending_auth_user"] = user
-                st.session_state["auth_step"] = "verify"
-                st.rerun()
-            except _auth.AuthValidationError as error:
-                st.error(str(error))
-            except RuntimeError:
-                st.error("Email verification is temporarily unavailable. Please try again later.")
-        return
 
     if step == "verify":
         pending = st.session_state.get("pending_auth_user", {})
-        st.markdown("### Check your email")
-        st.info(f"We sent a six-digit code to {pending.get('email', 'your email address')}. It expires in 10 minutes.")
+        st.markdown(
+            f"""
+            <div style="background:rgba(56,189,248,0.1);border:1px solid rgba(56,189,248,0.25);border-radius:10px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:0.82rem;font-weight:700;color:#38bdf8;">ONE-TIME CODE SENT</div>
+                <div style="font-size:0.86rem;color:#cbd5e1;margin-top:4px;">We emailed a 6-digit code to <strong>{pending.get('email', 'your email')}</strong>.</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         with st.form("verification_form"):
-            code = st.text_input("Verification code", max_chars=6, placeholder="123456", autocomplete="one-time-code")
-            submitted = st.form_submit_button("Verify email", type="primary", use_container_width=True)
+            code = st.text_input("Verification code (OTP)", max_chars=6, placeholder="6-digit code", autocomplete="off")
+            submitted = st.form_submit_button("Verify Email Code →", type="primary", use_container_width=True)
         if submitted:
             if _auth.verify_email_code(pending.get("id", ""), code):
                 st.session_state["auth_step"] = "password"
@@ -206,11 +308,11 @@ def _login():
 
     if step == "password":
         pending = st.session_state.get("pending_auth_user", {})
-        st.markdown("### Set your password")
+        st.markdown('<div style="font-size:0.92rem;color:#cbd5e1;margin-bottom:12px;">Create a secure password for your account:</div>', unsafe_allow_html=True)
         with st.form("password_form"):
-            password = st.text_input("Password", type="password", autocomplete="new-password")
-            confirmation = st.text_input("Confirm password", type="password", autocomplete="new-password")
-            submitted = st.form_submit_button("Finish account setup", type="primary", use_container_width=True)
+            password = st.text_input("Password (min 8 chars)", type="password", placeholder="Minimum 8 characters", autocomplete="off")
+            confirmation = st.text_input("Confirm password", type="password", placeholder="Re-enter password", autocomplete="off")
+            submitted = st.form_submit_button("Complete Setup & Enter →", type="primary", use_container_width=True)
         if submitted:
             try:
                 if password != confirmation:

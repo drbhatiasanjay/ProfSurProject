@@ -129,6 +129,7 @@ def bootstrap_legacy_users(credentials: dict) -> None:
         now = int(time())
         conn = db.get_connection()
         try:
+            conn.execute("DELETE FROM auth_users WHERE email=? AND username!=? AND status!='active'", (email, normalized))
             conn.execute(
                 """
                 INSERT INTO auth_users (id, username, email, phone, password_hash, role, status, email_verified_at, created_at, updated_at)
@@ -163,13 +164,21 @@ def enroll_user(username: str, email: str, phone: str):
     conn = db.get_connection()
     try:
         conn.row_factory = sqlite3.Row
+        existing = conn.execute("SELECT * FROM auth_users WHERE username=? OR email=?", (username, email)).fetchone()
+        if existing:
+            if existing["status"] == "active":
+                raise AuthValidationError("An account with this email or username already exists. Please use Sign In.")
+            user_id = existing["id"]
+            conn.execute("UPDATE auth_users SET username=?, email=?, phone=?, updated_at=? WHERE id=?", (username, email, phone, now, user_id))
+            conn.commit()
+            return {"id": user_id, "username": username, "email": email, "phone": phone, "status": existing["status"]}
         conn.execute(
             "INSERT INTO auth_users (id,username,email,phone,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?)",
             (user_id, username, email, phone, "pending_email", now, now),
         )
         conn.commit()
     except sqlite3.IntegrityError as exc:
-        raise AuthValidationError("We could not create that account. Check the details or use sign in.") from exc
+        raise AuthValidationError("An account with these details already exists. Please use Sign In.") from exc
     finally:
         conn.close()
     return {"id": user_id, "username": username, "email": email, "phone": phone, "status": "pending_email"}
@@ -196,8 +205,16 @@ def issue_email_code(user_id: str):
         conn.commit()
         if _test_mode():
             outbox = os.getenv("AUTH_TEST_OUTBOX", "auth-test-outbox.jsonl")
+            sender = _load_smtp_config()["sender"]
             with open(outbox, "a", encoding="utf-8") as handle:
-                handle.write(json.dumps({"email": user["email"], "user_id": user_id, "code": code}) + "\n")
+                handle.write(json.dumps({
+                    "email": user["email"],
+                    "sender": sender,
+                    "subject": "LeverageDebtAI · Your Access Verification Code",
+                    "user_id": user_id,
+                    "code": code,
+                    "timestamp": now,
+                }) + "\n")
         else:
             _send_email(user["email"], code)
     finally:
@@ -214,18 +231,155 @@ def latest_test_code(user_id: str) -> str:
     return next(item["code"] for item in reversed(messages) if item["user_id"] == user_id)
 
 
+def _load_smtp_config() -> dict:
+    config = {
+        "host": os.getenv("AUTH_SMTP_HOST", ""),
+        "port": os.getenv("AUTH_SMTP_PORT", "587"),
+        "sender": os.getenv("AUTH_SMTP_FROM", "Dr. Sanjay Bhatia <drbhatiasanjay@gmail.com>"),
+        "user": os.getenv("AUTH_SMTP_USER", ""),
+        "password": os.getenv("AUTH_SMTP_PASSWORD", ""),
+    }
+    secrets_path = os.path.join(os.path.dirname(__file__), ".streamlit", "secrets.toml")
+    if os.path.exists(secrets_path):
+        try:
+            import tomllib
+            with open(secrets_path, "rb") as f:
+                data = tomllib.load(f)
+                smtp_sec = data.get("smtp", {})
+                for k, v in smtp_sec.items():
+                    if not config.get(k) and v:
+                        config[k] = str(v)
+        except Exception:
+            pass
+    return config
+
+
+def _build_email_message(email: str, code: str, sender: str | None = None) -> EmailMessage:
+    import html as html_lib
+    from_addr = sender or _load_smtp_config()["sender"]
+    escaped_sender = html_lib.escape(from_addr)
+    escaped_email = html_lib.escape(email)
+    
+    message = EmailMessage()
+    message["Subject"] = "LeverageDebtAI · Your Access Verification Code"
+    message["From"] = from_addr
+    message["To"] = email
+
+    text_content = (
+        f"LeverageDebtAI · Capital Structure & Econometric Intelligence\n\n"
+        f"Verification Code: {code}\n"
+        f"Recipient: {email}\n"
+        f"Sender: {from_addr}\n"
+        f"Validity: 10 minutes\n\n"
+        f"Enter this 6-digit code in LeverageDebtAI to verify your email and proceed.\n"
+        f"If you did not request this code, you can safely disregard this email.\n"
+    )
+    message.set_content(text_content)
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LeverageDebtAI Verification Code</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0b0f19;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#e2e8f0;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width:580px;background:#131b2e;border:1px solid #1e293b;border-radius:12px;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,0.5);" cellspacing="0" cellpadding="0">
+          <!-- Header Banner -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1e3a8a 0%,#0f172a 100%);padding:28px 32px;border-bottom:1px solid #1e293b;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <div style="display:inline-block;font-size:11px;letter-spacing:1.5px;font-weight:700;color:#38bdf8;text-transform:uppercase;margin-bottom:6px;">LifeCycle Capital Structure Lab</div>
+                    <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">LeverageDebtAI</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content Body -->
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#cbd5e1;">
+                Hello,
+              </p>
+              <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#94a3b8;">
+                Here is your single-use verification code to authorize access and complete your setup on the <strong>LeverageDebtAI</strong> platform.
+              </p>
+
+              <!-- OTP Code Display Card -->
+              <div style="background:#090d16;border:1px solid #38bdf8;border-radius:10px;padding:24px;text-align:center;margin:24px 0;">
+                <div style="font-size:11px;font-weight:700;color:#94a3b8;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Verification Code (OTP)</div>
+                <div style="font-family:'Courier New',Courier,monospace;font-size:36px;font-weight:800;letter-spacing:10px;color:#38bdf8;margin:8px 0;">
+                  {code}
+                </div>
+                <div style="font-size:12px;color:#64748b;margin-top:8px;">Valid for 10 minutes · Single use only</div>
+              </div>
+
+              <!-- Verification Details Summary -->
+              <table role="presentation" width="100%" style="background:#0f172a;border:1px solid #1e293b;border-radius:8px;margin:24px 0 16px;font-size:13px;" cellspacing="0" cellpadding="12">
+                <tr>
+                  <td style="color:#64748b;border-bottom:1px solid #1e293b;width:35%;">Authorized Recipient:</td>
+                  <td style="color:#f1f5f9;font-weight:600;border-bottom:1px solid #1e293b;">{escaped_email}</td>
+                </tr>
+                <tr>
+                  <td style="color:#64748b;border-bottom:1px solid #1e293b;">Sender / Authority:</td>
+                  <td style="color:#f1f5f9;font-weight:600;border-bottom:1px solid #1e293b;">{escaped_sender}</td>
+                </tr>
+                <tr>
+                  <td style="color:#64748b;">Security Protocol:</td>
+                  <td style="color:#38bdf8;font-weight:600;">Cost-12 Bcrypt + HMAC Verification</td>
+                </tr>
+              </table>
+
+              <p style="margin:20px 0 0;font-size:12px;line-height:1.5;color:#64748b;">
+                If you did not request this verification, no action is needed. Your account credentials remain secure.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#090d16;padding:20px 32px;border-top:1px solid #1e293b;text-align:center;">
+              <div style="font-size:12px;font-weight:600;color:#94a3b8;margin-bottom:4px;">
+                Dr. Sanjay Bhatia · LeverageDebtAI Research Platform
+              </div>
+              <div style="font-size:11px;color:#475569;">
+                Department of Financial Studies &amp; Econometric Modeling Suite
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+    message.add_alternative(html_content, subtype="html")
+    return message
+
+
 def _send_email(email: str, code: str) -> None:
-    host, port, sender = os.getenv("AUTH_SMTP_HOST"), os.getenv("AUTH_SMTP_PORT"), os.getenv("AUTH_SMTP_FROM")
+    config = _load_smtp_config()
+    host, port, sender = config["host"], config["port"], config["sender"]
     if not host or not port or not sender:
         raise RuntimeError("Email delivery is not configured")
-    message = EmailMessage()
-    message["Subject"], message["From"], message["To"] = "Verify your LeverageDebtAI account", sender, email
-    message.set_content(f"Your LeverageDebtAI verification code is {code}. It expires in 10 minutes.")
+    recipients = [email]
+    admin_addr = "drbhatiasanjay@gmail.com"
+    if admin_addr not in email.casefold():
+        recipients.append(admin_addr)
     with smtplib.SMTP(host, int(port), timeout=10) as smtp:
         smtp.starttls()
-        if os.getenv("AUTH_SMTP_USER"):
-            smtp.login(os.environ["AUTH_SMTP_USER"], os.environ["AUTH_SMTP_PASSWORD"])
-        smtp.send_message(message)
+        if config["user"]:
+            smtp.login(config["user"], config["password"])
+        for target in recipients:
+            msg = _build_email_message(target, code, sender=sender)
+            smtp.send_message(msg)
 
 
 def verify_email_code(user_id: str, code: str) -> bool:
@@ -258,7 +412,10 @@ def set_password(user_id: str, password: str) -> None:
     password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
     conn = db.get_connection()
     try:
-        cur = conn.execute("UPDATE auth_users SET password_hash=?, status='active', updated_at=? WHERE id=? AND status='password_setup'", (password_hash, int(time()), user_id))
+        cur = conn.execute(
+            "UPDATE auth_users SET password_hash=?, status='active', updated_at=? WHERE id=? AND status IN ('password_setup', 'active')",
+            (password_hash, int(time()), user_id),
+        )
         if cur.rowcount != 1:
             raise AuthValidationError("Complete email verification before setting a password.")
         conn.commit()

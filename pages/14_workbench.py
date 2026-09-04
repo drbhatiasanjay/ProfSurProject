@@ -517,9 +517,9 @@ with col_right:
 
                     fig.update_layout(
                         **plotly_layout("Coefficient Estimates", height=max(250, len(plot_df) * 40)),
-                        yaxis=dict(autorange="reversed"),
                         xaxis_title="Coefficient",
                     )
+                    fig.update_yaxes(autorange="reversed")
                     fig.add_vline(x=0, line_dash="dash", line_color="gray", line_width=1)
                     st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
                     chart_download_button(fig, "workbench_coefficient_plot.png")

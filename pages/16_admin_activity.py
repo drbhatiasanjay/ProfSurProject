@@ -76,9 +76,8 @@ with c1:
     _pc.columns = ["Page", "Visits"]
     fig1 = px.bar(_pc, x="Visits", y="Page", orientation="h",
                   color="Visits", color_continuous_scale="teal")
-    fig1.update_layout(**plotly_layout("", height=360),
-                       yaxis={"categoryorder": "total ascending"},
-                       coloraxis_showscale=False)
+    fig1.update_layout(**plotly_layout("", height=360), coloraxis_showscale=False)
+    fig1.update_yaxes(categoryorder="total ascending")
     st.plotly_chart(fig1, config=PLOTLY_CONFIG, use_container_width=True)
     chart_download_button(fig1, "admin_page_popularity.png")
 

@@ -494,7 +494,7 @@ def generate_followup_suggestions(
     try:
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
-            model="claude-haiku-4-5-20251001",
+            model="claude-haiku-4-5",
             max_tokens=150,
             system=system_msg,
             messages=[{"role": "user", "content": user_msg}],
@@ -562,7 +562,7 @@ def stream_ollama(
 def stream_anthropic(
     messages: list[dict],
     system: str = "",
-    model: str = "claude-haiku-4-5-20251001",
+    model: str = "claude-sonnet-4-6",
     max_tokens: int = 1024,
     *,
     role: str = "viewer",

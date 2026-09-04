@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime, timezone
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "capital_structure.db")
+DB_PATH = os.environ.get("PROFSUR_DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "capital_structure.db"))
 
 
 def is_cmie_lab_enabled() -> bool:

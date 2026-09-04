@@ -168,13 +168,13 @@ class TestStreamGeminiAgent:
     def test_missing_api_key_yields_configuration_message(self, monkeypatch):
         monkeypatch.delenv("GEMINI_API_KEY", raising=False)
         monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
-
-        chunks = list(stream_gemini_agent(
-            messages=[{"role": "user", "content": "What is leverage?"}],
-            system="System prompt",
-        ))
-        assert len(chunks) == 1
-        assert "not configured" in chunks[0]
+        with patch("streamlit.secrets", {}):
+            chunks = list(stream_gemini_agent(
+                messages=[{"role": "user", "content": "What is leverage?"}],
+                system="System prompt",
+            ))
+            assert len(chunks) == 1
+            assert "not configured" in chunks[0]
 
     @patch("models.llm_adapters.os.environ.get")
     def test_mocked_gemini_agent_text_response(self, mock_env):
