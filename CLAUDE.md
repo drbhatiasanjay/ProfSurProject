@@ -62,95 +62,13 @@ gcloud run deploy lifecycle-leverage --source . --region us-east1 --project temp
 - Service: lifecycle-leverage
 
 ## File Structure
-```
-app.py              - Entrypoint, sidebar filters, panel+theme state, navigation
-db.py               - All SQL queries, caching, vintage predicate, connection
-helpers.py          - Formatters, chart theme dispatcher (plotly_layout),
-                      new_badge() helper, interpretation engine
-assets/
-  style_light.css   - Default theme (inherits Streamlit defaults)
-  style_dark.css    - DataV2-mock palette (full widget coverage)
-cmie/
-  client.py         - CmieClient (download_wapicall_zip, post_query_form,
-                      download_query_zip) with backoff + TokenBucket hook;
-                      Retry-After parsed into CmieRateLimitError.retry_after_s
-  errors.py         - CmieError hierarchy (Auth / Entitlement / RateLimit / …)
-  pipeline.py       - import_from_raw_dataframe, merge_zip_paths_to_version
-  batch_pipeline.py - Hardened per-company wapicall loop: abort-on-auth,
-                      Retry-After honouring, 5-consecutive-5xx circuit breaker,
-                      shared TokenBucket (§F.3.3/4/5). run_per_company_batch +
-                      import_results_to_db; returns CompanyResult + BatchSummary
-  normalize.py      - CANONICAL_COLUMNS, normalize_panel_like, validate_panel
-  indicator_map.py  - COLUMN_ALIASES (CMIE → canonical)
-  query_form.py     - cmie_tabular_json_to_dataframe
-  zip_parse.py      - ZIP extract + ERROR.txt classification
-  rate_limit.py     - TokenBucket (now wired on all 4 streamlit_import sites)
-  load_vintage.py   - DataV2 T616/T617/T618/T623 loader
-  streamlit_import.py - Sidebar import UI (currently hidden at app.py:133-136);
-                      errno-check guard (§E.5.3) before tabular parser
-  __main__.py       - CLI: download / import-zip / merge-zips / batch-download
-models/
-  base.py           - PanelGroupKFold, prepare_panel, metrics
-  econometric.py    - OLS, FE, RE, Hausman, ANOVA, GMM (Tier 1)
-  scenario_regression.py - Pure OLS helpers for Scenarios (pytest-covered)
-  ml_predict.py     - RF, XGBoost, LightGBM, SHAP (Tier 2)
-  timeseries.py     - LSTM/GRU forecasting (Tier 3, torch-guarded)
-  clustering.py     - K-Means, Dickinson comparison (Tier 3)
-  survival.py       - Cox PH, Kaplan-Meier (Tier 3)
-  data_ingest.py    - Bulk / CMIE ingest helpers (classification, validation)
-  workbench.py      - Workbench page logic
-  cache.py          - Model artifact storage
-  interaction.py    - Cross-term OLS + stage moderation + simple slopes (delta method SEs)
-  board_export.py   - 13 topic builder functions → {figs, tables, insights, actions} (page 17)
-  pptx_generator.py - PPTX assembly: Plotly→PNG (kaleido) → python-pptx slides
-pages/
-  1_dashboard.py           - KPIs, Fig 5.1 stage view, Fig 5.2 year trends, Table 5.9, T623 index
-  2_peer_benchmarks.py     - Company vs industry/stage
-  3_scenarios.py           - OLS scenario coefficients (pinned: panel_mode='thesis')
-  4_bulk_upload.py         - Bulk upload + CMIE API Sync tab
-  5_data_explorer.py       - Raw panel explorer (vintage-aware)
-  6_settings.py            - Appearance (theme toggle) + CMIE lab UI
-  7_knowledge_graph.py     - Life Stage Dynamics: Markov transitions, stickiness, event impact, COVID cohorts, multi-hop profiling (sidebar title: "Life Stage Dynamics") [KG1 — do not modify]
-  8_econometrics.py        - OLS/FE/RE/Hausman (pinned: thesis)
-  9_ml_models.py           - RF/XGB/LGBM + SHAP (pinned: thesis)
-  10_forecasting.py        - LSTM/GRU (pinned: thesis)
-  11_clustering.py         - K-Means vs Dickinson
-  12_transitions.py        - Life-stage transition matrices
-  13_advanced_econometrics.py - GMM, delta-leverage, COVID cohorts (pinned: thesis)
-  14_workbench.py          - Workbench scratchpad
-  15_interaction_effects.py - Cross-term (Prof×Tang) + stage moderation + simple slopes (pinned: thesis)
-  16_admin_activity.py     - Admin audit log viewer (role: admin only)
-  17_board_export.py       - Individual company board deck: 13 topics, preview + .pptx download (role: admin/researcher)
-  18_company_navigator.py  - Interactive graph explorer: Ego Graph / Peer Cluster / Stage Map, pyvis + Plotly (role: admin/researcher) [KG1 — do not modify]
-  19_ai_assistant.py       - AI assistant chat interface
-  20_life_stage_dynamics.py - Life stage dynamics explorer
-  21_knowledge_graph2.py   - KG2: OCaml-ontology-backed semantic graph (Macro/Meso/Micro, personas, Explain This) [KG2 — separate stack]
-graph_bridge.py     - KG2 Python stub: generates Macro/Meso/Micro JSON matching OCaml contract;
-                      swap for OCaml HTTP call once lifecycle-ontology service is live
-lifecycle-ontology/ - OCaml semantic + analytics meta-layer (KG2 backend)
-  dune-project
-  src/
-    domain/         - stage, period, metric, company types + smart constructors
-    analytics_meta/ - model, model_run, statistic, normative_band, scenario, explanation, persona
-    normative/      - band computation + anomaly flags
-    scenario/       - scenario DSL + validation
-    graph_export/   - ocamlgraph Macro/Meso/Micro → JSON/DOT
-    api/            - Dream HTTP: /lifecycle_query /explain_stat /scenario_runner
-    cli/            - cmdliner entry point
-  test/             - alcotest unit tests
-scripts/
-  cmie_stage1_reliance_diagnostic.py  - wapicall E2E probe (§E.5)
-  cmie_stage1_queryphp_probe.py       - query.php E2E probe (§E.5.3)
-tests/
-  test_database.py, test_models.py, test_scenario_regression.py,
-  test_cmie_*.py (7 files), test_bulk_upload_cmie_parse.py,
-  test_page_integration.py, test_board_export.py, test_cfo_graph.py   (344 tests total)
-  test_kg2_bridge.py  - KG2 graph_bridge JSON contract tests
-cmie_validation/    - Per-run CMIE API artifacts (gitignored)
-DataV2/             - Raw CMIE pipe-delimited extracts (gitignored)
-docs/
-  KG2_ARCHITECTURE.md - KG2 entry-point doc (cross-references all four OCaml spec files)
-```
+## File Structure (Summary)
+- **Entry & Database:** `app.py` (entrypoint, filters, nav), `db.py` (vintage-aware SQL query engine), `helpers.py` (Plotly layouts, formatters).
+- **Core Models (`models/`):** `econometric.py` (OLS, FE, RE, GMM), `ml_predict.py` (RF, XGBoost, SHAP), `timeseries.py` (LSTM), `econometric_literature_vault.py` (citations/theories), `rich_chat_renderer.py` (dual-theme renderers).
+- **Dashboards (`pages/`):** 24 numbered pages (1: Dashboard, 8: Stata Studio, 19: AI Assistant, 21: KG2, 24: Academic Guide). Full page catalog in `docs/SCREEN_DESIGN_LAYOUTS.md`.
+- **Knowledge Graphs & Ontology:** `graphify-out/` (KG1 & code dependency graph), `lifecycle-ontology/` (OCaml KG2 service + `graph_bridge.py`).
+- **Automation CLI:** `scripts/project_ops.py` (status, test, push, verify), `scripts/gen_bulk_doc.py` (bulk docs).
+- **Full Dependency Map:** Query `codebase-memory-mcp` or read `graphify-out/GRAPH_REPORT.md`.
 
 ## Key Commands (KG2)
 ```bash

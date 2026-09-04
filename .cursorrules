@@ -1,0 +1,9 @@
+# Cursor Rules — LifeCycle Leverage Dashboard
+
+See AGENTS.md and .agents/rules/token_optimization.md for authoritative directives.
+
+1. **Ponytail Minimal-Code Principle:** Check necessity, reuse models/utils, use standard libraries, write minimal lines.
+2. **Concise Mode:** No conversational fluff, no pleasantries, return targeted diffs only.
+3. **Graph-First Lookup:** Always use codebase-memory-mcp or graphify-out/ before reading full files.
+4. **Quiet Tests:** Run `py -3.12 scripts/project_ops.py test --fast` or `pytest -q --tb=line`.
+5. **Autonomy & Non-Destructive:** Run/stop servers autonomously. Always append/extend, never overwrite existing features.
