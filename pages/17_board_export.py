@@ -310,12 +310,19 @@ if st.session_state.get("deck_previewed"):
                     firm_loop = firm_pcts + [firm_pcts[0]]
                     peer_loop = [50, 50, 50, 50, 50, 50, 50]
 
+                    # Helper to convert hex to valid rgba for Plotly
+                    def _hex_to_rgba(hex_code, alpha=0.25):
+                        h = str(hex_code).lstrip("#")
+                        if len(h) == 6:
+                            return f"rgba({int(h[0:2], 16)}, {int(h[2:4], 16)}, {int(h[4:6], 16)}, {alpha})"
+                        return f"rgba(13, 148, 136, {alpha})"
+
                     fig_radar = go.Figure()
                     fig_radar.add_trace(go.Scatterpolar(
                         r=firm_loop,
                         theta=categories_loop,
                         fill='toself',
-                        fillcolor=f"{stage_color}33",
+                        fillcolor=_hex_to_rgba(stage_color, 0.25),
                         line=dict(color=stage_color, width=2.5),
                         name=f"{selected_name} (Percentile)",
                     ))
