@@ -134,6 +134,7 @@ def bootstrap_legacy_users(credentials: dict) -> None:
                 INSERT INTO auth_users (id, username, email, phone, password_hash, role, status, email_verified_at, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
                 ON CONFLICT(username) DO UPDATE SET
+                    email=excluded.email,
                     password_hash=excluded.password_hash,
                     role=excluded.role,
                     status='active',
