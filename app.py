@@ -27,44 +27,208 @@ if os.path.exists(css_path):
     with open(css_path) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# ── Authentication ────────────────────────────────────────────────────────────
-import bcrypt as _bcrypt
+# ── Secure LeverageDebtAI authentication ───────────────────────────────────────
+import auth as _auth
 
 try:
-    _creds = {"usernames": {
+    _legacy_creds = {
         k: dict(v) for k, v in st.secrets.get("credentials", {}).get("usernames", {}).items()
-    }}
+    }
 except Exception:
-    _creds = {"usernames": {}}
+    _legacy_creds = {}
+
+_auth.ensure_auth_tables()
+_auth.bootstrap_legacy_users(_legacy_creds)
+
+
+def _complete_login(user):
+    st.session_state["authentication_status"] = True
+    st.session_state["auth_user"] = user
+    st.session_state["username"] = user["username"]
+    st.session_state["name"] = user.get("name") or user["username"]
+    st.session_state["user"] = {
+        "name": user.get("name") or user["username"],
+        "username": user["username"],
+        "role": user.get("role", "viewer"),
+    }
+    st.session_state.pop("auth_step", None)
+    st.rerun()
+
 
 def _login():
-    st.markdown("### LifeCycle Leverage — Sign In")
-    with st.form("login_form"):
-        _u = st.text_input("Username")
-        _p = st.text_input("Password", type="password")
-        if st.form_submit_button("Login", type="primary"):
-            _user = _creds["usernames"].get(_u)
-            if _user:
-                try:
-                    _ok = _bcrypt.checkpw(_p.encode(), _user["password"].encode()) or _p in ("Pass@123", "password", "admin123")
-                except Exception:
-                    _ok = _p in ("Pass@123", "password", "admin123")
+    st.markdown(
+        """
+        <style>
+        /* Focused auth surface; application navigation appears after sign-in. */
+        .stApp, [data-testid="stAppViewContainer"], section.main {
+            background:
+                radial-gradient(circle at 78% 12%, rgba(99,102,241,.28), transparent 28rem),
+                radial-gradient(circle at 12% 88%, rgba(14,165,233,.16), transparent 24rem),
+                #081225 !important;
+        }
+        section[data-testid="stSidebar"], header[data-testid="stHeader"] { display: none !important; }
+        [data-testid="stAppViewContainer"] .main .block-container {
+            max-width: 520px;
+            padding-top: 10vh;
+            padding-bottom: 10vh;
+        }
+        [data-testid="stMarkdownContainer"] h2 {
+            color: #f8fafc !important;
+            font-size: clamp(2rem, 5vw, 3rem) !important;
+            letter-spacing: -.045em;
+            line-height: 1.05;
+            margin: .7rem 0 .65rem;
+        }
+        [data-testid="stCaptionContainer"] {
+            color: #a9b7cf !important;
+            font-size: .96rem !important;
+            line-height: 1.6 !important;
+        }
+        [data-testid="stForm"] {
+            background: rgba(15, 29, 54, .78);
+            border: 1px solid rgba(148,163,184,.22);
+            border-radius: 22px;
+            padding: 1.6rem 1.7rem;
+            box-shadow: 0 24px 80px rgba(0,0,0,.32);
+            backdrop-filter: blur(18px);
+        }
+        [data-testid="stForm"] label, [data-testid="stTextInput"] label {
+            color: #dbeafe !important;
+            font-weight: 600 !important;
+        }
+        [data-testid="stTextInput"] input {
+            background: rgba(2, 8, 23, .55) !important;
+            color: #f8fafc !important;
+            border: 1px solid rgba(148,163,184,.3) !important;
+            border-radius: 11px !important;
+        }
+        [data-testid="stButton"] button {
+            min-height: 3rem;
+            border-radius: 12px !important;
+            font-weight: 700 !important;
+            transition: transform .18s ease, box-shadow .18s ease !important;
+        }
+        [data-testid="stButton"] button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 26px rgba(79,70,229,.28);
+        }
+        [data-testid="stAlert"] {
+            background: rgba(30, 58, 95, .6) !important;
+            border: 1px solid rgba(125,211,252,.24) !important;
+            color: #dbeafe !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div style="display:flex;align-items:center;gap:.7rem;color:#c7d2fe;font-size:.82rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;">'
+        '<span style="display:grid;place-items:center;width:2.15rem;height:2.15rem;border-radius:12px;background:linear-gradient(135deg,#6366f1,#22d3ee);box-shadow:0 8px 28px rgba(99,102,241,.38);font-size:1.15rem;">↗</span>'
+        'LEVERAGEDEBTAI</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("## Welcome to LeverageDebtAI")
+    st.caption("Evidence-led debt and capital-structure intelligence for researchers, finance teams, and boards.")
+    step = st.session_state.get("auth_step", "welcome")
+    if step != "welcome":
+        steps = {"existing": ("Sign in", "1"), "new": ("Account details", "1"), "verify": ("Verify email", "2"), "password": ("Set password", "3")}
+        current_label, current_number = steps.get(step, ("Secure access", "1"))
+        st.markdown(
+            f'<div style="display:flex;align-items:center;gap:.65rem;margin:1.35rem 0 .35rem;color:#a5b4fc;font-size:.76rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;">'
+            f'<span style="display:grid;place-items:center;width:1.6rem;height:1.6rem;border:1px solid #818cf8;border-radius:50%;">{current_number}</span>'
+            f'<span>{current_label}</span><span style="height:1px;flex:1;background:rgba(148,163,184,.28);"></span>'
+            f'<span style="color:#7183a8;letter-spacing:.02em;text-transform:none;">Secure access</span></div>',
+            unsafe_allow_html=True,
+        )
+
+    if step == "welcome":
+        st.markdown("### How would you like to continue?")
+        if st.button("I already have an account", use_container_width=True, type="primary"):
+            st.session_state["auth_step"] = "existing"
+            st.rerun()
+        if st.button("Create a new account", use_container_width=True):
+            st.session_state["auth_step"] = "new"
+            st.rerun()
+        st.info("New accounts are verified by a one-time email code. Passwords are never emailed.")
+        return
+
+    if st.button("← Back"):
+        st.session_state["auth_step"] = "welcome"
+        st.rerun()
+
+    if step == "existing":
+        st.markdown("### Sign in")
+        with st.form("login_form"):
+            identifier = st.text_input("Username or email", autocomplete="username")
+            password = st.text_input("Password", type="password", autocomplete="current-password")
+            submitted = st.form_submit_button("Sign in", type="primary", use_container_width=True)
+        if submitted:
+            user = _auth.authenticate(identifier, password)
+            if user:
+                _complete_login(user)
             else:
-                _ok = False
-            if _ok:
-                st.session_state["authentication_status"] = True
-                st.session_state["username"] = _u
-                st.session_state["name"] = _user.get("name", _u)
+                st.error("Sign-in details are incorrect or the account is unavailable.")
+        return
+
+    if step == "new":
+        st.markdown("### Create your account")
+        with st.form("enrollment_form"):
+            username = st.text_input("Username", help="3–30 lowercase letters, numbers, dots, dashes, or underscores.")
+            email = st.text_input("Email address", autocomplete="email")
+            phone = st.text_input("Phone number", placeholder="+919876543210", autocomplete="tel")
+            submitted = st.form_submit_button("Send verification code", type="primary", use_container_width=True)
+        if submitted:
+            try:
+                user = _auth.enroll_user(username, email, phone)
+                _auth.issue_email_code(user["id"])
+                st.session_state["pending_auth_user"] = user
+                st.session_state["auth_step"] = "verify"
                 st.rerun()
-            else:
-                st.error("Username or password incorrect.")
+            except _auth.AuthValidationError as error:
+                st.error(str(error))
+            except RuntimeError:
+                st.error("Email verification is temporarily unavailable. Please try again later.")
+        return
+
+    if step == "verify":
+        pending = st.session_state.get("pending_auth_user", {})
+        st.markdown("### Check your email")
+        st.info(f"We sent a six-digit code to {pending.get('email', 'your email address')}. It expires in 10 minutes.")
+        with st.form("verification_form"):
+            code = st.text_input("Verification code", max_chars=6, placeholder="123456", autocomplete="one-time-code")
+            submitted = st.form_submit_button("Verify email", type="primary", use_container_width=True)
+        if submitted:
+            if _auth.verify_email_code(pending.get("id", ""), code):
+                st.session_state["auth_step"] = "password"
+                st.rerun()
+            st.error("That code is invalid or expired.")
+        return
+
+    if step == "password":
+        pending = st.session_state.get("pending_auth_user", {})
+        st.markdown("### Set your password")
+        with st.form("password_form"):
+            password = st.text_input("Password", type="password", autocomplete="new-password")
+            confirmation = st.text_input("Confirm password", type="password", autocomplete="new-password")
+            submitted = st.form_submit_button("Finish account setup", type="primary", use_container_width=True)
+        if submitted:
+            try:
+                if password != confirmation:
+                    raise _auth.AuthValidationError("Passwords do not match.")
+                _auth.set_password(pending["id"], password)
+                _complete_login(_auth.authenticate(pending["username"], password))
+            except _auth.AuthValidationError as error:
+                st.error(str(error))
+        return
+
 
 if not st.session_state.get("authentication_status"):
     _login()
     st.stop()
 
-_username = st.session_state.get("username", "")
-_role = _creds["usernames"].get(_username, {}).get("role", "viewer")
+_auth_user = st.session_state.get("auth_user", {})
+_username = _auth_user.get("username", st.session_state.get("username", ""))
+_role = _auth_user.get("role", "viewer")
 st.session_state["user"] = {
     "name": st.session_state.get("name", _username),
     "username": _username,
