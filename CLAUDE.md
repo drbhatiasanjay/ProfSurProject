@@ -14,26 +14,25 @@ Streamlit dashboard analyzing capital structure determinants across corporate li
 
 ## Key Commands
 ```bash
+# Unified Project Ops CLI (Zero-Bloat Automation)
+py -3.12 scripts/project_ops.py status               # Check local, remote, and Cloud Run revision status
+py -3.12 scripts/project_ops.py test --fast          # Run targeted test suites with quiet output
+py -3.12 scripts/project_ops.py verify --env gcp     # Live Playwright browser verification + screenshot
+py -3.12 scripts/project_ops.py push                 # Keyring-isolated pre-push test and git push
+
 # Local dev
 streamlit run app.py
 
-# Run tests
-py -3.12 -m pytest tests/ -v
+# Run tests (quiet mode to preserve token limits)
+py -3.12 -m pytest tests/ -q --tb=line
 
 # Docker
 docker compose up -d
-docker exec lifecycle-app python -m pytest tests/ -v
+docker exec lifecycle-app python -m pytest tests/ -q
 
 # Deploy to GCP
 export CLOUDSDK_PYTHON="/c/Users/hemas/AppData/Local/Programs/Python/Python312/python.exe"
 gcloud run deploy lifecycle-leverage --source . --region us-east1 --project tempproject-462219 --port 8501 --memory 2Gi --allow-unauthenticated
-
-# DataV2 vintage load (CMIE 2025 rollforward from DataV2/ pipe-delimited extracts)
-py -3.12 -m cmie.load_vintage ./DataV2 --vintage cmie_2025
-
-# Live CMIE diagnostics (standalone, gitignored artifacts)
-py -3.12 scripts/cmie_stage1_reliance_diagnostic.py   # wapicall transport probe
-py -3.12 scripts/cmie_stage1_queryphp_probe.py         # query.php transport probe
 ```
 
 ## UI controls (sidebar + Settings)
