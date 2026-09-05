@@ -100,15 +100,19 @@ Created detailed project note at:
    - Built `scripts/gen_bulk_doc.py` to offload bulk HTML/markdown generation to Gemini 1.5 Flash.
 
 ## 2. Verified Deployments & Git State
-- **Git HEAD:** `e722ca5` (`master` in sync with `origin/master`).
-- **Google Cloud Run:** Revision `lifecycle-leverage-00173-jq4` serving 100% traffic at `https://lifecycle-leverage-779655496440.us-east1.run.app`.
-- **Test Suite:** 86/86 targeted tests passing (100% green).
-- **Default Auth:** `profsurkumar` / `Pass@123`.
+- **Git HEAD:** `1556b35` (`master` in sync with `origin/master`).
+- **Google Cloud Run:** Live build `33978079087` serving 100% traffic at `https://lifecycle-leverage-779655496440.us-east1.run.app`.
+- **Key Milestones Resolved:**
+  - `models/stata_engine.py`: Added smart data-aware variable resolution (`int_rate` <-> `interest`) and dropped all-NaN collinear variables before estimation to eliminate zero-size array crashes in `xtreg`.
+  - `pages/23_stata_studio.py`: Wrapped command prompt in `st.form` for atomic input submission across both `Enter` keypress and `▶ Run Command` click.
+  - `models/rich_chat_renderer.py` & CSS: Converted terminal output to native `st.html` with explicit `<pre>` block, fixing text contrast (`#F0F6FC`) and preventing CommonMark line collapsing.
+- **Default Auth:** `profsurkumar` / `Pass@123` (Researcher role), `drbhatia` / `Pass@123` (Admin role).
 
-## 3. Recommended Next Session Starting Tasks
-- [ ] Task A: Enhance **Page 17: Board Deck Export** / **Page 18: Company Navigator**.
-- [ ] Task B: Review/extend **`docs/CHART_SWITCHER_ACADEMIC_PROTOTYPE.html`** into additional dashboard views.
+## 3. Recommended Next Tasks
+- [ ] Task A: Review & extend **Page 17: Board Deck Export** / **Page 18: Company Navigator**.
+- [ ] Task B: Implement user observability & session metrics from **`USER_BEHAVIORAL_OBSERVABILITY_PROTOTYPE.html`**.
 - [ ] Task C: Ingest CMIE 2025 rollforward updates via `scripts/project_ops.py`.
+
 
 ---
 
