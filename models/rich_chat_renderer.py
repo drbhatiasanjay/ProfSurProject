@@ -48,18 +48,18 @@ def render_rich_terminal_html(ascii_output: str, command_title: str = "Stata 18 
     """
     escaped_ascii = html.escape(ascii_output.strip())
     return clean_html(f"""
-<div class="stata-rich-terminal-card" style="background: #0D1117 !important; background-color: #0D1117 !important; border: 1px solid #30363D !important; border-radius: 8px; margin-bottom: 14px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
-<div style="background: #161B22 !important; background-color: #161B22 !important; padding: 8px 14px; border-bottom: 1px solid #30363D !important; display: flex; align-items: center; justify-content: space-between;">
-<div style="display: flex; gap: 6px; align-items: center;">
-<span style="width: 10px; height: 10px; border-radius: 50%; background-color: #FF5F56 !important; display: inline-block;"></span>
-<span style="width: 10px; height: 10px; border-radius: 50%; background-color: #FFBD2E !important; display: inline-block;"></span>
-<span style="width: 10px; height: 10px; border-radius: 50%; background-color: #27C93F !important; display: inline-block;"></span>
+<div class="stata-rich-terminal-card" style="background: #0D1117 !important; background-color: #0D1117 !important; border: 1px solid #30363D !important; border-radius: 8px; margin-bottom: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.35);">
+<div style="background: #161B22 !important; background-color: #161B22 !important; padding: 10px 16px; border-bottom: 1px solid #30363D !important; display: flex; align-items: center; justify-content: space-between;">
+<div style="display: flex; gap: 7px; align-items: center;">
+<span style="width: 11px; height: 11px; border-radius: 50%; background-color: #FF5F56 !important; display: inline-block;"></span>
+<span style="width: 11px; height: 11px; border-radius: 50%; background-color: #FFBD2E !important; display: inline-block;"></span>
+<span style="width: 11px; height: 11px; border-radius: 50%; background-color: #27C93F !important; display: inline-block;"></span>
 </div>
-<div style="font-size: 11.5px; font-weight: 600; color: #C9D1D9 !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">{html.escape(command_title)}</div>
-<div style="font-size: 10.5px; color: #58A6FF !important; font-family: monospace; font-weight: 600;">N = 8,677</div>
+<div style="font-size: 12.5px; font-weight: 700; color: #58A6FF !important; font-family: 'Consolas', 'Fira Code', 'Courier New', monospace !important; letter-spacing: 0.02em;">{html.escape(command_title)}</div>
+<div style="font-size: 11.5px; color: #7EE787 !important; font-family: 'Consolas', 'Courier New', monospace !important; font-weight: 700;">N = 8,677</div>
 </div>
-<div style="padding: 12px 16px; overflow-x: auto; background: #0D1117 !important; background-color: #0D1117 !important;">
-<div style="margin: 0 !important; font-family: 'Consolas', 'Courier New', monospace !important; font-size: 12.5px !important; line-height: 1.45 !important; color: #F0F6FC !important; background: transparent !important; background-color: transparent !important; white-space: pre !important;">{escaped_ascii}</div>
+<div style="padding: 14px 18px; overflow-x: auto; background: #0D1117 !important; background-color: #0D1117 !important;">
+<pre class="stata-terminal-output" style="margin: 0 !important; font-family: 'Consolas', 'Courier New', monospace !important; font-size: 12.5px !important; line-height: 1.5 !important; color: #F0F6FC !important; background: transparent !important; background-color: transparent !important; white-space: pre !important; word-wrap: normal !important; overflow-x: auto !important;">{escaped_ascii}</pre>
 </div>
 </div>
 """)

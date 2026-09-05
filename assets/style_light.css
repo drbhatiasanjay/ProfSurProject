@@ -111,11 +111,18 @@ div.stata-rich-terminal-card {
 .stata-rich-terminal-card code,
 .stata-rich-terminal-card span,
 .stata-rich-terminal-card pre code,
-.stata-rich-terminal-card pre span {
+.stata-rich-terminal-card pre span,
+.stata-rich-terminal-card .stata-terminal-output {
     color: #F0F6FC !important;
+    font-family: 'Consolas', 'Courier New', monospace !important;
+    white-space: pre !important;
+    word-break: normal !important;
+    word-wrap: normal !important;
+    overflow-x: auto !important;
     background-color: transparent !important;
     background: transparent !important;
 }
+
 
 /* Bento Card Grid System */
 .bento-grid {

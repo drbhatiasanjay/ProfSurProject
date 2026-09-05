@@ -522,3 +522,32 @@ button[data-testid="stSidebarCollapseButton"]:focus-visible {
     outline-offset: 2px !important;
 }
 
+/* ==========================================================================
+   Stata Studio Rich Terminal Card High-Contrast Protection
+   ========================================================================== */
+.stata-rich-terminal-card,
+div.stata-rich-terminal-card {
+    background-color: #0D1117 !important;
+    border: 1px solid #30363D !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.stata-rich-terminal-card *,
+.stata-rich-terminal-card pre,
+.stata-rich-terminal-card code,
+.stata-rich-terminal-card .stata-terminal-output {
+    font-family: 'Consolas', 'Courier New', monospace !important;
+}
+
+.stata-rich-terminal-card pre,
+.stata-rich-terminal-card .stata-terminal-output {
+    color: #F0F6FC !important;
+    white-space: pre !important;
+    word-break: normal !important;
+    word-wrap: normal !important;
+    overflow-x: auto !important;
+    background: transparent !important;
+}
+
+

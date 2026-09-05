@@ -507,9 +507,12 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
         )
 
         clean_cmd = turn["stata_command"].lstrip('. ')
-        current_theme = st.session_state.get("theme", "light")
         terminal_html = render_rich_terminal_html(turn["stata_output"], f"Stata 18 SE · {clean_cmd}", theme=current_theme)
-        st.markdown(terminal_html, unsafe_allow_html=True)
+        if hasattr(st, "html"):
+            st.html(terminal_html)
+        else:
+            st.markdown(terminal_html, unsafe_allow_html=True)
+
 
         # Intelligent Chart Switcher if regression or compatible charts present
         compat = turn.get("compatible_charts", [])

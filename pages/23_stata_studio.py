@@ -273,7 +273,11 @@ with tab_cli:
     current_theme = st.session_state.get("theme", "light")
 
     terminal_html = render_rich_terminal_html(ascii_out, f"Stata 18 SE · {clean_cmd}", theme=current_theme)
-    st.markdown(terminal_html, unsafe_allow_html=True)
+    if hasattr(st, "html"):
+        st.html(terminal_html)
+    else:
+        st.markdown(terminal_html, unsafe_allow_html=True)
+
 
     # Intelligent Chart Switcher if regression or compatible charts present
     compat = last_res.get("compatible_charts", [])
