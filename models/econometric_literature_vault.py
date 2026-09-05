@@ -368,6 +368,36 @@ def get_relevant_vault_citations(text: str) -> List[str]:
         citations.append("Titman, S., & Wessels, R. (1988). The Determinants of Capital Structure Choice. Journal of Finance, 43(1), 1-19.")
         citations.append("Insolvency and Bankruptcy Board of India (IBBI). Quarterly Insolvency Resolution & Liquidation Bulletin (2022-2023).")
 
+    # Debt Service / Interest Coverage (ICR)
+    if any(k in t for k in ["icr", "coverage", "interest cover", "debt service", "interest expense"]):
+        citations.append("Booth, L., Aivazian, V., Demirguc-Kunt, A., & Maksimovic, V. (2001). Capital Structures in Developing Countries. Journal of Finance, 56(1), 87-130.")
+        citations.append("Reserve Bank of India (RBI). Financial Stability Report (December 2023). Mumbai: Reserve Bank of India.")
+        citations.append("Kumar, S., & Dawar, V. (2015). Determinants of Capital Structure over Corporate Life Stages: An Empirical Investigation of Indian Manufacturing Firms.")
+
+    # Corporate Tax / Tax Shield / M&M
+    if any(k in t for k in ["tax", "tax shield", "effective tax", "modigliani", "miller"]):
+        citations.append("Modigliani, F., & Miller, M. H. (1963). Corporate Income Taxes and the Cost of Capital: A Correction. American Economic Review, 53(3), 433-443.")
+        citations.append("Fama, E. F., & French, K. R. (2002). Testing Trade-Off and Pecking Order Predictions About Dividends and Debt. Review of Financial Studies, 15(1), 1-33.")
+        citations.append("Booth, L., Aivazian, V., Demirguc-Kunt, A., & Maksimovic, V. (2001). Capital Structures in Developing Countries. Journal of Finance, 56(1), 87-130.")
+
+    # Macroeconomic Shocks / Crisis / Currency & Monetary Policy
+    if any(k in t for k in ["shock", "crisis", "covid", "pandemic", "gfc", "taper", "tantrum", "currency", "rupee", "foreign exchange", "borrowing", "borrowings"]):
+        citations.append("Booth, L., Aivazian, V., Demirguc-Kunt, A., & Maksimovic, V. (2001). Capital Structures in Developing Countries. Journal of Finance, 56(1), 87-130.")
+        citations.append("Reserve Bank of India (RBI). Financial Stability Report (December 2023). Mumbai: Reserve Bank of India.")
+        citations.append("Rajan, R. G., & Zingales, L. (1995). What Do We Know about Capital Structure? Some Evidence from International Data. Journal of Finance, 50(5), 1421-1460.")
+
+    # Working Capital / Liquidity / DSO / Operating Cycle
+    if any(k in t for k in ["dso", "working capital", "receivables", "liquidity", "cash conversion", "current ratio"]):
+        citations.append(TEXTBOOK_FOUNDATIONS["dickinson_life_cycle"]["citation"])
+        citations.append("Myers, S. C., & Majluf, N. S. (1984). Corporate Financing and Investment Decisions When Firms Have Information That Investors Do Not Have. Journal of Financial Economics, 13(2), 187-221.")
+        citations.append("Kumar, S., & Dawar, V. (2015). Determinants of Capital Structure over Corporate Life Stages: An Empirical Investigation of Indian Manufacturing Firms.")
+
+    # Executive Strategy & Governance
+    if any(k in t for k in ["board", "memorandum", "memo", "cfo", "director", "strategy", "governance"]):
+        citations.append("Kumar, S., & Dawar, V. (2015). Determinants of Capital Structure over Corporate Life Stages: An Empirical Investigation of Indian Manufacturing Firms.")
+        citations.append("Securities and Exchange Board of India (SEBI). Corporate Bond Market Development & Issuer Profile Survey (2023).")
+        citations.append("Jensen, M. C., & Meckling, W. H. (1976). Theory of the Firm: Managerial Behavior, Agency Costs and Ownership Structure. Journal of Financial Economics, 3(4), 305-360.")
+
     # Firm size / scale / corporate governance
     if any(k in t for k in ["size", "scale", "large firm", "log_size", "disintermediation", "conglomerate", "bond market"]):
         citations.append("Fama, E. F., & French, K. R. (2002). Testing Trade-Off and Pecking Order Predictions About Dividends and Debt. Review of Financial Studies, 15(1), 1-33.")
@@ -378,8 +408,8 @@ def get_relevant_vault_citations(text: str) -> List[str]:
     if any(k in t for k in ["agency", "jensen", "discipline", "free cash flow"]):
         citations.append("Jensen, M. C., & Meckling, W. H. (1976). Theory of the Firm: Managerial Behavior, Agency Costs and Ownership Structure. Journal of Financial Economics, 3(4), 305-360.")
 
-    # General capital structure fallback if question is broad
-    if not citations and any(k in t for k in ["leverage", "capital structure", "debt", "equity", "finance"]):
+    # Universal academic fallback ensuring literature vault card is never empty
+    if not citations:
         citations.append(TEXTBOOK_FOUNDATIONS["dickinson_life_cycle"]["citation"])
         citations.append("Rajan, R. G., & Zingales, L. (1995). What Do We Know about Capital Structure? Some Evidence from International Data. Journal of Finance, 50(5), 1421-1460.")
         citations.append("Kumar, S., & Dawar, V. (2015). Determinants of Capital Structure over Corporate Life Stages: An Empirical Investigation of Indian Manufacturing Firms.")
