@@ -341,16 +341,20 @@ import uuid as _uuid
 if "session_id" not in st.session_state:
     st.session_state["session_id"] = _uuid.uuid4().hex[:12]
 
-# Guest self-identification — blocks page render until viewer enters their name
+# Guest self-identification — blocks page render until viewer enters their name (only if anonymous guest)
 if _role == "viewer" and "guest_display_name" not in st.session_state:
-    st.markdown("### Welcome to LifeCycle Leverage")
-    with st.form("guest_id_form"):
-        st.info("Please enter your name so your session is identifiable in the activity log.")
-        _dname = st.text_input("Your name or initials", placeholder="e.g. Prof. Dawar")
-        if st.form_submit_button("Continue to Dashboard") and _dname.strip():
-            st.session_state["guest_display_name"] = _dname.strip()
-            st.rerun()
-    st.stop()
+    _existing_name = _auth_user.get("name") or _username
+    if _existing_name and _existing_name.lower() != "guest":
+        st.session_state["guest_display_name"] = _existing_name
+    else:
+        st.markdown("### Welcome to LifeCycle Leverage")
+        with st.form("guest_id_form"):
+            st.info("Please enter your name so your session is identifiable in the activity log.")
+            _dname = st.text_input("Your name or initials", placeholder="e.g. Prof. Dawar")
+            if st.form_submit_button("Continue to Dashboard") and _dname.strip():
+                st.session_state["guest_display_name"] = _dname.strip()
+                st.rerun()
+        st.stop()
 # ─────────────────────────────────────────────────────────────────────────────
 
 import db
