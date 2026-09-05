@@ -273,9 +273,6 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
         ).to_dict("index")
         order = ["Startup", "Growth", "Maturity", "Shakeout1", "Shakeout2", "Shakeout3", "Decline", "Decay"]
         present = [s for s in order if s in stage_group]
-        stage_line = ", ".join(
-            f"{s}={float(stage_group[s]['mean_lev']):.2f}%" for s in present
-        )
         stage_table_rows = [
             f"| {s} | {stage_group[s]['mean_lev']:.2f}% | {stage_group[s]['mean_prof']:.3f} | {stage_group[s]['mean_tang']:.3f} | {stage_group[s]['n_obs']} |"
             for s in present
@@ -1112,11 +1109,21 @@ def normalize_assistant_response(
     if chart_requested and resolved_chart is None:
         resolved_chart = extract_table_chart_spec(answer, user_q=user_query)
         resolved_chart = _filter_chart_series_for_query(resolved_chart, user_query)
+    from models.decision_contracts import build_decision_brief
+    decision_brief = build_decision_brief(
+        answer=answer,
+        table=table,
+        chart=resolved_chart,
+        user_query=user_query,
+    )
+    # Keep the existing flat response keys for compatibility while exposing a
+    # provider-neutral envelope for the CFO UI and future export paths.
     return {
         "answer": answer,
         "table": table,
-        "chart_spec": resolved_chart,
+        "chart_spec": decision_brief.chart,
         "sources": [],
+        "decision_brief": decision_brief.to_dict(),
     }
 
 

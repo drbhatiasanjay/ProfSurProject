@@ -282,6 +282,19 @@ def is_india_panel(mode: str) -> bool:
     return mode in ("thesis", "latest", "run3")
 
 
+def apply_theme() -> None:
+    """Inject active theme CSS (light or dark) across all pages."""
+    import streamlit as st
+    import os
+    theme = st.session_state.get("theme", "light")
+    if theme not in ("light", "dark"):
+        theme = "light"
+    css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", f"style_{theme}.css")
+    if os.path.exists(css_path):
+        with open(css_path, "r", encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+
 def ensure_session_state() -> None:
     """Idempotent initialiser for `st.session_state` defaults.
 
@@ -317,6 +330,8 @@ def ensure_session_state() -> None:
 
     if "data_source_mode" not in st.session_state:
         st.session_state.data_source_mode = "sqlite"
+
+    apply_theme()
 
 
 # ── Dynamic Interpretation Engine ──

@@ -607,8 +607,8 @@ st.markdown(f"""
     color: {_header_text};
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 ">
-    <span style="font-family:'Plus Jakarta Sans', sans-serif; font-weight:800; background:{_accent_grad}; -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-size:18px; white-space:nowrap; display:flex; align-items:center; gap:6px;">
-        💎 LifeCycle Leverage<span style="font-size:11px;color:{_header_sub};font-weight:600;margin-left:6px;border:1px solid {_version_border};padding:2px 6px;border-radius:6px;-webkit-text-fill-color:initial;">v{_APP_VERSION}</span>
+    <span style="font-family:'Plus Jakarta Sans', sans-serif; font-weight:800; color:{'#4F46E5' if _theme=='light' else '#38BDF8'}; font-size:18px; white-space:nowrap; display:flex; align-items:center; gap:6px;">
+        💎 LifeCycle Leverage<span style="font-size:11px;color:{_header_sub};font-weight:600;margin-left:6px;border:1px solid {_version_border};padding:2px 6px;border-radius:6px;">v{_APP_VERSION}</span>
     </span>
     <span style="background:{_tag_bg};color:{_tag_color};border:1px solid {_tag_border};border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;white-space:nowrap;">
         🏷️&nbsp;{_panel_title}
@@ -659,15 +659,21 @@ section[data-testid="stSidebar"] {{
     padding-top: 130px !important;
 }}
 /* Sidebar collapse arrow (<<) — positioned below both rows, above everything */
-button[data-testid="stSidebarCollapseButton"] {{
+[data-testid="stSidebarCollapseButton"],
+button[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapseButton"] button {{
     top: calc(112px + 0.5rem) !important;
     z-index: 1000002 !important;
 }}
 /* Sidebar expand arrow (>>) — positioned below both rows, above everything */
-button[data-testid="collapsedControl"] {{
+[data-testid="collapsedControl"],
+button[data-testid="collapsedControl"],
+[data-testid="collapsedControl"] button {{
     top: calc(112px + 0.5rem) !important;
     z-index: 1000002 !important;
     left: 0.5rem !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }}
 /* Ensure any popover/dropdown appears above the fixed navbar */
 [data-baseweb="popover"] {{

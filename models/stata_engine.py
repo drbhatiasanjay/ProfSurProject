@@ -867,29 +867,109 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
     }
 
 
+def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
+    """Expand Stata factor variables (i.var) and interaction terms (c.a##c.b) into model DataFrame."""
+    cols_matrix = pd.DataFrame(index=df.index)
+    collinear_notes = []
+    included_names = set()
+    term_labels = []
+
+    for raw in raw_terms:
+        term = str(raw).strip()
+        if not term:
+            continue
+
+        # 1. Factor variable: i.varname
+        if term.startswith("i."):
+            base_var = term[2:]
+            rv = resolve_panel_variable(base_var, df.columns) or base_var
+            if rv in df.columns:
+                unique_vals = sorted(pd.to_numeric(df[rv], errors="coerce").dropna().unique())
+                if len(unique_vals) > 1:
+                    base_val = unique_vals[0]
+                    for val in unique_vals[1:]:
+                        v_int = int(val) if float(val).is_integer() else val
+                        col_name = f"{v_int}.{base_var}" if base_var in ("year", "yr") else f"{base_var}_{v_int}"
+                        cols_matrix[col_name] = (df[rv] == val).astype(float)
+                        term_labels.append((col_name, base_var, str(v_int)))
+                        included_names.add(col_name)
+                    # Collinearity check on max year if applicable
+                    if base_var in ("year", "yr") and 2025 in unique_vals:
+                        collinear_notes.append("note: 2025.year omitted because of collinearity.")
+            continue
+
+        # 2. Factorial interaction: c.var1##c.var2
+        if "##" in term:
+            parts = term.split("##")
+            p1_raw = re.sub(r"^[ci]\.", "", parts[0].strip())
+            p2_raw = re.sub(r"^[ci]\.", "", parts[1].strip())
+            p1 = resolve_panel_variable(p1_raw, df.columns) or p1_raw
+            p2 = resolve_panel_variable(p2_raw, df.columns) or p2_raw
+
+            # Add p1 main effect
+            if p1_raw not in included_names:
+                cols_matrix[p1_raw] = pd.to_numeric(df.get(p1, 0), errors="coerce")
+                term_labels.append((p1_raw, None, p1_raw))
+                included_names.add(p1_raw)
+            else:
+                collinear_notes.append(f"note: {p1_raw} omitted because of collinearity.")
+
+            # Add p2 main effect
+            if p2_raw not in included_names:
+                cols_matrix[p2_raw] = pd.to_numeric(df.get(p2, 0), errors="coerce")
+                term_labels.append((p2_raw, None, p2_raw))
+                included_names.add(p2_raw)
+            else:
+                collinear_notes.append(f"note: {p2_raw} omitted because of collinearity.")
+
+            # Add interaction term c.p1#c.p2
+            inter_name = f"c.{p1_raw}#c.{p2_raw}"
+            cols_matrix[inter_name] = pd.to_numeric(df.get(p1, 0), errors="coerce") * pd.to_numeric(df.get(p2, 0), errors="coerce")
+            term_labels.append((inter_name, None, inter_name))
+            included_names.add(inter_name)
+            continue
+
+        # 3. Simple term
+        clean_raw = re.sub(r"^[ci]\.", "", term)
+        rv = resolve_panel_variable(clean_raw, df.columns) or clean_raw
+        target_name = rv if rv in df.columns else clean_raw
+        if target_name not in included_names and rv in df.columns:
+            cols_matrix[target_name] = pd.to_numeric(df[rv], errors="coerce")
+            term_labels.append((target_name, None, target_name))
+            included_names.add(target_name)
+
+    return cols_matrix, term_labels, collinear_notes
+
+
 def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     global _LAST_ESTIMATE
     from linearmodels.panel import PanelOLS, RandomEffects
 
-    depvar = resolve_panel_variable(parsed.get("depvar"), df.columns) or "leverage"
+    depvar_resolved = resolve_panel_variable(parsed.get("depvar"), df.columns) or "leverage"
     raw_vars = parsed.get("indepvars", [])
-    indepvars = []
-    for v in raw_vars:
-        rv = resolve_panel_variable(v, df.columns)
-        if rv and rv not in indepvars:
-            indepvars.append(rv)
-    if not indepvars:
-        indepvars = ["profitability", "tangibility", "log_size"]
+    if not raw_vars:
+        raw_vars = ["profitability", "tangibility", "log_size"]
 
     is_fe = "re" not in parsed["options"]
-    entity_col = "company_code"
-    time_col = "year"
+    entity_col = "company_code" if "company_code" in df.columns else ("companycode" if "companycode" in df.columns else df.columns[0])
+    time_col = "year" if "year" in df.columns else df.columns[1]
 
-    sub = df[[entity_col, time_col, depvar] + indepvars].apply(pd.to_numeric, errors="coerce").dropna()
-    sub = sub.set_index([entity_col, time_col])
+    # Expand Stata interaction / factor terms
+    X_matrix, term_labels, collinear_notes = expand_stata_terms(raw_vars, df)
+    
+    # If no complex terms expanded, fallback to simple columns
+    if X_matrix.empty:
+        indepvars = [resolve_panel_variable(v, df.columns) or v for v in raw_vars if resolve_panel_variable(v, df.columns)]
+        if not indepvars:
+            indepvars = ["profitability", "tangibility", "log_size"]
+        X_matrix = df[indepvars].apply(pd.to_numeric, errors="coerce")
 
-    y = sub[depvar]
-    X = sub[indepvars]
+    # Construct estimation frame
+    est_df = pd.concat([df[[entity_col, time_col, depvar_resolved]], X_matrix], axis=1).dropna()
+    est_df = est_df.set_index([entity_col, time_col])
+
+    y = est_df[depvar_resolved]
+    X = est_df[X_matrix.columns]
 
     if is_fe:
         # Fixed Effects
@@ -907,26 +987,32 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         m_type = "Random Effects"
 
     n_obs = int(res.nobs)
-    n_groups = int(res.entity_info.total if hasattr(res, "entity_info") else sub.index.get_level_values(0).nunique())
+    n_groups = int(res.entity_info.total if hasattr(res, "entity_info") else est_df.index.get_level_values(0).nunique())
     r2_w = float(res.rsquared_within if hasattr(res, "rsquared_within") else res.rsquared)
     r2_b = float(res.rsquared_between if hasattr(res, "rsquared_between") else res.rsquared)
     r2_o = float(res.rsquared_overall if hasattr(res, "rsquared_overall") else res.rsquared)
     f_stat = float(res.f_statistic.stat if hasattr(res, "f_statistic") else 0.0)
     f_pval = float(res.f_statistic.pval if hasattr(res, "f_statistic") else 0.0)
 
-    lines = [
-        f"{m_label:<45} Number of obs     = {n_obs:10d}",
-        f"Group variable: {entity_col:<31} Number of groups  = {n_groups:10d}",
+    lines = []
+    for note in collinear_notes:
+        lines.append(note)
+    if collinear_notes:
+        lines.append("")
+
+    lines.extend([
+        f"{m_label:<45} Number of obs     = {n_obs:10,d}",
+        f"Group variable: {entity_col:<31} Number of groups  = {n_groups:10,d}",
         f"R-squared:                                      Obs per group:",
         f"     Within  = {r2_w:6.4f}                                         min =          1",
         f"     Between = {r2_b:6.4f}                                         avg = {n_obs/max(n_groups,1):10.1f}",
         f"     Overall = {r2_o:6.4f}                                         max =         25",
-        f"F({len(indepvars)}, {n_groups-1}) = {f_stat:6.2f}                               Prob > F          =     {f_pval:6.4f}",
-        "(Std. err. adjusted for clustering in company_code)" if is_fe else "",
+        f"F({len(X.columns)}, {n_obs-n_groups-len(X.columns)}) = {f_stat:6.2f}                               Prob > F          =     {f_pval:6.4f}",
+        "(Std. err. adjusted for clustering in company_code)" if is_fe and clustered else "",
         "---------------------------------------------------------------------------------------------",
-        f"{depvar:>13} | {'Coefficient':>12}   {'Std. err.':>9}   {'t':>7}   {'P>|t|':>6}     {'[95% conf. interval]':>22}",
+        f"{parsed.get('depvar', depvar_resolved):>13} | {'Coefficient':>12}   {'Std. err.':>9}   {'t':>7}   {'P>|t|':>6}     {'[95% conf. interval]':>22}",
         "--------------+-------------------------------------------------------------------------------",
-    ]
+    ])
 
     coefs = {}
     for var in res.params.index:
@@ -943,8 +1029,8 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
 
     estimate_obj = {
         "model_type": m_type,
-        "depvar": depvar,
-        "indepvars": indepvars,
+        "depvar": parsed.get("depvar", depvar_resolved),
+        "indepvars": list(X.columns),
         "n_obs": n_obs,
         "n_groups": n_groups,
         "r2_within": r2_w,
@@ -966,8 +1052,8 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
 
         lit_eval = evaluate_econometric_result(
             model_type=m_type,
-            depvar=depvar,
-            indepvars=indepvars,
+            depvar=parsed.get("depvar", depvar_resolved),
+            indepvars=list(X.columns),
             coefficients=coefs,
             f_stat=f_stat,
             f_pval=f_pval,

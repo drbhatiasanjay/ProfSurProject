@@ -390,3 +390,50 @@ div[data-testid="stStatusWidget"] div[data-testid="stMarkdown"] p {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(79, 70, 229, 0.12);
 }
+
+/* Sidebar Collapse / Restore (Expand) Controls in Light Mode */
+[data-testid="collapsedControl"],
+[data-testid="collapsedControl"] button,
+button[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapseButton"] button,
+button[data-testid="stSidebarCollapseButton"] {
+    background: #FFFFFF !important;
+    color: #4F46E5 !important;
+    border: 1px solid rgba(79, 70, 229, 0.25) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+
+[data-testid="collapsedControl"] *,
+[data-testid="stSidebarCollapseButton"] * {
+    color: #4F46E5 !important;
+    fill: #4F46E5 !important;
+    stroke: #4F46E5 !important;
+}
+
+[data-testid="collapsedControl"]:hover,
+[data-testid="collapsedControl"] button:hover,
+button[data-testid="collapsedControl"]:hover,
+[data-testid="stSidebarCollapseButton"]:hover,
+[data-testid="stSidebarCollapseButton"] button:hover,
+button[data-testid="stSidebarCollapseButton"]:hover {
+    background: #F1F5F9 !important;
+    border-color: #4F46E5 !important;
+    box-shadow: 0 0 10px rgba(79, 70, 229, 0.2) !important;
+}
+
+[data-testid="collapsedControl"]:focus-visible,
+[data-testid="collapsedControl"] button:focus-visible,
+button[data-testid="collapsedControl"]:focus-visible,
+[data-testid="stSidebarCollapseButton"]:focus-visible,
+[data-testid="stSidebarCollapseButton"] button:focus-visible,
+button[data-testid="stSidebarCollapseButton"]:focus-visible {
+    outline: 2px solid #4F46E5 !important;
+    outline-offset: 2px !important;
+}
+
