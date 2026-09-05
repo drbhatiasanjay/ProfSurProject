@@ -224,27 +224,26 @@ with tab_cli:
                 st.rerun()
 
     # Command Input Bar
-    c_in1, c_in2 = st.columns([5, 1])
-    with c_in1:
-        typed_cmd = st.text_input(
-            "Stata Command Prompt:",
-            placeholder=". xtreg leverage profitability tangibility log_size, fe cluster(company_code)",
-            key="stata_cmd_input",
-            label_visibility="collapsed",
-        )
-    with c_in2:
-        run_clicked = st.button("▶ Run Command", use_container_width=True, type="primary")
+    with st.form("stata_command_form", clear_on_submit=False):
+        c_in1, c_in2 = st.columns([5, 1])
+        with c_in1:
+            typed_cmd = st.text_input(
+                "Stata Command Prompt:",
+                value=st.session_state.get("stata_cmd_input", "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"),
+                placeholder=". xtreg leverage profitability tangibility log_size, fe cluster(company_code)",
+                label_visibility="collapsed",
+            )
+        with c_in2:
+            run_clicked = st.form_submit_button("▶ Run Command", use_container_width=True, type="primary")
 
     trigger_run = st.session_state.pop("_trigger_stata_run", False)
     active_cmd = (typed_cmd or "").strip()
 
-    # Trigger execution if:
-    # 1. '▶ Run Command' was clicked
-    # 2. A template button triggered execution
-    # 3. User pressed Enter with a new command
+    # Trigger execution if form was submitted (Enter or button click), template clicked, or new command entered
     should_run = (run_clicked or trigger_run or (active_cmd and active_cmd != st.session_state.get("_prev_cmd", "").strip())) and bool(active_cmd)
 
     if should_run:
+        st.session_state["stata_cmd_input"] = active_cmd
         st.session_state["_prev_cmd"] = active_cmd
         with st.spinner(f"Executing: {active_cmd}..."):
             t0 = time.time()
@@ -252,6 +251,7 @@ with tab_cli:
             elapsed = time.time() - t0
             st.session_state["stata_last_result"] = res
             st.session_state["stata_history"].append((active_cmd, res))
+
 
     # Render Terminal Output Box
     last_res = st.session_state.get("stata_last_result", {})

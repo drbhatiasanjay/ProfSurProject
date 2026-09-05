@@ -59,7 +59,7 @@ def render_rich_terminal_html(ascii_output: str, command_title: str = "Stata 18 
 <div style="font-size: 10.5px; color: #58A6FF !important; font-family: monospace; font-weight: 600;">N = 8,677</div>
 </div>
 <div style="padding: 12px 16px; overflow-x: auto; background: #0D1117 !important; background-color: #0D1117 !important;">
-<pre style="margin: 0 !important; font-family: 'Consolas', 'Courier New', monospace !important; font-size: 12.5px !important; line-height: 1.45 !important; color: #F0F6FC !important; background: transparent !important; background-color: transparent !important; white-space: pre !important;"><code style="color: #F0F6FC !important; background: transparent !important; font-family: inherit !important;">{escaped_ascii}</code></pre>
+<div style="margin: 0 !important; font-family: 'Consolas', 'Courier New', monospace !important; font-size: 12.5px !important; line-height: 1.45 !important; color: #F0F6FC !important; background: transparent !important; background-color: transparent !important; white-space: pre !important;">{escaped_ascii}</div>
 </div>
 </div>
 """)
