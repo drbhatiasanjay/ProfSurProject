@@ -113,7 +113,7 @@ COMMON_VAR_ALIASES = {
 }
 
 
-def resolve_panel_variable(var_name: str, valid_columns) -> str | None:
+def resolve_panel_variable(var_name: str, valid_columns, df: pd.DataFrame = None) -> str | None:
     """Resolve user-typed variable names, abbreviations, and aliases to actual DataFrame column names."""
     if not var_name or not isinstance(var_name, str):
         return None
@@ -121,31 +121,56 @@ def resolve_panel_variable(var_name: str, valid_columns) -> str | None:
     low = raw.lower()
     valid_cols_list = list(valid_columns)
 
-    # 1. Exact match
-    if raw in valid_cols_list:
+    def _has_data(col):
+        if df is None or col not in df.columns:
+            return True
+        return bool(pd.to_numeric(df[col], errors="coerce").notna().sum() > 0)
+
+    # 1. Exact match (prefer if column contains data)
+    if raw in valid_cols_list and _has_data(raw):
         return raw
 
-    # 2. Case-insensitive match
+    # 2. Case-insensitive match (prefer if column contains data)
     for col in valid_cols_list:
-        if low == col.lower():
+        if low == col.lower() and _has_data(col):
             return col
 
-    # 3. Known alias dictionary match
+    # 3. Known alias dictionary match with intelligent data fallback
     if low in COMMON_VAR_ALIASES:
         target = COMMON_VAR_ALIASES[low]
+        if target in valid_cols_list and _has_data(target):
+            return target
+        # Fallbacks for interest rate / interest expense
+        if target in ("int_rate", "interest"):
+            alt = "interest" if target == "int_rate" else "int_rate"
+            if alt in valid_cols_list and _has_data(alt):
+                return alt
         if target in valid_cols_list:
             return target
 
     # 4. Normalized match (stripping underscores, hyphens, and whitespace)
     clean_no_under = re.sub(r"[_\-\s]", "", low)
     for col in valid_cols_list:
+        if clean_no_under == re.sub(r"[_\-\s]", "", col.lower()) and _has_data(col):
+            return col
+    for col in valid_cols_list:
         if clean_no_under == re.sub(r"[_\-\s]", "", col.lower()):
             return col
 
     # 5. Stata prefix abbreviation match (e.g. 'prof' -> 'profitability', 'tang' -> 'tangibility')
-    prefix_matches = [col for col in valid_cols_list if col.lower().startswith(low)]
+    prefix_matches = [col for col in valid_cols_list if col.lower().startswith(low) and _has_data(col)]
     if len(prefix_matches) == 1:
         return prefix_matches[0]
+    prefix_matches_all = [col for col in valid_cols_list if col.lower().startswith(low)]
+    if len(prefix_matches_all) == 1:
+        return prefix_matches_all[0]
+
+    # Final fallback if column exists even without data
+    if raw in valid_cols_list:
+        return raw
+    for col in valid_cols_list:
+        if low == col.lower():
+            return col
 
     return None
 
@@ -894,7 +919,7 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
         # 1. Factor variable: i.varname
         if term.startswith("i."):
             base_var = term[2:]
-            rv = resolve_panel_variable(base_var, df.columns) or base_var
+            rv = resolve_panel_variable(base_var, df.columns, df=df) or base_var
             if rv in df.columns:
                 num_series = pd.to_numeric(df[rv], errors="coerce")
                 if num_series.dropna().nunique() > 1:
@@ -927,14 +952,14 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
             parts = term.split("##")
             p1_raw = re.sub(r"^[ci]\.", "", parts[0].strip())
             p2_raw = re.sub(r"^[ci]\.", "", parts[1].strip())
-            p1 = resolve_panel_variable(p1_raw, df.columns) or p1_raw
-            p2 = resolve_panel_variable(p2_raw, df.columns) or p2_raw
+            p1 = resolve_panel_variable(p1_raw, df.columns, df=df) or p1_raw
+            p2 = resolve_panel_variable(p2_raw, df.columns, df=df) or p2_raw
 
             s1 = pd.to_numeric(df[p1], errors="coerce") if p1 in df.columns else None
             s2 = pd.to_numeric(df[p2], errors="coerce") if p2 in df.columns else None
 
             # Add p1 main effect
-            if s1 is not None:
+            if s1 is not None and s1.notna().sum() > 0:
                 if p1_raw not in included_names:
                     cols_matrix[p1_raw] = s1
                     term_labels.append((p1_raw, None, p1_raw))
@@ -945,7 +970,7 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
                 collinear_notes.append(f"note: {p1_raw} omitted because of collinearity.")
 
             # Add p2 main effect
-            if s2 is not None:
+            if s2 is not None and s2.notna().sum() > 0:
                 if p2_raw not in included_names:
                     cols_matrix[p2_raw] = s2
                     term_labels.append((p2_raw, None, p2_raw))
@@ -957,7 +982,7 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
 
             # Add interaction term c.p1#c.p2
             inter_name = f"c.{p1_raw}#c.{p2_raw}"
-            if s1 is not None and s2 is not None:
+            if s1 is not None and s2 is not None and s1.notna().sum() > 0 and s2.notna().sum() > 0:
                 cols_matrix[inter_name] = s1 * s2
                 term_labels.append((inter_name, None, inter_name))
                 included_names.add(inter_name)
@@ -967,12 +992,16 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
 
         # 3. Simple term
         clean_raw = re.sub(r"^[ci]\.", "", term)
-        rv = resolve_panel_variable(clean_raw, df.columns) or clean_raw
+        rv = resolve_panel_variable(clean_raw, df.columns, df=df) or clean_raw
         target_name = rv if rv in df.columns else clean_raw
         if target_name not in included_names and rv in df.columns:
-            cols_matrix[target_name] = pd.to_numeric(df[rv], errors="coerce")
-            term_labels.append((target_name, None, target_name))
-            included_names.add(target_name)
+            s_data = pd.to_numeric(df[rv], errors="coerce")
+            if s_data.notna().sum() == 0:
+                collinear_notes.append(f"note: {target_name} omitted because all observations are missing.")
+            else:
+                cols_matrix[target_name] = s_data
+                term_labels.append((target_name, None, target_name))
+                included_names.add(target_name)
 
     return cols_matrix, term_labels, collinear_notes
 
@@ -981,7 +1010,7 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     global _LAST_ESTIMATE
     from linearmodels.panel import PanelOLS, RandomEffects
 
-    depvar_resolved = resolve_panel_variable(parsed.get("depvar"), df.columns) or "leverage"
+    depvar_resolved = resolve_panel_variable(parsed.get("depvar"), df.columns, df=df) or "leverage"
     raw_vars = parsed.get("indepvars", [])
     if not raw_vars:
         raw_vars = ["profitability", "tangibility", "log_size"]
@@ -995,13 +1024,27 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     
     # If no complex terms expanded, fallback to simple columns
     if X_matrix.empty:
-        indepvars = [resolve_panel_variable(v, df.columns) or v for v in raw_vars if resolve_panel_variable(v, df.columns)]
+        indepvars = [resolve_panel_variable(v, df.columns, df=df) or v for v in raw_vars if resolve_panel_variable(v, df.columns, df=df)]
         if not indepvars:
             indepvars = ["profitability", "tangibility", "log_size"]
         X_matrix = df[indepvars].apply(pd.to_numeric, errors="coerce")
 
+    # Drop any all-NaN columns from X_matrix before concat & dropna
+    all_nan_cols = [c for c in X_matrix.columns if X_matrix[c].notna().sum() == 0]
+    for c in all_nan_cols:
+        X_matrix = X_matrix.drop(columns=[c])
+        col_note = f"note: {c} omitted because all observations are missing."
+        if col_note not in collinear_notes:
+            collinear_notes.append(col_note)
+
     # Construct estimation frame
     est_df = pd.concat([df[[entity_col, time_col, depvar_resolved]], X_matrix], axis=1).dropna()
+    if est_df.empty:
+        return {
+            "status": "error",
+            "message": "No observations available for estimation after dropping missing values (r(2000)).",
+            "ascii_output": "no observations\nr(2000);",
+        }
     est_df = est_df.set_index([entity_col, time_col])
 
     y = est_df[depvar_resolved]
@@ -1060,6 +1103,13 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     except Exception:
         pass
 
+    if len(X.columns) == 0:
+        return {
+            "status": "error",
+            "message": "All independent variables omitted because of collinearity (r(459)).",
+            "ascii_output": "r(459); all regressors omitted because of collinearity",
+        }
+
     clustered = "cluster" in parsed["options"] or "vce" in parsed["options"]
     if is_fe:
         # Fixed Effects with fallback to demeaned OLS (mathematical parity)
@@ -1078,6 +1128,12 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
                 col_note = f"note: {c} omitted because of collinearity."
                 if col_note not in collinear_notes:
                     collinear_notes.append(col_note)
+            if len(valid_cols) == 0:
+                return {
+                    "status": "error",
+                    "message": "Within-entity variation is zero across all regressors (r(459)).",
+                    "ascii_output": "r(459); no within-group variation in regressors",
+                }
             X_dm = X_dm[valid_cols]
             ols_mod = sm.OLS(y_dm, X_dm)
             res = ols_mod.fit(cov_type="HC1" if clustered else "nonrobust")
