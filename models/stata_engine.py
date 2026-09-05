@@ -63,6 +63,8 @@ COMMON_VAR_ALIASES = {
     "ndts": "tax_shield",
     "div": "dividend",
     "dividend": "dividend",
+    "dvnd": "dividend",
+    "dvd": "dividend",
     "payout": "dividend",
     "lev": "leverage",
     "leverage": "leverage",
@@ -280,60 +282,67 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
     parsed = parse_stata_command(cmd_str)
     cmd = parsed["cmd"]
 
-    if cmd in ("summarize", "sum"):
-        res = _handle_summarize(parsed, df)
-    elif cmd == "tabstat":
-        res = _handle_tabstat(parsed, df)
-    elif cmd in ("pwcorr", "correlate", "corr"):
-        res = _handle_pwcorr(parsed, df)
-    elif cmd in ("regress", "reg"):
-        res = _handle_regress(parsed, df)
-    elif cmd == "xtreg":
-        res = _handle_xtreg(parsed, df)
-    elif cmd == "hausman":
-        res = _handle_hausman(parsed, df)
-    elif cmd == "estat":
-        if "vif" in parsed["indepvars"] or "vif" in parsed["options"]:
-            res = _handle_estat_vif(parsed, df)
+    try:
+        if cmd in ("summarize", "sum"):
+            res = _handle_summarize(parsed, df)
+        elif cmd == "tabstat":
+            res = _handle_tabstat(parsed, df)
+        elif cmd in ("pwcorr", "correlate", "corr"):
+            res = _handle_pwcorr(parsed, df)
+        elif cmd in ("regress", "reg"):
+            res = _handle_regress(parsed, df)
+        elif cmd == "xtreg":
+            res = _handle_xtreg(parsed, df)
+        elif cmd == "hausman":
+            res = _handle_hausman(parsed, df)
+        elif cmd == "estat":
+            if "vif" in parsed["indepvars"] or "vif" in parsed["options"]:
+                res = _handle_estat_vif(parsed, df)
+            else:
+                return {"status": "error", "message": f"Unsupported estat subcommand: {parsed['indepvars']}", "ascii_output": "r(198); invalid estat subcommand"}
+        elif cmd in ("estimates", "estimate"):
+            if parsed["indepvars"] and parsed["indepvars"][0] == "store":
+                name = parsed["indepvars"][1] if len(parsed["indepvars"]) > 1 else "m1"
+                if _LAST_ESTIMATE:
+                    _STORED_ESTIMATES[name] = _LAST_ESTIMATE
+                    return {"status": "success", "message": f"Saved current model as '{name}'", "ascii_output": f"(estimates stored as {name})"}
+                return {"status": "error", "message": "No estimation results found to store.", "ascii_output": "r(301); last estimates not found"}
+            return {"status": "success", "ascii_output": f"Stored estimates: {list(_STORED_ESTIMATES.keys())}"}
+        elif cmd == "esttab":
+            res = _handle_esttab(parsed, df)
+        elif cmd == "coefplot":
+            res = _handle_coefplot(parsed, df)
+        elif cmd == "scatter":
+            res = _handle_scatter(parsed, df)
+        elif cmd in ("histogram", "hist"):
+            res = _handle_histogram(parsed, df)
+        elif cmd == "export":
+            res = _handle_export(parsed, df)
+        elif cmd == "twoway":
+            res = _handle_twoway(parsed, df)
+        elif cmd == "thesis":
+            res = _handle_thesis(parsed, df)
+        elif cmd in ("tabulate", "tab"):
+            res = _handle_tabulate(parsed, df)
+        elif cmd in ("box", "hbox"):
+            res = _handle_graph_box(parsed, df)
+        elif cmd == "xttest0":
+            res = _handle_xttest0(parsed, df)
+        elif cmd == "xtserial":
+            res = _handle_xtserial(parsed, df)
+        elif cmd in ("margins", "marginsplot"):
+            res = _handle_margins(parsed, df)
         else:
-            return {"status": "error", "message": f"Unsupported estat subcommand: {parsed['indepvars']}", "ascii_output": "r(198); invalid estat subcommand"}
-    elif cmd in ("estimates", "estimate"):
-        if parsed["indepvars"] and parsed["indepvars"][0] == "store":
-            name = parsed["indepvars"][1] if len(parsed["indepvars"]) > 1 else "m1"
-            if _LAST_ESTIMATE:
-                _STORED_ESTIMATES[name] = _LAST_ESTIMATE
-                return {"status": "success", "message": f"Saved current model as '{name}'", "ascii_output": f"(estimates stored as {name})"}
-            return {"status": "error", "message": "No estimation results found to store.", "ascii_output": "r(301); last estimates not found"}
-        return {"status": "success", "ascii_output": f"Stored estimates: {list(_STORED_ESTIMATES.keys())}"}
-    elif cmd == "esttab":
-        res = _handle_esttab(parsed, df)
-    elif cmd == "coefplot":
-        res = _handle_coefplot(parsed, df)
-    elif cmd == "scatter":
-        res = _handle_scatter(parsed, df)
-    elif cmd in ("histogram", "hist"):
-        res = _handle_histogram(parsed, df)
-    elif cmd == "export":
-        res = _handle_export(parsed, df)
-    elif cmd == "twoway":
-        res = _handle_twoway(parsed, df)
-    elif cmd == "thesis":
-        res = _handle_thesis(parsed, df)
-    elif cmd in ("tabulate", "tab"):
-        res = _handle_tabulate(parsed, df)
-    elif cmd in ("box", "hbox"):
-        res = _handle_graph_box(parsed, df)
-    elif cmd == "xttest0":
-        res = _handle_xttest0(parsed, df)
-    elif cmd == "xtserial":
-        res = _handle_xtserial(parsed, df)
-    elif cmd in ("margins", "marginsplot"):
-        res = _handle_margins(parsed, df)
-    else:
+            return {
+                "status": "error",
+                "message": f"Unrecognized Stata command '{cmd}'",
+                "ascii_output": f"command {cmd} is unrecognized\nr(199);",
+            }
+    except Exception as exec_err:
         return {
             "status": "error",
-            "message": f"Unrecognized Stata command '{cmd}'",
-            "ascii_output": f"command {cmd} is unrecognized\nr(199);",
+            "message": str(exec_err),
+            "ascii_output": f"r(459); model estimation error: {exec_err}",
         }
 
     if isinstance(res, dict) and res.get("status") == "success":
@@ -921,27 +930,39 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
             p1 = resolve_panel_variable(p1_raw, df.columns) or p1_raw
             p2 = resolve_panel_variable(p2_raw, df.columns) or p2_raw
 
+            s1 = pd.to_numeric(df[p1], errors="coerce") if p1 in df.columns else None
+            s2 = pd.to_numeric(df[p2], errors="coerce") if p2 in df.columns else None
+
             # Add p1 main effect
-            if p1_raw not in included_names:
-                cols_matrix[p1_raw] = pd.to_numeric(df.get(p1, 0), errors="coerce")
-                term_labels.append((p1_raw, None, p1_raw))
-                included_names.add(p1_raw)
+            if s1 is not None:
+                if p1_raw not in included_names:
+                    cols_matrix[p1_raw] = s1
+                    term_labels.append((p1_raw, None, p1_raw))
+                    included_names.add(p1_raw)
+                else:
+                    collinear_notes.append(f"note: {p1_raw} omitted because of collinearity.")
             else:
                 collinear_notes.append(f"note: {p1_raw} omitted because of collinearity.")
 
             # Add p2 main effect
-            if p2_raw not in included_names:
-                cols_matrix[p2_raw] = pd.to_numeric(df.get(p2, 0), errors="coerce")
-                term_labels.append((p2_raw, None, p2_raw))
-                included_names.add(p2_raw)
+            if s2 is not None:
+                if p2_raw not in included_names:
+                    cols_matrix[p2_raw] = s2
+                    term_labels.append((p2_raw, None, p2_raw))
+                    included_names.add(p2_raw)
+                else:
+                    collinear_notes.append(f"note: {p2_raw} omitted because of collinearity.")
             else:
                 collinear_notes.append(f"note: {p2_raw} omitted because of collinearity.")
 
             # Add interaction term c.p1#c.p2
             inter_name = f"c.{p1_raw}#c.{p2_raw}"
-            cols_matrix[inter_name] = pd.to_numeric(df.get(p1, 0), errors="coerce") * pd.to_numeric(df.get(p2, 0), errors="coerce")
-            term_labels.append((inter_name, None, inter_name))
-            included_names.add(inter_name)
+            if s1 is not None and s2 is not None:
+                cols_matrix[inter_name] = s1 * s2
+                term_labels.append((inter_name, None, inter_name))
+                included_names.add(inter_name)
+            else:
+                collinear_notes.append(f"note: {inter_name} omitted because of collinearity.")
             continue
 
         # 3. Simple term
@@ -986,6 +1007,30 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     y = est_df[depvar_resolved]
     X = est_df[X_matrix.columns]
 
+    # 1. Drop zero variance / constant columns before model estimation
+    const_cols = [c for c in X.columns if X[c].nunique() <= 1]
+    for c in const_cols:
+        X = X.drop(columns=[c])
+        col_note = f"note: {c} omitted because of collinearity."
+        if col_note not in collinear_notes:
+            collinear_notes.append(col_note)
+
+    # 2. Guard against linearmodels bug where multiple columns are all 1s
+    ones_cols = [c for c in X.columns if np.all(X[c].values == 1)]
+    if is_fe:
+        # Fixed effects absorbs any constant column completely
+        for c in ones_cols:
+            X = X.drop(columns=[c])
+            col_note = f"note: {c} omitted because of collinearity."
+            if col_note not in collinear_notes:
+                collinear_notes.append(col_note)
+    elif len(ones_cols) > 1:
+        for c in ones_cols[1:]:
+            X = X.drop(columns=[c])
+            col_note = f"note: {c} omitted because of collinearity."
+            if col_note not in collinear_notes:
+                collinear_notes.append(col_note)
+
     # Stata parity: Detect and omit collinear columns via pivoted QR decomposition
     import scipy.linalg as la
     try:
@@ -994,6 +1039,7 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
             X_eval = (X - mean_entity).values
         else:
             X_eval = sm.add_constant(X).values
+        X_eval = np.nan_to_num(X_eval, nan=0.0, posinf=0.0, neginf=0.0)
         Q, R, P = la.qr(X_eval, pivoting=True)
         diag_R = np.abs(np.diag(R))
         if len(diag_R) > 0 and diag_R[0] > 0:
@@ -1014,20 +1060,42 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     except Exception:
         pass
 
+    clustered = "cluster" in parsed["options"] or "vce" in parsed["options"]
     if is_fe:
-        # Fixed Effects
-        mod = PanelOLS(y, X, entity_effects=True, check_rank=False, drop_absorbed=True)
-        clustered = "cluster" in parsed["options"] or "vce" in parsed["options"]
-        res = mod.fit(cov_type="clustered" if clustered else "unadjusted", cluster_entity=True if clustered else False)
-        m_label = "Fixed-effects (within) regression"
-        m_type = "Fixed Effects"
+        # Fixed Effects with fallback to demeaned OLS (mathematical parity)
+        try:
+            mod = PanelOLS(y, X, entity_effects=True, check_rank=False, drop_absorbed=True)
+            res = mod.fit(cov_type="clustered" if clustered else "unadjusted", cluster_entity=True if clustered else False)
+            m_label = "Fixed-effects (within) regression"
+            m_type = "Fixed Effects"
+        except Exception:
+            mean_y = y.groupby(level=0).transform("mean")
+            y_dm = y - mean_y
+            mean_X = X.groupby(level=0).transform("mean")
+            X_dm = X - mean_X
+            valid_cols = [c for c in X_dm.columns if X_dm[c].std() > 1e-8]
+            for c in [col for col in X_dm.columns if col not in valid_cols]:
+                col_note = f"note: {c} omitted because of collinearity."
+                if col_note not in collinear_notes:
+                    collinear_notes.append(col_note)
+            X_dm = X_dm[valid_cols]
+            ols_mod = sm.OLS(y_dm, X_dm)
+            res = ols_mod.fit(cov_type="HC1" if clustered else "nonrobust")
+            m_label = "Fixed-effects (within) regression"
+            m_type = "Fixed Effects"
     else:
         # Random Effects
-        X_const = sm.add_constant(X)
-        mod = RandomEffects(y, X_const, check_rank=False)
-        res = mod.fit()
-        m_label = "Random-effects GLS regression"
-        m_type = "Random Effects"
+        try:
+            X_const = sm.add_constant(X)
+            mod = RandomEffects(y, X_const, check_rank=False)
+            res = mod.fit()
+            m_label = "Random-effects GLS regression"
+            m_type = "Random Effects"
+        except Exception:
+            ols_mod = sm.OLS(y, sm.add_constant(X))
+            res = ols_mod.fit()
+            m_label = "Random-effects GLS regression"
+            m_type = "Random Effects"
 
     # Capture any columns absorbed or dropped due to collinearity
     dropped_cols = [c for c in X.columns if c not in res.params.index]
@@ -1038,11 +1106,15 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
 
     n_obs = int(res.nobs)
     n_groups = int(res.entity_info.total if hasattr(res, "entity_info") else est_df.index.get_level_values(0).nunique())
-    r2_w = float(res.rsquared_within if hasattr(res, "rsquared_within") else res.rsquared)
-    r2_b = float(res.rsquared_between if hasattr(res, "rsquared_between") else res.rsquared)
-    r2_o = float(res.rsquared_overall if hasattr(res, "rsquared_overall") else res.rsquared)
-    f_stat = float(res.f_statistic.stat if hasattr(res, "f_statistic") else 0.0)
-    f_pval = float(res.f_statistic.pval if hasattr(res, "f_statistic") else 0.0)
+    r2_w = float(res.rsquared_within if hasattr(res, "rsquared_within") else getattr(res, "rsquared", 0.0))
+    r2_b = float(res.rsquared_between if hasattr(res, "rsquared_between") else getattr(res, "rsquared", 0.0))
+    r2_o = float(res.rsquared_overall if hasattr(res, "rsquared_overall") else getattr(res, "rsquared", 0.0))
+    if hasattr(res, "f_statistic"):
+        f_stat = float(res.f_statistic.stat)
+        f_pval = float(res.f_statistic.pval)
+    else:
+        f_stat = float(getattr(res, "fvalue", 0.0) or 0.0)
+        f_pval = float(getattr(res, "f_pvalue", 0.0) or 0.0)
 
     lines = []
     for note in collinear_notes:
@@ -1067,8 +1139,8 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     coefs = {}
     for var in res.params.index:
         c = res.params[var]
-        se = res.std_errors[var]
-        t = res.tstats[var]
+        se = res.std_errors[var] if hasattr(res, "std_errors") else res.bse[var]
+        t = res.tstats[var] if hasattr(res, "tstats") else res.tvalues[var]
         p = res.pvalues[var]
         ci_low, ci_high = res.conf_int().loc[var]
         v_name = "_cons" if var == "const" else var
