@@ -106,8 +106,17 @@ PLOTLY_FULL_CONFIG = {
     "scrollZoom": True,
 }
 
-st.markdown("### 💻 Stata Studio")
-st.caption("Autonomous Stata Command Line & Econometric Publication Suite · Open-source mathematical parity with Stata 17/18")
+col_head1, col_head2 = st.columns([5, 1])
+with col_head1:
+    st.markdown("### 💻 Stata Studio")
+    st.caption("Autonomous Stata Command Line & Econometric Publication Suite · Open-source mathematical parity with Stata 17/18")
+with col_head2:
+    cur_t = st.session_state.get("theme", "light")
+    t_label = "🌙 Dark" if cur_t == "light" else "☀️ Light"
+    if st.button(t_label, key="stata_page_theme_toggle", help="Toggle between Light and Dark theme", use_container_width=True):
+        st.session_state.theme = "dark" if cur_t == "light" else "light"
+        st.rerun()
+
 
 # Retrieve Active Panel Dataset
 panel_mode = st.session_state.get("panel_mode", "thesis")

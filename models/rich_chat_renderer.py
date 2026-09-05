@@ -44,22 +44,33 @@ def render_question_card_html(question_text: str, stata_cmd: Optional[str] = Non
 def render_rich_terminal_html(ascii_output: str, command_title: str = "Stata 18 SE Console", theme: str = "light") -> str:
     """
     Renders the authentic Stata terminal card with header dots.
-    Forces bright text styling (!important) so Streamlit's light-mode styles cannot black out text.
+    Supports both Dark Mode (macOS Terminal) and Light Mode (Stata GUI Results window).
+    Uses explicit inline styles (!important) to guarantee maximum contrast and avoid CSS overrides.
     """
     escaped_ascii = html.escape(ascii_output.strip())
+    is_dark = str(theme).lower() == "dark"
+
+    card_bg = "#0D1117" if is_dark else "#FFFFFF"
+    header_bg = "#161B22" if is_dark else "#F1F5F9"
+    border_color = "#30363D" if is_dark else "#CBD5E1"
+    title_color = "#58A6FF" if is_dark else "#0284C7"
+    badge_color = "#7EE787" if is_dark else "#059669"
+    text_color = "#F0F6FC" if is_dark else "#0F172A"
+    shadow = "0 4px 16px rgba(0,0,0,0.35)" if is_dark else "0 2px 10px rgba(0,0,0,0.06)"
+
     return clean_html(f"""
-<div class="stata-rich-terminal-card" style="background: #0D1117 !important; background-color: #0D1117 !important; border: 1px solid #30363D !important; border-radius: 8px; margin-bottom: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.35);">
-<div style="background: #161B22 !important; background-color: #161B22 !important; padding: 10px 16px; border-bottom: 1px solid #30363D !important; display: flex; align-items: center; justify-content: space-between;">
+<div class="stata-rich-terminal-card" style="background: {card_bg} !important; background-color: {card_bg} !important; border: 1px solid {border_color} !important; border-radius: 8px; margin-bottom: 14px; overflow: hidden; box-shadow: {shadow};">
+<div style="background: {header_bg} !important; background-color: {header_bg} !important; padding: 10px 16px; border-bottom: 1px solid {border_color} !important; display: flex; align-items: center; justify-content: space-between;">
 <div style="display: flex; gap: 7px; align-items: center;">
 <span style="width: 11px; height: 11px; border-radius: 50%; background-color: #FF5F56 !important; display: inline-block;"></span>
 <span style="width: 11px; height: 11px; border-radius: 50%; background-color: #FFBD2E !important; display: inline-block;"></span>
 <span style="width: 11px; height: 11px; border-radius: 50%; background-color: #27C93F !important; display: inline-block;"></span>
 </div>
-<div style="font-size: 12.5px; font-weight: 700; color: #58A6FF !important; font-family: 'Consolas', 'Fira Code', 'Courier New', monospace !important; letter-spacing: 0.02em;">{html.escape(command_title)}</div>
-<div style="font-size: 11.5px; color: #7EE787 !important; font-family: 'Consolas', 'Courier New', monospace !important; font-weight: 700;">N = 8,677</div>
+<div style="font-size: 12.5px; font-weight: 700; color: {title_color} !important; font-family: 'Consolas', 'Fira Code', 'Courier New', monospace !important; letter-spacing: 0.02em;">{html.escape(command_title)}</div>
+<div style="font-size: 11.5px; color: {badge_color} !important; font-family: 'Consolas', 'Courier New', monospace !important; font-weight: 700;">N = 8,677</div>
 </div>
-<div style="padding: 14px 18px; overflow-x: auto; background: #0D1117 !important; background-color: #0D1117 !important;">
-<pre class="stata-terminal-output" style="margin: 0 !important; font-family: 'Consolas', 'Courier New', monospace !important; font-size: 12.5px !important; line-height: 1.5 !important; color: #F0F6FC !important; background: transparent !important; background-color: transparent !important; white-space: pre !important; word-wrap: normal !important; overflow-x: auto !important;">{escaped_ascii}</pre>
+<div style="padding: 14px 18px; overflow-x: auto; background: {card_bg} !important; background-color: {card_bg} !important;">
+<pre class="stata-terminal-output" style="margin: 0 !important; font-family: 'Consolas', 'Courier New', monospace !important; font-size: 12.5px !important; line-height: 1.5 !important; color: {text_color} !important; background: transparent !important; background-color: transparent !important; white-space: pre !important; word-wrap: normal !important; overflow-x: auto !important;">{escaped_ascii}</pre>
 </div>
 </div>
 """)
