@@ -73,6 +73,9 @@ COMMON_VAR_ALIASES = {
     "td_ta": "leverage",
     "stage": "life_stage",
     "lifestage": "life_stage",
+    "corplifestage": "life_stage",
+    "corp_lifestage": "life_stage",
+    "corp_life_stage": "life_stage",
     "life_stage": "life_stage",
     "ind": "industry_group",
     "industry": "industry_group",
@@ -884,8 +887,9 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
             base_var = term[2:]
             rv = resolve_panel_variable(base_var, df.columns) or base_var
             if rv in df.columns:
-                unique_vals = sorted(pd.to_numeric(df[rv], errors="coerce").dropna().unique())
-                if len(unique_vals) > 1:
+                num_series = pd.to_numeric(df[rv], errors="coerce")
+                if num_series.dropna().nunique() > 1:
+                    unique_vals = sorted(num_series.dropna().unique())
                     base_val = unique_vals[0]
                     for val in unique_vals[1:]:
                         v_int = int(val) if float(val).is_integer() else val
@@ -896,6 +900,17 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
                     # Collinearity check on max year if applicable
                     if base_var in ("year", "yr") and 2025 in unique_vals:
                         collinear_notes.append("note: 2025.year omitted because of collinearity.")
+                else:
+                    # Categorical / string variable factor (e.g. i.corplifestage, i.life_stage)
+                    cat_vals = [str(x) for x in df[rv].dropna().unique() if str(x).strip()]
+                    from helpers import STAGE_ORDER
+                    cat_vals_sorted = [s for s in STAGE_ORDER if s in cat_vals] + sorted([s for s in cat_vals if s not in STAGE_ORDER])
+                    if len(cat_vals_sorted) > 1:
+                        for c_val in cat_vals_sorted[1:]:
+                            col_name = f"{base_var}_{c_val}"
+                            cols_matrix[col_name] = (df[rv].astype(str) == c_val).astype(float)
+                            term_labels.append((col_name, base_var, c_val))
+                            included_names.add(col_name)
             continue
 
         # 2. Factorial interaction: c.var1##c.var2
@@ -971,9 +986,37 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     y = est_df[depvar_resolved]
     X = est_df[X_matrix.columns]
 
+    # Stata parity: Detect and omit collinear columns via pivoted QR decomposition
+    import scipy.linalg as la
+    try:
+        if is_fe:
+            mean_entity = X.groupby(level=0).transform("mean")
+            X_eval = (X - mean_entity).values
+        else:
+            X_eval = sm.add_constant(X).values
+        Q, R, P = la.qr(X_eval, pivoting=True)
+        diag_R = np.abs(np.diag(R))
+        if len(diag_R) > 0 and diag_R[0] > 0:
+            tol = 1e-7 * diag_R[0]
+            rank = int(np.sum(diag_R > tol))
+            if rank < len(P):
+                keep_idx = sorted(P[:rank])
+                drop_idx = sorted(P[rank:])
+                for di in drop_idx:
+                    if di < len(X.columns):
+                        dropped_col = X.columns[di]
+                        col_note = f"note: {dropped_col} omitted because of collinearity."
+                        if col_note not in collinear_notes:
+                            collinear_notes.append(col_note)
+                valid_keep = [ki for ki in keep_idx if ki < len(X.columns)]
+                if valid_keep:
+                    X = X.iloc[:, valid_keep]
+    except Exception:
+        pass
+
     if is_fe:
         # Fixed Effects
-        mod = PanelOLS(y, X, entity_effects=True)
+        mod = PanelOLS(y, X, entity_effects=True, check_rank=False, drop_absorbed=True)
         clustered = "cluster" in parsed["options"] or "vce" in parsed["options"]
         res = mod.fit(cov_type="clustered" if clustered else "unadjusted", cluster_entity=True if clustered else False)
         m_label = "Fixed-effects (within) regression"
@@ -981,10 +1024,17 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     else:
         # Random Effects
         X_const = sm.add_constant(X)
-        mod = RandomEffects(y, X_const)
+        mod = RandomEffects(y, X_const, check_rank=False)
         res = mod.fit()
         m_label = "Random-effects GLS regression"
         m_type = "Random Effects"
+
+    # Capture any columns absorbed or dropped due to collinearity
+    dropped_cols = [c for c in X.columns if c not in res.params.index]
+    for dc in dropped_cols:
+        col_note = f"note: {dc} omitted because of collinearity."
+        if col_note not in collinear_notes:
+            collinear_notes.append(col_note)
 
     n_obs = int(res.nobs)
     n_groups = int(res.entity_info.total if hasattr(res, "entity_info") else est_df.index.get_level_values(0).nunique())
