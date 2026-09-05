@@ -1,0 +1,56 @@
+# Graphify Ignore Rules for LifeCycle Leverage
+# Preserves code AST extraction and canonical Markdown while excluding large datasets, caches, scratch, and secrets.
+
+# Large data, database files, and transients
+*.db
+*.db.bak-*
+*.dta
+*.zip
+*.docx
+*.pdf
+*.pptx
+*.png
+*.jpeg
+*.jpg
+*.mp4
+*.log
+*.stackdump
+
+# Python virtual environment and caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.cache/
+.ruff_cache/
+.streamlit/
+
+# Scratch, test bulk, and generated test evidence
+scratch/
+demo/
+demo_output/
+test_screenshots/
+verify_frames/
+unpacked/
+batch_result*/
+DataUS/
+DataV*/
+cmie_validation/
+
+# Non-canonical recovery artifacts & brain sessions
+PROFSUR_RECONSTRUCTION_CHECKPOINT.md
+.gemini/
+
+# Bulk raw data tables & presentation mirrors
+table55_*.xml
+table59_*.xml
+profsur-ebook-*.html
+slides_mirror.md
+
+# Whitelist canonical project documentation
+!CURRENT_STATUS.md
+!AGENTS.md
+!CLAUDE.md
+!SESSION_LOG.md
+!docs/CANONICAL_IMPLEMENTATION_PLAN.md
+!docs/HANDOFF_ANTIGRAVITY_VSCODE.md

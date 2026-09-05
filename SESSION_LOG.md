@@ -120,3 +120,25 @@ Created detailed project note at:
 ```text
 Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (100% deployed to GCP). Follow AGENTS.md Ponytail minimal-code and concise rules. Use scripts/project_ops.py for operations. What would you like to build next?
 ```
+
+---
+
+# ProfSurProject — Session Log (2026-09-06 Recovery & Context Consolidation)
+
+## 1. Forensic Recovery & Historical Reconciliation
+- **Historical Recovery Source:** Fully recovered pre-shutdown Antigravity conversation and artifact directory (`C:\Users\hemas\.gemini\antigravity-ide\brain\dfad8734-d349-4cab-bff4-d88cf51c2925`).
+- **Filesystem Timestamps Confirmed:**
+  - `implementation_plan.md`: Created `2026-09-05 23:11:55 IST`, Last Write `2026-09-06 00:14:39 IST`.
+  - `walkthrough.md`: Created `2026-09-05 23:25:23 IST`, Last Write `2026-09-05 23:41:36 IST`.
+- **Exhaustive Verification Recovered:** 109/109 checkpoints verified 100% PASS across Phases 1–6 (Multi-page crawler 25/25, Interactive controls 19/19 with 34/34 actions pass, Stata math engine 19/19, AI Assistant prompts 46/46, 4-user auth matrix on local + GCP, and sub-second caching latency).
+- **Approved Two Workstreams Isolated:**
+  - Workstream 1: Stata CLI / NLP Enhancement (`feature/stata-cli-nlp-highlighting`).
+  - Workstream 2: Citation Inspector / Academic Literature Vault (`feature/citation-inspector-modal`).
+  - Post-restart AutoPrompt plan formally classified as non-canonical and discarded.
+
+## 2. Governance & Consolidation Milestones
+- **Human Gate #1 v2 Approved:** Forensic recovery accepted; established durable source-of-truth hierarchy.
+- **`CURRENT_STATUS.md` Created:** Consolidated operational checkpoint anchored to baseline commit `6075708`.
+- **`docs/CANONICAL_IMPLEMENTATION_PLAN.md` Created:** Reconciled technical specifications for Workstreams 1 & 2 removing already-implemented items.
+- **Security Remediation Flagged:** Plaintext credentials removed from `AGENTS.md` and replaced with standard secret references; status set to `SECURITY_REMEDIATION_PENDING_ROTATION`.
+- **`.graphifyignore` Created:** Configured dual-mode indexing for source code plus curated canonical Markdown while excluding binary databases, caches, and test scratch.
