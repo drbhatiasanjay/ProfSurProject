@@ -16,6 +16,7 @@ Provides full mathematical, syntax, and visual parity with Stata 17/18:
 import os
 import io
 import time
+import html
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -35,7 +36,6 @@ from models.stata_engine import (
     prepare_df_for_stata,
     _STORED_ESTIMATES,
 )
-from components.citation_inspector import show_citation_dialog, render_citation_selector
 
 ensure_session_state()
 db.log_page_visit("Stata Studio")
@@ -49,6 +49,49 @@ st.set_page_config(
 
 # Authentication & Access Control
 require_role("admin", "researcher", "viewer", "cfo", "guest")
+
+def get_financial_translation(cmd_str: str) -> str:
+    """Translates a Stata command into executive corporate finance intent."""
+    low = (cmd_str or "").lower().strip()
+    if low.startswith("."):
+        low = low[1:].strip()
+
+    if low.startswith("xtreg") and (" fe" in low or ", fe" in low or ",fe" in low):
+        return (
+            "Estimates a within-firm <b>Fixed Effects panel regression</b> analyzing how corporate debt ratios (leverage) "
+            "respond to firm profitability, asset tangibility, and size. By de-meaning data within each firm across 2001–2024, "
+            "it purges all unobserved time-invariant firm heterogeneity (governance heritage, founding culture, corporate lineage), "
+            "isolating true within-firm causal elasticities. Evaluates <b>Pecking Order Theory</b> (profitability draining debt) vs. "
+            "<b>Trade-Off Theory</b> (tangibility providing pledgeable debt capacity)."
+        )
+    if low.startswith("xtreg") and (" re" in low or ", re" in low or ",re" in low):
+        return (
+            "Estimates a <b>Random Effects panel regression</b> using Generalized Least Squares (GLS) to assess capital structure "
+            "determinants across firms and over time, providing efficient parameter estimates under the assumption that firm-specific "
+            "unobserved heterogeneity is uncorrelated with financial regressors."
+        )
+    if low.startswith("hausman"):
+        return (
+            "Executes the formal <b>Hausman specification test</b> contrasting Fixed Effects consistency against Random Effects efficiency. "
+            "Determines whether individual firm endowments correlate with explanatory variables to mathematically verify whether within-firm "
+            "Fixed Effects modeling is statistically required."
+        )
+    if low.startswith("summarize") or low.startswith("sum "):
+        return (
+            "Computes comprehensive parametric and non-parametric descriptive statistics (mean, standard deviation, percentiles, skewness) "
+            "to establish baseline corporate distributions across the Indian manufacturing panel."
+        )
+    if low.startswith("pwcorr") or low.startswith("correlate"):
+        return (
+            "Generates pairwise correlation coefficients with significance stars to examine bivariate balance-sheet interactions and "
+            "diagnose potential multicollinearity across leverage regressors."
+        )
+    if low.startswith("estat vif") or low.startswith("vif"):
+        return (
+            "Computes Variance Inflation Factors (VIF) to formally test for severe multicollinearity among explanatory financial ratios. "
+            "VIF values strictly below 5–10 confirm parameter stability and regression robustness."
+        )
+    return f"Executes econometric estimation for <code>{html.escape(cmd_str)}</code> on the active longitudinal panel dataset."
 
 # Custom Stata Terminal CSS
 st.markdown(
@@ -110,7 +153,7 @@ PLOTLY_FULL_CONFIG = {
 col_head1, col_head2 = st.columns([5, 1])
 with col_head1:
     st.markdown("### 💻 Stata Studio")
-    st.caption("Autonomous Stata Command Line & Econometric Publication Suite · Open-source mathematical parity with Stata 17/18")
+    st.caption("Autonomous Stata Command Line & Econometric Publication Suite · Longitudinal Panel Econometric Engine")
 with col_head2:
     cur_t = st.session_state.get("theme", "light")
     t_label = "🌙 Dark" if cur_t == "light" else "☀️ Light"
@@ -133,16 +176,13 @@ if panel_df is None or panel_df.empty:
 if "stata_history" not in st.session_state:
     st.session_state["stata_history"] = []
 if "stata_last_result" not in st.session_state:
-    # Run default baseline command on load
-    default_cmd = "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"
-    init_res = execute_stata_command(default_cmd, df=panel_df)
-    st.session_state["stata_last_result"] = init_res
-    st.session_state["stata_history"].append((default_cmd, init_res))
+    st.session_state["stata_last_result"] = None
 
 # ── Metric Ribbons ────────────────────────────────────────────────────────────
 n_obs = len(panel_df)
 n_firms = panel_df["company_code"].nunique() if "company_code" in panel_df.columns else 0
 years = (int(panel_df["year"].min()), int(panel_df["year"].max())) if "year" in panel_df.columns else (2001, 2024)
+n_industries = panel_df["industry_group"].nunique() if "industry_group" in panel_df.columns else 104
 
 col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
 with col_m1:
@@ -154,7 +194,7 @@ with col_m3:
 with col_m4:
     st.metric("Time Horizon (t)", f"{years[0]} – {years[1]} (24 Yrs)")
 with col_m5:
-    st.metric("Engine License", "Open Source Parity", delta="100% Stata Match")
+    st.metric("Industry Coverage", f"{n_industries} Sectors", help="Prowess / CMIE cross-industry manufacturing classification")
 
 st.markdown("---")
 
@@ -172,7 +212,7 @@ with tab_cli:
 
     # Initialize in session_state if not present
     if "stata_cmd_input" not in st.session_state:
-        st.session_state["stata_cmd_input"] = "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"
+        st.session_state["stata_cmd_input"] = ""
 
     # Quick Template Buttons
     col_q1, col_q2, col_q3 = st.columns(3)
@@ -203,10 +243,6 @@ with tab_cli:
             st.session_state["stata_cmd_input"] = "pwcorr leverage profitability tangibility log_size, sig star(0.05)"
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
-
-    with st.expander("📖 Academic Citation Inspector & Bibliography Vault", expanded=True):
-        st.caption("Verify empirical literature benchmarks against peer-reviewed DOIs and export BibTeX / APA citations:")
-        render_citation_selector()
 
     with st.expander("📚 PhD Dissertation Figure Replications (Chapters 5 & 8) — 1-Click Stata Command & Graph", expanded=False):
         col_th1, col_th2 = st.columns(2)
@@ -243,7 +279,7 @@ with tab_cli:
         with c_in1:
             typed_cmd = st.text_input(
                 "Stata Command Prompt:",
-                value=st.session_state.get("stata_cmd_input", "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"),
+                value=st.session_state.get("stata_cmd_input", ""),
                 placeholder=". xtreg leverage profitability tangibility log_size, fe cluster(company_code)",
                 label_visibility="collapsed",
             )
@@ -266,95 +302,102 @@ with tab_cli:
             st.session_state["stata_last_result"] = res
             st.session_state["stata_history"].append((active_cmd, res))
 
+    # Render Command Results (6-Tier Stack) or Readiness Banner
+    last_res = st.session_state.get("stata_last_result", None)
 
-    # Render Terminal Output Box
-    last_res = st.session_state.get("stata_last_result", {})
-    last_cmd = st.session_state["stata_history"][-1][0] if st.session_state["stata_history"] else "xtreg leverage roa tang size, fe"
-    import html
-    from models.rich_chat_renderer import (
-        render_rich_terminal_html,
-        render_detailed_economic_commentary_html,
-        render_theory_scorecard_html,
-        render_academic_vault_html,
-    )
-    from models.chart_switcher_engine import (
-        build_forest_plot,
-        build_beta_rank_bars,
-    )
+    if last_res is not None:
+        last_cmd = st.session_state["stata_history"][-1][0] if st.session_state["stata_history"] else (active_cmd or "xtreg leverage roa tang size, fe")
+        clean_cmd = last_cmd.lstrip('. ')
+        current_theme = st.session_state.get("theme", "light")
 
-    ascii_out = last_res.get("ascii_output", "No output generated.")
-    clean_cmd = last_cmd.lstrip('. ')
-    current_theme = st.session_state.get("theme", "light")
+        from models.rich_chat_renderer import (
+            render_rich_terminal_html,
+            render_detailed_economic_commentary_html,
+            render_theory_scorecard_html,
+            render_academic_vault_html,
+        )
+        from models.chart_switcher_engine import (
+            build_forest_plot,
+            build_beta_rank_bars,
+        )
 
-    terminal_html = render_rich_terminal_html(ascii_out, f"Stata 18 SE · {clean_cmd}", theme=current_theme)
-    if hasattr(st, "html"):
-        st.html(terminal_html)
-    else:
-        st.markdown(terminal_html, unsafe_allow_html=True)
+        # Tier 1: Corporate Finance Translation & Economic Intent
+        fin_trans = get_financial_translation(clean_cmd)
+        is_dark = current_theme == "dark"
+        card_bg = "#0f172a" if is_dark else "#F0FDF4"
+        card_border = "#1e293b" if is_dark else "#BBF7D0"
+        card_text = "#e2e8f0" if is_dark else "#166534"
+        st.markdown(f"""
+        <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; line-height: 1.5; color: {card_text};">
+            <b>💡 Corporate Finance Translation & Economic Intent:</b><br/>
+            {fin_trans}
+        </div>
+        """, unsafe_allow_html=True)
 
-
-    # Intelligent Chart Switcher if regression or compatible charts present
-    compat = last_res.get("compatible_charts", [])
-    coefs = last_res.get("coefficients", {})
-    if compat and coefs:
-        c_sw1, c_sw2 = st.columns([3, 2])
-        with c_sw1:
-            st.markdown("""
-            <div style="font-size: 13px; font-weight: 700; color: #0284C7; margin-top: 6px;">
-                📊 Visual Engine · Data-Gated Chart Switcher
-            </div>
-            <div style="font-size: 11.5px; color: var(--text-muted, #64748B);">
-                Switch between mathematically permitted econometric representations
-            </div>
-            """, unsafe_allow_html=True)
-        with c_sw2:
-            chart_options = [c["label"] for c in compat]
-            selected_label = st.selectbox(
-                "Select Visualization:",
-                chart_options,
-                index=0,
-                key=f"stata_studio_chart_switcher_{clean_cmd[:20]}",
-                label_visibility="collapsed",
-            )
-        selected_id = next((c["id"] for c in compat if c["label"] == selected_label), "forest_plot")
-
-        if selected_id == "beta_rank_bars":
-            fig = build_beta_rank_bars(coefs, theme=current_theme)
+        # Tier 2: Stata Monospace Terminal
+        ascii_out = last_res.get("ascii_output", "No output generated.")
+        terminal_html = render_rich_terminal_html(ascii_out, f"Stata 18 SE · {clean_cmd}", theme=current_theme)
+        if hasattr(st, "html"):
+            st.html(terminal_html)
         else:
-            fig = build_forest_plot(coefs, theme=current_theme)
-        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
-        st.caption("🛡️ *Compatibility Rule Enforced:* Only mathematically permissible regression representations are displayed. Non-continuous charts (Donut, Pie, Stacked Area) are automatically excluded.")
-    elif last_res.get("fig"):
-        st.plotly_chart(last_res["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
-    elif last_res.get("chart_spec"):
-        from models.agent_tools import render_chat_chart_figure
-        fig = render_chat_chart_figure(last_res["chart_spec"], theme=current_theme)
-        if fig:
+            st.markdown(terminal_html, unsafe_allow_html=True)
+
+        # Tier 3: Visual Engine · Data-Gated Chart Switcher
+        compat = last_res.get("compatible_charts", [])
+        coefs = last_res.get("coefficients", {})
+        if compat and coefs:
+            c_sw1, c_sw2 = st.columns([3, 2])
+            with c_sw1:
+                st.markdown("""
+                <div style="font-size: 13px; font-weight: 700; color: #0284C7; margin-top: 6px;">
+                    📊 Visual Engine · Data-Gated Chart Switcher
+                </div>
+                <div style="font-size: 11.5px; color: var(--text-muted, #64748B);">
+                    Switch between mathematically permitted econometric representations
+                </div>
+                """, unsafe_allow_html=True)
+            with c_sw2:
+                chart_options = [c["label"] for c in compat]
+                selected_label = st.selectbox(
+                    "Select Visualization:",
+                    chart_options,
+                    index=0,
+                    key=f"stata_studio_chart_switcher_{clean_cmd[:20]}",
+                    label_visibility="collapsed",
+                )
+            selected_id = next((c["id"] for c in compat if c["label"] == selected_label), "forest_plot")
+
+            if selected_id == "beta_rank_bars":
+                fig = build_beta_rank_bars(coefs, theme=current_theme)
+            else:
+                fig = build_forest_plot(coefs, theme=current_theme)
             st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
+            st.caption("🛡️ *Compatibility Rule Enforced:* Only mathematically permissible regression representations are displayed. Non-continuous charts (Donut, Pie, Stacked Area) are automatically excluded.")
+        elif last_res.get("fig"):
+            st.plotly_chart(last_res["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
+        elif last_res.get("chart_spec"):
+            from models.agent_tools import render_chat_chart_figure
+            fig = render_chat_chart_figure(last_res["chart_spec"], theme=current_theme)
+            if fig:
+                st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
 
-    # Render Detailed Economic Commentary
-    scorecard = last_res.get("theory_scorecard", [])
-    if scorecard:
-        st.markdown(render_detailed_economic_commentary_html(scorecard, theme=current_theme), unsafe_allow_html=True)
-        st.markdown(render_theory_scorecard_html(scorecard, theme=current_theme), unsafe_allow_html=True)
+        # Tier 4 & 5: Economic Commentary & Theory Scorecard
+        scorecard = last_res.get("theory_scorecard", [])
+        if scorecard:
+            st.markdown(render_detailed_economic_commentary_html(scorecard, theme=current_theme), unsafe_allow_html=True)
+            st.markdown(render_theory_scorecard_html(scorecard, theme=current_theme), unsafe_allow_html=True)
 
-    # Render Academic Literature Vault & Citations
-    lit_eval = last_res.get("literature_eval", {})
-    if lit_eval and lit_eval.get("citations"):
-        st.markdown(render_academic_vault_html(lit_eval["citations"], theme=current_theme), unsafe_allow_html=True)
-        # Interactive Citation Inspector Triggers
-        st.markdown("<div style='margin-top: 6px; font-size: 12px; font-weight: 700; color: #0284c7;'>📖 Inspect Scholarly Citation Details (DOIs & Mechanisms):</div>", unsafe_allow_html=True)
-        cols_cit = st.columns(min(len(lit_eval["citations"]), 4))
-        for idx, cit in enumerate(lit_eval["citations"][:4]):
-            with cols_cit[idx]:
-                cit_label = cit.get("author", cit.get("source", "Citation")) if isinstance(cit, dict) else str(cit)
-                if st.button(f"🔍 {cit_label[:24]}", key=f"cit_inspect_btn_{idx}_{clean_cmd[:10]}", use_container_width=True):
-                    show_citation_dialog(cit_label)
+        # Tier 6: Peer-Reviewed Academic Literature Vault
+        lit_eval = last_res.get("literature_eval", {})
+        if lit_eval and lit_eval.get("citations"):
+            st.markdown(render_academic_vault_html(lit_eval["citations"], theme=current_theme), unsafe_allow_html=True)
 
-    # Command History Expander
-    with st.expander("📜 Stata Command History in this Session", expanded=False):
-        for i, (h_cmd, h_res) in enumerate(reversed(st.session_state["stata_history"])):
-            st.markdown(f"**[{len(st.session_state['stata_history'])-i}]** `{h_cmd}` — *Status: {h_res.get('status')}*")
+        # Command History Expander
+        with st.expander("📜 Stata Command History in this Session", expanded=False):
+            for i, (h_cmd, h_res) in enumerate(reversed(st.session_state["stata_history"])):
+                st.markdown(f"**[{len(st.session_state['stata_history'])-i}]** `{h_cmd}` — *Status: {h_res.get('status')}*")
+    else:
+        st.info("⚡ **Stata Command Console Ready.** Type any econometric command above (e.g. `xtreg leverage profitability tangibility log_size, fe cluster(company_code)`) or click one of the quick templates above to execute.")
 
 
 with tab_esttab:
