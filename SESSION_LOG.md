@@ -142,3 +142,20 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - **`docs/CANONICAL_IMPLEMENTATION_PLAN.md` Created:** Reconciled technical specifications for Workstreams 1 & 2 removing already-implemented items.
 - **Security Remediation Flagged:** Plaintext credentials removed from `AGENTS.md` and replaced with standard secret references; status set to `SECURITY_REMEDIATION_PENDING_ROTATION`.
 - **`.graphifyignore` Created:** Configured dual-mode indexing for source code plus curated canonical Markdown while excluding binary databases, caches, and test scratch.
+
+## 3. Stata Studio Alignment, Anti-Fade & GCP Live Deployment (Commit `7c1385e`)
+- **Stata Output Formatting Fixed:**
+  - Header right column statistics (`Number of obs`, `Number of groups`, `min`, `avg`, `max`, `F(...)`, `Prob > F`) have all `=` signs locked precisely at column 66 across all panel regressions.
+  - OLS ANOVA table right column statistics locked at column 69.
+  - Summarize table dynamically adjusts variable column width (`max(len(v), 13) + 1`), preventing 13-character `profitability` from displacing the vertical pipe divider `|`.
+  - Pwcorr matrix column width dynamically sized to prevent column shift.
+- **Terminal Card UI & Anti-Fade Polish:**
+  - Header dots (red, yellow, green) aligned in non-collapsible left container with command text wrapping cleanly and right badge `N = ...` fixed in place.
+  - Comprehensive anti-fade CSS injected into `pages/23_stata_studio.py`, `assets/style_light.css`, and `assets/style_dark.css` overriding Streamlit's `opacity: 0.33` stale DOM element dimming.
+  - Replaced stale DOM updates with `output_placeholder = st.empty()` and clear `st.spinner(...)` computation lifecycle.
+- **Deployment & Live GCP Verification:**
+  - Pushed to `master` (commit `7c1385e`).
+  - GitHub Actions run `34017700035` passed 100% (pytest in 2m12s, OCaml in 3m11s, Cloud Run deployment in 3m47s).
+  - Live GCP Cloud Run (`https://lifecycle-leverage-779655496440.us-east1.run.app`) verified across all user roles (`drbhatia`, `profsurkumar`, `sbhatia`) executing the dissertation regression:
+    `xtreg leverage i.corplifestage c.prof##c.tang c.prof##c.dvnd taxShield intRate i.year, fe`.
+  - Stata Studio and AI Assistant tested and verified operational with screenshots recorded in `scratch/matrix_evidence/`.
