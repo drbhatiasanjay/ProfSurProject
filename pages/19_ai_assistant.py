@@ -16,6 +16,7 @@ import streamlit.components.v1 as components
 import plotly.graph_objects as go
 from helpers import require_role, plotly_layout
 import db
+from components.citation_inspector import show_citation_dialog, render_citation_selector
 
 require_role("admin", "researcher", "viewer", "cfo", "guest")
 db.log_page_visit("ai_assistant_page")
@@ -797,6 +798,10 @@ with st.sidebar:
     _n_msgs = len(st.session_state.get("chat_history", []))
     st.progress(min(_n_msgs / 20, 1.0))
     st.caption(f"Stored turns: {_n_msgs} · model context: up to 6 recent turns")
+
+    with st.expander("📖 Academic Citation Inspector", expanded=False):
+        st.caption("Verify empirical literature benchmarks against peer-reviewed DOIs:")
+        render_citation_selector()
 
     # ── Chat History panel ────────────────────────────────────────────────────
     st.markdown("---")

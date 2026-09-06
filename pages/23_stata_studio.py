@@ -35,6 +35,7 @@ from models.stata_engine import (
     prepare_df_for_stata,
     _STORED_ESTIMATES,
 )
+from components.citation_inspector import show_citation_dialog, render_citation_selector
 
 ensure_session_state()
 db.log_page_visit("Stata Studio")
@@ -203,6 +204,10 @@ with tab_cli:
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
 
+    with st.expander("📖 Academic Citation Inspector & Bibliography Vault", expanded=True):
+        st.caption("Verify empirical literature benchmarks against peer-reviewed DOIs and export BibTeX / APA citations:")
+        render_citation_selector()
+
     with st.expander("📚 PhD Dissertation Figure Replications (Chapters 5 & 8) — 1-Click Stata Command & Graph", expanded=False):
         col_th1, col_th2 = st.columns(2)
         with col_th1:
@@ -337,6 +342,14 @@ with tab_cli:
     lit_eval = last_res.get("literature_eval", {})
     if lit_eval and lit_eval.get("citations"):
         st.markdown(render_academic_vault_html(lit_eval["citations"], theme=current_theme), unsafe_allow_html=True)
+        # Interactive Citation Inspector Triggers
+        st.markdown("<div style='margin-top: 6px; font-size: 12px; font-weight: 700; color: #0284c7;'>📖 Inspect Scholarly Citation Details (DOIs & Mechanisms):</div>", unsafe_allow_html=True)
+        cols_cit = st.columns(min(len(lit_eval["citations"]), 4))
+        for idx, cit in enumerate(lit_eval["citations"][:4]):
+            with cols_cit[idx]:
+                cit_label = cit.get("author", cit.get("source", "Citation")) if isinstance(cit, dict) else str(cit)
+                if st.button(f"🔍 {cit_label[:24]}", key=f"cit_inspect_btn_{idx}_{clean_cmd[:10]}", use_container_width=True):
+                    show_citation_dialog(cit_label)
 
     # Command History Expander
     with st.expander("📜 Stata Command History in this Session", expanded=False):
