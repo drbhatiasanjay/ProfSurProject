@@ -41,7 +41,7 @@ def render_question_card_html(question_text: str, stata_cmd: Optional[str] = Non
 """)
 
 
-def render_rich_terminal_html(ascii_output: str, command_title: str = "Stata 18 SE Console", theme: str = "light") -> str:
+def render_rich_terminal_html(ascii_output: str, command_title: str = "Stata 18 SE Console", theme: str = "light", n_obs: int = 0) -> str:
     """
     Renders the authentic Stata terminal card with header dots.
     Supports both Dark Mode (macOS Terminal) and Light Mode (Stata GUI Results window).
@@ -57,23 +57,27 @@ def render_rich_terminal_html(ascii_output: str, command_title: str = "Stata 18 
     badge_color = "#7EE787" if is_dark else "#059669"
     text_color = "#F0F6FC" if is_dark else "#0F172A"
     shadow = "0 4px 16px rgba(0,0,0,0.35)" if is_dark else "0 2px 10px rgba(0,0,0,0.06)"
+    n_badge = f"N = {n_obs:,}" if n_obs > 0 else ""
 
     return clean_html(f"""
 <div class="stata-rich-terminal-card" style="background: {card_bg} !important; background-color: {card_bg} !important; border: 1px solid {border_color} !important; border-radius: 8px; margin-bottom: 14px; overflow: hidden; box-shadow: {shadow};">
-<div style="background: {header_bg} !important; background-color: {header_bg} !important; padding: 10px 16px; border-bottom: 1px solid {border_color} !important; display: flex; align-items: center; justify-content: space-between;">
-<div style="display: flex; gap: 7px; align-items: center;">
-<span style="width: 11px; height: 11px; border-radius: 50%; background-color: #FF5F56 !important; display: inline-block;"></span>
-<span style="width: 11px; height: 11px; border-radius: 50%; background-color: #FFBD2E !important; display: inline-block;"></span>
-<span style="width: 11px; height: 11px; border-radius: 50%; background-color: #27C93F !important; display: inline-block;"></span>
+<div style="background: {header_bg} !important; background-color: {header_bg} !important; padding: 10px 16px; border-bottom: 1px solid {border_color} !important; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;">
+<div style="display: flex; gap: 12px; align-items: flex-start; flex: 1; min-width: 0;">
+<div style="display: flex; gap: 6px; align-items: center; flex-shrink: 0; padding-top: 4px;">
+<span style="width: 10px; height: 10px; border-radius: 50%; background-color: #FF5F56 !important; display: inline-block;"></span>
+<span style="width: 10px; height: 10px; border-radius: 50%; background-color: #FFBD2E !important; display: inline-block;"></span>
+<span style="width: 10px; height: 10px; border-radius: 50%; background-color: #27C93F !important; display: inline-block;"></span>
 </div>
-<div style="font-size: 12.5px; font-weight: 700; color: {title_color} !important; font-family: 'Consolas', 'Fira Code', 'Courier New', monospace !important; letter-spacing: 0.02em;">{html.escape(command_title)}</div>
-<div style="font-size: 11.5px; color: {badge_color} !important; font-family: 'Consolas', 'Courier New', monospace !important; font-weight: 700;">N = 8,677</div>
+<div style="font-size: 12.5px; font-weight: 700; color: {title_color} !important; font-family: 'Consolas', 'Fira Code', 'Courier New', monospace !important; letter-spacing: 0.02em; line-height: 1.45; word-break: break-word; overflow-wrap: break-word;">{html.escape(command_title)}</div>
+</div>
+<div style="font-size: 11.5px; color: {badge_color} !important; font-family: 'Consolas', 'Courier New', monospace !important; font-weight: 700; flex-shrink: 0; white-space: nowrap; padding-top: 2px;">{n_badge}</div>
 </div>
 <div style="padding: 14px 18px; overflow-x: auto; background: {card_bg} !important; background-color: {card_bg} !important;">
 <pre class="stata-terminal-output" style="margin: 0 !important; font-family: 'Consolas', 'Courier New', monospace !important; font-size: 12.5px !important; line-height: 1.5 !important; color: {text_color} !important; background: transparent !important; background-color: transparent !important; white-space: pre !important; word-wrap: normal !important; overflow-x: auto !important;">{escaped_ascii}</pre>
 </div>
 </div>
 """)
+
 
 
 def render_detailed_economic_commentary_html(

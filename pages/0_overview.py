@@ -12,6 +12,7 @@ _panel_mode = st.session_state.get("panel_mode", "latest")
 _meta = db.get_db_metadata(_panel_mode)
 
 _panel_label = {
+    "bf2001_25_sept26": "bf2001-25_Sept26",
     "thesis":     "Original Thesis Data",
     "latest":     "Latest Panel (CMIE 2025)",
     "run3":       "(2001-25)_April26",

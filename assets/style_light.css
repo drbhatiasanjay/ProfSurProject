@@ -139,6 +139,9 @@ div.stata-rich-terminal-card {
     padding: 18px 20px;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+    min-height: 148px;
     gap: 8px;
     box-shadow: var(--shadow-elevation);
     transition: all 0.2s ease;
@@ -159,7 +162,8 @@ div.stata-rich-terminal-card {
     color: var(--text-muted);
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    min-height: 28px;
     gap: 6px;
 }
 
@@ -444,3 +448,27 @@ button[data-testid="stSidebarCollapseButton"]:focus-visible {
     outline-offset: 2px !important;
 }
 
+/* ==========================================================================
+   Streamlit Anti-Fading Rules — Complete Elimination of Stale Greying Out
+   ========================================================================== */
+.stApp[data-test-script-state="running"],
+.stApp[data-test-script-state="running"] *,
+div[data-testid="stElementContainer"],
+div[data-testid="stElementContainer"] *,
+.element-container,
+.stElementContainer,
+div[data-testid="stVerticalBlock"],
+div[data-testid="stVerticalBlock"] > div,
+div[data-testid="stHorizontalBlock"],
+div[data-testid="stHorizontalBlock"] > div,
+div[data-testid="column"],
+div[data-testid="stExpander"],
+div[data-testid="stTabs"],
+.stTabs [role="tablist"],
+.stTabs [role="tabpanel"],
+[data-testid="stMainBlockContainer"],
+[data-testid="stAppViewBlockContainer"] {
+    opacity: 1 !important;
+    filter: none !important;
+    transition: none !important;
+}

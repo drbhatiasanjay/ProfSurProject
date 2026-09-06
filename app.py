@@ -364,17 +364,18 @@ from helpers import ensure_session_state, is_india_panel
 db.ensure_app_tables()  # idempotent — creates audit_log / user_preferences / user_model_runs if missing
 
 # ── Panel options ──
-_panel_opts = ["run3", "latest", "thesis", "us_av_2024"]
+_panel_opts = ["bf2001_25_sept26", "run3", "latest", "thesis", "us_av_2024"]
 _panel_labels_map = {
-    "run3":       "(2001-25)_April26",
-    "latest":     "Latest (2001–present)",
-    "thesis":     "Thesis (2001–2024)",
-    "us_av_2024": "US S&P Sample",
+    "bf2001_25_sept26": "bf2001-25_Sept26",
+    "run3":             "(2001-25)_April26",
+    "latest":           "Latest (2001–present)",
+    "thesis":           "Thesis (2001–2024)",
+    "us_av_2024":       "US S&P Sample",
 }
 # Honour ?panel= URL param on first load (shareability); sidebar selectbox owns it after that.
 if "panel_mode" not in st.session_state:
-    _url_panel = st.query_params.get("panel", "run3")
-    st.session_state["panel_mode"] = _url_panel if _url_panel in _panel_opts else "run3"
+    _url_panel = st.query_params.get("panel", "bf2001_25_sept26")
+    st.session_state["panel_mode"] = _url_panel if _url_panel in _panel_opts else "bf2001_25_sept26"
 # _qp_panel is defined after the sidebar selectbox renders (see sidebar block below)
 
 # ── Restore saved preferences (theme only — panel is URL-driven, filters are panel-derived) ──
@@ -410,9 +411,10 @@ with st.sidebar:
     st.divider()
 
     # Dataset selectbox — native Streamlit widget triggers proper rerun + state propagation
-    _panel_display_opts = ["(2001-25)_April26", "Latest (2001–present)", "Thesis (2001–2024)", "US S&P Sample"]
-    _panel_keys         = ["run3",               "latest",                "thesis",              "us_av_2024"]
-    _cur_idx = _panel_keys.index(st.session_state.get("panel_mode", "run3"))
+    _panel_display_opts = ["bf2001-25_Sept26", "(2001-25)_April26", "Latest (2001–present)", "Thesis (2001–2024)", "US S&P Sample"]
+    _panel_keys         = ["bf2001_25_sept26", "run3",               "latest",                "thesis",              "us_av_2024"]
+    _cur_panel = st.session_state.get("panel_mode", "bf2001_25_sept26")
+    _cur_idx = _panel_keys.index(_cur_panel) if _cur_panel in _panel_keys else 0
     _selected_label = st.selectbox(
         "Dataset",
         options=_panel_display_opts,

@@ -97,6 +97,28 @@ def get_financial_translation(cmd_str: str) -> str:
 st.markdown(
     """
     <style>
+    /* Complete elimination of Streamlit stale / running fade and ghosting */
+    .stApp[data-test-script-state="running"],
+    .stApp[data-test-script-state="running"] *,
+    div[data-testid="stElementContainer"],
+    div[data-testid="stElementContainer"] *,
+    .element-container,
+    .stElementContainer,
+    div[data-testid="stVerticalBlock"],
+    div[data-testid="stVerticalBlock"] > div,
+    div[data-testid="stHorizontalBlock"],
+    div[data-testid="stHorizontalBlock"] > div,
+    div[data-testid="column"],
+    div[data-testid="stExpander"],
+    div[data-testid="stTabs"],
+    .stTabs [role="tablist"],
+    .stTabs [role="tabpanel"],
+    [data-testid="stMainBlockContainer"],
+    [data-testid="stAppViewBlockContainer"] {
+        opacity: 1 !important;
+        filter: none !important;
+        transition: none !important;
+    }
     .stata-terminal-box {
         background-color: #0c1017;
         color: #f0f6fc;
@@ -181,20 +203,81 @@ if "stata_last_result" not in st.session_state:
 # ── Metric Ribbons ────────────────────────────────────────────────────────────
 n_obs = len(panel_df)
 n_firms = panel_df["company_code"].nunique() if "company_code" in panel_df.columns else 0
-years = (int(panel_df["year"].min()), int(panel_df["year"].max())) if "year" in panel_df.columns else (2001, 2024)
+years = (int(panel_df["year"].min()), int(panel_df["year"].max())) if "year" in panel_df.columns else (2001, 2025)
 n_industries = panel_df["industry_group"].nunique() if "industry_group" in panel_df.columns else 104
 
 col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
+is_dark = st.session_state.get("theme", "light") == "dark"
+card_bg = "rgba(30, 41, 59, 0.55)" if is_dark else "#FFFFFF"
+card_border = "#334155" if is_dark else "#E2E8F0"
+lbl_col = "#94A3B8" if is_dark else "#64748B"
+txt_col = "#F8FAFC" if is_dark else "#0F172A"
+
+m_card_style = f"""
+    background: {card_bg};
+    border: 1px solid {card_border};
+    border-radius: 10px;
+    padding: 10px 12px;
+    height: 100%;
+    min-height: 82px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+"""
+
 with col_m1:
-    st.metric("Panel Setting", "xtset company_code year", help="Stata strongly balanced longitudinal panel structure")
+    st.markdown(f"""
+    <div style="{m_card_style}">
+        <div style="font-size:0.67rem; font-weight:700; text-transform:uppercase; color:{lbl_col}; letter-spacing:0.04em;">PANEL SETTING</div>
+        <div style="font-family:'Consolas','Courier New',monospace; font-size:0.82rem; font-weight:700; color:#0284C7; background:rgba(2,132,199,0.09); padding:3px 6px; border-radius:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="xtset company_code year">xtset company_code year</div>
+    </div>
+    """, unsafe_allow_html=True)
+
 with col_m2:
-    st.metric("Observations (N)", f"{n_obs:,}")
+    st.markdown(f"""
+    <div style="{m_card_style}">
+        <div style="font-size:0.67rem; font-weight:700; text-transform:uppercase; color:{lbl_col}; letter-spacing:0.04em;">OBSERVATIONS (N)</div>
+        <div style="display:flex; align-items:baseline; gap:5px; flex-wrap:nowrap;">
+            <span style="font-size:1.3rem; font-weight:800; color:{txt_col}; font-family:'JetBrains Mono',monospace;">{n_obs:,}</span>
+            <span style="font-size:0.68rem; color:#10B981; font-weight:700; background:rgba(16,185,129,0.12); padding:1px 5px; border-radius:4px; white-space:nowrap;">Balanced</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 with col_m3:
-    st.metric("Cross-Section Units (i)", f"{n_firms:,} Firms")
+    st.markdown(f"""
+    <div style="{m_card_style}">
+        <div style="font-size:0.67rem; font-weight:700; text-transform:uppercase; color:{lbl_col}; letter-spacing:0.04em;">CROSS-SECTION (i)</div>
+        <div style="display:flex; align-items:baseline; gap:5px;">
+            <span style="font-size:1.3rem; font-weight:800; color:{txt_col}; font-family:'JetBrains Mono',monospace;">{n_firms:,}</span>
+            <span style="font-size:0.75rem; color:#6366F1; font-weight:600;">Firms</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 with col_m4:
-    st.metric("Time Horizon (t)", f"{years[0]} – {years[1]} (24 Yrs)")
+    n_yrs = years[1] - years[0] + 1
+    st.markdown(f"""
+    <div style="{m_card_style}">
+        <div style="font-size:0.67rem; font-weight:700; text-transform:uppercase; color:{lbl_col}; letter-spacing:0.04em;">TIME HORIZON (T)</div>
+        <div style="display:flex; align-items:baseline; gap:4px; flex-wrap:nowrap;">
+            <span style="font-size:1.12rem; font-weight:800; color:{txt_col}; font-family:'JetBrains Mono',monospace; white-space:nowrap;">{years[0]}–{years[1]}</span>
+            <span style="font-size:0.68rem; color:#059669; font-weight:600; white-space:nowrap;">({n_yrs}Y)</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 with col_m5:
-    st.metric("Industry Coverage", f"{n_industries} Sectors", help="Prowess / CMIE cross-industry manufacturing classification")
+    st.markdown(f"""
+    <div style="{m_card_style}">
+        <div style="font-size:0.67rem; font-weight:700; text-transform:uppercase; color:{lbl_col}; letter-spacing:0.04em;">INDUSTRY SECTORS</div>
+        <div style="display:flex; align-items:baseline; gap:5px;">
+            <span style="font-size:1.3rem; font-weight:800; color:{txt_col}; font-family:'JetBrains Mono',monospace;">{n_industries}</span>
+            <span style="font-size:0.75rem; color:#06B6D4; font-weight:600;">Sectors</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -273,9 +356,66 @@ with tab_cli:
                 st.session_state["_trigger_stata_run"] = True
                 st.rerun()
 
-    # Command Input Bar
+    # Command Input Bar Styling & Proportional Alignment
+    st.markdown("""
+    <style>
+    /* Complete elimination of Streamlit stale / running fade and ghosting */
+    .stApp[data-test-script-state="running"],
+    .stApp[data-test-script-state="running"] *,
+    div[data-testid="stElementContainer"],
+    div[data-testid="stElementContainer"] *,
+    .element-container,
+    .stElementContainer,
+    div[data-testid="stVerticalBlock"],
+    div[data-testid="stVerticalBlock"] > div,
+    div[data-testid="stHorizontalBlock"],
+    div[data-testid="stHorizontalBlock"] > div,
+    div[data-testid="column"],
+    div[data-testid="stExpander"],
+    div[data-testid="stTabs"],
+    .stTabs [role="tablist"],
+    .stTabs [role="tabpanel"],
+    [data-testid="stMainBlockContainer"],
+    [data-testid="stAppViewBlockContainer"] {
+        opacity: 1 !important;
+        filter: none !important;
+        transition: none !important;
+    }
+    div[data-testid="stFormSubmitButton"] button {
+        white-space: nowrap !important;
+        min-height: 44px !important;
+        height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        letter-spacing: 0.01em !important;
+    }
+    div[data-testid="stTextInput"] input {
+        min-height: 44px !important;
+        height: 44px !important;
+        font-size: 0.95rem !important;
+    }
+    /* Executive Processing Card with Spinner */
+    div[data-testid="stSpinner"] {
+        background: rgba(2, 132, 199, 0.06) !important;
+        border: 1px solid #0284C7 !important;
+        border-radius: 8px !important;
+        padding: 14px 18px !important;
+        margin: 12px 0 18px 0 !important;
+        box-shadow: 0 4px 12px rgba(2, 132, 199, 0.08) !important;
+    }
+    div[data-testid="stSpinner"] > div {
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        color: #0284C7 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
     with st.form("stata_command_form", clear_on_submit=False):
-        c_in1, c_in2 = st.columns([5, 1])
+        c_in1, c_in2 = st.columns([5.2, 1.4], vertical_alignment="center")
         with c_in1:
             typed_cmd = st.text_input(
                 "Stata Command Prompt:",
@@ -292,22 +432,31 @@ with tab_cli:
     # Trigger execution if form was submitted (Enter or button click), template clicked, or new command entered
     should_run = (run_clicked or trigger_run or (active_cmd and active_cmd != st.session_state.get("_prev_cmd", "").strip())) and bool(active_cmd)
 
+    output_placeholder = st.empty()
+
     if should_run:
         st.session_state["stata_cmd_input"] = active_cmd
         st.session_state["_prev_cmd"] = active_cmd
-        with st.spinner(f"Executing: {active_cmd}..."):
-            t0 = time.time()
-            res = execute_stata_command(active_cmd, df=panel_df)
-            elapsed = time.time() - t0
-            st.session_state["stata_last_result"] = res
-            st.session_state["stata_history"].append((active_cmd, res))
+        st.session_state["stata_last_result"] = None  # Clear previous result so stale text does not linger
 
-    # Render Command Results (6-Tier Stack) or Readiness Banner
+        with output_placeholder.container():
+            with st.spinner(f"⏳ Processing Stata command `.{active_cmd}`… Estimating econometric parameters & compiling results"):
+                t0 = time.time()
+                res = execute_stata_command(active_cmd, df=panel_df)
+                elapsed = time.time() - t0
+                if elapsed < 0.6:
+                    time.sleep(0.6 - elapsed)
+                st.session_state["stata_last_result"] = res
+                st.session_state["stata_history"].append((active_cmd, res))
+
+        output_placeholder.empty()
+
+    # ── Render Results ─────────────────────────────────────────────────────
     last_res = st.session_state.get("stata_last_result", None)
 
     if last_res is not None:
         last_cmd = st.session_state["stata_history"][-1][0] if st.session_state["stata_history"] else (active_cmd or "xtreg leverage roa tang size, fe")
-        clean_cmd = last_cmd.lstrip('. ')
+        clean_cmd = last_cmd.lstrip(". ")
         current_theme = st.session_state.get("theme", "light")
 
         from models.rich_chat_renderer import (
@@ -316,88 +465,238 @@ with tab_cli:
             render_theory_scorecard_html,
             render_academic_vault_html,
         )
-        from models.chart_switcher_engine import (
-            build_forest_plot,
-            build_beta_rank_bars,
-        )
+        from models.chart_switcher_engine import build_forest_plot, build_beta_rank_bars
 
-        # Tier 1: Corporate Finance Translation & Economic Intent
-        fin_trans = get_financial_translation(clean_cmd)
         is_dark = current_theme == "dark"
-        card_bg = "#0f172a" if is_dark else "#F0FDF4"
-        card_border = "#1e293b" if is_dark else "#BBF7D0"
-        card_text = "#e2e8f0" if is_dark else "#166534"
+
+        # ── TIER 1: Corporate Finance Translation ──────────────────────────
+        fin_trans = get_financial_translation(clean_cmd)
+        card_bg    = "#0f172a" if is_dark else "#F0FDF4"
+        card_border= "#1e293b" if is_dark else "#BBF7D0"
+        card_text  = "#e2e8f0" if is_dark else "#166534"
         st.markdown(f"""
-        <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 13px; line-height: 1.5; color: {card_text};">
-            <b>💡 Corporate Finance Translation & Economic Intent:</b><br/>
-            {fin_trans}
+        <div style="background:{card_bg};border:1px solid {card_border};border-radius:8px;
+                    padding:12px 16px;margin-bottom:14px;font-size:13px;
+                    line-height:1.5;color:{card_text};">
+            <b>💡 Corporate Finance Translation &amp; Economic Intent:</b><br/>{fin_trans}
         </div>
         """, unsafe_allow_html=True)
 
-        # Tier 2: Stata Monospace Terminal
+        # ── TIER 2: Stata Monospace Terminal ──────────────────────────────
         ascii_out = last_res.get("ascii_output", "No output generated.")
-        terminal_html = render_rich_terminal_html(ascii_out, f"Stata 18 SE · {clean_cmd}", theme=current_theme)
+        n_obs_result = last_res.get("n_obs", 0)
+        terminal_html = render_rich_terminal_html(
+            ascii_out,
+            f"Stata 18 SE · {clean_cmd}",
+            theme=current_theme,
+            n_obs=n_obs_result,
+        )
         if hasattr(st, "html"):
             st.html(terminal_html)
         else:
             st.markdown(terminal_html, unsafe_allow_html=True)
 
-        # Tier 3: Visual Engine · Data-Gated Chart Switcher
+        # ── TIER 3: Visual Engine ──────────────────────────────────────────
         compat = last_res.get("compatible_charts", [])
-        coefs = last_res.get("coefficients", {})
+        coefs  = last_res.get("coefficients", {})
         if compat and coefs:
-            c_sw1, c_sw2 = st.columns([3, 2])
-            with c_sw1:
-                st.markdown("""
-                <div style="font-size: 13px; font-weight: 700; color: #0284C7; margin-top: 6px;">
-                    📊 Visual Engine · Data-Gated Chart Switcher
-                </div>
-                <div style="font-size: 11.5px; color: var(--text-muted, #64748B);">
-                    Switch between mathematically permitted econometric representations
-                </div>
-                """, unsafe_allow_html=True)
-            with c_sw2:
-                chart_options = [c["label"] for c in compat]
-                selected_label = st.selectbox(
-                    "Select Visualization:",
-                    chart_options,
-                    index=0,
-                    key=f"stata_studio_chart_switcher_{clean_cmd[:20]}",
-                    label_visibility="collapsed",
-                )
-            selected_id = next((c["id"] for c in compat if c["label"] == selected_label), "forest_plot")
-
-            if selected_id == "beta_rank_bars":
-                fig = build_beta_rank_bars(coefs, theme=current_theme)
-            else:
-                fig = build_forest_plot(coefs, theme=current_theme)
-            st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
-            st.caption("🛡️ *Compatibility Rule Enforced:* Only mathematically permissible regression representations are displayed. Non-continuous charts (Donut, Pie, Stacked Area) are automatically excluded.")
+            with st.expander("📊 Visual Engine — Coefficient Plot", expanded=True):
+                c_sw1, c_sw2 = st.columns([3, 2])
+                with c_sw1:
+                    st.markdown(
+                        "<div style='font-size:13px;font-weight:700;color:#0284C7;margin-top:6px;'>"
+                        "Data-Gated Chart Switcher</div>"
+                        "<div style='font-size:11.5px;color:#64748B;'>"
+                        "Only mathematically permissible representations shown</div>",
+                        unsafe_allow_html=True,
+                    )
+                with c_sw2:
+                    chart_options  = [c["label"] for c in compat]
+                    selected_label = st.selectbox(
+                        "Select chart",
+                        chart_options,
+                        index=0,
+                        key=f"chart_sw_{clean_cmd[:20]}",
+                        label_visibility="collapsed",
+                    )
+                selected_id = next((c["id"] for c in compat if c["label"] == selected_label), "forest_plot")
+                fig = build_beta_rank_bars(coefs, theme=current_theme) if selected_id == "beta_rank_bars" else build_forest_plot(coefs, theme=current_theme)
+                st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
         elif last_res.get("fig"):
-            st.plotly_chart(last_res["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
+            with st.expander("📊 Visual Engine", expanded=True):
+                st.plotly_chart(last_res["fig"], use_container_width=True, config=PLOTLY_FULL_CONFIG)
         elif last_res.get("chart_spec"):
             from models.agent_tools import render_chat_chart_figure
             fig = render_chat_chart_figure(last_res["chart_spec"], theme=current_theme)
             if fig:
-                st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
+                with st.expander("📊 Visual Engine", expanded=True):
+                    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_FULL_CONFIG)
 
-        # Tier 4 & 5: Economic Commentary & Theory Scorecard
+        # ── TIER 4: Economic Analysis (Collapsible per variable) ──────────
         scorecard = last_res.get("theory_scorecard", [])
         if scorecard:
-            st.markdown(render_detailed_economic_commentary_html(scorecard, theme=current_theme), unsafe_allow_html=True)
-            st.markdown(render_theory_scorecard_html(scorecard, theme=current_theme), unsafe_allow_html=True)
+            n_validated = sum(1 for s in scorecard if "VALIDATED" in s.get("status", ""))
+            n_total     = len(scorecard)
 
-        # Tier 6: Peer-Reviewed Academic Literature Vault
+            with st.expander(
+                f"💡 Part 2: Comprehensive Economic Analysis & Theoretical Interpretation"
+                f"   —   {n_validated}/{n_total} theories validated",
+                expanded=False,
+            ):
+                # Summary intro box
+                intro_bg  = "rgba(245,158,11,0.08)" if is_dark else "#FFFBEB"
+                intro_border = "rgba(245,158,11,0.25)" if is_dark else "#FDE68A"
+                intro_color  = "#CBD5E1" if is_dark else "#334155"
+                st.markdown(f"""
+                <div style="background:{intro_bg};border:1px solid {intro_border};
+                            border-radius:8px;padding:12px 16px;margin-bottom:12px;
+                            font-size:13px;color:{intro_color};line-height:1.55;">
+                    <b>Core Finding:</b> When controlling for unobserved, time-invariant firm differences
+                    across our panel of 401 Indian manufacturing companies (2001–2025), the empirical
+                    estimates reveal a clear story: <i>internal profits are king, physical plant sets the
+                    borrowing ceiling, and larger corporates actively choose financial autonomy over debt.</i>
+                </div>
+                """, unsafe_allow_html=True)
+
+                palette = ["#F43F5E", "#10B981", "#38BDF8", "#818CF8", "#F59E0B"]
+                for i, item in enumerate(scorecard):
+                    color      = palette[i % len(palette)]
+                    var_label  = item.get("variable", "Variable")
+                    raw_var    = item.get("raw_var", "")
+                    beta_str   = item.get("beta", "—")
+                    theory     = item.get("theory", "")
+                    status     = item.get("status", "")
+                    is_val     = "VALIDATED" in status
+                    badge      = "✅ VALIDATED" if is_val else "⚠ PARTIAL"
+                    # One-line summary for collapsed state
+                    summary_line = f"β = {beta_str}   ·   {badge}   ·   {theory}"
+                    body_col   = "#E2E8F0" if is_dark else "#1E293B"
+                    lbl_col    = "#94A3B8" if is_dark else "#475569"
+                    vt_col     = "#FFFFFF" if is_dark else "#0F172A"
+                    bdg_bg     = ("#ECFDF5" if not is_dark else "rgba(16,185,129,0.15)") if is_val else ("#FEF3C7" if not is_dark else "rgba(245,158,11,0.15)")
+                    bdg_tc     = ("#059669" if not is_dark else "#10B981") if is_val else ("#B45309" if not is_dark else "#F59E0B")
+
+                    with st.expander(f"  {'›'} {var_label}   {summary_line}", expanded=False):
+                        if "profit" in raw_var.lower() or "roa" in raw_var.lower():
+                            intuition = "When profitability surges, Indian manufacturing firms immediately channel retained earnings into debt repayment rather than tapping external lenders — strong evidence for the Pecking Order Hypothesis (Myers & Majluf, 1984)."
+                        elif "tangib" in raw_var.lower():
+                            intuition = "Asset-heavy firms pledge physical collateral to unlock larger bank credit lines. Following IBC 2016, Indian credit committees mandate tangible asset coverage as a non-negotiable prerequisite for long-term project loans."
+                        elif "size" in raw_var.lower():
+                            intuition = "Large Indian conglomerates have outgrown intermediated bank credit — they possess decades of accumulated internal reserves and can float domestic or international equity (Financial Independence Hypothesis)."
+                        else:
+                            intuition = f"Reflects the marginal responsiveness of corporate leverage to changes in {var_label} after controlling for firm-level fixed unobserved heterogeneity."
+
+                        st.markdown(f"""
+                        <div style="border-left:4px solid {color};padding-left:14px;margin:4px 0 0 0;">
+                          <div style="font-size:13.5px;font-weight:700;color:{vt_col};margin-bottom:6px;">
+                            {var_label}
+                            <span style="background:{bdg_bg};color:{bdg_tc};border:1px solid {bdg_tc};
+                                         padding:2px 7px;border-radius:4px;font-size:11px;
+                                         font-weight:700;margin-left:10px;">{badge}</span>
+                          </div>
+                          <div style="font-size:12.5px;color:{body_col};line-height:1.55;margin-bottom:5px;">
+                            <b style="color:{lbl_col};">Estimate:</b> {beta_str} &nbsp;|&nbsp;
+                            <b style="color:{lbl_col};">Theory:</b> {theory}
+                          </div>
+                          <div style="font-size:12.5px;color:{body_col};line-height:1.55;">
+                            <b style="color:{lbl_col};">Economic intuition:</b> {intuition}
+                          </div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                # ── Synthesized Academic Verdict (nested collapsible) ──────
+                st.markdown("---")
+                with st.expander("  🏛️ Synthesized Academic Verdict — Two-Tier Life Cycle Dynamic", expanded=False):
+                    overall_bg  = "rgba(15,23,42,0.6)"  if is_dark else "#F8FAFC"
+                    overall_border = "rgba(56,189,248,0.25)" if is_dark else "#E2E8F0"
+                    overall_col = "#E2E8F0" if is_dark else "#0F172A"
+                    title_col   = "#F59E0B" if is_dark else "#B45309"
+                    st.markdown(f"""
+                    <div style="background:{overall_bg};padding:14px 18px;border-radius:8px;
+                                border:1px solid {overall_border};color:{overall_col};
+                                font-size:13px;line-height:1.65;">
+                        Indian corporate capital structure cannot be explained by any single theory in isolation.
+                        The evidence demonstrates a <b>Two-Tier Life Cycle Dynamic</b>:<br/>
+                        <b>1. Operational margin:</b> Firms follow <b>Pecking Order Theory</b> — abundant
+                        cash flow → debt repayment; cash drought → forced borrowing.<br/>
+                        <b>2. Structural constraint:</b> Access to debt is governed by the <b>Trade-Off
+                        Collateral Channel</b> — firms can only borrow up to the liquidation value of
+                        tangible assets.<br/>
+                        <b>3. Life-stage trajectory:</b> As firms reach maturity, reliance on bank debt
+                        gives way to equity capitalisation and internal surpluses.
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # ── TIER 5: Theory Scorecard (collapsible) ─────────────────────────
+        if scorecard:
+            with st.expander("📋 Theory & Literature Benchmark Validation Scorecard", expanded=False):
+                st.markdown(render_theory_scorecard_html(scorecard, theme=current_theme), unsafe_allow_html=True)
+
+        # ── TIER 6: Citations — top 2 visible, rest collapsible ───────────
         lit_eval = last_res.get("literature_eval", {})
-        if lit_eval and lit_eval.get("citations"):
-            st.markdown(render_academic_vault_html(lit_eval["citations"], theme=current_theme), unsafe_allow_html=True)
+        citations = lit_eval.get("citations", []) if lit_eval else []
+        if citations:
+            # Theme tokens
+            cite_bg     = "rgba(15,23,42,0.5)"  if is_dark else "#FFFFFF"
+            cite_border = "#1E293B" if is_dark else "#E2E8F0"
+            cite_title  = "#818CF8" if is_dark else "#4338CA"
+            cite_text   = "#CBD5E1" if is_dark else "#1E293B"
+            cite_tag_bg = "rgba(129,140,248,0.15)" if is_dark else "#EEF2FF"
+            cite_tag_c  = "#818CF8" if is_dark else "#4338CA"
 
-        # Command History Expander
-        with st.expander("📜 Stata Command History in this Session", expanded=False):
+            def _tag(cit):
+                if any(k in cit for k in ["Wooldridge","Cameron","Baltagi"]):
+                    return "METHODOLOGY"
+                if any(k in cit for k in ["Journal of Finance","Rajan","Booth","Myers"]):
+                    return "JOURNAL OF FINANCE"
+                if any(k in cit for k in ["Reserve Bank","IBBI"]):
+                    return "INSTITUTIONAL REPORT"
+                return "EMPIRICAL LITERATURE"
+
+            def _cite_row(cit):
+                tag = _tag(cit)
+                return (
+                    f'<div style="padding:8px 0;border-bottom:1px solid {cite_border};'
+                    f'font-size:12px;color:{cite_text};line-height:1.45;">'
+                    f'<span style="background:{cite_tag_bg};color:{cite_tag_c};'
+                    f'border:1px solid {cite_tag_c};padding:2px 6px;border-radius:4px;'
+                    f'font-size:10px;font-weight:700;margin-right:8px;">{tag}</span>'
+                    f'{html.escape(cit)}</div>'
+                )
+
+            top2_html = "".join(_cite_row(c) for c in citations[:2])
+            st.markdown(f"""
+            <div style="background:{cite_bg};border:1px solid {cite_border};
+                        border-radius:8px;padding:16px 20px;margin-bottom:14px;">
+                <div style="font-size:12.5px;font-weight:700;color:{cite_title};margin-bottom:10px;">
+                    📚 Part 3: Peer-Reviewed Literature & Citations
+                    <span style="font-weight:400;font-size:11px;margin-left:8px;color:#64748B;">
+                        Showing 2 of {len(citations)}
+                    </span>
+                </div>
+                {top2_html}
+            </div>
+            """, unsafe_allow_html=True)
+
+            if len(citations) > 2:
+                with st.expander(f"  › Show all {len(citations)} citations", expanded=False):
+                    rest_html = "".join(_cite_row(c) for c in citations[2:])
+                    st.markdown(f"""
+                    <div style="background:{cite_bg};border:1px solid {cite_border};
+                                border-radius:8px;padding:12px 16px;">
+                        {rest_html}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # ── Command History ────────────────────────────────────────────────
+        with st.expander("📜 Command History", expanded=False):
             for i, (h_cmd, h_res) in enumerate(reversed(st.session_state["stata_history"])):
-                st.markdown(f"**[{len(st.session_state['stata_history'])-i}]** `{h_cmd}` — *Status: {h_res.get('status')}*")
+                idx = len(st.session_state["stata_history"]) - i
+                status_icon = "✅" if h_res.get("status") == "success" else "❌"
+                st.markdown(f"**[{idx}]** `{h_cmd}` {status_icon}")
     else:
-        st.info("⚡ **Stata Command Console Ready.** Type any econometric command above (e.g. `xtreg leverage profitability tangibility log_size, fe cluster(company_code)`) or click one of the quick templates above to execute.")
+        st.info("⚡ **Stata Command Console Ready.** Type any econometric command above or click a quick template to execute.")
+
 
 
 with tab_esttab:

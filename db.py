@@ -675,7 +675,9 @@ def get_year_range(panel_mode: str = "latest"):
     - `run3`       (2001-2025) — Stata replication panel
     - `us_av_2024` (dynamic)   — US S&P sample loaded from Alpha Vantage
     """
-    if panel_mode == "thesis":
+    if panel_mode in ("bf2001_25_sept26", "bf_sept26", "bf2001-25_Sept26"):
+        sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage = 'bf2001_25_sept26'"
+    elif panel_mode == "thesis":
         sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage = 'thesis'"
     elif panel_mode == "run3":
         sql = "SELECT MIN(year) as min_yr, MAX(year) as max_yr FROM financials WHERE vintage = 'run3'"
@@ -700,17 +702,15 @@ def get_data_vintages():
 def _vintage_predicate(panel_mode: str, table_prefix: str = "") -> tuple[str, list]:
     """Return (SQL fragment, params) for the panel_mode vintage predicate.
 
-    Three production modes:
+    Production modes:
+      bf2001_25_sept26 → vintage = 'bf2001_25_sept26' (400 firms, 2001-2025, bifurcated stages)
       thesis  → vintage = 'thesis'                       (2001-2024 frozen panel)
       latest  → vintage IN ('thesis', 'cmie_2025')       (production: thesis + 2025 rollforward)
       run3    → vintage = 'run3'                         (Stata replication, 2001-2025)
-
-    Run3 is deliberately NOT in `latest` because its rows overlap thesis years —
-    unioning them would double-count. Future additive vintages (e.g. cmie_2026) should
-    be appended to the `latest` IN-list explicitly; replication / alternate panels stay
-    standalone.
     """
     p = f"{table_prefix}." if table_prefix else ""
+    if panel_mode in ("bf2001_25_sept26", "bf_sept26", "bf2001-25_Sept26"):
+        return f"{p}vintage = ?", ["bf2001_25_sept26"]
     if panel_mode == "thesis":
         return f"{p}vintage = ?", ["thesis"]
     if panel_mode == "run3":
@@ -730,14 +730,14 @@ def _build_where(filters, table_prefix=""):
     clauses = ["1=1"]
     params = []
 
-    # Panel mode → vintage predicate. Defaults to 'latest' if not set (Dashboard/Benchmarks/Explorer).
-    # Reproducibility-critical pages (Econometrics/ML/Forecasting) set panel_mode='thesis' before querying.
-    panel_mode = filters.get("panel_mode", "latest")
+    panel_mode = filters.get("panel_mode", "bf2001_25_sept26")
     vintage_sql, vintage_params = _vintage_predicate(panel_mode, table_prefix)
     clauses.append(vintage_sql)
     params.extend(vintage_params)
 
-    yr = filters.get("year_range", (2001, 2024))
+    yr = filters.get("year_range")
+    if not yr:
+        yr = get_year_range(panel_mode)
     clauses.append(f"{p}year BETWEEN ? AND ?")
     params.extend([yr[0], yr[1]])
 

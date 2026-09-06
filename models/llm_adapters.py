@@ -42,6 +42,7 @@ except ImportError:
 
 
 _PANEL_DISPLAY_LABELS = {
+    "bf2001_25_sept26": "bf2001-25_Sept26",
     "run3":      "(2001-25)_April26",
     "thesis":    "Thesis (2001-2024)",
     "latest":    "Latest (2001-2025)",

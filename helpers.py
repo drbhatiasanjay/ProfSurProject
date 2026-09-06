@@ -170,7 +170,15 @@ def render_bento_kpi(
     tag_html = f'<span class="bento-tag">{tag}</span>' if tag else ""
     help_attr = f' title="{help_text}"' if help_text else ""
 
-    return f'<div class="bento-card"{help_attr}><div class="bento-title"><span>{title}</span>{tag_html}</div><div class="bento-value"><span>{value}</span>{delta_html}</div>{spark_html}{pct_html}</div>'
+    val_str = str(value)
+    if len(val_str) > 13:
+        val_style = ' style="font-size: 1.05rem; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"'
+    elif len(val_str) > 9:
+        val_style = ' style="font-size: 1.22rem; letter-spacing: -0.01em; white-space: nowrap;"'
+    else:
+        val_style = ''
+
+    return f'<div class="bento-card"{help_attr}><div class="bento-title"><span>{title}</span>{tag_html}</div><div class="bento-value"{val_style}><span>{value}</span>{delta_html}</div>{spark_html}{pct_html}</div>'
 
 
 def render_stage_badge(stage: str) -> str:
@@ -265,9 +273,10 @@ def render_latex_card(equation_latex: str, title: str = "Econometric Specificati
 # Human-friendly labels for the sidebar Panel radio. Used by app.py for the radio
 # itself and by every analysis page that reports which panel is currently active.
 PANEL_LABELS = {
+    "bf2001_25_sept26": "bf2001-25_Sept26",
+    "run3":      "(2001-25)_April26",
     "latest":    "Latest panel (2001–present)",
     "thesis":    "Thesis panel (2001–2024)",
-    "run3":      "(2001-25)_April26",
     "us_av_2024": "US S&P Sample (Alpha Vantage)",
 }
 
@@ -278,8 +287,8 @@ def panel_label(mode: str) -> str:
 
 
 def is_india_panel(mode: str) -> bool:
-    """True for the three India panels; False for the US panel and any unknown future panels."""
-    return mode in ("thesis", "latest", "run3")
+    """True for the India panels; False for the US panel and any unknown future panels."""
+    return mode in ("thesis", "latest", "run3", "bf2001_25_sept26")
 
 
 def apply_theme() -> None:
@@ -312,7 +321,7 @@ def ensure_session_state() -> None:
     import db
 
     if "panel_mode" not in st.session_state:
-        st.session_state.panel_mode = "run3"
+        st.session_state.panel_mode = "bf2001_25_sept26"
 
     if "filters" not in st.session_state:
         yr_min, yr_max = db.get_year_range(st.session_state.panel_mode)

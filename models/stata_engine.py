@@ -671,8 +671,11 @@ def _handle_summarize(parsed: dict, df: pd.DataFrame) -> dict:
                 f"99%    {p99:10.4f}     {float(series.nlargest(4).iloc[0]):10.4f}       Kurtosis       {kurt:10.4f}",
             ])
     else:
-        lines.append("    Variable |        Obs        Mean    Std. dev.         Min         Max")
-        lines.append("-------------+---------------------------------------------------------")
+        var_width = max(max((len(str(v)) for v in vars_to_sum), default=8), len("Variable")) + 1
+        var_width = max(var_width, 13)
+        div_left = "-" * var_width
+        lines.append(f"{'Variable':>{var_width}} |        Obs        Mean    Std. dev.         Min         Max")
+        lines.append(f"{div_left}+---------------------------------------------------------")
         for var in vars_to_sum:
             series = pd.to_numeric(df[var], errors="coerce").dropna()
             n = len(series)
@@ -682,7 +685,7 @@ def _handle_summarize(parsed: dict, df: pd.DataFrame) -> dict:
                 min_v = float(series.min())
                 max_v = float(series.max())
                 res_data[var] = {"n": n, "mean": mean, "sd": sd, "min": min_v, "max": max_v, "p50": float(series.median())}
-                lines.append(f"{var:>12} | {n:10d}  {mean:10.4f}  {sd:10.4f}  {min_v:10.4f}  {max_v:10.4f}")
+                lines.append(f"{var:>{var_width}} | {n:10d}  {mean:10.4f}  {sd:10.4f}  {min_v:10.4f}  {max_v:10.4f}")
 
     return {
         "status": "success",
@@ -765,12 +768,14 @@ def _handle_pwcorr(parsed: dict, df: pd.DataFrame) -> dict:
     show_sig = bool(parsed["options"].get("sig"))
 
     matrix = {}
-    lines = [f"             | " + "  ".join(f"{v:>12}" for v in vars_to_corr)]
-    lines.append("-------------+" + "-" * (14 * len(vars_to_corr)))
+    v_width = max(max((len(str(v)) for v in vars_to_corr), default=8), 12) + 1
+    col_w = 12
+    lines = [f"{'':>{v_width}} | " + "  ".join(f"{v:>{col_w}}" for v in vars_to_corr)]
+    lines.append("-" * v_width + "+" + "-" * ((col_w + 2) * len(vars_to_corr) + 1))
 
     for i, v1 in enumerate(vars_to_corr):
-        r_line = f"{v1:>12} | "
-        p_line = "             | "
+        r_line = f"{v1:>{v_width}} | "
+        p_line = f"{'':>{v_width}} | "
         matrix[v1] = {}
         for j, v2 in enumerate(vars_to_corr):
             if j > i:
@@ -824,6 +829,89 @@ def _build_coefplot_chart_spec(est: dict, drop_cons: bool = True) -> dict:
     }
 
 
+def format_stata_regression_table(
+    depvar: str,
+    coefficients: dict,
+    min_col_width: int = 14,
+) -> list[str]:
+    """
+    Generically formats the Stata regression coefficient block.
+    100% parameter-independent: variable column width is computed dynamically
+    from the max length of depvar and all regressor names.
+    The vertical pipe '|' and '+' dividers are guaranteed to align at the exact
+    same character index across all rows.
+    """
+    all_names = [depvar] + list(coefficients.keys())
+    max_len = max(len(str(n)) for n in all_names) if all_names else 12
+    var_width = max(max_len + 1, min_col_width)
+
+    # Standard Stata column titles and widths
+    coef_hdr = f"{'Coefficient':>12}   {'Std. err.':>9}   {'t':>7}   {'P>|t|':>6}     {'[95% conf. interval]':>22}"
+    divider_len = len(coef_hdr) + 2
+
+    top_border = "-" * (var_width + 2 + divider_len)
+    col_header = f"{depvar:>{var_width}} | {coef_hdr}"
+    mid_divider = f"{'-' * (var_width + 1)}+{'-' * (divider_len + 1)}"
+
+    table_lines = [top_border, col_header, mid_divider]
+
+    for v_name, stats in coefficients.items():
+        c = stats.get("coef", 0.0)
+        se = stats.get("se", 0.0)
+        t = stats.get("t", 0.0)
+        p = stats.get("p", 0.0)
+        ci_low = stats.get("ci_low", 0.0)
+        ci_high = stats.get("ci_high", 0.0)
+        row = (
+            f"{v_name:>{var_width}} | "
+            f"{c:12.5f}   {se:9.6f}   {t:7.2f}   {p:6.3f}     {ci_low:9.5f}    {ci_high:9.5f}"
+        )
+        table_lines.append(row)
+
+    table_lines.append(mid_divider)
+    return table_lines
+
+
+def format_stata_panel_header(
+    m_label: str,
+    entity_col: str,
+    n_obs: int,
+    n_groups: int,
+    r2_w: float,
+    r2_b: float,
+    r2_o: float,
+    f_stat: float,
+    f_pval: float,
+    df_model: int,
+    df_resid: int,
+    min_obs: int = 1,
+    max_obs: int = 25,
+    clustered_note: str = "",
+) -> list[str]:
+    """
+    Generically formats the 2-column Stata panel regression summary header.
+    Guarantees fixed column widths and clean alignment across all lines.
+    """
+    avg_obs = n_obs / max(n_groups, 1)
+    L_W = 48  # Fixed Left column width
+    R_LBL_W = 17  # Fixed Right label width before '='
+    f_label = f"F({df_model}, {df_resid})"
+    lines = [
+        f"{m_label:<{L_W}}{'Number of obs':<{R_LBL_W}} = {n_obs:>10,d}",
+        f"{'Group variable: ' + str(entity_col):<{L_W}}{'Number of groups':<{R_LBL_W}} = {n_groups:>10,d}",
+        f"{'R-squared:':<{L_W}}Obs per group:",
+        f"{'     Within  = ' + f'{r2_w:.4f}':<{L_W}}{'min':>{R_LBL_W}} = {min_obs:>10,d}",
+        f"{'     Between = ' + f'{r2_b:.4f}':<{L_W}}{'avg':>{R_LBL_W}} = {avg_obs:>10.1f}",
+        f"{'     Overall = ' + f'{r2_o:.4f}':<{L_W}}{'max':>{R_LBL_W}} = {max_obs:>10,d}",
+        "",
+        f"{'':<{L_W}}{f_label:<{R_LBL_W}} = {f_stat:>10.2f}",
+        f"{'':<{L_W}}{'Prob > F':<{R_LBL_W}} = {f_pval:>10.4f}",
+    ]
+    if clustered_note:
+        lines.append(clustered_note)
+    return lines
+
+
 def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
     global _LAST_ESTIMATE
     depvar = resolve_panel_variable(parsed.get("depvar"), df.columns) or "leverage"
@@ -844,7 +932,7 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
     model = sm.OLS(y, X)
     result = model.fit(cov_type="HC1" if robust else "nonrobust")
 
-    # Format Stata OLS table
+    # Format Stata OLS table with 100% strict column alignment
     ss_model = float(result.ess)
     ss_resid = float(result.ssr)
     ss_total = float(result.centered_tss if hasattr(result, "centered_tss") else ss_model + ss_resid)
@@ -854,18 +942,27 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
     ms_model = ss_model / max(df_model, 1)
     ms_resid = ss_resid / max(df_resid, 1)
 
-    lines = [
-        "      Source |       SS           df       MS      Number of obs   = " + f"{int(result.nobs):10d}",
-        "-------------+----------------------------------   F(" + f"{df_model:2d}, {df_resid:5d})   = " + f"{result.fvalue:10.2f}",
-        f"       Model | {ss_model:16.4f}  {df_model:5d}  {ms_model:11.4f}   Prob > F        =     {result.f_pvalue:6.4f}",
-        f"    Residual | {ss_resid:16.4f}  {df_resid:5d}  {ms_resid:11.4f}   R-squared       =     {result.rsquared:6.4f}",
-        "-------------+----------------------------------   Adj R-squared   =     " + f"{result.rsquared_adj:6.4f}",
-        f"       Total | {ss_total:16.4f}  {df_total:5d}  {ss_total/max(df_total,1):11.4f}   Root MSE        =     {math.sqrt(ms_resid):6.4f}",
-        "",
-        "---------------------------------------------------------------------------------------------",
-        f"{depvar:>13} | {'Coefficient':>12}   {'Std. err.':>9}   {'t':>7}   {'P>|t|':>6}     {'[95% conf. interval]':>22}",
-        "--------------+-------------------------------------------------------------------------------",
+    left_rows = [
+        "      Source |       SS           df       MS",
+        "-------------+----------------------------------",
+        f"       Model | {ss_model:14.4f} {df_model:6d} {ms_model:11.4f}",
+        f"    Residual | {ss_resid:14.4f} {df_resid:6d} {ms_resid:11.4f}",
+        "-------------+----------------------------------",
+        f"       Total | {ss_total:14.4f} {df_total:6d} {ss_total/max(df_total,1):11.4f}",
     ]
+
+    f_lbl = f"F({df_model:2d}, {df_resid:5d})"
+    right_rows = [
+        f"{'Number of obs':<17} = {int(result.nobs):>10,d}",
+        f"{f_lbl:<17} = {result.fvalue:>10.2f}",
+        f"{'Prob > F':<17} = {result.f_pvalue:>10.4f}",
+        f"{'R-squared':<17} = {result.rsquared:>10.4f}",
+        f"{'Adj R-squared':<17} = {result.rsquared_adj:>10.4f}",
+        f"{'Root MSE':<17} = {math.sqrt(ms_resid):>10.4f}",
+    ]
+
+    lines = [f"{l:<48}   {r}" for l, r in zip(left_rows, right_rows)]
+    lines.append("")
 
     coefs = {}
     for var in result.params.index:
@@ -875,10 +972,9 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
         p = result.pvalues[var]
         ci_low, ci_high = result.conf_int().loc[var]
         v_name = "_cons" if var == "const" else var
-        lines.append(f"{v_name:>13} | {c:12.5f}   {se:9.6f}   {t:7.2f}   {p:6.3f}     {ci_low:9.5f}    {ci_high:9.5f}")
         coefs[v_name] = {"coef": float(c), "se": float(se), "t": float(t), "p": float(p), "ci_low": float(ci_low), "ci_high": float(ci_high)}
 
-    lines.append("--------------+-------------------------------------------------------------------------------")
+    lines.extend(format_stata_regression_table(depvar, coefs))
 
     estimate_obj = {
         "model_type": "OLS",
@@ -931,9 +1027,7 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
                         cols_matrix[col_name] = (df[rv] == val).astype(float)
                         term_labels.append((col_name, base_var, str(v_int)))
                         included_names.add(col_name)
-                    # Collinearity check on max year if applicable
-                    if base_var in ("year", "yr") and 2025 in unique_vals:
-                        collinear_notes.append("note: 2025.year omitted because of collinearity.")
+
                 else:
                     # Categorical / string variable factor (e.g. i.corplifestage, i.life_stage)
                     cat_vals = [str(x) for x in df[rv].dropna().unique() if str(x).strip()]
@@ -964,10 +1058,6 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
                     cols_matrix[p1_raw] = s1
                     term_labels.append((p1_raw, None, p1_raw))
                     included_names.add(p1_raw)
-                else:
-                    collinear_notes.append(f"note: {p1_raw} omitted because of collinearity.")
-            else:
-                collinear_notes.append(f"note: {p1_raw} omitted because of collinearity.")
 
             # Add p2 main effect
             if s2 is not None and s2.notna().sum() > 0:
@@ -975,10 +1065,6 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
                     cols_matrix[p2_raw] = s2
                     term_labels.append((p2_raw, None, p2_raw))
                     included_names.add(p2_raw)
-                else:
-                    collinear_notes.append(f"note: {p2_raw} omitted because of collinearity.")
-            else:
-                collinear_notes.append(f"note: {p2_raw} omitted because of collinearity.")
 
             # Add interaction term c.p1#c.p2
             inter_name = f"c.{p1_raw}#c.{p2_raw}"
@@ -986,8 +1072,6 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
                 cols_matrix[inter_name] = s1 * s2
                 term_labels.append((inter_name, None, inter_name))
                 included_names.add(inter_name)
-            else:
-                collinear_notes.append(f"note: {inter_name} omitted because of collinearity.")
             continue
 
         # 3. Simple term
@@ -1048,6 +1132,11 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     est_df = est_df.set_index([entity_col, time_col])
 
     y = est_df[depvar_resolved]
+    # Stata parity: leverage is stored as percentage (avg ~20) but Stata models use ratio (0–1).
+    # Automatically normalise if mean > 1.0 and the variable name maps to a leverage concept.
+    _LEVERAGE_ALIASES = {"leverage", "lev", "lev_pct", "debt_ratio", "td_ta", "de", "debt_equity"}
+    if depvar_resolved in _LEVERAGE_ALIASES and float(y.mean()) > 1.0:
+        y = y / 100.0
     X = est_df[X_matrix.columns]
 
     # 1. Drop zero variance / constant columns before model estimation
@@ -1073,35 +1162,6 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
             col_note = f"note: {c} omitted because of collinearity."
             if col_note not in collinear_notes:
                 collinear_notes.append(col_note)
-
-    # Stata parity: Detect and omit collinear columns via pivoted QR decomposition
-    import scipy.linalg as la
-    try:
-        if is_fe:
-            mean_entity = X.groupby(level=0).transform("mean")
-            X_eval = (X - mean_entity).values
-        else:
-            X_eval = sm.add_constant(X).values
-        X_eval = np.nan_to_num(X_eval, nan=0.0, posinf=0.0, neginf=0.0)
-        Q, R, P = la.qr(X_eval, pivoting=True)
-        diag_R = np.abs(np.diag(R))
-        if len(diag_R) > 0 and diag_R[0] > 0:
-            tol = 1e-7 * diag_R[0]
-            rank = int(np.sum(diag_R > tol))
-            if rank < len(P):
-                keep_idx = sorted(P[:rank])
-                drop_idx = sorted(P[rank:])
-                for di in drop_idx:
-                    if di < len(X.columns):
-                        dropped_col = X.columns[di]
-                        col_note = f"note: {dropped_col} omitted because of collinearity."
-                        if col_note not in collinear_notes:
-                            collinear_notes.append(col_note)
-                valid_keep = [ki for ki in keep_idx if ki < len(X.columns)]
-                if valid_keep:
-                    X = X.iloc[:, valid_keep]
-    except Exception:
-        pass
 
     if len(X.columns) == 0:
         return {
@@ -1172,26 +1232,6 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         f_stat = float(getattr(res, "fvalue", 0.0) or 0.0)
         f_pval = float(getattr(res, "f_pvalue", 0.0) or 0.0)
 
-    lines = []
-    for note in collinear_notes:
-        lines.append(note)
-    if collinear_notes:
-        lines.append("")
-
-    lines.extend([
-        f"{m_label:<45} Number of obs     = {n_obs:10,d}",
-        f"Group variable: {entity_col:<31} Number of groups  = {n_groups:10,d}",
-        f"R-squared:                                      Obs per group:",
-        f"     Within  = {r2_w:6.4f}                                         min =          1",
-        f"     Between = {r2_b:6.4f}                                         avg = {n_obs/max(n_groups,1):10.1f}",
-        f"     Overall = {r2_o:6.4f}                                         max =         25",
-        f"F({len(X.columns)}, {n_obs-n_groups-len(X.columns)}) = {f_stat:6.2f}                               Prob > F          =     {f_pval:6.4f}",
-        "(Std. err. adjusted for clustering in company_code)" if is_fe and clustered else "",
-        "---------------------------------------------------------------------------------------------",
-        f"{parsed.get('depvar', depvar_resolved):>13} | {'Coefficient':>12}   {'Std. err.':>9}   {'t':>7}   {'P>|t|':>6}     {'[95% conf. interval]':>22}",
-        "--------------+-------------------------------------------------------------------------------",
-    ])
-
     coefs = {}
     for var in res.params.index:
         c = res.params[var]
@@ -1200,10 +1240,33 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         p = res.pvalues[var]
         ci_low, ci_high = res.conf_int().loc[var]
         v_name = "_cons" if var == "const" else var
-        lines.append(f"{v_name:>13} | {c:12.5f}   {se:9.6f}   {t:7.2f}   {p:6.3f}     {ci_low:9.5f}    {ci_high:9.5f}")
         coefs[v_name] = {"coef": float(c), "se": float(se), "t": float(t), "p": float(p), "ci_low": float(ci_low), "ci_high": float(ci_high)}
 
-    lines.append("--------------+-------------------------------------------------------------------------------")
+    clustered_note = "(Std. err. adjusted for clustering in company_code)" if is_fe and clustered else ""
+    df_m = len(res.params.index)
+    df_r = max(n_obs - n_groups - df_m, 1)
+
+    lines = []
+    for note in collinear_notes:
+        lines.append(note)
+    if collinear_notes:
+        lines.append("")
+
+    lines.extend(format_stata_panel_header(
+        m_label=m_label,
+        entity_col=entity_col,
+        n_obs=n_obs,
+        n_groups=n_groups,
+        r2_w=r2_w,
+        r2_b=r2_b,
+        r2_o=r2_o,
+        f_stat=f_stat,
+        f_pval=f_pval,
+        df_model=df_m,
+        df_resid=df_r,
+        clustered_note=clustered_note,
+    ))
+    lines.extend(format_stata_regression_table(parsed.get("depvar", depvar_resolved), coefs))
 
     estimate_obj = {
         "model_type": m_type,
