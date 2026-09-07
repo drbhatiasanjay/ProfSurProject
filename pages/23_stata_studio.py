@@ -205,6 +205,15 @@ filters = st.session_state.get("filters", {})
 ft = db.filters_to_tuple(filters)
 panel_df = db.get_active_panel_data(ft)
 
+if panel_df is not None and not panel_df.empty:
+    if "stata_working_df" not in st.session_state or st.session_state.get("_reset_stata_df", False):
+        st.session_state["stata_working_df"] = panel_df.copy(deep=True)
+        st.session_state["_reset_stata_df"] = False
+    stata_working_df = st.session_state["stata_working_df"]
+else:
+    stata_working_df = None
+
+
 if panel_df is None or panel_df.empty:
     st.error("No active panel data loaded. Please check database connection.")
     st.stop()
@@ -216,10 +225,10 @@ if "stata_last_result" not in st.session_state:
     st.session_state["stata_last_result"] = None
 
 # ── Metric Ribbons ────────────────────────────────────────────────────────────
-n_obs = len(panel_df)
-n_firms = panel_df["company_code"].nunique() if "company_code" in panel_df.columns else 0
-years = (int(panel_df["year"].min()), int(panel_df["year"].max())) if "year" in panel_df.columns else (2001, 2025)
-n_industries = panel_df["industry_group"].nunique() if "industry_group" in panel_df.columns else 104
+n_obs = len(stata_working_df)
+n_firms = stata_working_df["company_code"].nunique() if "company_code" in panel_df.columns else 0
+years = (int(stata_working_df["year"].min()), int(stata_working_df["year"].max())) if "year" in panel_df.columns else (2001, 2025)
+n_industries = stata_working_df["industry_group"].nunique() if "industry_group" in panel_df.columns else 104
 
 col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
 is_dark = st.session_state.get("theme", "light") == "dark"
@@ -313,9 +322,41 @@ with tab_cli:
         st.session_state["stata_cmd_input"] = ""
 
     # Quick Template Buttons
-    col_q1, col_q2, col_q3 = st.columns(3)
+    col_q1, col_q2, col_q3, col_q4 = st.columns(4)
     with col_q1:
         if st.button("📊 . xtreg leverage roa tang size, fe cluster(id)", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+        if st.button("🔗 . ivregress 2sls leverage (tang = L.tang) roa", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "ivregress 2sls leverage (tangibility = L.tangibility) profitability log_size"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+    with col_q2:
+        if st.button("🧪 . hausman fe re", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "hausman fe re"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+        if st.button("🔍 . test profitability = 0", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "test profitability = 0"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+    with col_q3:
+        if st.button("📋 . predict y_hat, xb", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "predict y_hat, xb"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+        if st.button("⚙ . winsor2 leverage tangibility, cuts(1 99)", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "winsor2 leverage tangibility, cuts(1 99) replace"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+    with col_q4:
+        if st.button("🗑 Reset Dataset", use_container_width=True, type="secondary"):
+            st.session_state["_reset_stata_df"] = True
+            st.rerun()
+
+    with col_q1: # Dummy replace to avoid removing the original blocks incorrectly
+        if False:
             st.session_state["stata_cmd_input"] = "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
@@ -445,7 +486,7 @@ with tab_cli:
     active_cmd = (typed_cmd or "").strip()
 
     # Trigger execution if form was submitted (Enter or button click), template clicked, or new command entered
-    should_run = (run_clicked or trigger_run or (active_cmd and active_cmd != st.session_state.get("_prev_cmd", "").strip())) and bool(active_cmd)
+    should_run = (run_clicked or trigger_run) and bool(active_cmd)
 
     output_placeholder = st.empty()
 
@@ -457,7 +498,7 @@ with tab_cli:
         with output_placeholder.container():
             with st.spinner(f"⏳ Processing Stata command `.{active_cmd}`… Estimating econometric parameters & compiling results"):
                 t0 = time.time()
-                res = execute_stata_command(active_cmd, df=panel_df)
+                res = execute_stata_command(active_cmd, df=stata_working_df, stata_session_state=st.session_state)
                 elapsed = time.time() - t0
                 if elapsed < 0.6:
                     time.sleep(0.6 - elapsed)
@@ -494,6 +535,23 @@ with tab_cli:
                     padding:12px 16px;margin-bottom:14px;font-size:13px;
                     line-height:1.5;color:{card_text};">
             <b>💡 Corporate Finance Translation &amp; Economic Intent:</b><br/>{fin_trans}
+        </div>
+        """, unsafe_allow_html=True)
+
+        from models.stata_explainer import explain_stata_command
+        explainer = explain_stata_command(clean_cmd, last_res)
+        exp_bg = "#0f172a" if is_dark else "#F8FAFC"
+        exp_br = "#1e293b" if is_dark else "#E2E8F0"
+        exp_tc = "#e2e8f0" if is_dark else "#0F172A"
+        st.markdown(f"""
+        <div style="background:{exp_bg};border:1px solid {exp_br};border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.5;color:{exp_tc};">
+            <b>📚 Econometric Deconstruction:</b><br/>
+            <ul>
+                <li><b>Intent:</b> {explainer.get("intent", "")}</li>
+                <li><b>Identification:</b> {explainer.get("identification", "")}</li>
+                <li><b>Inference:</b> {explainer.get("inference", "")}</li>
+                <li><b>Theory:</b> {explainer.get("economic_theory", "")}</li>
+            </ul>
         </div>
         """, unsafe_allow_html=True)
 
@@ -735,9 +793,9 @@ with tab_esttab:
     df_stored = get_stored_models_table()
     if df_stored.empty:
         # Pre-populate with standard specifications
-        execute_stata_command("regress leverage profitability tangibility log_size", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=panel_df)
+        execute_stata_command("regress leverage profitability tangibility log_size", df=stata_working_df, stata_session_state=st.session_state)
+        execute_stata_command("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=stata_working_df, stata_session_state=st.session_state)
+        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=stata_working_df, stata_session_state=st.session_state)
         df_stored = get_stored_models_table()
 
     st.dataframe(df_stored, use_container_width=True, hide_index=True)
@@ -792,7 +850,7 @@ with tab_coefplot:
     st.markdown("### 📈 Visual Determinants (`coefplot`)")
     st.caption("Point estimates with 95% confidence interval whiskers. Determinants with confidence intervals that do not cross zero (dashed line) are statistically significant.")
 
-    coef_res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=panel_df)
+    coef_res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=stata_working_df, stata_session_state=st.session_state)
     spec = coef_res.get("chart_spec", {})
 
     if spec and spec.get("categories"):
