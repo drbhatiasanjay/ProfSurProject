@@ -333,7 +333,7 @@ with tab_cli:
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
     with col_q2:
-        if st.button("🧪 . hausman fe re", use_container_width=True):
+        if st.button("🧪 . hausman fe re", use_container_width=True, key="btn_tmpl_hausman_primary"):
             st.session_state["stata_cmd_input"] = "hausman fe re"
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
@@ -365,7 +365,7 @@ with tab_cli:
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
     with col_q2:
-        if st.button("🧪 . hausman fe re", use_container_width=True):
+        if st.button("🧪 . hausman fe re", use_container_width=True, key="btn_tmpl_hausman_secondary"):
             st.session_state["stata_cmd_input"] = "hausman fe re"
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
