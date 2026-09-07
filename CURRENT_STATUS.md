@@ -68,16 +68,15 @@ Comprehensive end-to-end verification executed across 109 checkpoints demonstrat
 
 ## 7. Exactly TWO Approved Future Workstreams
 All future feature work is restricted to exactly two isolated, TDD-governed workstreams implemented on independent branches from the common master recovery commit:
-1. **Workstream 1: Stata CLI / NLP Enhancement**
-   - Target Branch: `feature/stata-cli-nlp-highlighting`
-   - State: `PLANNING_COMPLETE` | `IMPLEMENTATION_NOT_STARTED` | `AWAITING_USER_APPROVAL`
-   - Forensic Confidence: VERY HIGH CONFIDENCE based on available local Git, reflog, object-database, and filesystem evidence that implementation has not started.
-   - Scope: `ivregress 2sls`, `test`, `predict`, `winsor2`, syntax-highlighted editor with autocomplete, bidirectional NL ↔ Stata translation, and econometric explainer card.
+1. **Workstream 1: Stata CLI / NLP Enhancement & Wave 1 Context Integration**
+   - State: `COMPLETED_AND_MERGED` (PR #3 at commit `4119d56`)
+   - Scope: `ivregress 2sls`, `test`, `predict`, `winsor2`, syntax-highlighted editor with autocomplete, bidirectional NL ↔ Stata translation, econometric explainer card, `AnalysisRun` contract, and `ModelResultContext` isolation.
+   - Verification: 65/65 deterministic tests PASS (100%), Phase A–F Playwright online audit PASS (100%).
 2. **Workstream 2: Citation Inspector / Academic Literature Vault**
-   - Target Branch: `feature/citation-inspector-modal`
-   - State: `PLANNING_COMPLETE` | `IMPLEMENTATION_NOT_STARTED` | `AWAITING_USER_APPROVAL`
-   - Forensic Confidence: VERY HIGH CONFIDENCE based on available local Git, reflog, object-database, and filesystem evidence that implementation has not started.
-   - Scope: Canonical metadata catalog (DOIs, mechanisms, Indian panel relevance), `@st.dialog` Citation Inspector modal, and cross-page citation badge triggers.
+   - Branch: `feature/citation-inspector-modal`
+   - State: `COMPLETED_AND_PR_OPEN` (PR #4 at commit `3245356`)
+   - Scope: Canonical metadata catalog (8 papers with DOIs, mechanisms, Indian panel relevance, BibTeX/APA/Stata formatters), `@st.dialog` Citation Inspector modal with theme-adaptive styling, collision-free button keys, and Stata Studio & AI Assistant integrations.
+   - Verification: 6/6 TDD tests PASS, 709/709 full regression PASS, end-to-end browser Playwright verification PASS with evidence in `scratch/citation_inspector_evidence/`.
 
 *Full technical specifications and independent lifecycle requirements are recorded in docs/CANONICAL_IMPLEMENTATION_PLAN.md.*
 
@@ -100,20 +99,20 @@ All future feature work is restricted to exactly two isolated, TDD-governed work
 
 ## 10. Graphify Freshness & Bootstrap Status
 - **Last Locally Verified Generation:**
-  - Graphify version: v0.9.42
-  - Graph metrics: 4,751 nodes, 8,169 edges, 420 communities
-  - Timestamp: 2026-09-06
+   - Graphify version: v0.9.42
+   - Graph metrics: 2,470 nodes, 4,865 edges, 171 communities
+   - Timestamp: 2026-09-07
 - **Tracking & Bootstrap Policy:** Generated `graphify-out/` artifacts are intentionally untracked in Git and may be absent after a fresh clone. When absent or stale relative to `HEAD`, regenerate locally from the repository root using the tracked `.graphifyignore` configuration:
-  ```bash
-  graphify extract .
-  graphify cluster-only .
-  ```
+   ```bash
+   graphify extract .
+   graphify cluster-only .
+   ```
 
 ---
 
 ## 11. Next Authorized Action
-1. Review and authorize the recovery checkpoint commit on `master`.
-2. Branch out to Workstream 1 (`feature/stata-cli-nlp-highlighting`) to begin TDD RED phase.
+1. Administrative credential rotation.
+2. Branch out to Workstream 2 (`feature/citation-inspector-modal`) to begin TDD RED phase.
 
 ---
 

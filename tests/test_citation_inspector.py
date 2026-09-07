@@ -4,7 +4,9 @@ Covers:
 - TC-CIT-01: Dickinson (2011) lifecycle cash flow metadata & DOI validation
 - TC-CIT-02: Rajan & Zingales (1995) cross-country determinants & DOI validation
 - TC-CIT-03: Graceful fallback for unindexed citations
-- TC-CIT-04: Strict catalog schema validation for all registered citations
+- TC-CIT-04: Strict catalog schema validation and RFC 3986 HTTPS DOI format
+- TC-CIT-05: Fuzzy alias normalization mapping
+- TC-CIT-06: Composite button key collision prevention
 """
 
 import re
@@ -12,11 +14,14 @@ import pytest
 
 from models.citation_vault_metadata import (
     get_citation_metadata,
+    normalize_citation_query,
     list_all_citations,
     format_bibtex,
     format_apa,
+    format_stata_comment,
     CITATION_CATALOG,
 )
+from components.citation_inspector import get_safe_button_key
 
 
 def test_tc_cit_01_dickinson_metadata():
@@ -77,3 +82,36 @@ def test_tc_cit_04_schema_validation_all_citations():
         assert "theoretical_mechanism" in item, f"Missing mechanism in {key}"
         assert "indian_panel_relevance" in item, f"Missing Indian relevance in {key}"
         assert "empirical_benchmark" in item, f"Missing empirical benchmark in {key}"
+        
+        # Test BibTeX and APA generation
+        bib = format_bibtex(item)
+        assert bib.startswith("@article{")
+        assert "author = " in bib
+        assert "title = " in bib
+        assert "journal = " in bib
+        
+        apa = format_apa(item)
+        assert str(item["year"]) in apa
+        assert item["doi"] in apa
+
+
+def test_tc_cit_05_alias_normalization():
+    """TC-CIT-05: Punctuation and casing variations resolve to canonical keys."""
+    assert normalize_citation_query("dickinson 2011") == "Dickinson (2011)"
+    assert normalize_citation_query("myers & majluf") == "Myers & Majluf (1984)"
+    assert normalize_citation_query("myers and majluf (1984)") == "Myers & Majluf (1984)"
+    assert normalize_citation_query("rajan and zingales 1995") == "Rajan & Zingales (1995)"
+    assert normalize_citation_query("frank goyal") == "Frank & Goyal (2009)"
+    assert normalize_citation_query("titman wessels") == "Titman & Wessels (1988)"
+
+
+def test_tc_cit_06_button_key_uniqueness():
+    """TC-CIT-06: Scoped key generator creates distinct, valid Streamlit widget IDs."""
+    k1 = get_safe_button_key("Dickinson (2011)", scope="card_1", idx=0)
+    k2 = get_safe_button_key("Dickinson (2011)", scope="card_2", idx=0)
+    k3 = get_safe_button_key("Dickinson (2011)", scope="card_1", idx=1)
+    
+    assert k1 != k2
+    assert k1 != k3
+    assert " " not in k1
+    assert "(" not in k1 and ")" not in k1
