@@ -34,8 +34,30 @@ from models.stata_engine import (
     generate_esttab_latex,
     generate_esttab_docx,
     prepare_df_for_stata,
+    parse_stata_command,
     _STORED_ESTIMATES,
 )
+from models.analytical_router import route as _route
+from models.analytical_contracts import AnalyticalRequest, fingerprint_df as _fp
+import uuid as _uuid
+
+
+def _execute(cmd: str, df) -> dict:
+    """Wave 2 shim: route via capability layer, return dict for backward-compat rendering."""
+    req = AnalyticalRequest(
+        command_str=cmd,
+        parsed=parse_stata_command(cmd),
+        df=df,
+        correlation_id=str(_uuid.uuid4()),
+        dataset_ref=_fp(df),
+        session_id=str(st.session_state.get("session_id", "")),
+    )
+    result = _route(req)
+    # Collapse CapabilityResult back to dict for page render compatibility
+    d = result.to_dict()
+    if result.chart:
+        d["chart_spec"] = result.chart.data
+    return d
 
 ensure_session_state()
 db.log_page_visit("Stata Studio")
@@ -457,7 +479,7 @@ with tab_cli:
         with output_placeholder.container():
             with st.spinner(f"⏳ Processing Stata command `.{active_cmd}`… Estimating econometric parameters & compiling results"):
                 t0 = time.time()
-                res = execute_stata_command(active_cmd, df=panel_df)
+                res = _execute(active_cmd, df=panel_df)
                 elapsed = time.time() - t0
                 if elapsed < 0.6:
                     time.sleep(0.6 - elapsed)
@@ -735,9 +757,9 @@ with tab_esttab:
     df_stored = get_stored_models_table()
     if df_stored.empty:
         # Pre-populate with standard specifications
-        execute_stata_command("regress leverage profitability tangibility log_size", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=panel_df)
+        _execute("regress leverage profitability tangibility log_size", df=panel_df)
+        _execute("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=panel_df)
+        _execute("xtreg leverage profitability tangibility log_size, re", df=panel_df)
         df_stored = get_stored_models_table()
 
     st.dataframe(df_stored, use_container_width=True, hide_index=True)
@@ -792,8 +814,8 @@ with tab_coefplot:
     st.markdown("### 📈 Visual Determinants (`coefplot`)")
     st.caption("Point estimates with 95% confidence interval whiskers. Determinants with confidence intervals that do not cross zero (dashed line) are statistically significant.")
 
-    coef_res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=panel_df)
-    spec = coef_res.get("chart_spec", {})
+    coef_res = _execute("coefplot, drop(_cons) xline(0)", df=panel_df)
+    spec = coef_res.get("chart_spec", coef_res.get("chart", {}) or {})
 
     if spec and spec.get("categories"):
         cats = spec["categories"]

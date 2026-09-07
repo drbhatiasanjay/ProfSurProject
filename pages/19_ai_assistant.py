@@ -1010,9 +1010,31 @@ if user_q:
     is_stata_cmd = _q_clean.startswith(".") or any(_q_clean.lower().startswith(v) for v in _stata_verbs)
 
     if is_stata_cmd:
-        from models.stata_engine import execute_stata_command
-        exec_cmd = _q_clean if _q_clean.startswith(".") else f". {_q_clean}"
-        stata_res = execute_stata_command(exec_cmd)
+        # Wave 2: route via capability layer instead of calling engine directly
+        from models.analytical_router import route as _route
+        from models.analytical_contracts import AnalyticalRequest, fingerprint_df as _fp
+        from models.stata_engine import parse_stata_command
+        import uuid as _uuid
+        exec_cmd = _q_clean if _q_clean.startswith(".") else _q_clean
+        try:
+            import db as _db
+            _ft = _db.filters_to_tuple({})
+            _df = _db.get_active_panel_data(_ft)
+        except Exception:
+            _df = None
+        if _df is not None and not _df.empty:
+            _req = AnalyticalRequest(
+                command_str=exec_cmd,
+                parsed=parse_stata_command(exec_cmd),
+                df=_df,
+                correlation_id=str(_uuid.uuid4()),
+                dataset_ref=_fp(_df),
+            )
+            _res = _route(_req)
+            stata_res = _res.to_dict()
+        else:
+            from models.stata_engine import execute_stata_command
+            stata_res = execute_stata_command(exec_cmd)
         ascii_text = stata_res.get("ascii_output", "")
         interpretation = stata_res.get("interpretation", "")
         reply_content = f"```stata\n{exec_cmd}\n\n{ascii_text}\n```"
