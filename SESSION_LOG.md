@@ -159,3 +159,30 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
   - Live GCP Cloud Run (`https://lifecycle-leverage-779655496440.us-east1.run.app`) verified across all user roles (`drbhatia`, `profsurkumar`, `sbhatia`) executing the dissertation regression:
     `xtreg leverage i.corplifestage c.prof##c.tang c.prof##c.dvnd taxShield intRate i.year, fe`.
   - Stata Studio and AI Assistant tested and verified operational with screenshots recorded in `scratch/matrix_evidence/`.
+
+---
+
+# ProfSurProject — Session Log (2026-09-07 Stata Studio Compatibility & Error Hardening)
+
+## 1. Issues Identified & Fully Resolved
+1. **`xtset <panelvar> <timevar>` Implementation:**
+   - Added `"companycode": "company_code"`, `"companyid": "company_code"`, `"company_id": "company_code"` to `COMMON_VAR_ALIASES`.
+   - Built `PanelContext` dataclass capturing panel dimensions, balance, time range, observations, and duplicate keys.
+   - Implemented `_handle_xtset()` validating panel variables, detecting repeated time values with `r(451);`, and rendering authentic Stata monospace ASCII output.
+   - Persisted `PanelContext` to session state for downstream `xt` models.
+2. **`lgraph <y1> [y2 ...] <xvar>, [wide]` Implementation:**
+   - Implemented multi-series longitudinal time trend aggregator and parser.
+   - Generates interactive Plotly figures with support for `wide` side-by-side facet subplots and high-contrast theme palettes.
+   - Generates authentic Stata ASCII longitudinal means summary table.
+3. **`python-docx` Packaging & Runtime Isolation:**
+   - Added `python-docx>=1.1.0` to `requirements.txt`.
+   - Guarded `generate_esttab_docx()` in `models/stata_engine.py` and download button in `pages/23_stata_studio.py` with `DOCX_AVAILABLE` detection so missing packages degrade gracefully without crashing.
+4. **Non-Crashing Error Handling & "Contact Admin" Guidance:**
+   - Intercepted unrecognized/unsupported commands in `execute_stata_command()` to return structured `status: "unsupported"`, authentic `r(199)` Stata output, and administrator contact details (`admin@lifecycle-leverage.internal`).
+   - Added warning callout card in `pages/23_stata_studio.py` displaying the list of supported commands with zero raw Python tracebacks.
+5. **Econometric Phrasing Calibration:**
+   - Refined inference copy in `generate_stata_inference()` from overly deterministic causal claims ("proves", "isolating true within-firm causal elasticities") to peer-reviewed empirical terminology ("empirically supported", "identifying within-firm associations").
+
+## 2. Verification & Test Evidence
+- **8-Command Screenshot Sequence:** 8/8 commands verified with **100% SUCCESS** on the active 9,031-row panel dataset.
+- **Unit & Regression Suite:** `tests/test_stata_compatibility.py` (9/9 passed in 4.72s) and `tests/test_chart_switcher_and_literature.py` (6/6 passed in 2.54s).

@@ -61,7 +61,7 @@ def get_financial_translation(cmd_str: str) -> str:
             "Estimates a within-firm <b>Fixed Effects panel regression</b> analyzing how corporate debt ratios (leverage) "
             "respond to firm profitability, asset tangibility, and size. By de-meaning data within each firm across 2001–2024, "
             "it purges all unobserved time-invariant firm heterogeneity (governance heritage, founding culture, corporate lineage), "
-            "isolating true within-firm causal elasticities. Evaluates <b>Pecking Order Theory</b> (profitability draining debt) vs. "
+            "identifying within-firm associations. Evaluates <b>Pecking Order Theory</b> (profitability draining debt) vs. "
             "<b>Trade-Off Theory</b> (tangibility providing pledgeable debt capacity)."
         )
     if low.startswith("xtreg") and (" re" in low or ", re" in low or ",re" in low):
@@ -69,6 +69,21 @@ def get_financial_translation(cmd_str: str) -> str:
             "Estimates a <b>Random Effects panel regression</b> using Generalized Least Squares (GLS) to assess capital structure "
             "determinants across firms and over time, providing efficient parameter estimates under the assumption that firm-specific "
             "unobserved heterogeneity is uncorrelated with financial regressors."
+        )
+    if low.startswith("xtset"):
+        return (
+            "Declares and validates longitudinal panel dimensions (firm cross-section <code>i</code> and time series <code>t</code>). "
+            "Verifies observations for duplicate firm-year keys and establishes panel balance and delta intervals for subsequent <code>xt</code> models."
+        )
+    if low.startswith("lgraph"):
+        return (
+            "Generates multi-series longitudinal trajectories over time across all 401 Indian manufacturing firms. "
+            "Computes annual cross-sectional means to track corporate balance-sheet evolutions across 2001–2024."
+        )
+    if low.startswith("tabulate") or low.startswith("tab "):
+        return (
+            "Computes one-way or two-way frequency distributions, percentage breakdowns, and cumulative shares "
+            "across categorical dimensions (e.g. corporate life stages or industry sectors)."
         )
     if low.startswith("hausman"):
         return (
@@ -496,6 +511,20 @@ with tab_cli:
         else:
             st.markdown(terminal_html, unsafe_allow_html=True)
 
+        if last_res.get("status") == "unsupported":
+            st.warning(
+                f"⚠️ **Command Not Supported (`{last_res.get('command', clean_cmd)}`)**\n\n"
+                f"The Stata command `.{last_res.get('command', clean_cmd)}` is not currently implemented in the open-source econometric engine runtime.\n\n"
+                f"📧 **Request Support:** If your research requires this econometric capability enabled, please contact the administrator at `{last_res.get('admin_contact', 'admin@lifecycle-leverage.internal')}`.\n\n"
+                f"**Currently Supported Commands:** `xtset`, `xtreg`, `lgraph`, `regress`, `summarize`, `tabstat`, `pwcorr`, `tabulate`, `scatter`, `histogram`, `graph box`, `hausman`, `estat vif`, `estimates store`, `esttab`, `coefplot`, `xttest0`, `xtserial`, `margins`."
+            )
+        elif last_res.get("status") == "error":
+            st.error(
+                f"❌ **Stata Runtime Error**\n\n"
+                f"{last_res.get('message', 'An error occurred during command estimation.')}\n\n"
+                f"Please check variable spelling, data availability, and syntax against the active panel dataset."
+            )
+
         # ── TIER 3: Visual Engine ──────────────────────────────────────────
         compat = last_res.get("compatible_charts", [])
         coefs  = last_res.get("coefficients", {})
@@ -728,14 +757,22 @@ with tab_esttab:
         # Microsoft Word Export
         tmp_docx = os.path.join(os.getcwd(), "scratch", "stata_publication_table.docx")
         os.makedirs(os.path.dirname(tmp_docx), exist_ok=True)
-        generate_esttab_docx(tmp_docx)
-        with open(tmp_docx, "rb") as f_docx:
-            st.download_button(
-                "📥 Download Word (.docx)",
-                data=f_docx.read(),
-                file_name="stata_publication_table.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        docx_res = generate_esttab_docx(tmp_docx)
+        if docx_res and os.path.exists(tmp_docx):
+            with open(tmp_docx, "rb") as f_docx:
+                st.download_button(
+                    "📥 Download Word (.docx)",
+                    data=f_docx.read(),
+                    file_name="stata_publication_table.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    use_container_width=True,
+                )
+        else:
+            st.button(
+                "📥 Download Word (.docx) [Unavailable]",
+                disabled=True,
                 use_container_width=True,
+                help="Word export requires python-docx to be installed in the runtime environment.",
             )
     with c_dl3:
         # CSV Export
