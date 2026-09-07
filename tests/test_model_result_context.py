@@ -43,3 +43,30 @@ def test_post_estimation_uses_only_the_active_model_context():
     assert same_context["status"] == "success"
     assert isolated_context["status"] == "error"
     assert "r(301)" in isolated_context["ascii_output"]
+
+
+def test_esttab_reads_only_models_stored_in_active_context():
+    frame = _panel_frame()
+    first = ModelResultContext()
+    second = ModelResultContext()
+
+    fitted = execute_stata_command(
+        "regress leverage profitability tangibility log_size",
+        df=frame,
+        stata_session_state=first,
+    )
+    assert fitted["status"] == "success"
+    stored = execute_stata_command(
+        "estimates store model_a",
+        df=frame,
+        stata_session_state=first,
+    )
+    assert stored["status"] == "success"
+
+    first_table = execute_stata_command("esttab", df=frame, stata_session_state=first)
+    second_table = execute_stata_command("esttab", df=frame, stata_session_state=second)
+
+    assert first_table["status"] == "success"
+    assert "model_a" in first_table["table_html"].columns
+    assert second_table["status"] == "error"
+    assert "r(301)" in second_table["ascii_output"]

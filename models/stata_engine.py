@@ -504,7 +504,7 @@ def execute_stata_command(
                 return {"status": "error", "message": "No estimation results found to store.", "ascii_output": "r(301); last estimates not found"}
             return {"status": "success", "ascii_output": f"Stored estimates: {list(_get_stored_estimates(stata_session_state).keys())}"}
         elif cmd == "esttab":
-            res = _handle_esttab(parsed, df)
+            res = _handle_esttab(parsed, df, stata_session_state)
         elif cmd == "coefplot":
             res = _handle_coefplot(parsed, df, stata_session_state)
         elif cmd == "scatter":
@@ -1789,15 +1789,17 @@ def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
     return {"status": "error", "ascii_output": "r(198); invalid twoway syntax or variables not found"}
 
 
-def _handle_esttab(parsed: dict, df: pd.DataFrame) -> dict:
-    global _STORED_ESTIMATES
-    if not _STORED_ESTIMATES:
+def _handle_esttab(parsed: dict, df: pd.DataFrame, stata_session_state=None) -> dict:
+    stored = _get_stored_estimates(stata_session_state)
+    if not stored:
+        if isinstance(stata_session_state, ModelResultContext):
+            return {"status": "error", "message": "No stored estimates found in the active model context.", "ascii_output": "r(301); no stored estimates in active context"}
         execute_stata_command("regress leverage profitability tangibility log_size", df=df)
         execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
         execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=df)
 
-    table_data = get_stored_models_table()
-    latex = generate_esttab_latex()
+    table_data = get_stored_models_table(stata_session_state)
+    latex = generate_esttab_latex(stata_session_state)
     return {
         "status": "success",
         "command": parsed["raw"],
@@ -2536,14 +2538,14 @@ def _handle_lgraph(parsed: dict, df: pd.DataFrame) -> dict:
     }
 
 
-def get_stored_models_table() -> pd.DataFrame:
+def get_stored_models_table(stata_session_state=None) -> pd.DataFrame:
     """Format stored models into a standard side-by-side comparison DataFrame."""
-    global _STORED_ESTIMATES
-    if not _STORED_ESTIMATES:
+    stored = _get_stored_estimates(stata_session_state)
+    if not stored:
         return pd.DataFrame()
 
     all_vars = []
-    for m in _STORED_ESTIMATES.values():
+    for m in stored.values():
         for v in m.get("coefficients", {}).keys():
             if v not in all_vars and v != "_cons":
                 all_vars.append(v)
@@ -2554,7 +2556,7 @@ def get_stored_models_table() -> pd.DataFrame:
     for var in all_vars:
         coef_row = {"Variable": var}
         se_row = {"Variable": ""}
-        for m_name, m in _STORED_ESTIMATES.items():
+        for m_name, m in stored.items():
             coef_data = m.get("coefficients", {}).get(var)
             if coef_data:
                 c = coef_data["coef"]
@@ -2573,7 +2575,7 @@ def get_stored_models_table() -> pd.DataFrame:
     n_row = {"Variable": "Observations"}
     r2_row = {"Variable": "R-squared"}
     fe_row = {"Variable": "Firm Fixed Effects"}
-    for m_name, m in _STORED_ESTIMATES.items():
+    for m_name, m in stored.items():
         n_row[m_name] = f"{m.get('n_obs', 0):,}"
         r2_row[m_name] = f"{m.get('r2', 0.0):.4f}"
         fe_row[m_name] = "Yes" if "Fixed" in m.get("model_type", "") else "No"
@@ -2582,9 +2584,9 @@ def get_stored_models_table() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def generate_esttab_latex() -> str:
+def generate_esttab_latex(stata_session_state=None) -> str:
     """Generate publication-ready LaTeX code matching Stata esttab / outreg2."""
-    df_table = get_stored_models_table()
+    df_table = get_stored_models_table(stata_session_state)
     if df_table.empty:
         return "% No models estimated yet"
 
@@ -2619,7 +2621,7 @@ def generate_esttab_latex() -> str:
     return "\n".join(lines)
 
 
-def generate_esttab_docx(output_path: str) -> str | None:
+def generate_esttab_docx(output_path: str, stata_session_state=None) -> str | None:
     """Export the esttab multi-model comparison table to Microsoft Word (.docx)."""
     if not DOCX_AVAILABLE:
         return None
@@ -2630,7 +2632,7 @@ def generate_esttab_docx(output_path: str) -> str | None:
         doc.add_heading("LifeCycle Leverage — Stata Econometric Replication", level=1)
         doc.add_paragraph("Table: Panel Regression Models with Cluster-Robust Standard Errors")
 
-        df_table = get_stored_models_table()
+        df_table = get_stored_models_table(stata_session_state)
         if df_table.empty:
             doc.add_paragraph("No regression models estimated yet.")
             doc.save(output_path)
