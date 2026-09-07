@@ -573,6 +573,12 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
         lit_eval = turn.get("literature_eval")
         if lit_eval and lit_eval.get("citations"):
             st.markdown(render_academic_vault_html(lit_eval["citations"], theme=current_theme), unsafe_allow_html=True)
+            from components.citation_inspector import render_citation_badge_button
+            cols_cit = st.columns(min(len(lit_eval["citations"]), 4))
+            for idx, cit in enumerate(lit_eval["citations"][:4]):
+                with cols_cit[idx]:
+                    cit_key = cit.get("author", cit.get("source", "Citation")) if isinstance(cit, dict) else str(cit)
+                    render_citation_badge_button(cit_key, scope=f"ai_turn_{key_prefix}", idx=idx)
 
         _render_answer_context(key_prefix)
         return
@@ -638,6 +644,12 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
             ),
             unsafe_allow_html=True
         )
+        from components.citation_inspector import render_citation_badge_button
+        cols_cit_gen = st.columns(min(len(lit_citations), 4))
+        for idx, cit in enumerate(lit_citations[:4]):
+            with cols_cit_gen[idx]:
+                cit_key = cit.get("author", cit.get("source", "Citation")) if isinstance(cit, dict) else str(cit)
+                render_citation_badge_button(cit_key, scope=f"ai_gen_{key_prefix}", idx=idx)
 
     _render_answer_context(key_prefix)
 

@@ -344,12 +344,16 @@ with tab_cli:
         st.markdown(render_academic_vault_html(lit_eval["citations"], theme=current_theme), unsafe_allow_html=True)
         # Interactive Citation Inspector Triggers
         st.markdown("<div style='margin-top: 6px; font-size: 12px; font-weight: 700; color: #0284c7;'>📖 Inspect Scholarly Citation Details (DOIs & Mechanisms):</div>", unsafe_allow_html=True)
+        from components.citation_inspector import render_citation_badge_button
         cols_cit = st.columns(min(len(lit_eval["citations"]), 4))
         for idx, cit in enumerate(lit_eval["citations"][:4]):
             with cols_cit[idx]:
                 cit_label = cit.get("author", cit.get("source", "Citation")) if isinstance(cit, dict) else str(cit)
-                if st.button(f"🔍 {cit_label[:24]}", key=f"cit_inspect_btn_{idx}_{clean_cmd[:10]}", use_container_width=True):
-                    show_citation_dialog(cit_label)
+                render_citation_badge_button(cit_label, scope="stata_studio_lit", idx=idx)
+
+    # Academic Citation Catalog Quick Inspector
+    with st.expander("📚 Academic Citation Catalog & DOI Inspector", expanded=False):
+        render_citation_selector()
 
     # Command History Expander
     with st.expander("📜 Stata Command History in this Session", expanded=False):
