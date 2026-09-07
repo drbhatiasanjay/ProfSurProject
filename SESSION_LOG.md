@@ -186,3 +186,14 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 ## 2. Verification & Test Evidence
 - **8-Command Screenshot Sequence:** 8/8 commands verified with **100% SUCCESS** on the active 9,031-row panel dataset.
 - **Unit & Regression Suite:** `tests/test_stata_compatibility.py` (9/9 passed in 4.72s) and `tests/test_chart_switcher_and_literature.py` (6/6 passed in 2.54s).
+
+---
+
+# Wave 1 Gemini Handoff (2026-09-07)
+
+- Branch `feature/wave1-model-result-context` is pushed at `c769850`.
+- Added context-scoped `esttab`, stored-model tables, LaTeX, and DOCX generation.
+- Added cross-context isolation coverage; Wave 1 targeted suite: **65 passed**; push pre-check: **67 passed**.
+- PR #3: https://github.com/drbhatiasanjay/ProfSurProject/pull/3 (open, mergeable).
+- Next action is the full online A–F browser audit against this worktree/commit. Detailed instructions: [`docs/HANDOFF_WAVE1_GEMINI.md`](docs/HANDOFF_WAVE1_GEMINI.md).
+- Security reminder: rotate the previously exposed test credential before production deployment; never print or repeat it.
