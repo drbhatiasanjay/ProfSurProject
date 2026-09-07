@@ -12,7 +12,7 @@ Provides open-source mathematical and visual parity with Stata 17/18:
 import os
 import re
 import math
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -55,6 +55,56 @@ class EstimateRecord(dict):
     def params(self):
         result_obj = self.get("result_obj")
         return getattr(result_obj, "params", None)
+
+
+@dataclass
+class ModelResultContext:
+    """Session/workspace-scoped model state for post-estimation commands."""
+
+    last_estimate: EstimateRecord | None = None
+    stored_estimates: dict[str, EstimateRecord] = field(default_factory=dict)
+
+    def get_last_estimate(self):
+        return self.last_estimate
+
+    def set_last_estimate(self, estimate):
+        self.last_estimate = estimate
+
+    def store_estimate(self, name: str, estimate):
+        self.stored_estimates[name] = estimate
+
+
+def _get_last_estimate(stata_session_state=None):
+    if isinstance(stata_session_state, ModelResultContext):
+        return stata_session_state.get_last_estimate()
+    if stata_session_state is not None:
+        return stata_session_state.get("_LAST_ESTIMATE")
+    return _LAST_ESTIMATE
+
+
+def _set_last_estimate(stata_session_state, estimate):
+    global _LAST_ESTIMATE
+    if isinstance(stata_session_state, ModelResultContext):
+        stata_session_state.set_last_estimate(estimate)
+    elif stata_session_state is not None:
+        stata_session_state["_LAST_ESTIMATE"] = estimate
+        if stata_session_state.get("_USE_GLOBAL_FALLBACK"):
+            _LAST_ESTIMATE = estimate
+    else:
+        _LAST_ESTIMATE = estimate
+
+
+def _get_stored_estimates(stata_session_state=None):
+    if isinstance(stata_session_state, ModelResultContext):
+        return stata_session_state.stored_estimates
+    return _STORED_ESTIMATES
+
+
+def _store_estimate(stata_session_state, name: str, estimate):
+    if isinstance(stata_session_state, ModelResultContext):
+        stata_session_state.store_estimate(name, estimate)
+    else:
+        _STORED_ESTIMATES[name] = estimate
 
 COMMON_VAR_ALIASES = {
     "prof": "profitability",
@@ -390,11 +440,17 @@ def parse_stata_command(cmd_str: str) -> dict:
     }
 
 
-def execute_stata_command(cmd_str: str, df: pd.DataFrame = None, stata_session_state: dict = None) -> dict:
+def execute_stata_command(
+    cmd_str: str,
+    df: pd.DataFrame = None,
+    stata_session_state: dict | ModelResultContext = None,
+) -> dict:
     """Execute a parsed Stata command against the provided pandas DataFrame."""
     # global _LAST_ESTIMATE
     if stata_session_state is None:
-        stata_session_state = {"_LAST_ESTIMATE": _LAST_ESTIMATE}
+        stata_session_state = {"_LAST_ESTIMATE": _LAST_ESTIMATE, "_USE_GLOBAL_FALLBACK": True}
+    elif isinstance(stata_session_state, ModelResultContext):
+        pass
     elif "_LAST_ESTIMATE" not in stata_session_state:
         stata_session_state["_LAST_ESTIMATE"] = _LAST_ESTIMATE
     global _STORED_ESTIMATES
@@ -442,13 +498,13 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None, stata_session_s
         elif cmd in ("estimates", "estimate"):
             if parsed["indepvars"] and parsed["indepvars"][0] == "store":
                 name = parsed["indepvars"][1] if len(parsed["indepvars"]) > 1 else "m1"
-                if (stata_session_state.get("_LAST_ESTIMATE") if stata_session_state else _LAST_ESTIMATE):
-                    _STORED_ESTIMATES[name] = stata_session_state.get("_LAST_ESTIMATE") if stata_session_state else _LAST_ESTIMATE
+                if _get_last_estimate(stata_session_state):
+                    _store_estimate(stata_session_state, name, _get_last_estimate(stata_session_state))
                     return {"status": "success", "message": f"Saved current model as '{name}'", "ascii_output": f"(estimates stored as {name})"}
                 return {"status": "error", "message": "No estimation results found to store.", "ascii_output": "r(301); last estimates not found"}
-            return {"status": "success", "ascii_output": f"Stored estimates: {list(_STORED_ESTIMATES.keys())}"}
+            return {"status": "success", "ascii_output": f"Stored estimates: {list(_get_stored_estimates(stata_session_state).keys())}"}
         elif cmd == "esttab":
-            res = _handle_esttab(parsed, df)
+            res = _handle_esttab(parsed, df, stata_session_state)
         elif cmd == "coefplot":
             res = _handle_coefplot(parsed, df, stata_session_state)
         elif cmd == "scatter":
@@ -1128,10 +1184,8 @@ def _handle_regress(parsed: dict, df: pd.DataFrame, stata_session_state: dict = 
     }
     estimate_obj = EstimateRecord(estimate_obj)
     estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
-    if stata_session_state is not None: stata_session_state["_LAST_ESTIMATE"] = estimate_obj
-    global _LAST_ESTIMATE
-    _LAST_ESTIMATE = estimate_obj
-    _STORED_ESTIMATES["ols"] = estimate_obj
+    _set_last_estimate(stata_session_state, estimate_obj)
+    _store_estimate(stata_session_state, "ols", estimate_obj)
 
     return {
         "status": "success",
@@ -1467,11 +1521,9 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame, stata_session_state: dict = No
         estimate_obj["theory_scorecard"] = []
         estimate_obj["compatible_charts"] = [{"id": "forest_plot", "label": "Forest Plot (95% CI)"}]
 
-    if stata_session_state is not None: stata_session_state["_LAST_ESTIMATE"] = estimate_obj
-    global _LAST_ESTIMATE
-    _LAST_ESTIMATE = estimate_obj
+    _set_last_estimate(stata_session_state, estimate_obj)
     store_key = "fe" if is_fe else "re"
-    _STORED_ESTIMATES[store_key] = estimate_obj
+    _store_estimate(stata_session_state, store_key, estimate_obj)
 
     return {
         "status": "success",
@@ -1482,13 +1534,13 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame, stata_session_state: dict = No
 
 def _handle_hausman(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
     from models.econometric import run_hausman_test
-    global _STORED_ESTIMATES
-    fe_est = _STORED_ESTIMATES.get("fe")
-    re_est = _STORED_ESTIMATES.get("re")
+    stored_estimates = _get_stored_estimates(stata_session_state)
+    fe_est = stored_estimates.get("fe")
+    re_est = stored_estimates.get("re")
     if not fe_est:
-        fe_est = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
+        fe_est = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df, stata_session_state=stata_session_state)
     if not re_est:
-        re_est = execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=df)
+        re_est = execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=df, stata_session_state=stata_session_state)
 
     res = run_hausman_test(fe_est, re_est)
     chi2 = float(res.get("chi2", 24.5))
@@ -1548,11 +1600,11 @@ def _handle_estat_vif(parsed: dict, df: pd.DataFrame, stata_session_state: dict 
 
 def _handle_coefplot(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
     # global _LAST_ESTIMATE
-    est = stata_session_state.get("_LAST_ESTIMATE") if stata_session_state else _LAST_ESTIMATE
+    est = _get_last_estimate(stata_session_state)
     if not est:
         # Run default FE model
-        execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
-        est = stata_session_state.get("_LAST_ESTIMATE") if stata_session_state else _LAST_ESTIMATE
+        execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df, stata_session_state=stata_session_state)
+        est = _get_last_estimate(stata_session_state)
 
     drop_cons = "drop(_cons)" in parsed["raw"] or parsed["options"].get("drop") == "_cons"
     chart_spec = _build_coefplot_chart_spec(est, drop_cons=drop_cons)
@@ -1737,15 +1789,17 @@ def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
     return {"status": "error", "ascii_output": "r(198); invalid twoway syntax or variables not found"}
 
 
-def _handle_esttab(parsed: dict, df: pd.DataFrame) -> dict:
-    global _STORED_ESTIMATES
-    if not _STORED_ESTIMATES:
+def _handle_esttab(parsed: dict, df: pd.DataFrame, stata_session_state=None) -> dict:
+    stored = _get_stored_estimates(stata_session_state)
+    if not stored:
+        if isinstance(stata_session_state, ModelResultContext):
+            return {"status": "error", "message": "No stored estimates found in the active model context.", "ascii_output": "r(301); no stored estimates in active context"}
         execute_stata_command("regress leverage profitability tangibility log_size", df=df)
         execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
         execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=df)
 
-    table_data = get_stored_models_table()
-    latex = generate_esttab_latex()
+    table_data = get_stored_models_table(stata_session_state)
+    latex = generate_esttab_latex(stata_session_state)
     return {
         "status": "success",
         "command": parsed["raw"],
@@ -2484,14 +2538,14 @@ def _handle_lgraph(parsed: dict, df: pd.DataFrame) -> dict:
     }
 
 
-def get_stored_models_table() -> pd.DataFrame:
+def get_stored_models_table(stata_session_state=None) -> pd.DataFrame:
     """Format stored models into a standard side-by-side comparison DataFrame."""
-    global _STORED_ESTIMATES
-    if not _STORED_ESTIMATES:
+    stored = _get_stored_estimates(stata_session_state)
+    if not stored:
         return pd.DataFrame()
 
     all_vars = []
-    for m in _STORED_ESTIMATES.values():
+    for m in stored.values():
         for v in m.get("coefficients", {}).keys():
             if v not in all_vars and v != "_cons":
                 all_vars.append(v)
@@ -2502,7 +2556,7 @@ def get_stored_models_table() -> pd.DataFrame:
     for var in all_vars:
         coef_row = {"Variable": var}
         se_row = {"Variable": ""}
-        for m_name, m in _STORED_ESTIMATES.items():
+        for m_name, m in stored.items():
             coef_data = m.get("coefficients", {}).get(var)
             if coef_data:
                 c = coef_data["coef"]
@@ -2521,7 +2575,7 @@ def get_stored_models_table() -> pd.DataFrame:
     n_row = {"Variable": "Observations"}
     r2_row = {"Variable": "R-squared"}
     fe_row = {"Variable": "Firm Fixed Effects"}
-    for m_name, m in _STORED_ESTIMATES.items():
+    for m_name, m in stored.items():
         n_row[m_name] = f"{m.get('n_obs', 0):,}"
         r2_row[m_name] = f"{m.get('r2', 0.0):.4f}"
         fe_row[m_name] = "Yes" if "Fixed" in m.get("model_type", "") else "No"
@@ -2530,9 +2584,9 @@ def get_stored_models_table() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def generate_esttab_latex() -> str:
+def generate_esttab_latex(stata_session_state=None) -> str:
     """Generate publication-ready LaTeX code matching Stata esttab / outreg2."""
-    df_table = get_stored_models_table()
+    df_table = get_stored_models_table(stata_session_state)
     if df_table.empty:
         return "% No models estimated yet"
 
@@ -2567,7 +2621,7 @@ def generate_esttab_latex() -> str:
     return "\n".join(lines)
 
 
-def generate_esttab_docx(output_path: str) -> str | None:
+def generate_esttab_docx(output_path: str, stata_session_state=None) -> str | None:
     """Export the esttab multi-model comparison table to Microsoft Word (.docx)."""
     if not DOCX_AVAILABLE:
         return None
@@ -2578,7 +2632,7 @@ def generate_esttab_docx(output_path: str) -> str | None:
         doc.add_heading("LifeCycle Leverage — Stata Econometric Replication", level=1)
         doc.add_paragraph("Table: Panel Regression Models with Cluster-Robust Standard Errors")
 
-        df_table = get_stored_models_table()
+        df_table = get_stored_models_table(stata_session_state)
         if df_table.empty:
             doc.add_paragraph("No regression models estimated yet.")
             doc.save(output_path)
@@ -2756,10 +2810,8 @@ def _handle_ivregress(parsed: dict, df: pd.DataFrame, stata_session_state: dict 
         "compatible_charts": [{"id": "forest_plot", "label": "Forest Plot (95% CI)"}],
     }
     estimate_obj = EstimateRecord(estimate_obj)
-    if stata_session_state is not None: stata_session_state["_LAST_ESTIMATE"] = estimate_obj
-    global _LAST_ESTIMATE
-    _LAST_ESTIMATE = estimate_obj
-    _STORED_ESTIMATES["iv"] = estimate_obj
+    _set_last_estimate(stata_session_state, estimate_obj)
+    _store_estimate(stata_session_state, "iv", estimate_obj)
     return estimate_obj
 
 
@@ -2768,7 +2820,7 @@ def _handle_ivregress(parsed: dict, df: pd.DataFrame, stata_session_state: dict 
 def _handle_test(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
     """Post-estimation Wald linear hypothesis test."""
 
-    last_est = stata_session_state.get("_LAST_ESTIMATE") if stata_session_state else _LAST_ESTIMATE
+    last_est = _get_last_estimate(stata_session_state)
     if not last_est or "result_obj" not in last_est:
         return {
             "status": "error",
@@ -2877,7 +2929,7 @@ def _handle_test(parsed: dict, df: pd.DataFrame, stata_session_state: dict = Non
 def _handle_predict(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
     """Post-estimation prediction generator for xb and residuals."""
 
-    last_est = stata_session_state.get("_LAST_ESTIMATE") if stata_session_state else _LAST_ESTIMATE
+    last_est = _get_last_estimate(stata_session_state)
     if not last_est or "result_obj" not in last_est:
         return {
             "status": "error",
@@ -2892,7 +2944,7 @@ def _handle_predict(parsed: dict, df: pd.DataFrame, stata_session_state: dict = 
     opts = parsed.get("options", {})
     pred_type = "residuals" if ("residuals" in opts or "r" in opts) else "xb"
 
-    res_obj = _LAST_ESTIMATE["result_obj"]
+    res_obj = last_est["result_obj"]
     depvar = last_est.get("depvar", "leverage")
 
     try:

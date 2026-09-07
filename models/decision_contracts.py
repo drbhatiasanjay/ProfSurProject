@@ -6,11 +6,66 @@ same evidence and visualization rules.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 
 EvidenceKind = Literal["observed", "derived", "modeled", "assumption", "interpretation"]
+AnalysisRunStatus = Literal["pending", "running", "completed", "failed"]
+
+
+@dataclass(frozen=True)
+class AnalysisRun:
+    """Provider-neutral envelope for one deterministic analytical execution."""
+
+    run_id: str
+    capability_id: str
+    status: AnalysisRunStatus
+    parameters: dict[str, Any] = field(default_factory=dict)
+    dataset_fingerprint: str = ""
+    result: Any = None
+    provenance: dict[str, Any] = field(default_factory=dict)
+    errors: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.run_id.strip():
+            raise ValueError("run_id must not be empty")
+        if not self.capability_id.strip():
+            raise ValueError("capability_id must not be empty")
+        if self.status not in {"pending", "running", "completed", "failed"}:
+            raise ValueError(f"unsupported analysis run status: {self.status}")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-compatible representation with stable field names."""
+        return {
+            "run_id": self.run_id,
+            "capability_id": self.capability_id,
+            "status": self.status,
+            "parameters": dict(self.parameters),
+            "dataset_fingerprint": self.dataset_fingerprint,
+            "result": self.result,
+            "provenance": dict(self.provenance),
+            "errors": list(self.errors),
+        }
+
+    def to_json(self) -> str:
+        """Serialize deterministically for persistence and reproducibility checks."""
+        return json.dumps(self.to_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "AnalysisRun":
+        """Rehydrate a run from the public dictionary representation."""
+        return cls(
+            run_id=str(payload.get("run_id", "")),
+            capability_id=str(payload.get("capability_id", "")),
+            status=payload.get("status", "pending"),
+            parameters=dict(payload.get("parameters") or {}),
+            dataset_fingerprint=str(payload.get("dataset_fingerprint", "")),
+            result=payload.get("result"),
+            provenance=dict(payload.get("provenance") or {}),
+            errors=tuple(payload.get("errors") or ()),
+        )
 
 
 @dataclass(frozen=True)
