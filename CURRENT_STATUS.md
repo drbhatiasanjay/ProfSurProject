@@ -1,6 +1,6 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Operational Status
 
-**Last Updated:** 2026-09-06  
+**Last Updated:** 2026-09-07  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
 
 ---
@@ -15,9 +15,10 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 
 ## 2. Git Baseline & Tracking Qualification
 - **Active Branch:** `master`
-- **Head Commit:** `6075708` (`fix(auth): auto-assign display name for authenticated viewer accounts`)
-- **Remote Tracking State:** Local `HEAD` matches locally known tracking ref `refs/remotes/origin/master` (`6075708`).
-- **Network Qualification:** *No fresh network fetch was performed.* Status is based strictly on local git references under recovery guardrails.
+- **Head Commit:** `168b043` (`feat(citation): Workstream 2 — Citation Inspector modal, academic vault metadata, zero-collision triggers [PR #4 approved, tests 109/109]`)
+- **Release Tag:** `v2.0.0-ws2-complete`
+- **Previous Baseline:** `6075708` (auth fix)
+- **Remote Tracking State:** Local `HEAD` is ahead of `origin/master` by 1 commit. GCP deployment pending.
 
 ---
 
@@ -58,11 +59,14 @@ Comprehensive end-to-end verification executed across 109 checkpoints demonstrat
 
 ---
 
-## 6. Genuine Remaining Feature Gaps
-1. **Stata Engine CLI Expansion:** Missing mathematical parsing for `ivregress 2sls`, `test`, `predict`, and `winsor2`.
-2. **Terminal Input UX:** Lacks syntax highlighting and dynamic active-panel column autocompletion.
-3. **NL Econometric Translation:** Lacks bidirectional Natural Language ↔ Stata command translation and live plain-English econometric explainer cards.
-4. **Scholarly Citation Inspector:** Lacks an interactive `@st.dialog` modal exposing verified DOIs and theoretical mechanisms.
+## 6. Remaining Feature Gaps
+All canonical workstream feature gaps are **RESOLVED**. No outstanding gaps remain within the approved scope.
+
+| Gap | Resolution | Commit |
+|-----|-----------|--------|
+| `ivregress 2sls`, `test`, `predict`, `winsor2` | ✅ WS1 merged | PR #3 `4119d56` |
+| Syntax highlighting + NL translation | ✅ WS1 merged | PR #3 `4119d56` |
+| Citation Inspector `@st.dialog` modal | ✅ WS2 merged | PR #4 `168b043` |
 
 ---
 
@@ -74,9 +78,10 @@ All future feature work is restricted to exactly two isolated, TDD-governed work
    - Verification: 65/65 deterministic tests PASS (100%), Phase A–F Playwright online audit PASS (100%).
 2. **Workstream 2: Citation Inspector / Academic Literature Vault**
    - Branch: `feature/citation-inspector-modal`
-   - State: `COMPLETED_AND_PR_OPEN` (PR #4 at commit `3245356`)
+   - State: `COMPLETED_AND_MERGED` (PR #4 squash-merged to `master` at `168b043`)
    - Scope: Canonical metadata catalog (8 papers with DOIs, mechanisms, Indian panel relevance, BibTeX/APA/Stata formatters), `@st.dialog` Citation Inspector modal with theme-adaptive styling, collision-free button keys, and Stata Studio & AI Assistant integrations.
-   - Verification: 6/6 TDD tests PASS, 709/709 full regression PASS, end-to-end browser Playwright verification PASS with evidence in `scratch/citation_inspector_evidence/`.
+   - Verification: 6/6 TDD tests PASS, 109/109 targeted regression (Stata Studio + AI Chat) PASS, end-to-end browser Playwright verification PASS with 6 screenshots in `scratch/citation_inspector_evidence/`.
+   - Release Tag: `v2.0.0-ws2-complete`
 
 *Full technical specifications and independent lifecycle requirements are recorded in docs/CANONICAL_IMPLEMENTATION_PLAN.md.*
 
@@ -111,8 +116,11 @@ All future feature work is restricted to exactly two isolated, TDD-governed work
 ---
 
 ## 11. Next Authorized Action
-1. Administrative credential rotation.
-2. Branch out to Workstream 2 (`feature/citation-inspector-modal`) to begin TDD RED phase.
+1. **GCP Deployment:** Push `master` (`168b043`) to GCP Cloud Run (`profsurkumar.app`) for live production verification.
+2. **Credential Rotation:** Complete formal administrative rotation of any previously exposed secrets.
+3. **Post-Merge Graphify Refresh:** Regenerate `graphify-out/` from new `master` HEAD to keep knowledge graph current.
+
+> **Both canonical workstreams are COMPLETE. No further feature branches are authorized without a new PRD entry.**
 
 ---
 
