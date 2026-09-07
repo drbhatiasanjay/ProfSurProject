@@ -12,13 +12,38 @@ Provides open-source mathematical and visual parity with Stata 17/18:
 import os
 import re
 import math
+from dataclasses import dataclass, asdict
 import numpy as np
 import pandas as pd
 from scipy import stats
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
-# Global in-memory storage for 'estimates store <name>' across a user session
+try:
+    import docx
+    from docx.shared import Inches, Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    DOCX_AVAILABLE = True
+except ImportError:
+    DOCX_AVAILABLE = False
+
+@dataclass
+class PanelContext:
+    panel_var: str
+    time_var: str
+    is_balanced: bool
+    n_panels: int
+    n_obs: int
+    min_period: int
+    max_period: int
+    delta: int = 1
+    has_duplicates: bool = False
+    gaps: bool = False
+
+# Global session panel context & stored estimates
+_ACTIVE_PANEL_CONTEXT: PanelContext | None = None
 _STORED_ESTIMATES = {}
 _LAST_ESTIMATE = None
 
@@ -107,6 +132,9 @@ COMMON_VAR_ALIASES = {
     "year": "year",
     "yr": "year",
     "company_code": "company_code",
+    "companycode": "company_code",
+    "companyid": "company_code",
+    "company_id": "company_code",
     "firm": "company_code",
     "id": "company_code",
     "company": "company_code",
@@ -273,6 +301,10 @@ def parse_stata_command(cmd_str: str) -> dict:
         indepvars = tokens[1:]
     elif cmd == "twoway":
         indepvars = tokens[1:]
+    elif cmd == "xtset":
+        indepvars = tokens[1:]
+    elif cmd == "lgraph":
+        indepvars = tokens[1:]
     else:
         indepvars = tokens[1:]
 
@@ -318,6 +350,10 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
             res = _handle_regress(parsed, df)
         elif cmd == "xtreg":
             res = _handle_xtreg(parsed, df)
+        elif cmd == "xtset":
+            res = _handle_xtset(parsed, df)
+        elif cmd == "lgraph":
+            res = _handle_lgraph(parsed, df)
         elif cmd == "hausman":
             res = _handle_hausman(parsed, df)
         elif cmd == "estat":
@@ -358,10 +394,25 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
         elif cmd in ("margins", "marginsplot"):
             res = _handle_margins(parsed, df)
         else:
+            supported_cmds = [
+                "xtset", "xtreg", "regress", "summarize", "tabstat", "pwcorr",
+                "tabulate", "lgraph", "scatter", "histogram", "graph box",
+                "hausman", "estat vif", "estimates store", "esttab", "coefplot",
+                "xttest0", "xtserial", "margins", "export"
+            ]
+            supported_list_str = ", ".join(supported_cmds[:10]) + ", etc."
             return {
-                "status": "error",
-                "message": f"Unrecognized Stata command '{cmd}'",
-                "ascii_output": f"command {cmd} is unrecognized\nr(199);",
+                "status": "unsupported",
+                "command": cmd,
+                "message": f"Command '{cmd}' is not currently supported in Stata Studio.",
+                "admin_contact": "admin@lifecycle-leverage.internal",
+                "supported_commands": supported_cmds,
+                "ascii_output": (
+                    f". {parsed.get('raw', cmd_str)}\n"
+                    f"command {cmd} is unrecognized or not supported in this runtime.\n"
+                    f"If you require this econometric capability, please contact the administrator (r(199)).\n"
+                    f"Supported commands include: {supported_list_str}"
+                ),
             }
     except Exception as exec_err:
         return {
@@ -405,19 +456,19 @@ def generate_stata_inference(parsed: dict, result: dict, df: pd.DataFrame) -> st
             direction = "negative" if c < 0 else "positive"
 
             p.append(
-                f"- **`{var_name}` ($\\beta = {c:.4f}$, $t = {t:.2f}$, $p = {pval:.3f}$ {sig}):** Demonstrates a statistically significant {direction} impact on `{depvar}`. "
-                f"Holding other regressors and unobserved firm heterogeneity constant, a 1-unit increase in `{var_name}` is associated with a **{abs(c):.4f}** unit shift in `{depvar}`."
+                f"- **`{var_name}` ($\\beta = {c:.4f}$, $t = {t:.2f}$, $p = {pval:.3f}$ {sig}):** Indicates a statistically significant {direction} association with `{depvar}`. "
+                f"Holding other regressors and time-invariant unobserved firm heterogeneity constant, a 1-unit increase in `{var_name}` is associated with a **{abs(c):.4f}** unit shift in `{depvar}`."
             )
 
         p.append("\n#### 2. Capital Structure Theory Validation")
         var_keys = [k.lower() for k in coefs.keys()]
         if any("prof" in k for k in var_keys):
             p.append(
-                "- **Pecking Order Theory (Myers & Majluf, 1984): Strongly Confirmed.** The negative coefficient on profitability reflects that profitable firms prioritize internal cash retention over external debt issuance, minimizing financing friction and information asymmetry costs."
+                "- **Pecking Order Theory (Myers & Majluf, 1984): Empirically Supported.** The negative coefficient on profitability indicates that profitable Indian manufacturing firms prioritize internal cash retention over external debt issuance, consistent with asymmetric information and financing hierarchy models."
             )
         if any("tang" in k for k in var_keys):
             p.append(
-                "- **Trade-Off Theory (Modigliani & Miller, 1963; Kraus & Litzenberger, 1973): Strongly Confirmed.** The positive coefficient on tangibility proves that tangible assets serve as pledgeable loan collateral, mitigating agency costs of debt (asset substitution) and expanding debt capacity."
+                "- **Trade-Off Theory (Modigliani & Miller, 1963; Kraus & Litzenberger, 1973): Empirically Supported.** The positive coefficient on tangibility shows that tangible assets serve as pledgeable loan collateral, mitigating agency costs of debt (asset substitution) and expanding debt capacity under Indian creditor frameworks."
             )
         if any("size" in k for k in var_keys):
             p.append(
@@ -433,8 +484,8 @@ def generate_stata_inference(parsed: dict, result: dict, df: pd.DataFrame) -> st
         )
         return "\n".join(p)
 
-    # CASE 2: twoway connected / line plot
-    elif cmd in ("twoway", "thesis") or ("chart_spec" in result and cmd not in ("tabulate", "tab", "box", "hbox", "margins", "marginsplot")):
+    # CASE 2: twoway connected / lgraph / line plot
+    elif cmd in ("twoway", "thesis", "lgraph") or ("chart_spec" in result and cmd not in ("tabulate", "tab", "box", "hbox", "margins", "marginsplot")):
         spec = result.get("chart_spec", {})
         series = spec.get("series", [])
         categories = spec.get("categories", [])
@@ -2073,6 +2124,274 @@ def _handle_thesis(parsed: dict, df: pd.DataFrame) -> dict:
     return {"status": "error", "message": "Specify thesis fig51, fig52, or fig83", "ascii_output": "r(198); invalid thesis figure requested"}
 
 
+def _handle_xtset(parsed: dict, df: pd.DataFrame) -> dict:
+    """Declare or query longitudinal panel dimensions (panel_var, time_var)."""
+    global _ACTIVE_PANEL_CONTEXT
+    indepvars = parsed.get("indepvars", [])
+    valid_cols = list(df.columns)
+
+    if not indepvars:
+        # Query current panel setting
+        if _ACTIVE_PANEL_CONTEXT is not None:
+            ctx = _ACTIVE_PANEL_CONTEXT
+            bal_str = "strongly balanced" if ctx.is_balanced else "unbalanced"
+            ascii_out = (
+                f"       panel variable:  {ctx.panel_var} ({bal_str})\n"
+                f"        time variable:  {ctx.time_var}, {ctx.min_period} to {ctx.max_period}\n"
+                f"                delta:  {ctx.delta} unit"
+            )
+            return {
+                "status": "success",
+                "command": "xtset",
+                "panel_var": ctx.panel_var,
+                "time_var": ctx.time_var,
+                "panel_context": asdict(ctx),
+                "ascii_output": ascii_out,
+                "message": f"Active panel setting: {ctx.panel_var} {ctx.time_var}",
+            }
+        else:
+            p_var = "company_code" if "company_code" in df.columns else df.columns[0]
+            t_var = "year" if "year" in df.columns else (df.columns[1] if len(df.columns) > 1 else None)
+            indepvars = [p_var, t_var] if t_var else [p_var]
+
+    p_raw = indepvars[0]
+    p_var = resolve_panel_variable(p_raw, valid_cols, df)
+    if not p_var or p_var not in df.columns:
+        return {
+            "status": "error",
+            "message": f"Panel variable '{p_raw}' not found in dataset.",
+            "ascii_output": f"variable {p_raw} not found\nr(111);",
+        }
+
+    t_var = None
+    if len(indepvars) > 1:
+        t_raw = indepvars[1]
+        t_var = resolve_panel_variable(t_raw, valid_cols, df)
+        if not t_var or t_var not in df.columns:
+            return {
+                "status": "error",
+                "message": f"Time variable '{t_raw}' not found in dataset.",
+                "ascii_output": f"variable {t_raw} not found\nr(111);",
+            }
+
+    # Check for duplicate firm-year observations
+    subset_cols = [p_var, t_var] if t_var else [p_var]
+    has_dups = bool(df.duplicated(subset=subset_cols).any())
+    if has_dups and t_var:
+        return {
+            "status": "error",
+            "message": f"Repeated time values within panel '{p_var}'.",
+            "ascii_output": f"repeated time values within panel\nr(451);",
+        }
+
+    n_panels = df[p_var].nunique()
+    n_obs = len(df)
+    min_yr = 2001
+    max_yr = 2024
+    is_strongly_balanced = True
+
+    if t_var:
+        t_numeric = pd.to_numeric(df[t_var], errors="coerce")
+        if t_numeric.notna().any():
+            min_yr = int(t_numeric.min())
+            max_yr = int(t_numeric.max())
+            obs_per_panel = df.groupby(p_var)[t_var].count()
+            expected_periods = max_yr - min_yr + 1
+            is_strongly_balanced = bool((obs_per_panel == expected_periods).all())
+
+    bal_str = "strongly balanced" if is_strongly_balanced else "unbalanced"
+
+    if t_var:
+        ascii_out = (
+            f"       panel variable:  {p_var} ({bal_str})\n"
+            f"        time variable:  {t_var}, {min_yr} to {max_yr}\n"
+            f"                delta:  1 unit"
+        )
+    else:
+        ascii_out = (
+            f"       panel variable:  {p_var} ({bal_str})\n"
+            f"        time variable:  (none)"
+        )
+
+    ctx = PanelContext(
+        panel_var=p_var,
+        time_var=t_var or "year",
+        is_balanced=is_strongly_balanced,
+        n_panels=n_panels,
+        n_obs=n_obs,
+        min_period=min_yr,
+        max_period=max_yr,
+        delta=1,
+        has_duplicates=has_dups,
+        gaps=not is_strongly_balanced,
+    )
+    _ACTIVE_PANEL_CONTEXT = ctx
+
+    try:
+        import streamlit as st
+        st.session_state["active_panel_context"] = ctx
+    except Exception:
+        pass
+
+    return {
+        "status": "success",
+        "command": "xtset",
+        "panel_var": p_var,
+        "time_var": t_var,
+        "panel_context": asdict(ctx),
+        "ascii_output": ascii_out,
+        "message": f"Panel dimensions declared: {p_var} (i)" + (f", {t_var} (t)" if t_var else ""),
+    }
+
+
+def _handle_lgraph(parsed: dict, df: pd.DataFrame) -> dict:
+    """Handle multi-series longitudinal time trend graphs (lgraph var1 var2 ... timevar, [wide])."""
+    raw = parsed.get("raw", "")
+    tokens = parsed.get("indepvars", [])
+    options = parsed.get("options", {})
+    valid_cols = list(df.columns)
+
+    if not tokens:
+        return {
+            "status": "error",
+            "message": "lgraph requires at least one dependent variable and one time variable.",
+            "ascii_output": "syntax error: lgraph varlist timevar [, wide]\nr(198);",
+        }
+
+    # If only 1 token, default timevar to 'year'
+    if len(tokens) == 1:
+        y_tokens = [tokens[0]]
+        t_token = "year"
+    else:
+        y_tokens = tokens[:-1]
+        t_token = tokens[-1]
+
+    # Resolve timevar
+    time_col = resolve_panel_variable(t_token, valid_cols, df)
+    if not time_col or time_col not in df.columns:
+        return {
+            "status": "error",
+            "message": f"Time variable '{t_token}' not found in dataset.",
+            "ascii_output": f"variable {t_token} not found\nr(111);",
+        }
+
+    # Resolve y_vars
+    y_vars = []
+    y_display = {}
+    for yt in y_tokens:
+        resolved = resolve_panel_variable(yt, valid_cols, df)
+        if not resolved or resolved not in df.columns:
+            return {
+                "status": "error",
+                "message": f"Variable '{yt}' not found in dataset.",
+                "ascii_output": f"variable {yt} not found\nr(111);",
+            }
+        if resolved not in y_vars:
+            y_vars.append(resolved)
+            y_display[resolved] = yt
+
+    is_wide = "wide" in options or options.get("wide", False)
+
+    # Compute longitudinal means grouped by time_col
+    needed_cols = [time_col] + y_vars
+    clean_df = df[needed_cols].dropna(subset=[time_col])
+    grouped = clean_df.groupby(time_col)[y_vars].mean().reset_index().sort_values(by=time_col)
+
+    # Build ASCII output table
+    header_cols = [f"{y_display.get(y, y):>14}" for y in y_vars]
+    col_header = f"{time_col:>8} | " + "  ".join(header_cols)
+    divider_len = max(len(col_header), 52)
+    divider = "-" * 9 + "+" + "-" * (divider_len - 9)
+
+    table_lines = [
+        f"Longitudinal Panel Means over {time_col} (N = {len(df):,}, {df['company_code'].nunique() if 'company_code' in df.columns else 401} firms)",
+        divider,
+        col_header,
+        divider,
+    ]
+    for _, row in grouped.iterrows():
+        t_val = str(int(row[time_col])) if pd.notna(row[time_col]) else str(row[time_col])
+        v_strs = []
+        for y in y_vars:
+            val = row[y]
+            v_strs.append(f"{val:14.4f}" if pd.notna(val) else "             .")
+        table_lines.append(f"{t_val:>8} | " + "  ".join(v_strs))
+    table_lines.append(divider)
+    table_lines.append("(Interactive multi-series longitudinal graph plotted in Visual Engine)")
+
+    # Build Plotly Figure
+    palette = ["#0284C7", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4"]
+    x_vals = [int(x) if isinstance(x, (int, float)) and not pd.isna(x) else str(x) for x in grouped[time_col]]
+
+    if is_wide and len(y_vars) > 1:
+        # Side-by-side subplots (wide facet format)
+        fig = make_subplots(
+            rows=1,
+            cols=len(y_vars),
+            subplot_titles=[f"<b>{y_display.get(y, y).upper()}</b>" for y in y_vars],
+            horizontal_spacing=0.08,
+        )
+        for idx, y in enumerate(y_vars, 1):
+            y_vals = grouped[y].tolist()
+            color = palette[(idx - 1) % len(palette)]
+            fig.add_trace(
+                go.Scatter(
+                    x=x_vals,
+                    y=y_vals,
+                    mode="lines+markers",
+                    name=y_display.get(y, y),
+                    line=dict(color=color, width=2.5),
+                    marker=dict(size=6, color=color),
+                    hovertemplate=f"<b>{y_display.get(y, y)}</b><br>{time_col}: %{{x}}<br>Mean: %{{y:.4f}}<extra></extra>",
+                ),
+                row=1,
+                col=idx,
+            )
+        fig.update_layout(
+            title=f"lgraph: Longitudinal Panel Trends across {time_col} (Wide Facet View)",
+            template="plotly_white",
+            height=420,
+            showlegend=False,
+            margin=dict(l=50, r=40, t=60, b=40),
+        )
+    else:
+        # Overlaid single plot
+        fig = go.Figure()
+        for idx, y in enumerate(y_vars):
+            y_vals = grouped[y].tolist()
+            color = palette[idx % len(palette)]
+            fig.add_trace(
+                go.Scatter(
+                    x=x_vals,
+                    y=y_vals,
+                    mode="lines+markers",
+                    name=y_display.get(y, y),
+                    line=dict(color=color, width=2.5),
+                    marker=dict(size=6, color=color),
+                    hovertemplate=f"<b>{y_display.get(y, y)}</b><br>{time_col}: %{{x}}<br>Mean: %{{y:.4f}}<extra></extra>",
+                )
+            )
+        fig.update_layout(
+            title=f"lgraph: Longitudinal Panel Trajectories across {time_col}",
+            xaxis_title=time_col.capitalize(),
+            yaxis_title="Cross-Sectional Mean",
+            template="plotly_white",
+            height=450,
+            hovermode="x unified",
+            margin=dict(l=60, r=40, t=60, b=40),
+        )
+
+    return {
+        "status": "success",
+        "command": parsed.get("raw", "lgraph"),
+        "x_var": time_col,
+        "y_vars": y_vars,
+        "fig": fig,
+        "ascii_output": "\n".join(table_lines),
+        "message": f"Longitudinal line graph generated for {', '.join(y_vars)} over {time_col}",
+    }
+
+
 def get_stored_models_table() -> pd.DataFrame:
     """Format stored models into a standard side-by-side comparison DataFrame."""
     global _STORED_ESTIMATES
@@ -2156,38 +2475,41 @@ def generate_esttab_latex() -> str:
     return "\n".join(lines)
 
 
-def generate_esttab_docx(output_path: str) -> str:
+def generate_esttab_docx(output_path: str) -> str | None:
     """Export the esttab multi-model comparison table to Microsoft Word (.docx)."""
-    import docx
-    from docx.shared import Inches, Pt, RGBColor
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    if not DOCX_AVAILABLE:
+        return None
 
-    doc = docx.Document()
-    doc.add_heading("LifeCycle Leverage — Stata Econometric Replication", level=1)
-    doc.add_paragraph("Table: Panel Regression Models with Cluster-Robust Standard Errors")
+    try:
+        import docx
+        doc = docx.Document()
+        doc.add_heading("LifeCycle Leverage — Stata Econometric Replication", level=1)
+        doc.add_paragraph("Table: Panel Regression Models with Cluster-Robust Standard Errors")
 
-    df_table = get_stored_models_table()
-    if df_table.empty:
-        doc.add_paragraph("No regression models estimated yet.")
+        df_table = get_stored_models_table()
+        if df_table.empty:
+            doc.add_paragraph("No regression models estimated yet.")
+            doc.save(output_path)
+            return output_path
+
+        t = doc.add_table(rows=len(df_table) + 1, cols=len(df_table.columns))
+        t.style = "Table Grid"
+
+        # Header
+        for col_idx, col_name in enumerate(df_table.columns):
+            cell = t.cell(0, col_idx)
+            cell.text = col_name
+            for p in cell.paragraphs:
+                for run in p.runs:
+                    run.bold = True
+
+        # Rows
+        for row_idx, (_, row) in enumerate(df_table.iterrows()):
+            for col_idx, col_name in enumerate(df_table.columns):
+                t.cell(row_idx + 1, col_idx).text = str(row[col_name])
+
+        doc.add_paragraph("\nStandard errors in parentheses. * p<0.10, ** p<0.05, *** p<0.01.")
         doc.save(output_path)
         return output_path
-
-    t = doc.add_table(rows=len(df_table) + 1, cols=len(df_table.columns))
-    t.style = "Table Grid"
-
-    # Header
-    for col_idx, col_name in enumerate(df_table.columns):
-        cell = t.cell(0, col_idx)
-        cell.text = col_name
-        for p in cell.paragraphs:
-            for run in p.runs:
-                run.bold = True
-
-    # Rows
-    for row_idx, (_, row) in enumerate(df_table.iterrows()):
-        for col_idx, col_name in enumerate(df_table.columns):
-            t.cell(row_idx + 1, col_idx).text = str(row[col_name])
-
-    doc.add_paragraph("\nStandard errors in parentheses. * p<0.10, ** p<0.05, *** p<0.01.")
-    doc.save(output_path)
-    return output_path
+    except Exception:
+        return None
