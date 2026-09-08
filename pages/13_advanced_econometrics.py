@@ -748,18 +748,19 @@ A simple OLS coefficient on profitability is biased because *current-year residu
 back into *current-year profitability* through retained earnings, dividend policy, and
 managerial response to financing constraints.
 
-**The 2SLS fix**: replace the endogenous regressor with its predicted value from a first-stage
-regression on lagged values (which are pre-determined and therefore exogenous to current
-residuals).
+**The 2SLS approach**: replace the endogenous regressor with its predicted value from a
+first-stage regression on lagged values. Lagged values may be relevant instruments, but their
+exclusion and exogeneity assumptions require substantive justification and are not established
+by this screen.
 
 **Three diagnostics that decide whether the IV estimate is trustworthy:**
 - **First-stage F-statistic** — instrument *strength*. Rule of thumb: F > 10 means lags are
   meaningful predictors of the current value. Below 10, instruments are weak and 2SLS is
   worse than just running OLS.
-- **Sargan over-identification** (only when ≥ 2 instruments) — instrument *validity*.
-  p > 0.05 means we cannot reject the moment conditions; instruments behave as exogenous.
-- **Wu-Hausman** — *was the regressor actually endogenous?* p < 0.05 says yes, IV was needed.
-  p > 0.05 says OLS would have given the same answer; you can quote the simpler model.
+- **Sargan over-identification** (only when ≥ 2 instruments) — a diagnostic of the moment
+  restrictions. p > 0.05 means we cannot reject them; it does not prove instrument validity.
+- **Wu-Hausman** — a diagnostic for endogeneity under its assumptions. p < 0.05 rejects the
+  null of exogeneity; p > 0.05 does not prove OLS is unbiased or establish identification.
 """)
 
     iv_col_left, iv_col_right = st.columns([1, 3])
@@ -816,7 +817,7 @@ residuals).
                     if sp is not None:
                         st.metric("p-value", format_pvalue(sp))
                         if sp > 0.05:
-                            st.success("Instruments appear valid (p > 0.05)")
+                            st.info("Moment restrictions not rejected (p > 0.05); validity is not established")
                         else:
                             st.warning("Over-id rejected — moment conditions may not hold")
                     else:
@@ -847,8 +848,8 @@ residuals).
                     iv_p = endog_row.iloc[0]["p-value"]
                     insights.append(
                         f"**IV coefficient on {iv_endog}**: {iv_coef:+.4f} "
-                        f"(p={format_pvalue(iv_p)}). Compare against OLS — if magnitudes "
-                        f"differ materially, OLS was biased by endogeneity."
+                        f"(p={format_pvalue(iv_p)}). Compare against OLS descriptively; "
+                        f"differences do not by themselves establish bias or causality."
                     )
                 if iv.get("first_stage_f") is not None and iv["first_stage_f"] < 10:
                     insights.append(
@@ -857,8 +858,8 @@ residuals).
                     )
                 if iv.get("wu_hausman_pvalue") is not None and iv["wu_hausman_pvalue"] > 0.05:
                     insights.append(
-                        "Wu-Hausman cannot reject exogeneity — OLS and IV give the same answer. "
-                        "You can quote the simpler OLS estimate without bias concerns."
+                        "Wu-Hausman cannot reject exogeneity under its assumptions. This does not "
+                        "establish that OLS is unbiased; report the IV identification assumptions."
                     )
 
                 render_interpretation(insights, [
