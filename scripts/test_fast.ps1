@@ -4,7 +4,11 @@ $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 Set-Location $repo
 $python = Join-Path $repo ".venv\Scripts\python.exe"
-if (-not (Test-Path $python)) { $python = "python" }
+if (-not (Test-Path $python)) {
+    if (Get-Command py -ErrorAction SilentlyContinue) {
+        $python = (& py -3.12 -c "import sys; print(sys.executable)").Trim()
+    } else { $python = "python" }
+}
 $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD = "1"
 if (-not $env:PROFSUR_DB_PATH) {
     $env:PROFSUR_DB_PATH = Join-Path $env:TEMP "profsur-fast-$PID.db"
@@ -23,7 +27,12 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 if ($PrePush) {
-    $changed = @(git diff --name-only HEAD~1 HEAD)
+    $upstream = git rev-parse --verify "@{upstream}" 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        $changed = @(git diff --name-only "$upstream..HEAD")
+    } else {
+        $changed = @(git diff --name-only HEAD~1 HEAD)
+    }
 } else {
     $changed = @(git diff --name-only; git diff --name-only --cached | Sort-Object -Unique)
 }

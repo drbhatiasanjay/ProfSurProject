@@ -68,6 +68,9 @@ Machine-readable evidence is emitted with `--evidence <path>`.
 
 Additional action-item contract gate: **55 passed in 15.52s**.
 
+Upstream-range pre-push gate: **243 passed, 2 warnings in 22.20s**, followed by
+the disposable 9,031-row real-data audit.
+
 ## Real-Data Audit
 
 `py -3.12 scripts/wave5_realdata_audit.py`
@@ -105,8 +108,8 @@ Result: **`WAVE5_UI_PASS journeys=4`**.
 
 - GMM, IV, HDFE, ML, and scenario methodology classifications remain unchanged
   and non-validated.
-- Real-data audit requires optional HDFE dependencies and is run locally/pre-push,
-  while CI runs deterministic contract and full pytest gates.
+- Real-data audit accepts either a partial HDFE result or a typed
+  `DEPENDENCY_UNAVAILABLE` result when the optional backend is absent.
 - Graphify semantic attribution warnings remain a tooling limitation; generation
   is restricted to bootstrap and final-commit checkpoints.
 

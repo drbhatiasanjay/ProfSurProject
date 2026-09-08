@@ -122,7 +122,9 @@ def run_audit(source_db: Path) -> dict:
         )
         assert all(result["status"] == "success" for result in covariance.values())
         assert all(result["status"] == "partial" for result in scenarios)
-        assert hdfe["status"] == "partial"
+        assert hdfe["status"] == "partial" or (
+            hdfe["status"] == "error" and hdfe.get("error_code") == "DEPENDENCY_UNAVAILABLE"
+        )
         assert ws1[WS1_COMMANDS[0]]["metadata"]["methodology_status"] == "IMPLEMENTED_UNVERIFIED"
 
         copy_hash_after = _sha256(audit_db)

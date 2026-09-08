@@ -11,6 +11,7 @@ def test_fast_hook_includes_repair_import_safety_and_realdata_gates():
     for required in (
         "PYTEST_DISABLE_PLUGIN_AUTOLOAD",
         "--basetemp",
+        'git diff --name-only "$upstream..HEAD"',
         "test_wave5_independent_review_repair.py",
         "test_llm_adapter_import_safety.py",
         "test_capability_status_contract.py",
