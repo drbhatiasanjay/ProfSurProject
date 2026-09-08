@@ -4,11 +4,19 @@
 import argparse
 import os
 import time
+import uuid
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
 from playwright_stata import authenticate, submit_stata_command
+
+
+def prepare_evidence_dir(base_dir: Path) -> Path:
+    """Create a unique run directory before browser or artifact work begins."""
+    run_dir = base_dir / f"run_{uuid.uuid4().hex}"
+    run_dir.mkdir(parents=True, exist_ok=False)
+    return run_dir
 
 
 def main() -> int:
@@ -20,6 +28,7 @@ def main() -> int:
     args = parser.parse_args()
     if not args.password:
         raise SystemExit("Set PROFSUR_VERIFY_PASSWORD or pass --password.")
+    evidence_dir = prepare_evidence_dir(args.evidence_dir)
 
     started = time.monotonic()
     command_count = 0
@@ -31,7 +40,7 @@ def main() -> int:
         command_count += 1
         return submit_stata_command(
             page, args.base_url, command, fragments, fresh=fresh,
-            evidence_dir=args.evidence_dir,
+            evidence_dir=evidence_dir,
         )
 
     with sync_playwright() as playwright:
@@ -84,7 +93,7 @@ def main() -> int:
             ]:
                 bounded_submit(page, command, fragments, fresh=False)
             assert time.monotonic() - journey_start < 90
-            page.screenshot(path=str(args.evidence_dir / "wave5_ui_pass.png"), full_page=True)
+            page.screenshot(path=str(evidence_dir / "wave5_ui_pass.png"), full_page=True)
         finally:
             context.close()
             browser.close()
