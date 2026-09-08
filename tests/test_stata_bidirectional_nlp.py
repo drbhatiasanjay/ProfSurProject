@@ -83,14 +83,15 @@ def test_tc_st_01_ivregress_overidentified(panel_data):
 
 def test_tc_st_02_post_estimation_test(panel_data):
     """TC-ST-02: 'test roa = 0' after xtreg."""
-    from models.stata_engine import execute_stata_command
+    from models.stata_engine import ModelResultContext, execute_stata_command
+    state = ModelResultContext()
 
     # First run an xtreg regression to populate _LAST_ESTIMATE
-    init_res = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=panel_data.copy())
+    init_res = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=panel_data.copy(), stata_session_state=state)
     assert init_res["status"] == "success"
 
     # Now execute test
-    test_res = execute_stata_command("test roa = 0", df=panel_data.copy())
+    test_res = execute_stata_command("test roa = 0", df=panel_data.copy(), stata_session_state=state)
     assert test_res["status"] == "success"
     assert "f_stat" in test_res
     assert "p_value" in test_res
@@ -104,14 +105,15 @@ def test_tc_st_02_post_estimation_test(panel_data):
 
 def test_tc_st_03_predict_xb_and_residuals(panel_data):
     """TC-ST-03: 'predict y_hat, xb' and 'predict e_hat, residuals'."""
-    from models.stata_engine import execute_stata_command
+    from models.stata_engine import ModelResultContext, execute_stata_command
+    state = ModelResultContext()
 
     df_work = panel_data.copy()
-    init_res = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df_work)
+    init_res = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df_work, stata_session_state=state)
     assert init_res["status"] == "success"
 
     # Linear prediction
-    pred_res = execute_stata_command("predict y_hat, xb", df=df_work)
+    pred_res = execute_stata_command("predict y_hat, xb", df=df_work, stata_session_state=state)
     assert pred_res["status"] == "success"
     assert pred_res["varname"] == "y_hat"
     assert pred_res["type"] == "xb"
@@ -119,7 +121,7 @@ def test_tc_st_03_predict_xb_and_residuals(panel_data):
     assert len(df_work["y_hat"].dropna()) > 0
 
     # Residuals prediction
-    resid_res = execute_stata_command("predict e_hat, residuals", df=df_work)
+    resid_res = execute_stata_command("predict e_hat, residuals", df=df_work, stata_session_state=state)
     assert resid_res["status"] == "success"
     assert resid_res["varname"] == "e_hat"
     assert resid_res["type"] == "residuals"
