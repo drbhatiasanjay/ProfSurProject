@@ -3,10 +3,9 @@ models/gmm_adapter.py — Wave 5 GMM adapter (contract-repaired).
 
 STATUS: IMPLEMENTED_UNVERIFIED
   - Uses linearmodels.iv.IVGMM as a proxy estimator.
-  - IVGMM is NOT Arellano-Bond or Blundell-Bond system GMM.
-  - The AR(1)/AR(2) tests use Pearson residual correlation, which is NOT
-    the Arellano-Bond z-statistic. These are excluded pending a validated
-    xtdpdsys/xtabond2-equivalent implementation.
+  - IVGMM is an IV-based proxy, not a validated dynamic-panel estimator.
+  - The lag-correlation diagnostics are descriptive Pearson correlations,
+    not formal dynamic-panel test statistics.
   - Do not present this as System GMM in any UI or report.
   - Silent clipping/winsorization is removed; callers must pre-process explicitly.
 """
@@ -22,21 +21,19 @@ from .capability_status import result_status_metadata
 
 class CurrentProfSurGMMAdapter:
     """
-    IMPLEMENTED_UNVERIFIED — IV-GMM proxy (NOT Arellano-Bond / System GMM).
+    IMPLEMENTED_UNVERIFIED — IV-GMM proxy; dynamic-panel validation pending.
 
     Uses linearmodels.iv.IVGMM with lag-2 and lag-3 of the dependent variable
     as excluded instruments. This approximates dynamic panel logic but is
-    fundamentally different from the Arellano-Bond (1991) or Blundell-Bond (1998)
-    estimators. A validated AB/BB implementation is required before this can be
-    presented as System GMM.
+    and must not be presented as a validated dynamic-panel estimator.
     """
 
     _METHODOLOGY_DISCLAIMER = (
         "METHODOLOGY NOTICE: This estimator uses linearmodels IVGMM (IV-based GMM), "
-        "NOT Arellano-Bond or Blundell-Bond System GMM. "
-        "AR(1)/AR(2) diagnostics shown are Pearson residual correlations, "
-        "not the formal Arellano-Bond z-statistics. "
-        "Results are UNVERIFIED and must not be cited as System GMM."
+        "not a validated dynamic-panel estimator. "
+        "Lag-correlation diagnostics shown are descriptive Pearson residual "
+        "correlations, not formal dynamic-panel test statistics. "
+        "Results are UNVERIFIED and must not be cited as a validated estimator."
     )
 
     @staticmethod
@@ -136,7 +133,7 @@ class CurrentProfSurGMMAdapter:
         n_firms = int(work.index.get_level_values(0).nunique())
         instr_count = len(instr.columns)
 
-        # Pearson residual correlations — labelled explicitly, NOT as Arellano-Bond AR tests
+        # Pearson residual correlations — descriptive only, not formal dynamic-panel tests
         resid_df = result.resids.reset_index()
         resid_df.columns = [entity, time, "resid"]
         resid_df = resid_df.sort_values([entity, time])
@@ -170,9 +167,9 @@ class CurrentProfSurGMMAdapter:
             f"Observations: {n_obs}   Firms: {n_firms}",
             f"Hansen J-statistic p-value: {j_pval:.4f}",
             f"Residual Pearson lag-1 correlation: r={ar1_corr:.4f}, p={ar1_p:.4f}  "
-            "(NOTE: not an Arellano-Bond AR(1) test)",
+            "(NOTE: descriptive correlation only; not a formal dynamic-panel test)",
             f"Residual Pearson lag-2 correlation: r={ar2_corr:.4f}, p={ar2_p:.4f}  "
-            "(NOTE: not an Arellano-Bond AR(2) test)",
+            "(NOTE: descriptive correlation only; not a formal dynamic-panel test)",
         ] + warnings
 
         return CapabilityResult(

@@ -846,7 +846,7 @@ def generate_stata_inference(parsed: dict, result: dict, df: pd.DataFrame) -> st
         p.append(f"- **Hypothesis Tested:** $H_0$: No first-order autocorrelation ($AR(1)$) in the idiosyncratic panel residuals $\\varepsilon_{{it}}$.")
         if p_val < 0.05:
             p.append(f"- **Diagnostic Verdict:** **Reject $H_0$ ($p < 0.05$).** Strong evidence of first-order serial correlation in panel disturbances.")
-            p.append(f"- **Statistical Remedy:** Standard OLS standard errors are biased downwards. Researchers must report **Cluster-Robust Standard Errors (`vce(cluster company_code)`)** or estimate Dynamic Panel GMM models (`xtabond`).")
+            p.append(f"- **Statistical Remedy:** Standard OLS standard errors are biased downwards. Researchers should report **Cluster-Robust Standard Errors (`vce(cluster company_code)`)**. This diagnostic does not establish a dynamic-panel estimator.")
         else:
             p.append(f"- **Diagnostic Verdict:** **Fail to reject $H_0$ ($p \\ge 0.05$).** No statistically significant first-order serial correlation detected.")
         return "\n".join(p)

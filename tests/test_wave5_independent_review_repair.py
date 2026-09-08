@@ -369,7 +369,32 @@ def test_legacy_gmm_proxy_has_no_system_gmm_or_arellano_bond_claims():
         assert claim not in combined
 
     assert "Experimental IV-GMM proxy" in combined
-    assert "not Arellano-Bond or Blundell-Bond System GMM" in combined
+    assert "IV-GMM proxy" in combined
+
+
+def test_user_facing_tracked_surfaces_have_no_unsupported_method_claims():
+    import subprocess
+
+    paths = subprocess.check_output(
+        ["git", "ls-files", "--", "docs", "models", "pages"], text=True
+    ).splitlines()
+    historical = ("docs/implementation-reports/", "docs/generate_section_e.js")
+    forbidden = (
+        "TWO-STEP SYSTEM GMM",
+        "Dynamic Panel System GMM",
+        "Arellano-Bond AR(1)",
+        "Arellano-Bond AR(2)",
+        "Instruments are Valid",
+    )
+    violations = []
+    for path in paths:
+        if path.startswith(historical):
+            continue
+        text = Path(path).read_text(encoding="utf-8", errors="ignore")
+        for claim in forbidden:
+            if claim.lower() in text.lower():
+                violations.append(f"{path}: {claim}")
+    assert not violations, "unsupported user-facing claims: " + "; ".join(violations)
 
 
 def test_ws1_availability_is_separate_from_master_merge_and_validation_docs():
