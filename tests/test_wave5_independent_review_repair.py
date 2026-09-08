@@ -155,7 +155,13 @@ def test_ws1_commands_use_behavioral_router_registry_path(monkeypatch, command, 
     monkeypatch.setattr(analytical_router, "get_handler", observed_handler)
     result = route(_request(command, panel_df))
 
-    assert seen and seen[-1][2] is True
+    expected_capability = {
+        "ivregress": "iv_estimation",
+        "test": "wald_test",
+        "predict": "prediction",
+        "winsor2": "data_transform",
+    }[command.split()[0]]
+    assert seen and seen[-1] == (expected_capability, command.split()[0], True)
     assert result.status != "unsupported"
 
 
@@ -280,6 +286,24 @@ def test_grouping_and_cluster_roles_do_not_use_analytical_aliases(command, panel
     assert result["status"] == "error"
     assert result["error_code"] == "VARIABLE_NOT_FOUND"
     assert result["metadata"]["stata_rc"] == 111
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["graph box leverage, over(stage)", "margins stage"],
+)
+def test_all_grouping_roles_fail_closed_without_alias_substitution(command, panel_df):
+    result = execute_stata_command(command, panel_df, {})
+    assert result["status"] == "error"
+    assert result["error_code"] == "VARIABLE_NOT_FOUND"
+    assert result["metadata"]["stata_rc"] == 111
+
+
+def test_post_estimation_test_unknown_variable_has_typed_error(panel_df):
+    result = execute_stata_command("test nonexistent_col = 0", panel_df, {})
+    assert result["status"] == "error"
+    assert result["error_code"] == "VARIABLE_NOT_FOUND"
+    assert result["metadata"]["argument_role"] == "test_variable"
 
 
 @pytest.mark.parametrize(

@@ -20,6 +20,7 @@ import html
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import uuid
 
 import db
 from helpers import (
@@ -36,6 +37,9 @@ from models.stata_engine import (
     prepare_df_for_stata,
     _STORED_ESTIMATES,
 )
+from models.analytical_contracts import AnalyticalRequest, fingerprint_df
+from models.analytical_router import route
+from models.stata_engine import parse_stata_command
 from models.capability_status import capability_status
 
 ensure_session_state()
@@ -538,7 +542,15 @@ with tab_cli:
         with output_placeholder.container():
             with st.spinner(f"⏳ Processing Stata command `.{active_cmd}`… Estimating econometric parameters & compiling results"):
                 t0 = time.time()
-                res = execute_stata_command(active_cmd, df=stata_working_df, stata_session_state=st.session_state)
+                request = AnalyticalRequest(
+                    command_str=active_cmd,
+                    parsed=parse_stata_command(active_cmd),
+                    df=stata_working_df,
+                    correlation_id=str(uuid.uuid4()),
+                    dataset_ref=fingerprint_df(stata_working_df),
+                    session_id="stata_studio",
+                )
+                res = route(request).to_dict()
                 elapsed = time.time() - t0
                 if elapsed < 0.6:
                     time.sleep(0.6 - elapsed)

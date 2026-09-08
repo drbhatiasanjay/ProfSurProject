@@ -3052,8 +3052,14 @@ def _handle_test(parsed: dict, df: pd.DataFrame, stata_session_state: dict = Non
     except Exception as e:
         return {
             "status": "error",
+            "error_code": "VARIABLE_NOT_FOUND",
             "message": f"r(111); {str(e)}",
             "ascii_output": f"r(111); variable or constraint not found in model: {e}",
+            "metadata": {
+                "stata_rc": 111,
+                "invalid_argument": str(e),
+                "argument_role": "test_variable",
+            },
         }
 
 

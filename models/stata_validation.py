@@ -225,6 +225,35 @@ def validate_stata_command(
                 )
             normalized["options"]["by"] = by_variable
 
+    if command in {"box", "hbox"} and normalized["options"].get("over"):
+        raw_group = str(normalized["options"]["over"]).strip()
+        group = _resolve(raw_group, df, resolver, role="by")
+        if group is None:
+            return normalized, validation_error(
+                "VARIABLE_NOT_FOUND", 111, f"variable {raw_group} not found (over)",
+                invalid_argument=raw_group, argument_role="over",
+            )
+        normalized["options"]["over"] = group
+
+    if command in {"margins", "marginsplot"} and normalized.get("indepvars"):
+        raw_group = str(normalized["indepvars"][0]).strip("(),")
+        group = _resolve(raw_group, df, resolver, role="by")
+        if group is None:
+            return normalized, validation_error(
+                "VARIABLE_NOT_FOUND", 111, f"variable {raw_group} not found (group)",
+                invalid_argument=raw_group, argument_role="group",
+            )
+        normalized["indepvars"][0] = group
+
+    if command == "test":
+        for reference in _variable_references(normalized.get("formula", "")):
+            if _resolve(reference, df, resolver) is None:
+                return normalized, validation_error(
+                    "VARIABLE_NOT_FOUND", 111,
+                    f"variable {reference} not found (test)",
+                    invalid_argument=reference, argument_role="test_variable",
+                )
+
     list_commands = {
         "summarize", "sum", "pwcorr", "correlate", "corr", "tabulate", "tab",
         "mean", "proportion", "describe", "codebook", "winsor2", "lgraph",

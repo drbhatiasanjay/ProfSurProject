@@ -1005,7 +1005,7 @@ if user_q:
         "pwcorr", "correlate", "corr ", "hausman", "estat", "estimates",
         "esttab", "coefplot", "scatter", "histogram", "hist ", "export", "thesis",
         "tabulate", "tab ", "graph box", "box ", "graph hbox", "xttest0", "xtserial",
-        "margins", "marginsplot"
+        "margins", "marginsplot", "ivregress", "test", "predict", "winsor2"
     )
     is_stata_cmd = _q_clean.startswith(".") or any(_q_clean.lower().startswith(v) for v in _stata_verbs)
 

@@ -35,6 +35,7 @@ jobs:
           python scripts/check_stata_contracts.py
           python scripts/check_import_side_effects.py
           python scripts/render_capability_status.py --check
+          python scripts/wave5_realdata_audit.py --source-db capital_structure.db --output /tmp/wave5-realdata-audit.json
           python -m pytest \
             tests/test_llm_adapter_import_safety.py \
             tests/test_capability_status_contract.py \
