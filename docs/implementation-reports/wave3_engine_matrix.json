@@ -1,0 +1,329 @@
+{
+  "S-01_descriptive": {
+    "stata_engine_v1": {
+      "status": "SUCCESS",
+      "duration_ms": 3342.4661001190543,
+      "n_obs": 9026,
+      "summary": "      Variable |        Obs        Mean    Std. dev.         Min         Max\n--------------+---------------------------------------------------------\n      leverage |       9026     20.7166     38.626"
+    },
+    "statsmodels_pandas": {
+      "status": "SUCCESS",
+      "duration_ms": 10.43489994481206,
+      "metrics": {
+        "leverage": {
+          "mean": 20.7165651595431,
+          "std": 38.62636374125278
+        },
+        "profitability": {
+          "mean": 0.1569631403139593,
+          "std": 0.15489556199528984
+        },
+        "tangibility": {
+          "mean": 0.2826256622068814,
+          "std": 0.18315123214792384
+        },
+        "log_size": {
+          "mean": 7.66724869502622,
+          "std": 2.0194393849991554
+        }
+      }
+    }
+  },
+  "S-02_ols": {
+    "stata_engine_v1": {
+      "status": "SUCCESS",
+      "duration_ms": 12.045399751514196,
+      "r_squared": null,
+      "params": {}
+    },
+    "statsmodels": {
+      "status": "SUCCESS",
+      "duration_ms": 3.4885001368820667,
+      "r_squared": 0.08483046480284118,
+      "params": {
+        "const": 17.08704096606691,
+        "profitability": -40.71226061635229,
+        "tangibility": 52.34667175232551,
+        "log_size": -0.6227350238848095
+      },
+      "pvalues": {
+        "const": 5.4447381544477635e-25,
+        "profitability": 1.374443440647082e-57,
+        "tangibility": 2.6111807302116963e-129,
+        "log_size": 0.0012900044253427907
+      }
+    },
+    "linearmodels": {
+      "status": "SUCCESS",
+      "duration_ms": 53.29609988257289,
+      "r_squared": 0.0848304648028414,
+      "params": {
+        "const": 17.087040966066855,
+        "profitability": -40.71226061635232,
+        "tangibility": 52.3466717523255,
+        "log_size": -0.6227350238848187
+      }
+    },
+    "pyfixest": {
+      "status": "SUCCESS",
+      "duration_ms": 2188.621200155467,
+      "r_squared": 0.08483046480284129,
+      "params": {
+        "Intercept": 17.087040966067004,
+        "profitability": -40.71226061635233,
+        "tangibility": 52.346671752325726,
+        "log_size": -0.6227350238848487
+      }
+    },
+    "sklearn": {
+      "status": "SUCCESS",
+      "duration_ms": 3.595499787479639,
+      "r_squared": 0.08483046480284129,
+      "params": {
+        "const": 17.08704096606679,
+        "profitability": -40.71226061635229,
+        "tangibility": 52.34667175232555,
+        "log_size": -0.6227350238848146
+      }
+    }
+  },
+  "S-03_fe_firm": {
+    "stata_engine_v1": {
+      "status": "SUCCESS",
+      "duration_ms": 99.953499622643,
+      "params": {}
+    },
+    "linearmodels": {
+      "status": "SUCCESS",
+      "duration_ms": 59.0506000444293,
+      "r_squared_within": 0.029270902842243318,
+      "params": {
+        "profitability": -22.110803889011876,
+        "tangibility": 21.993918803671853,
+        "log_size": -2.4281500240578366
+      },
+      "pvalues": {
+        "profitability": 0.3445401049064696,
+        "tangibility": 0.07308210798465131,
+        "log_size": 0.0009542173283114685
+      }
+    },
+    "pyfixest": {
+      "status": "SUCCESS",
+      "duration_ms": 34.055099822580814,
+      "r_squared_within": 0.029270902842242985,
+      "params": {
+        "profitability": -22.11080388901191,
+        "tangibility": 21.993918803671892,
+        "log_size": -2.4281500240578295
+      }
+    }
+  },
+  "S-04_fe_two_way": {
+    "linearmodels": {
+      "status": "SUCCESS",
+      "duration_ms": 117.97930020838976,
+      "r_squared_within": 0.02844208778334767,
+      "params": {
+        "profitability": -23.16468370117133,
+        "tangibility": 20.745447490285333,
+        "log_size": -1.7985699673438038
+      }
+    },
+    "pyfixest": {
+      "status": "SUCCESS",
+      "duration_ms": 32.37240016460419,
+      "params": {
+        "profitability": -23.164683701171345,
+        "tangibility": 20.745447490285276,
+        "log_size": -1.7985699673437991
+      }
+    }
+  },
+  "S-05_lifecycle_interaction": {
+    "statsmodels": {
+      "status": "SUCCESS",
+      "duration_ms": 59.14290016517043,
+      "interaction_terms": [
+        "profitability:C(life_stage)[T.Decline]",
+        "profitability:C(life_stage)[T.Growth]",
+        "profitability:C(life_stage)[T.Maturity]",
+        "profitability:C(life_stage)[T.Shakeout1]",
+        "profitability:C(life_stage)[T.Shakeout2]",
+        "profitability:C(life_stage)[T.Shakeout3]",
+        "profitability:C(life_stage)[T.Startup]"
+      ],
+      "params": {
+        "Intercept": 11.39296676813698,
+        "C(life_stage)[T.Decline]": 12.018917939370432,
+        "C(life_stage)[T.Growth]": 8.83339924830957,
+        "C(life_stage)[T.Maturity]": -2.916166700323995,
+        "C(life_stage)[T.Shakeout1]": -3.828736483395292,
+        "C(life_stage)[T.Shakeout2]": 3.3738455294657075,
+        "C(life_stage)[T.Shakeout3]": 7.231490510793648,
+        "C(life_stage)[T.Startup]": 13.165222787727036,
+        "profitability": 37.97672618938077,
+        "profitability:C(life_stage)[T.Decline]": -86.50280519714308,
+        "profitability:C(life_stage)[T.Growth]": -85.64053872479535,
+        "profitability:C(life_stage)[T.Maturity]": -65.13802028582124,
+        "profitability:C(life_stage)[T.Shakeout1]": -55.985352609704854,
+        "profitability:C(life_stage)[T.Shakeout2]": -44.7930586387718,
+        "profitability:C(life_stage)[T.Shakeout3]": -110.55803249491011,
+        "profitability:C(life_stage)[T.Startup]": -48.343791445873066,
+        "tangibility": 53.3296206085539,
+        "log_size": -0.3436354569331459
+      }
+    },
+    "pyfixest": {
+      "status": "SUCCESS",
+      "duration_ms": 52.464399952441454,
+      "params": {
+        "tangibility": 21.86422263146244,
+        "log_size": -2.3966998767663887,
+        "profitability:C(life_stage)[Decay]": 19.544093022522944,
+        "profitability:C(life_stage)[Decline]": -48.16906326262073,
+        "profitability:C(life_stage)[Growth]": -8.730186696056867,
+        "profitability:C(life_stage)[Maturity]": -16.213434154579918,
+        "profitability:C(life_stage)[Shakeout1]": -38.84445473824746,
+        "profitability:C(life_stage)[Shakeout2]": 0.46142514295380144,
+        "profitability:C(life_stage)[Shakeout3]": -10.718850697367415,
+        "profitability:C(life_stage)[Startup]": -12.246420915686953
+      }
+    }
+  },
+  "S-06_re_random_effects": {
+    "linearmodels": {
+      "status": "SUCCESS",
+      "duration_ms": 106.18290025740862,
+      "r_squared_overall": 0.06632749129103266,
+      "params": {
+        "const": 30.76790139781356,
+        "profitability": -24.746417386421925,
+        "tangibility": 30.388689193815715,
+        "log_size": -1.9723968455144234
+      },
+      "theta": 0.6710482662945881
+    },
+    "stata_engine_v1": {
+      "status": "SUCCESS",
+      "duration_ms": 115.05359970033169,
+      "params": {}
+    }
+  },
+  "S-07_hdfe_multiway": {
+    "pyfixest": {
+      "status": "SUCCESS",
+      "duration_ms": 33.66809990257025,
+      "params": {
+        "profitability": -23.164683701171352,
+        "tangibility": 20.745447490285255,
+        "log_size": -1.7985699673438051
+      },
+      "absorb_dimensions": 3
+    },
+    "linearmodels": {
+      "status": "SUCCESS",
+      "duration_ms": 42.24599990993738,
+      "params": {
+        "profitability": -40.93907183012649,
+        "tangibility": 52.26655893376551,
+        "log_size": -0.6536949816779725
+      }
+    }
+  },
+  "S-08_iv_2sls": {
+    "linearmodels": {
+      "status": "SUCCESS",
+      "duration_ms": 33.434699755162,
+      "params": {
+        "const": 26.53098288833064,
+        "tangibility": 58.0812323552247,
+        "log_size": 0.1104045522138648,
+        "profitability": -147.01644983468577
+      },
+      "first_stage_f": 14.781900419933143
+    },
+    "pyfixest": {
+      "status": "SUCCESS",
+      "duration_ms": 54.54020015895367,
+      "params": {
+        "Intercept": 54.660498088165724,
+        "tangibility": 45.51860053914353,
+        "log_size": -2.115192739302284,
+        "profitability": -186.16575859931268
+      }
+    }
+  },
+  "S-09_dynamic_gmm": {
+    "stata_engine_v1": {
+      "status": "SUCCESS",
+      "duration_ms": 0.23379968479275703,
+      "params": {}
+    },
+    "linearmodels": {
+      "status": "AVAILABLE_STATIC_SYSTEM_GMM",
+      "note": "linearmodels provides static system GMM (IVSystemGMM); dynamic Arellano-Bond requires lag instrument matrix expansion."
+    }
+  },
+  "S-10_did_event_study": {
+    "pyfixest": {
+      "status": "SUCCESS",
+      "duration_ms": 33.19620015099645,
+      "att_estimate": 3.0102159375709,
+      "params": {
+        "treat_post": 3.0102159375709,
+        "profitability": -22.13147850241001,
+        "log_size": -1.5113496973937168
+      }
+    },
+    "dowhy": {
+      "status": "SUCCESS",
+      "duration_ms": 35.536100156605244,
+      "causal_effect": -3.539341956574688,
+      "method": "backdoor.linear_regression"
+    }
+  },
+  "S-11_prediction_oos": {
+    "sklearn_ridge": {
+      "status": "SUCCESS",
+      "duration_ms": 3.3648000098764896,
+      "oos_rmse": 56.23927230932787,
+      "oos_r2": 0.013538899242115154
+    },
+    "xgboost": {
+      "status": "SUCCESS",
+      "duration_ms": 140.96849970519543,
+      "oos_rmse": 57.236560459259266,
+      "oos_r2": -0.02175702969157922
+    },
+    "lightgbm": {
+      "status": "SUCCESS",
+      "duration_ms": 2226.1827997863293,
+      "oos_rmse": 56.751161686279744,
+      "oos_r2": -0.00450034641277397
+    }
+  },
+  "S-12_controlled_failure": {
+    "statsmodels": {
+      "status": "HANDLED_COLLINEARITY",
+      "params": {
+        "const": 26.5921461628622,
+        "profitability": -7.48657422572801,
+        "prof_double": -14.973148451456012
+      },
+      "nans": []
+    },
+    "pyfixest": {
+      "status": "HANDLED_COLLINEARITY",
+      "dropped_variables": [],
+      "params": {
+        "Intercept": 26.59214616286218,
+        "profitability": -37.43287112864005
+      }
+    },
+    "stata_engine_v1": {
+      "status": "HANDLED_ERROR",
+      "error_returned": "      Source |       SS           df       MS      Number of obs     =      9,026\n-------------+----"
+    }
+  }
+}
