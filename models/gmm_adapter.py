@@ -175,7 +175,7 @@ class CurrentProfSurGMMAdapter:
         ] + warnings
 
         return CapabilityResult(
-            status="success",
+            status="partial",
             ascii_output="\n".join(ascii_lines),
             table=coef_rows,
             message=CurrentProfSurGMMAdapter._METHODOLOGY_DISCLAIMER,

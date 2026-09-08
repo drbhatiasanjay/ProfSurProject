@@ -27,7 +27,7 @@ class AnalysisRunEnvelope:
     engine: str = "stata_engine_v1"
     engine_version: str = "1.0"
     status: Literal[
-        "pending", "success", "error", "unsupported"
+        "pending", "success", "error", "unsupported", "partial"
     ] = "pending"
     started_at: str = ""                 # ISO-8601
     completed_at: str = ""              # ISO-8601
@@ -57,7 +57,7 @@ class AnalysisRunEnvelope:
         )
 
     def complete(
-        self, status: Literal["success", "error", "unsupported"]
+        self, status: Literal["success", "error", "unsupported", "partial"]
     ) -> "AnalysisRunEnvelope":
         """Return a new envelope with status and completed_at stamped."""
         now = datetime.datetime.now(_UTC).isoformat()

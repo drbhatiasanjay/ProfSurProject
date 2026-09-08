@@ -32,7 +32,10 @@ from models.stata_engine import (
     _handle_margins,
     _handle_export,
     _handle_thesis,
-    # Wave 4 handlers
+)
+
+# Wave 4 handlers — relocated to stata_expansion_handlers by WS1
+from models.stata_expansion_handlers import (
     _handle_describe,
     _handle_codebook,
     _handle_count,
@@ -42,10 +45,9 @@ from models.stata_engine import (
     _handle_xtsum,
     _handle_xttab,
     _handle_xtline,
-    _handle_estat_ic,
-    _handle_estat_summarize,
-    _handle_testparm,
     _handle_lincom,
+    _handle_estat_ic,
+    _handle_test as _handle_testparm,
 )
 
 # Wave 1 handlers (may not exist on older branches — import gracefully)
@@ -110,9 +112,39 @@ def _estat_dispatcher(parsed: dict, df: pd.DataFrame) -> dict:
         "ascii_output": "r(198); invalid estat subcommand",
     }
 
+def _handle_estat_summarize(parsed: dict, df):
+    from models.stata_engine import _LAST_ESTIMATE
 
-# ---------------------------------------------------------------------------
-# Capability → handler map
+    if not _LAST_ESTIMATE:
+        return {
+            "status": "error",
+            "message": "No estimation results found.",
+            "ascii_output": "r(301); last estimates not found",
+        }
+
+    depvar = _LAST_ESTIMATE.get("depvar", "leverage")
+    indepvars = _LAST_ESTIMATE.get("indepvars", [])
+    model_vars = [depvar] + [var for var in indepvars if var in df.columns]
+    lines = [
+        "Estimation sample summary",
+        "",
+        f"{'Variable':<18}{'Obs':>10}{'Mean':>14}{'Std. Dev.':>14}{'Min':>12}{'Max':>12}",
+        "-" * 80,
+    ]
+    for variable in model_vars:
+        if variable in df.columns and pd.api.types.is_numeric_dtype(df[variable]):
+            series = df[variable].dropna()
+            lines.append(
+                f"{variable:<18}{len(series):>10,}{series.mean():>14.4f}"
+                f"{series.std():>14.4f}{series.min():>12.4f}{series.max():>12.4f}"
+            )
+    lines.append("-" * 80)
+    return {"status": "success", "ascii_output": "\n".join(lines)}
+
+def _handle_testparm_unavailable(parsed: dict, df):
+    return {"status": "unsupported", "ascii_output": "testparm: not yet implemented. Use 'test' instead.", "error_msg": ""}
+
+
 # ---------------------------------------------------------------------------
 CAPABILITY_REGISTRY: dict[str, CapabilityHandler] = {
     "descriptive":          _handle_summarize,
@@ -170,7 +202,7 @@ _DIAG_HANDLERS: dict[str, CapabilityHandler] = {
 }
 
 _WALD_HANDLERS: dict[str, CapabilityHandler] = {
-    "test":     _handle_test if _HAS_WAVE1_HANDLERS else _handle_testparm,
+    "test":     _handle_test if _HAS_WAVE1_HANDLERS else _handle_testparm_unavailable,
     "testparm": _handle_testparm,
 }
 
@@ -180,7 +212,7 @@ if _HAS_WAVE1_HANDLERS:
     CAPABILITY_REGISTRY["prediction"]    = _handle_predict    # type: ignore[assignment]
     CAPABILITY_REGISTRY["data_transform"] = _handle_winsor2   # type: ignore[assignment]
 else:
-    CAPABILITY_REGISTRY["wald_test"]     = _handle_testparm
+    CAPABILITY_REGISTRY["wald_test"]     = _handle_testparm_unavailable
 
 
 def get_handler(capability: str, cmd: str = "") -> CapabilityHandler | None:

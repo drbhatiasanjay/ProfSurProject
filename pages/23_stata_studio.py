@@ -106,6 +106,33 @@ def get_financial_translation(cmd_str: str) -> str:
             "Computes Variance Inflation Factors (VIF) to formally test for severe multicollinearity among explanatory financial ratios. "
             "VIF values strictly below 5–10 confirm parameter stability and regression robustness."
         )
+    if low.startswith("gmm"):
+        return (
+            "Runs an <b>IMPLEMENTED_UNVERIFIED IV-GMM proxy</b> using lagged instruments. "
+            "This is not Arellano–Bond or Blundell–Bond System GMM, and its residual correlations "
+            "are not formal Arellano–Bond AR tests. Do not cite results until numerical validation is complete."
+        )
+    if low.startswith("hdfe"):
+        return (
+            "Runs an <b>IMPLEMENTED_UNVERIFIED</b> high-dimensional fixed-effects regression via pyfixest. "
+            "Coefficient, standard-error, sample-membership, and absorbed-effects parity require a golden benchmark before validation."
+        )
+    if low.startswith("didregress"):
+        return (
+            "Difference-in-Differences is a <b>CANDIDATE</b> capability and currently fails closed. "
+            "A cohort-robust estimator, explicit treatment timing, and parallel-trends diagnostics are required before execution."
+        )
+    if low.startswith("scenario"):
+        return (
+            "Creates an <b>intervention preview only</b>; it is not a validated counterfactual forecast. "
+            "A fitted model, baseline comparison, uncertainty quantification, and provenance are required before claiming scenario results."
+        )
+    if low.startswith("predict_ml"):
+        return (
+            "Runs an <b>IMPLEMENTED_UNVERIFIED</b> Ridge model with a firm-aware group holdout "
+            "(<code>GroupShuffleSplit</code> on <code>company_code</code>) to prevent firm-level leakage. "
+            "No k-fold cross-validation or temporal forecasting validation is performed."
+        )
     return f"Executes econometric estimation for <code>{html.escape(cmd_str)}</code> on the active longitudinal panel dataset."
 
 # Custom Stata Terminal CSS

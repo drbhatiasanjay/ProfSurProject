@@ -383,11 +383,13 @@ def parse_stata_command(cmd_str: str) -> dict:
     depvar = ""
     indepvars = []
 
-    if cmd in ("xtreg", "regress", "reg"):
+    if cmd in ("xtreg", "regress", "reg", "gmm", "hdfe", "didregress", "predict_ml"):
         if len(tokens) >= 2:
             depvar = tokens[1]
         if len(tokens) >= 3:
             indepvars = tokens[2:]
+    elif cmd == "scenario":
+        indepvars = tokens[1:]
     elif cmd in ("summarize", "sum", "tabstat", "pwcorr", "correlate", "corr"):
         indepvars = tokens[1:]
     elif cmd in ("tabulate", "tab"):
@@ -535,12 +537,30 @@ def execute_stata_command(
             res = _handle_predict(parsed, df, stata_session_state)
         elif cmd == "winsor2":
             res = _handle_winsor2(parsed, df)
+        elif cmd in ("gmm", "hdfe", "didregress", "scenario", "predict_ml"):
+            from models.stata_expansion_handlers import (
+                _handle_didregress,
+                _handle_gmm,
+                _handle_hdfe,
+                _handle_ml_predict,
+                _handle_scenario,
+            )
+
+            wave5_handlers = {
+                "gmm": _handle_gmm,
+                "hdfe": _handle_hdfe,
+                "didregress": _handle_didregress,
+                "scenario": _handle_scenario,
+                "predict_ml": _handle_ml_predict,
+            }
+            res = wave5_handlers[cmd](parsed, df)
         else:
             supported_cmds = [
                 "xtset", "xtreg", "regress", "summarize", "tabstat", "pwcorr",
                 "tabulate", "lgraph", "scatter", "histogram", "graph box",
                 "hausman", "estat vif", "estimates store", "esttab", "coefplot",
-                "xttest0", "xtserial", "margins", "export"
+                "xttest0", "xtserial", "margins", "export", "gmm", "hdfe",
+                "didregress", "scenario", "predict_ml"
             ]
             supported_list_str = ", ".join(supported_cmds[:10]) + ", etc."
             return {

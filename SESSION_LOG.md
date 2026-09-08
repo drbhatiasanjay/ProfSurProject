@@ -227,3 +227,40 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - **Phase E (Performance Benchmark):** Cold load average 4.73s, warm load average 3.06s.
 - **Security Audit Finding:** Credential exposure detected in prior transcript; rotation required.
 - **Deployment Readiness:** **READY FOR ONLINE DEPLOYMENT** (PR #3 verified ready for merge authorization).
+
+---
+
+# ProfSurProject — Session Log (2026-09-08 Wave 5 / WS1 Reconciliation)
+
+## 1. Recovery and Lineage
+
+- Confirmed exclusive workspace `C:\Users\hemas\Downloads\ProfSurProject`.
+- Preserved historical Wave 5 commit `85ccd1e`.
+- Retained Antigravity repair commit `da4b2b8` and reconciliation merge `3f2e368`.
+- Confirmed Workstream 1 lineage `4119d56` as the second merge parent.
+- Preserved pre-existing `capital_structure.db` mutation and unrelated untracked files.
+
+## 2. Contract and Methodology Repair
+
+- Removed fabricated Wave 5 request/result assumptions and retained canonical Wave 2 contracts.
+- Added `partial` run-envelope state and router-level fail-closed demotion.
+- Kept validated Wave 1 `ivregress`; isolated Wave 5 IV candidate registration.
+- Restored Wave 4 handlers and post-estimation interoperability lost during WS1 merge.
+- Restored Wave 5 parser/console routing with truthful GMM, HDFE, DiD, scenario, and ML descriptions.
+- No advanced Wave 5 method is marked `VALIDATED`.
+
+## 3. Verification
+
+- RED suite hang recorded: local `napari` pytest plugin stalled before collection; no test node hung.
+- Repaired RED suite: 37 passed in 2.38s.
+- Wave 5 contract + numerical gates: 44 passed in 3.01s.
+- Targeted Wave 2 / Wave 4 / WS1 / Wave 5 gate: 98 passed in 3.96s.
+- Complete GitHub-equivalent selection: 816 passed, 1 skipped in 117.55s.
+- Targeted Playwright: 4/4 fail-closed Stata Studio commands passed.
+
+## 4. Review State
+
+- Durable reports added under `docs/implementation-reports/`.
+- No original Wave 5 PR, master merge, deployment, or Wave 6 work performed.
+- Resume point: `READY_FOR_INDEPENDENT_REVIEW` on
+  `reconcile/wave5-ws1-contract-repair-2026-09-08`.

@@ -68,12 +68,43 @@ def _require_active_estimation() -> Tuple[Optional[Dict[str, Any]], Optional[Dic
     """Guardrail H-01: Check active estimation state, failing gracefully if absent."""
     est = get_active_estimation()
     if not est:
+        from models.stata_engine import _LAST_ESTIMATE
+
+        last_estimate = _LAST_ESTIMATE
+        result_obj = last_estimate.get("result_obj") if last_estimate else None
+        params_obj = getattr(result_obj, "params", None)
+        if last_estimate and params_obj is not None:
+            if hasattr(result_obj, "cov_params"):
+                cov_matrix = np.asarray(result_obj.cov_params(), dtype=float)
+            else:
+                cov_matrix = np.asarray(getattr(result_obj, "cov", None), dtype=float)
+            residuals_obj = getattr(result_obj, "resid", getattr(result_obj, "resids", []))
+            fitted_obj = getattr(
+                result_obj,
+                "fittedvalues",
+                getattr(result_obj, "fitted_values", []),
+            )
+            est = {
+                "depvar": last_estimate.get("depvar", ""),
+                "indepvars": last_estimate.get("indepvars", []),
+                "params": {str(k): float(v) for k, v in params_obj.items()},
+                "cov_matrix": cov_matrix,
+                "residuals": np.asarray(residuals_obj, dtype=float).reshape(-1),
+                "fitted_values": np.asarray(fitted_obj, dtype=float).reshape(-1),
+                "n_obs": int(getattr(result_obj, "nobs", last_estimate.get("n_obs", 0))),
+                "r_squared": float(last_estimate.get("r2", 0.0)),
+                "df_model": int(getattr(result_obj, "df_model", len(params_obj))),
+                "df_resid": int(getattr(result_obj, "df_resid", 0)),
+                "model_type": last_estimate.get("model_type", "regress"),
+            }
+    if not est:
         return None, {
             "status": "ERROR",
             "error_code": "INVALID_POST_ESTIMATION_STATE",
-            "ascii_output": "Error: no valid regression estimation found in memory.\n"
+            "ascii_output": "r(301); last estimates not found\n"
+                           "Error: no valid regression estimation found in memory.\n"
                            "Please estimate a model first (e.g. `regress leverage profitability tangibility log_size` or `xtreg ...`).",
-            "message": "No active estimation model found in memory for post-estimation.",
+            "message": "r(301); last estimates not found for post-estimation.",
         }
     return est, None
 
@@ -93,8 +124,8 @@ def _handle_describe(parsed: dict, df: pd.DataFrame) -> dict:
 
     lines = [
         "Contains data from active corporate lifecycle panel",
-        f" Observations:        {n_obs:>10,}",
-        f" Variables:           {n_vars:>10}",
+        f" Obs:                 {n_obs:>10,}",
+        f" Vars:                {n_vars:>10}",
         f" Memory usage:        {mem_kb:>9.1f} KB",
         "-" * 72,
         f"{'Variable name':<18} {'Storage type':<14} {'Display format':<16} {'Variable label'}",
@@ -176,7 +207,10 @@ def _handle_count(parsed: dict, df: pd.DataFrame) -> dict:
     """Stata-compatible `count` [if exp]: count observations."""
     n_count = len(df)
     # If a filter clause is parsed
-    if_clause = parsed.get("if")
+    if_clause = parsed.get("if") or parsed.get("if_clause")
+    if not if_clause:
+        match = re.search(r"\bif\s+(.+)$", parsed.get("raw", ""), flags=re.IGNORECASE)
+        if_clause = match.group(1).strip() if match else ""
     if if_clause:
         try:
             filtered = df.query(if_clause)
@@ -1023,6 +1057,8 @@ def _capability_result_to_dict(res) -> dict:
     return {
         "status": res.status,           # already lowercase: success/error/unsupported/partial
         "ascii_output": res.ascii_output,
+        "message": res.message,
+        "error_code": res.error_code,
         "error_msg": res.message if res.status in ("error", "unsupported") else "",
         "table": res.table,
         "chart": res.chart.to_dict() if res.chart else None,

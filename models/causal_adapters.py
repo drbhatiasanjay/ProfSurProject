@@ -124,7 +124,7 @@ class IVAdapter:
         )
 
         return CapabilityResult(
-            status="success",
+            status="partial",
             ascii_output=ascii_out,
             table=coef_rows,
             message=_IDENTIFICATION_DISCLAIMER,
@@ -198,7 +198,7 @@ class HDFEAdapter:
         )
 
         return CapabilityResult(
-            status="success",
+            status="partial",
             ascii_output=ascii_out,
             table=coef_rows,
             message=_IDENTIFICATION_DISCLAIMER,

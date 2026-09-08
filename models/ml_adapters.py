@@ -132,7 +132,7 @@ class MLPredictAdapter:
         )
 
         return CapabilityResult(
-            status="success",
+            status="partial",
             ascii_output=ascii_out,
             table=feat_rows,
             message=_VALIDATION_DISCLAIMER,

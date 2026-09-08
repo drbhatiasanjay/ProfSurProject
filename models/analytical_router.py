@@ -109,8 +109,16 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
                 provenance_run_id=run_id,
             )
 
+        result_status = str(raw.get("status", "success")).lower()
+        if result_status not in {"success", "error", "unsupported", "partial"}:
+            result_status = "error"
+        if entry.status == "CANDIDATE" and result_status == "success":
+            result_status = "unsupported"
+        elif entry.status == "IMPLEMENTED_UNVERIFIED" and result_status == "success":
+            result_status = "partial"
+
         result = CapabilityResult(
-            status=raw.get("status", "success"),
+            status=result_status,
             ascii_output=raw.get("ascii_output", ""),
             chart=chart,
             table=raw.get("table"),
