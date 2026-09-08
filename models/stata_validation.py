@@ -122,6 +122,30 @@ def _covariance_contract(options: dict) -> tuple[str, str | None, dict | None]:
     return ("robust" if robust_flag else "nonrobust"), None, None
 
 
+def _grouping_option(
+    options: dict,
+    key: str,
+    df: pd.DataFrame,
+    resolver: Resolver,
+) -> tuple[str | None, dict | None]:
+    if key not in options:
+        return None, None
+    raw_group = options[key]
+    if not isinstance(raw_group, str) or not raw_group.strip():
+        return None, validation_error(
+            "SYNTAX_ERROR", 198, f"{key}() requires one grouping variable",
+            invalid_argument=str(raw_group), argument_role=key,
+        )
+    group = _resolve(raw_group.strip(), df, resolver, role="by")
+    if group is None:
+        return None, validation_error(
+            "VARIABLE_NOT_FOUND", 111,
+            f"variable {raw_group.strip()} not found ({key})",
+            invalid_argument=raw_group.strip(), argument_role=key,
+        )
+    return group, None
+
+
 def validate_stata_command(
     parsed: dict,
     df: pd.DataFrame,
@@ -225,14 +249,10 @@ def validate_stata_command(
                 )
             normalized["options"]["by"] = by_variable
 
-    if command in {"box", "hbox"} and normalized["options"].get("over"):
-        raw_group = str(normalized["options"]["over"]).strip()
-        group = _resolve(raw_group, df, resolver, role="by")
-        if group is None:
-            return normalized, validation_error(
-                "VARIABLE_NOT_FOUND", 111, f"variable {raw_group} not found (over)",
-                invalid_argument=raw_group, argument_role="over",
-            )
+    if command in {"box", "hbox"} and "over" in normalized["options"]:
+        group, error = _grouping_option(normalized["options"], "over", df, resolver)
+        if error:
+            return normalized, error
         normalized["options"]["over"] = group
 
     if command in {"margins", "marginsplot"} and normalized.get("indepvars"):
