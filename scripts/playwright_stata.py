@@ -10,10 +10,10 @@ from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError
 
 def authenticate(page: Page, base_url: str, username: str, password: str) -> None:
     page.goto(base_url, wait_until="networkidle", timeout=60_000)
-    login = page.locator('button:has-text("Login"), button:has-text("Sign In")').first
+    login = page.get_by_role("button", name=re.compile(r"(?:login|sign in)", re.I)).first
     if login.count() and login.is_visible():
-        page.locator('input[type="text"]').first.fill(username)
-        page.locator('input[type="password"]').first.fill(password)
+        page.get_by_label("Username or email").fill(username)
+        page.get_by_role("textbox", name="Password").fill(password)
         login.click()
         page.wait_for_timeout(3_000)
 
