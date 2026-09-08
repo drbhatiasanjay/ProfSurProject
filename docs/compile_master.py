@@ -107,7 +107,7 @@ for i, (v, c, s, th) in enumerate(data):
         t.rows[i+1].cells[j].text = val
 
 doc.add_paragraph("")
-doc.add_paragraph("System GMM (Table 5.12): Lag leverage = 0.622*** | Speed of adjustment = 37.8% per year")
+    doc.add_paragraph("Thesis-reported System GMM benchmark (Table 5.12): Lag leverage = 0.622*** | Speed of adjustment = 37.8% per year. The dashboard's current IV-GMM proxy is not this estimator.")
 doc.add_paragraph("")
 
 # Stage findings
@@ -142,7 +142,7 @@ for i, row in enumerate([
     ("Pairwise Tukey HSD", "Page 8", "Full"),
     ("FE Regression (R2=0.309)", "Page 8 Auto-Suggest", "Full"),
     ("Delta-Leverage", "Page 13", "Full"),
-    ("System GMM", "Page 13", "Full"),
+        ("Experimental IV-GMM proxy (unverified)", "Page 13", "Partial"),
     ("Startup Regressions", "Pages 8+13", "Full"),
     ("Growth/Maturity Comparison", "Pages 8+13", "Full"),
     ("Decline/Decay Regressions", "Pages 8+13", "Full"),

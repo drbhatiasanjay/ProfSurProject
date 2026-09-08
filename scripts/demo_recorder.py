@@ -222,14 +222,14 @@ SECTIONS = [
     },
     {
         "id":       "12_advanced_econometrics",
-        "title":    "Advanced Econometrics — System GMM & Speed of Adjustment",
+        "title":    "Advanced Econometrics — Experimental IV-GMM Proxy",
         "url":      "/Advanced_Econometrics",
         "nav_title": "Advanced Econometrics",
         "page_url": "/advanced_econometrics",
         "actions":  ["scroll_down", "click_primary_button", "wait:4", "scroll_down", "scroll_up"],
         "narration": (
-            "System GMM estimation handles endogeneity in dynamic panel models "
-            "using Blundell-Bond instrumentation. "
+                "The current experimental levels IV-GMM proxy uses lagged instruments but is "
+                "not Arellano-Bond or Blundell-Bond System GMM. "
             "The speed of adjustment — computed as one minus the lagged leverage coefficient — "
             "varies significantly by life-cycle stage. "
             "Decline-stage firms adjust toward their target leverage fastest, "

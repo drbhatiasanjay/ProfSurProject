@@ -136,6 +136,11 @@ class MLPredictAdapter:
             ascii_output=ascii_out,
             table=feat_rows,
             message=_VALIDATION_DISCLAIMER,
+            metadata={
+                "methodology_status": "IMPLEMENTED_UNVERIFIED",
+                "validation": "GroupShuffleSplit",
+                "cluster_variable": "company_code",
+            },
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )

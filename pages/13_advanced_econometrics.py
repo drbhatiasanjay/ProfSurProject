@@ -1,5 +1,5 @@
 """
-Advanced Econometrics — Dynamic GMM, Delta-Leverage models, Stage Comparisons.
+Advanced Econometrics — Experimental IV-GMM, Delta-Leverage models, Stage Comparisons.
 Extends thesis methodology beyond the basic Econometrics Lab.
 """
 
@@ -36,7 +36,7 @@ _panel = st.session_state.get("panel_mode", "latest")
 
 st.markdown("### Advanced Econometrics")
 st.caption(
-    "Dynamic panel GMM, change-in-leverage models, and stage comparison regressions — extending the thesis methodology."
+    "Experimental IV-GMM, change-in-leverage models, and stage comparison regressions."
     f" · Active panel: **{panel_label(_panel)}**"
 )
 if _panel != "thesis":
@@ -49,11 +49,11 @@ if _panel != "thesis":
 
 with st.expander("About these models"):
     st.markdown("""
-**Dynamic Panel GMM (System GMM)** estimates leverage with a lagged dependent variable, capturing the "stickiness" of capital structure.
-The thesis (Table 5.12) shows leverage at time *t* depends on leverage at *t-1* — firms don't adjust instantly.
-- **AR(1) test**: Should be significant (first-order autocorrelation expected)
-- **AR(2) test**: Should NOT be significant (validates instrument choice)
-- **Sargan/Hansen test**: Should NOT be significant (instruments are valid)
+**Experimental IV-GMM proxy — not Arellano-Bond or Blundell-Bond System GMM.**
+The current implementation uses levels IV-GMM with lagged leverage instruments. Its residual
+lag correlations are descriptive Pearson correlations, not formal dynamic-panel AR tests.
+The IV-GMM J-statistic reports whether moment restrictions are rejected; it does not by itself
+establish instrument validity. Results remain **IMPLEMENTED_UNVERIFIED** and are not citable as System GMM.
 
 **Delta-Leverage Models** use the CHANGE in leverage as the dependent variable (Tables 5.11, 6.5, 7.2, 7.4, 8.4, 8.5).
 This answers: *What drives changes in capital structure, not just its level?*
@@ -79,8 +79,8 @@ audit_trail_download_button(
     page="Advanced Econometrics",
     filters=filters,
     model_spec={
-        "active_tab": "System GMM / Delta-Leverage / Stage Comparisons / IV-2SLS",
-        "estimator": "GMM / OLS delta / Stage OLS / IV",
+        "active_tab": "Experimental IV-GMM / Delta-Leverage / Stage Comparisons / IV-2SLS",
+        "estimator": "Experimental IV-GMM proxy / OLS delta / Stage OLS / IV",
         "dep_var": "leverage",
         "indep_vars": DEFAULT_X_COLS,
     },
@@ -90,7 +90,7 @@ audit_trail_download_button(
 )
 
 tab_gmm, tab_delta, tab_compare, tab_iv = st.tabs([
-    "System GMM",
+    "Experimental IV-GMM",
     "Delta-Leverage",
     "Stage Comparisons",
     "IV / 2SLS",
@@ -98,14 +98,14 @@ tab_gmm, tab_delta, tab_compare, tab_iv = st.tabs([
 
 
 # ══════════════════════════════════════════════
-# TAB 1: System GMM
+# TAB 1: Experimental IV-GMM proxy
 # ══════════════════════════════════════════════
 with tab_gmm:
-    st.subheader("Dynamic Panel GMM")
-    st.caption("Leverage with lagged dependent variable — captures capital structure persistence")
+    st.subheader("Experimental IV-GMM proxy")
+    st.caption("Levels IV-GMM with lagged instruments; not Arellano-Bond or Blundell-Bond System GMM")
 
-    if st.button("Run System GMM", type="primary", key="run_gmm"):
-        with st.spinner("Estimating GMM model..."):
+    if st.button("Run experimental IV-GMM", type="primary", key="run_gmm"):
+        with st.spinner("Estimating experimental IV-GMM proxy..."):
             gmm = run_system_gmm(panel_df)
 
         if "error" in gmm:
@@ -123,7 +123,7 @@ with tab_gmm:
                     value=f"{gmm['r_squared']:.4f}",
                     delta="Explained variance",
                     percentile=gmm['r_squared'] * 100.0,
-                    tag="DYNAMIC GMM",
+                    tag="UNVERIFIED IV-GMM",
                     stroke_color="#6366F1"
                 ), unsafe_allow_html=True)
             with mc2:
@@ -167,12 +167,12 @@ with tab_gmm:
             _apa_text = (
                 f"Kumar, S. (2024). Capital structure determinants across corporate life stages "
                 f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
-                f"(Estimated via System GMM; panel: {_cite_panel}, "
+                f"(Estimated via experimental IV-GMM proxy; not System GMM; panel: {_cite_panel}, "
                 f"{_cite_yr[0]}–{_cite_yr[1]}, N={gmm.get('n_firms', 'N'):,} firms, "
                 f"{gmm.get('n_obs', 0):,} obs, R²={gmm.get('r_squared', 0):.3f})"
             )
             _latex_text = (
-                r"\cite{kumar2024lifecycle} estimated via System GMM, "
+                r"\cite{kumar2024lifecycle} estimated via an experimental IV-GMM proxy (not System GMM), "
                 f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
                 f"$N={gmm.get('n_firms', 'N')}$ firms, $R^2={gmm.get('r_squared', 0):.3f}$."
             )
@@ -184,36 +184,37 @@ with tab_gmm:
                 st.code(_latex_text, language=None)
 
             # Diagnostic tests
-            st.markdown("#### 🔬 Dynamic Specification & Overidentification Diagnostics")
+            st.markdown("#### 🔬 Descriptive Residual Correlations & IV-GMM J-Test")
             dc1, dc2, dc3 = st.columns(3)
             ar1 = gmm["ar1"]
             ar2 = gmm["ar2"]
             sargan = gmm["sargan"]
             with dc1:
                 st.markdown(render_bento_kpi(
-                    title="Arellano-Bond AR(1)",
+                    title="Residual Pearson Lag-1",
                     value=f"{ar1['correlation']:.3f}",
-                    delta=f"p = {ar1['p_value']:.4f} (Sig ✓)",
-                    percentile=100.0 if ar1['p_value'] < 0.05 else 0.0,
-                    tag="FIRST-ORDER CORR",
+                    delta=f"p = {ar1['p_value']:.4f} (descriptive only)",
+                    percentile=50.0,
+                    tag="NOT FORMAL AR TEST",
                     stroke_color="#10B981"
                 ), unsafe_allow_html=True)
             with dc2:
                 st.markdown(render_bento_kpi(
-                    title="Arellano-Bond AR(2)",
+                    title="Residual Pearson Lag-2",
                     value=f"{ar2['correlation']:.3f}",
-                    delta=f"p = {ar2['p_value']:.4f} (Valid ✓)" if ar2['p_value'] > 0.05 else "p < 0.05 (Warning)",
-                    percentile=100.0 if ar2['p_value'] > 0.05 else 0.0,
-                    tag="NO SECOND-ORDER CORR",
-                    stroke_color="#06B6D4" if ar2['p_value'] > 0.05 else "#F43F5E"
+                    delta=f"p = {ar2['p_value']:.4f} (descriptive only)",
+                    percentile=50.0,
+                    tag="NOT FORMAL AR TEST",
+                    stroke_color="#06B6D4"
                 ), unsafe_allow_html=True)
             with dc3:
                 st.markdown(render_bento_kpi(
-                    title="Hansen J-Statistic",
+                    title="IV-GMM J-Statistic",
                     value=f"{sargan['j_stat']:.3f}",
-                    delta=f"p = {sargan['p_value']:.4f} (Valid ✓)" if sargan['p_value'] > 0.05 else "p < 0.05 (Warning)",
-                    percentile=100.0 if sargan['p_value'] > 0.05 else 0.0,
-                    tag="OVERIDENTIFICATION",
+                    delta=(f"p = {sargan['p_value']:.4f} (restrictions not rejected)"
+                           if sargan['p_value'] > 0.05 else "p < 0.05 (restrictions rejected)"),
+                    percentile=50.0,
+                    tag="NOT VALIDITY PROOF",
                     stroke_color="#8B5CF6"
                 ), unsafe_allow_html=True)
 
@@ -245,11 +246,11 @@ with tab_gmm:
                 mode="markers",
                 error_x=dict(type="data", array=ci_half, color=PRIMARY, thickness=2, width=6),
                 marker=dict(size=10, color=PRIMARY, symbol="diamond"),
-                name="GMM Estimate (95% CI)",
+                name="Experimental IV-GMM Estimate (95% CI)",
                 hovertemplate="<b>%{y}</b><br>β = %{x:.4f}<br>p = %{customdata:.4f}<extra></extra>",
                 customdata=non_const["p-value"],
             ))
-            fig_gmm_forest.update_layout(**plotly_layout("System GMM Coefficients (β ± 1.96·SE)", height=380))
+            fig_gmm_forest.update_layout(**plotly_layout("Experimental IV-GMM Coefficients (β ± 1.96·SE)", height=380))
 
             # 2. Speed of Adjustment Decay Curve: Gap_t = (1 - λ)^t
             t_years = np.linspace(0, 10, 100)
@@ -285,7 +286,7 @@ with tab_gmm:
             fig_gmm_bar.update_layout(**plotly_layout("GMM Factor Direction & Magnitude", height=380))
 
             # 4. Diagnostic Confidence Map
-            diag_names = ["Arellano-Bond AR(1) (Expected Sig)", "Arellano-Bond AR(2) (Valid Ins)", "Hansen J (Overident Valid)"]
+            diag_names = ["Residual Pearson Lag-1", "Residual Pearson Lag-2", "IV-GMM J-Test"]
             diag_p = [ar1["p_value"], ar2["p_value"], sargan["p_value"]]
             diag_colors = [
                 "#10B981" if ar1["p_value"] < 0.05 else "#F43F5E",
@@ -326,12 +327,10 @@ with tab_gmm:
             if not lag_row.empty:
                 lag_coef = lag_row.iloc[0]["Coefficient"]
                 insights.append(f"Lagged leverage coefficient is **{lag_coef:.3f}** (Adjustment speed λ = **{soa:.1f}%**). Half-life to reach target leverage is **{half_life_yr:.1f} years**.")
-            if ar2["p_value"] > 0.05:
-                insights.append("AR(2) is not significant (p > 0.05) — instruments are appropriately specified.")
-            else:
-                insights.append("AR(2) is significant — instrument validity is questionable. Interpret with caution.")
-            if sargan["p_value"] > 0.05:
-                insights.append("Sargan / Hansen test passes — overidentifying moment restrictions are valid.")
+            insights.append(
+                "Residual lag correlations are descriptive Pearson statistics, not formal dynamic-panel AR diagnostics."
+            )
+            insights.append(sargan["verdict"])
 
             render_interpretation(insights, [
                 "Compare the lag DV coefficient with thesis Table 5.12 results.",
@@ -355,21 +354,21 @@ with tab_gmm:
                     Firms do not adjust instantaneously to optimal leverage due to transaction costs, debt issuance fees, and covenants.
                 </div>
                 <div style="font-size: 13px; color: {text_c}; line-height: 1.6; margin-bottom: 10px;">
-                    <b style="color: #10B981;">• Unobserved Firm Heterogeneity & Endogeneity Control:</b> 
-                    <span style="color: #10B981; font-weight: 600;">[Blundell & Bond (1998) System GMM]</span> 
-                    Instrumenting differenced equations with lagged levels and level equations with lagged differences purges dynamic panel bias (Nickell 1981).
+                    <b style="color: #F59E0B;">• Methodology limitation:</b>
+                    <span style="color: #F59E0B; font-weight: 600;">[IMPLEMENTED_UNVERIFIED]</span>
+                    This levels IV-GMM proxy does not estimate the differenced and levels equation system required by dynamic-panel System GMM.
                 </div>
             </div>
             """
             st.markdown(gmm_scholarly_html, unsafe_allow_html=True)
 
             # ── Literature Vault Drawer ──
-            vault_citations = get_relevant_vault_citations("system gmm dynamic panel arellano bond blundell bond speed of adjustment flannery rangan")
+            vault_citations = get_relevant_vault_citations("iv gmm proxy dynamic panel methodology limitations speed of adjustment")
             if vault_citations:
                 vault_html = render_academic_vault_html(
                     vault_citations,
                     theme=_theme,
-                    title="📚 Peer-Reviewed Literature Benchmark Knowledge Vault (Dynamic System GMM)"
+                    title="📚 Literature Context (Experimental IV-GMM Proxy)"
                 )
                 st.markdown(vault_html, unsafe_allow_html=True)
 
@@ -380,7 +379,7 @@ with tab_gmm:
                     with st.spinner("Analysing GMM results..."):
                         st.session_state["p13_gmm_ai"] = "".join(
                             generate_econometric_narrative(
-                                gmm, model_type="System GMM",
+                        gmm, model_type="Experimental IV-GMM proxy (IMPLEMENTED_UNVERIFIED)",
                                 panel_mode=_panel, role=_user_role, citations=_citations,
                             )
                         )

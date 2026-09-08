@@ -9,8 +9,8 @@
 
 - **Repository:** `C:\Users\hemas\Downloads\ProfSurProject`
 - **Authorized workspace:** ProfSurProject only
-- **Active branch:** `reconcile/wave5-ws1-contract-repair-2026-09-08`
-- **Review state:** `READY_FOR_INDEPENDENT_REVIEW`
+- **Active branch:** `reconcile/wave5-independent-review-repair-2026-09-08`
+- **Review state:** `READY_FOR_INDEPENDENT_RE_REVIEW`
 - **No deployment or master merge is authorized from this checkpoint.**
 
 ## 2. Git and Lineage State
@@ -19,10 +19,11 @@
 - Antigravity contract-repair commit: `da4b2b8`.
 - Workstream 1 lineage merged through `4119d56`.
 - Reconciliation merge commit: `3f2e368`.
-- The final reconciliation commit contains the completed contract, test, report,
-  and status repairs on top of that lineage.
+- Reviewed reconciliation commit `88ab5c2` is immutable and remains historical evidence.
+- The successor branch repairs findings from `INDEPENDENT_REVIEW_FAIL` without
+  rewriting the reviewed commit.
 - Intended upstream after final push:
-  `origin/reconcile/wave5-ws1-contract-repair-2026-09-08`.
+  `origin/reconcile/wave5-independent-review-repair-2026-09-08`.
 - Pull request recommendation: create a new reconciliation PR to `master`; do not
   recreate the original Wave 5 PR.
 
@@ -52,7 +53,7 @@ No Wave 5 advanced method is `VALIDATED`.
 | Capability | Registry state | Runtime state | Truthful limitation |
 |---|---|---|---|
 | `gmm` | `IMPLEMENTED_UNVERIFIED` | `partial` / typed error | IV-GMM proxy; not Arellano-Bond or Blundell-Bond System GMM |
-| Wave 5 IV | isolated candidate | `partial` / typed error | Does not replace validated Wave 1 `ivregress` |
+| Wave 5 IV | isolated candidate | `partial` / typed error | Does not replace executable WS1 `ivregress`; neither is methodologically validated |
 | `hdfe` | `IMPLEMENTED_UNVERIFIED` | `partial` / typed error | Requires independent sample, SE, covariance, and absorbed-FE review |
 | `didregress` | `CANDIDATE` | `unsupported` | No cohort-robust estimator or parallel-trends validation |
 | `scenario` | `CANDIDATE` | `partial` preview / `unsupported` | No fitted counterfactual model or uncertainty |
@@ -61,17 +62,36 @@ No Wave 5 advanced method is `VALIDATED`.
 The router demotes any false `success` from candidate or unverified registry
 entries. `AnalysisRunEnvelope` and `CapabilityResult` both support `partial`.
 
-## 5. Workstream 1 Preservation
+## 5. Workstream 1 Availability Versus Validation
 
-Workstream 1 remains merged through commit `4119d56`:
+The WS1 commands are **implemented on the reconciliation lineage** through commit
+`4119d56` and execute on the 9,031-row panel:
 
-- validated `ivregress 2sls`, `test`, `predict`, and `winsor2` lineage;
+- executable `ivregress 2sls`, `test`, `predict`, and `winsor2` lineage;
 - syntax-highlighted Stata editor and bidirectional NL translation;
 - econometric explainer card;
 - `AnalysisRun` / `ModelResultContext` integration.
 
-The reconciliation repairs Wave 4 handler relocation and post-estimation state
-without reverting or replacing WS1.
+They are **not yet available on `master`** at `b96cc3a`. They remain pending
+independent approval, PR creation, and merge into `master`.
+
+`ivregress` remains `IMPLEMENTED_UNVERIFIED`; `test`, `predict`, and `winsor2`
+have deterministic implementation coverage. Implementation availability, executable behavior, numerical checking, and
+methodological validation are separate states. Execution does not establish
+methodological validation, and no advanced Wave 5 method is promoted to
+`VALIDATED` by this repair.
+
+## 5A. Release-Blocking Command Invariant
+
+A user-specified variable, grouping variable, clustering variable, estimator
+option, absorb variable, or intervention must never be silently dropped,
+replaced, or defaulted. The command must execute exactly the requested semantics
+or fail closed with a typed user-visible error before estimation.
+
+- Unknown requested variables return `r(111)` / `VARIABLE_NOT_FOUND`.
+- Malformed syntax or options return `r(198)` / typed syntax or option errors.
+- Defaults are permitted only when an optional argument is intentionally omitted;
+  an invalid supplied argument is never replaced by a default.
 
 ## 6. Verification Evidence
 
@@ -92,34 +112,36 @@ without reverting or replacing WS1.
 
 ### Targeted reconciliation regression
 
-- 98 passed, 2 warnings in 3.96 seconds across Wave 2, Wave 4, WS1, and Wave 5.
+- Independent-review repair suite: 36 executable contract nodes.
+- Final Wave 2, Wave 4, WS1, Wave 5 and repair selection:
+  **134 passed, 2 warnings in 5.55 seconds**.
 
 ### Complete GitHub-equivalent pytest selection
 
 - Command selection matches `.github/workflows/deploy.yml`.
-- Result: **816 passed, 1 skipped, 38 warnings in 117.55 seconds**.
+- Result: **852 passed, 1 skipped, 38 warnings in 117.98 seconds**.
 - Local runtime: Python 3.12; Python 3.11 is not installed locally.
 
 ### Targeted Playwright
 
-- Local Stata Studio checks: GMM, DiD, scenario, and ML.
-- Result: `PLAYWRIGHT_WAVE5_PASS commands=4`.
-- Evidence:
-  `scratch/wave5_reconciliation_evidence/stata_studio_wave5_fail_closed.png`.
+- Four bounded Stata Studio journeys covering 19 commands/interactions.
+- Result: `PLAYWRIGHT_PASS journeys=4 commands=19`.
+- Evidence remains untracked under `scratch/wave5_independent_review_repair/`.
 - Local Streamlit server was stopped after verification.
 
 ## 7. Graphify Bootstrap
 
 - Graphify version: 0.9.42.
-- Refreshed 2026-09-08 after stale-artifact detection.
-- Graph: 6,634 nodes, 11,595 edges, 674 communities.
-- Artifacts are intentionally untracked.
-- Generation warnings remain documented in the reconciliation report.
+- Successor-worktree graph artifacts are regenerated after the final commit.
+- Artifacts remain intentionally untracked; consult local
+  `graphify-out/GRAPH_REPORT.md` for current metrics and warnings.
 
 ## 8. Durable Reports
 
 - `docs/implementation-reports/WAVE_5_PR_01_ADVANCED_METHODS_REPORT.md`
 - `docs/implementation-reports/WAVE_5_PR_02_WS1_RECONCILIATION_REPORT.md`
+- `docs/implementation-reports/WAVE_5_PR_03_INDEPENDENT_REVIEW_REPAIR_REPORT.md`
+- `docs/WAVE5_COMMAND_CONTRACTS.md`
 
 ## 9. Security and Data Boundaries
 
@@ -141,11 +163,11 @@ without reverting or replacing WS1.
 
 ## 11. Next Authorized Action
 
-Independent review only:
+Independent re-review only:
 
-1. Review the reconciliation diff and artifact separation.
-2. Review econometric classifications and numerical evidence.
+1. Review the successor diff against immutable commit `88ab5c2`.
+2. Re-run bounded parser/runtime, covariance, scenario, HDFE, GMM-label, and UI gates.
 3. Confirm no advanced capability is promoted to `VALIDATED`.
-4. If accepted, open a new reconciliation PR from the active branch to `master`.
+4. Only after approval, authorize PR creation separately.
 
-**Resume state:** `READY_FOR_INDEPENDENT_REVIEW`
+**Resume state:** `READY_FOR_INDEPENDENT_RE_REVIEW`

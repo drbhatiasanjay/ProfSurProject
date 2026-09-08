@@ -17,10 +17,10 @@ def explain_stata_command(cmd_str: str, result: Dict[str, Any] = None) -> Dict[s
 
     if low.startswith("ivregress"):
         return {
-            "intent": "Estimate causal elasticity of leverage with respect to endogenous capital structure determinants using Two-Stage Least Squares (2SLS).",
-            "identification": "Addresses endogeneity and reverse causality by using lagged values or exogenous covariates as instrumental variables satisfying relevance and exclusion restrictions (Cov(Z, u) = 0).",
-            "inference": "Standard errors corrected for first-stage generated regressors. Reports first-stage instrument relevance and Hansen/Sargan over-identification tests.",
-            "economic_theory": "Evaluates dynamic capital structure adjustments against Pecking Order (Myers & Majluf 1984) and Trade-Off Theory, isolating exogenous balance-sheet shocks in Indian manufacturing.",
+            "intent": "Execute an IMPLEMENTED_UNVERIFIED Two-Stage Least Squares (2SLS) specification for leverage.",
+            "identification": "The requested instruments are used computationally, but relevance, exogeneity, and exclusion restrictions require independent empirical justification.",
+            "inference": "Reports robust 2SLS estimates and available diagnostics; successful execution does not establish causal validity.",
+            "economic_theory": "Provides an IV-based sensitivity analysis for capital-structure relationships without claiming validated causal effects.",
         }
 
     if low.startswith("test"):

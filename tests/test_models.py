@@ -183,7 +183,7 @@ class TestEconometric:
         assert "Divergent" in result["comparison"].columns
 
     def test_system_gmm(self, full_panel):
-        """System GMM with lag DV using IVGMM — Arellano-Bond instrument approach."""
+        """Experimental IV-GMM proxy with binding non-System-GMM metadata."""
         from models.econometric import run_system_gmm
         result = run_system_gmm(full_panel)
 
@@ -193,6 +193,10 @@ class TestEconometric:
         assert "ar2" in result
         assert "sargan" in result
         assert result["n_obs"] > 2000
+        assert result["type"] == "Experimental IV-GMM proxy"
+        assert result["methodology_status"] == "IMPLEMENTED_UNVERIFIED"
+        assert result["is_system_gmm"] is False
+        assert result["diagnostics_validated"] is False
 
         # coef_table shape and columns (GMM-04)
         ct = result["coef_table"]
@@ -215,19 +219,17 @@ class TestEconometric:
         )
         assert 0.0 <= result["sargan"]["p_value"] <= 1.0
 
-        # AR(1) and AR(2) keys (GMM-02)
+        # Descriptive residual-correlation keys (not formal AR diagnostics)
         for ar_key in ("ar1", "ar2"):
             ar = result[ar_key]
+            assert ar["diagnostic_type"] == "descriptive_residual_correlation"
             assert "correlation" in ar
             assert "p_value" in ar
             assert "verdict" in ar
             assert -1.0 <= ar["correlation"] <= 1.0
             assert 0.0 <= ar["p_value"] <= 1.0
 
-        # type must not claim OLS (GMM-01)
-        assert "OLS" not in result.get("type", ""), (
-            f"type='{result.get('type')}' still mentions OLS — IVGMM not active"
-        )
+        assert "System GMM" not in result["type"]
 
     def test_system_gmm_sargan_reasonable(self, full_panel):
         """Hansen J p-value should be > 0.0 (not old formula). Phase 2: GMM-03."""

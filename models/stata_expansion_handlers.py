@@ -1059,6 +1059,7 @@ def _capability_result_to_dict(res) -> dict:
         "ascii_output": res.ascii_output,
         "message": res.message,
         "error_code": res.error_code,
+        "metadata": res.metadata,
         "error_msg": res.message if res.status in ("error", "unsupported") else "",
         "table": res.table,
         "chart": res.chart.to_dict() if res.chart else None,

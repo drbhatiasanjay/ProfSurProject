@@ -179,6 +179,11 @@ class CurrentProfSurGMMAdapter:
             ascii_output="\n".join(ascii_lines),
             table=coef_rows,
             message=CurrentProfSurGMMAdapter._METHODOLOGY_DISCLAIMER,
+            metadata={
+                "methodology_status": "IMPLEMENTED_UNVERIFIED",
+                "estimator": "IVGMM_PROXY",
+                "is_system_gmm": False,
+            },
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )

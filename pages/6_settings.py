@@ -65,7 +65,7 @@ for Indian publicly listed companies, based on research by **Surendra Kumar** (U
 
 **Methodology:**
 - Life stage classification using **Dickinson (2011)** cash-flow patterns
-- Panel data regression: Fixed Effects, Random Effects, System GMM
+- Panel data regression: Fixed Effects, Random Effects, and an experimental IV-GMM proxy (not System GMM)
 - Theoretical frameworks: Pecking Order Theory, Trade-off Theory, Agency Cost Theory
 """)
 st.markdown(f"**Version:** `{_APP_VERSION}` &nbsp;·&nbsp; **Released:** 2026-05-12")

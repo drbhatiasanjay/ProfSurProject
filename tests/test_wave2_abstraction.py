@@ -148,7 +148,7 @@ def test_route_ivregress():
     )
     result = route(req)
     # Accept success, error, OR unsupported — Wave 1 handlers may not be present on this branch
-    assert result.status in ("success", "error", "unsupported")
+    assert result.status in ("success", "partial", "error", "unsupported")
     assert result.correlation_id == req.correlation_id
 
 

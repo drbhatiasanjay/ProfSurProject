@@ -244,7 +244,7 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 - Removed fabricated Wave 5 request/result assumptions and retained canonical Wave 2 contracts.
 - Added `partial` run-envelope state and router-level fail-closed demotion.
-- Kept validated Wave 1 `ivregress`; isolated Wave 5 IV candidate registration.
+- Kept executable WS1 `ivregress` under `IMPLEMENTED_UNVERIFIED`; isolated the Wave 5 IV candidate registration.
 - Restored Wave 4 handlers and post-estimation interoperability lost during WS1 merge.
 - Restored Wave 5 parser/console routing with truthful GMM, HDFE, DiD, scenario, and ML descriptions.
 - No advanced Wave 5 method is marked `VALIDATED`.
@@ -264,3 +264,22 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - No original Wave 5 PR, master merge, deployment, or Wave 6 work performed.
 - Resume point: `READY_FOR_INDEPENDENT_REVIEW` on
   `reconcile/wave5-ws1-contract-repair-2026-09-08`.
+
+---
+
+# ProfSurProject — Session Log (2026-09-08 Independent Review Repair)
+
+- Created successor branch `reconcile/wave5-independent-review-repair-2026-09-08`
+  from immutable reviewed commit `88ab5c2`.
+- Added centralized parser-output validation and prohibited silent substitution.
+- Added typed `r(111)` and `r(198)` metadata and prevented estimator dispatch after failure.
+- Implemented exact OLS/panel covariance semantics for conventional, robust, and
+  requested-variable clustered covariance.
+- Added public parser-to-adapter contracts for scenario interventions and HDFE absorb lists.
+- Removed inherited System-GMM and Arellano–Bond claims for the levels IV-GMM proxy.
+- Separated WS1 IV execution availability from methodological validation.
+- Verification: 134 targeted tests passed; 852 full-suite tests passed; 67 push-hook
+  tests passed; four Playwright journeys passed across 19 interactions.
+- Disposable 9,031-row audit: 22 core commands and four WS1 commands succeeded;
+  eight invalid requests failed closed; source and copy database hashes were unchanged.
+- Resume point: `READY_FOR_INDEPENDENT_RE_REVIEW`.

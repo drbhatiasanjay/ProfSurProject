@@ -106,6 +106,12 @@ def get_financial_translation(cmd_str: str) -> str:
             "Computes Variance Inflation Factors (VIF) to formally test for severe multicollinearity among explanatory financial ratios. "
             "VIF values strictly below 5–10 confirm parameter stability and regression robustness."
         )
+    if low.startswith("ivregress"):
+        return (
+            "Executes an <b>IMPLEMENTED_UNVERIFIED</b> IV/2SLS specification. "
+            "Instrument relevance, exogeneity, and exclusion restrictions require independent validation; "
+            "successful execution does not establish a causal effect."
+        )
     if low.startswith("gmm"):
         return (
             "Runs an <b>IMPLEMENTED_UNVERIFIED IV-GMM proxy</b> using lagged instruments. "
@@ -552,35 +558,37 @@ with tab_cli:
 
         is_dark = current_theme == "dark"
 
-        # ── TIER 1: Corporate Finance Translation ──────────────────────────
-        fin_trans = get_financial_translation(clean_cmd)
-        card_bg    = "#0f172a" if is_dark else "#F0FDF4"
-        card_border= "#1e293b" if is_dark else "#BBF7D0"
-        card_text  = "#e2e8f0" if is_dark else "#166534"
-        st.markdown(f"""
-        <div style="background:{card_bg};border:1px solid {card_border};border-radius:8px;
-                    padding:12px 16px;margin-bottom:14px;font-size:13px;
-                    line-height:1.5;color:{card_text};">
-            <b>💡 Corporate Finance Translation &amp; Economic Intent:</b><br/>{fin_trans}
-        </div>
-        """, unsafe_allow_html=True)
+        is_failed_command = last_res.get("status") in ("error", "unsupported")
+        if not is_failed_command:
+            # ── TIER 1: Corporate Finance Translation ──────────────────────
+            fin_trans = get_financial_translation(clean_cmd)
+            card_bg    = "#0f172a" if is_dark else "#F0FDF4"
+            card_border= "#1e293b" if is_dark else "#BBF7D0"
+            card_text  = "#e2e8f0" if is_dark else "#166534"
+            st.markdown(f"""
+            <div style="background:{card_bg};border:1px solid {card_border};border-radius:8px;
+                        padding:12px 16px;margin-bottom:14px;font-size:13px;
+                        line-height:1.5;color:{card_text};">
+                <b>💡 Corporate Finance Translation &amp; Economic Intent:</b><br/>{fin_trans}
+            </div>
+            """, unsafe_allow_html=True)
 
-        from models.stata_explainer import explain_stata_command
-        explainer = explain_stata_command(clean_cmd, last_res)
-        exp_bg = "#0f172a" if is_dark else "#F8FAFC"
-        exp_br = "#1e293b" if is_dark else "#E2E8F0"
-        exp_tc = "#e2e8f0" if is_dark else "#0F172A"
-        st.markdown(f"""
-        <div style="background:{exp_bg};border:1px solid {exp_br};border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.5;color:{exp_tc};">
-            <b>📚 Econometric Deconstruction:</b><br/>
-            <ul>
-                <li><b>Intent:</b> {explainer.get("intent", "")}</li>
-                <li><b>Identification:</b> {explainer.get("identification", "")}</li>
-                <li><b>Inference:</b> {explainer.get("inference", "")}</li>
-                <li><b>Theory:</b> {explainer.get("economic_theory", "")}</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+            from models.stata_explainer import explain_stata_command
+            explainer = explain_stata_command(clean_cmd, last_res)
+            exp_bg = "#0f172a" if is_dark else "#F8FAFC"
+            exp_br = "#1e293b" if is_dark else "#E2E8F0"
+            exp_tc = "#e2e8f0" if is_dark else "#0F172A"
+            st.markdown(f"""
+            <div style="background:{exp_bg};border:1px solid {exp_br};border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.5;color:{exp_tc};">
+                <b>📚 Econometric Deconstruction:</b><br/>
+                <ul>
+                    <li><b>Intent:</b> {explainer.get("intent", "")}</li>
+                    <li><b>Identification:</b> {explainer.get("identification", "")}</li>
+                    <li><b>Inference:</b> {explainer.get("inference", "")}</li>
+                    <li><b>Theory:</b> {explainer.get("economic_theory", "")}</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
 
         # ── TIER 2: Stata Monospace Terminal ──────────────────────────────
         ascii_out = last_res.get("ascii_output", "No output generated.")
@@ -599,14 +607,26 @@ with tab_cli:
         if last_res.get("status") == "unsupported":
             st.warning(
                 f"⚠️ **Command Not Supported (`{last_res.get('command', clean_cmd)}`)**\n\n"
-                f"The Stata command `.{last_res.get('command', clean_cmd)}` is not currently implemented in the open-source econometric engine runtime.\n\n"
+                f"{last_res.get('message', 'This command is not currently implemented in the open-source econometric engine runtime.')}\n\n"
                 f"📧 **Request Support:** If your research requires this econometric capability enabled, please contact the administrator at `{last_res.get('admin_contact', 'admin@lifecycle-leverage.internal')}`.\n\n"
                 f"**Currently Supported Commands:** `xtset`, `xtreg`, `lgraph`, `regress`, `summarize`, `tabstat`, `pwcorr`, `tabulate`, `scatter`, `histogram`, `graph box`, `hausman`, `estat vif`, `estimates store`, `esttab`, `coefplot`, `xttest0`, `xtserial`, `margins`."
             )
         elif last_res.get("status") == "error":
+            error_metadata = last_res.get("metadata") or {}
+            stata_rc = error_metadata.get("stata_rc")
+            invalid_argument = error_metadata.get("invalid_argument")
+            argument_role = error_metadata.get("argument_role")
+            validation_detail = ""
+            if stata_rc:
+                validation_detail = f"\n\n**Validation code:** `r({stata_rc})`"
+            if invalid_argument:
+                validation_detail += (
+                    f"\n\n**Invalid {argument_role or 'argument'}:** `{invalid_argument}`"
+                )
             st.error(
-                f"❌ **Stata Runtime Error**\n\n"
+                f"❌ **Stata Validation Error — estimation was not run**\n\n"
                 f"{last_res.get('message', 'An error occurred during command estimation.')}\n\n"
+                f"{validation_detail}\n\n"
                 f"Please check variable spelling, data availability, and syntax against the active panel dataset."
             )
 

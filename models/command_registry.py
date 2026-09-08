@@ -76,7 +76,7 @@ COMMAND_REGISTRY: dict[str, CommandEntry] = {
     # ── Lifecycle graph (community compat) ───────────────────────────────
     "lgraph":       CommandEntry("lifecycle_chart",     "COMMUNITY_COMPATIBILITY"),
     # ── IV estimation ─────────────────────────────────────────────────────
-    "ivregress":    CommandEntry("iv_estimation",       "VALIDATED"),
+    "ivregress":    CommandEntry("iv_estimation",       "IMPLEMENTED_UNVERIFIED"),
     # ── Wald test ─────────────────────────────────────────────────────────
     "test":         CommandEntry("wald_test",           "VALIDATED"),
     # ── Prediction ────────────────────────────────────────────────────────

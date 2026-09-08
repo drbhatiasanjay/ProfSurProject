@@ -22,7 +22,7 @@ is sufficient for a `VALIDATED` classification.
   `AnalysisRunEnvelope`.
 - Added `partial` to the run-envelope lifecycle.
 - Normalized legacy handler statuses to canonical lowercase values at the router.
-- Preserved validated Wave 1 `ivregress` routing; Wave 5 IV remains isolated as
+- Preserved executable Wave 1 `ivregress` routing under `IMPLEMENTED_UNVERIFIED`; Wave 5 IV remains isolated as
   `iv_candidate`.
 - Restored Wave 5 parser and Stata Studio console dispatch lost during the WS1 merge.
 - Added a central router gate that demotes false `success` from:

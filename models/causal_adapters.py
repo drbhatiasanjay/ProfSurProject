@@ -128,6 +128,10 @@ class IVAdapter:
             ascii_output=ascii_out,
             table=coef_rows,
             message=_IDENTIFICATION_DISCLAIMER,
+            metadata={
+                "methodology_status": "IMPLEMENTED_UNVERIFIED",
+                "estimator": "IV2SLS",
+            },
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )
@@ -153,7 +157,15 @@ class HDFEAdapter:
         y_col: str = parsed.get("depvar", "")
         x_cols: list = list(parsed.get("indepvars", []))
         opts: dict = parsed.get("options", {})
-        fe_cols: list = list(opts.get("absorb", ["company_code", "year"]))
+        fe_cols = opts.get("absorb", ["company_code", "year"])
+        if not isinstance(fe_cols, list):
+            return CapabilityResult(
+                status="error",
+                message="absorb() must be a validated list of variables.",
+                error_code="SYNTAX_ERROR",
+                metadata={"methodology_status": "IMPLEMENTED_UNVERIFIED"},
+                correlation_id=request.correlation_id,
+            )
 
         if not y_col:
             return CapabilityResult(
@@ -202,6 +214,11 @@ class HDFEAdapter:
             ascii_output=ascii_out,
             table=coef_rows,
             message=_IDENTIFICATION_DISCLAIMER,
+            metadata={
+                "methodology_status": "IMPLEMENTED_UNVERIFIED",
+                "estimator": "pyfixest.feols",
+                "absorbed_variables": fe_cols,
+            },
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )
@@ -234,5 +251,6 @@ class DIDAdapter:
                 "Use xtreg with treatment interaction as interim approach."
             ),
             error_code="UNSUPPORTED_CAPABILITY",
+            metadata={"methodology_status": "CANDIDATE"},
             correlation_id=request.correlation_id,
         )

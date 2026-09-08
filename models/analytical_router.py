@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
+from dataclasses import replace
 
 from models.analytical_contracts import (
     AnalyticalError,
@@ -23,6 +24,8 @@ from models.analytical_contracts import (
 from models.analysis_run_envelope import AnalysisRunEnvelope
 from models.command_registry import CommandEntry, resolve_capability
 from models.capability_registry import get_handler
+from models.stata_engine import resolve_panel_variable
+from models.stata_validation import validate_stata_command
 
 logger = logging.getLogger("profsur.router")
 
@@ -41,8 +44,35 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
     """
     t0 = time.perf_counter()
     run_id = str(uuid.uuid4())
-    cmd = request.parsed.get("cmd", "")
+    validated_parsed, validation_failure = validate_stata_command(
+        request.parsed, request.df, resolve_panel_variable
+    )
+    request = replace(request, parsed=validated_parsed)
+    cmd = validated_parsed.get("cmd", "")
     entry: CommandEntry | None = resolve_capability(cmd)
+
+    if validation_failure:
+        result = CapabilityResult(
+            status="error",
+            error_code=validation_failure["error_code"],
+            message=validation_failure["message"],
+            ascii_output=validation_failure["ascii_output"],
+            metadata=validation_failure.get("metadata"),
+            correlation_id=request.correlation_id,
+            run_id=run_id,
+        )
+        envelope = AnalysisRunEnvelope.create(
+            run_id=run_id,
+            correlation_id=request.correlation_id,
+            dataset_fingerprint=request.dataset_ref.fingerprint,
+            normalized_command=cmd,
+            capability=entry.capability if entry else "NONE",
+        ).complete("error")
+        _log_route_event(
+            request, result, entry, envelope,
+            round((time.perf_counter() - t0) * 1000, 2),
+        )
+        return result
 
     # ── Unrecognized command ──────────────────────────────────────────────
     if entry is None:
@@ -124,6 +154,7 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
             table=raw.get("table"),
             message=raw.get("message", ""),
             error_code=raw.get("error_code", ""),
+            metadata=raw.get("metadata"),
             correlation_id=request.correlation_id,
             run_id=run_id,
             engine="stata_engine_v1",

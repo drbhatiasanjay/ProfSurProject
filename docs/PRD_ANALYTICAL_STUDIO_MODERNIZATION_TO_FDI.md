@@ -112,6 +112,29 @@ request → validation → execution → result → error behavior → UI state 
 
 Do not mix unrelated UI redesign, dependency upgrades, database changes, large renames, or formatting sweeps into analytical PRs unless explicitly authorized.
 
+### 4.6 No silent substitution
+
+A user-specified variable, grouping variable, clustering variable, estimator
+option, absorb variable, or intervention must never be silently dropped,
+replaced, or defaulted. The system must execute exactly the requested semantics
+or fail closed with a typed, user-visible error before estimation.
+
+Every supported command must define:
+
+- one canonical syntax example;
+- a typed parser-output contract for its adapter or handler;
+- raw-command parser-to-estimator tests;
+- negative tests for nonexistent variables and invalid options;
+- explicit covariance semantics where applicable;
+- the authoritative capability and methodology status propagated consistently to
+  the registry, router, result metadata, UI, and documentation.
+
+Defaults are allowed only when an optional argument is intentionally omitted.
+They must never replace an invalid argument supplied by the user.
+
+Implementation availability, executable behavior, numerical checking, and
+methodological validation are separate lifecycle states.
+
 ## 5. Mandatory GitHub implementation reporting
 
 Every implementation PR/wave must produce a durable report in GitHub.
@@ -476,6 +499,10 @@ Every PR must:
 11. include exact commands/results;
 12. end `READY_FOR_REVIEW` or `BLOCKED`;
 13. stop and not start the next PR automatically.
+14. prove that invalid user variables and options fail before estimator dispatch;
+15. include public raw-command integration tests for every repaired parser contract;
+16. verify covariance type, cluster variable, and cluster count when clustering is supported;
+17. prohibit silent substitution across parser, estimator, UI, tests, and reports.
 
 ## 16. Mandatory review checkpoints
 

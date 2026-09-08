@@ -78,10 +78,20 @@ The WS1 merge commit has parents `da4b2b8` and `4119d56`.
 - Restored `estat summarize`, `testparm`, `describe`, and conditional `count`
   behavior lost during merge.
 - Restored Wave 5 parser and console dispatch for GMM, HDFE, DiD, scenario, and ML.
-- Preserved validated Wave 1 `ivregress` and prevented Wave 5 duplicate registration.
+- Preserved executable WS1 `ivregress` under `IMPLEMENTED_UNVERIFIED` and prevented duplicate registration.
 - Added router-level canonical status normalization and fail-closed demotion.
 - Replaced expensive RED estimator execution with mocks and minimal fixtures.
 - Added numerical/golden gates while retaining non-validated classifications.
+
+## Independent Review Correction
+
+The WS1 commands `ivregress`, `test`, `predict`, and `winsor2` are implemented on
+the reconciliation lineage and execute at reviewed commit `88ab5c2`. They are
+not yet available on `master` at `b96cc3a` and remain pending independent approval,
+PR creation, and merge into `master`.
+
+Implementation availability is distinct from methodological validation. Executable
+behavior does not promote any advanced method to `VALIDATED`.
 
 ## Verification Evidence
 

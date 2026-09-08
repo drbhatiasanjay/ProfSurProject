@@ -171,6 +171,7 @@ class CapabilityResult:
     table: list[dict] | None = None
     message: str = ""
     error_code: str = ""            # one of ANALYTICAL_ERROR_CODES (or "")
+    metadata: dict[str, Any] | None = None
     correlation_id: str = ""        # echoed from AnalyticalRequest
     run_id: str = ""                # echoed from AnalysisRunEnvelope
     engine: str = "stata_engine_v1"
@@ -185,6 +186,7 @@ class CapabilityResult:
             "table": self.table,
             "message": self.message,
             "error_code": self.error_code,
+            "metadata": self.metadata,
             "correlation_id": self.correlation_id,
             "run_id": self.run_id,
             "engine": self.engine,

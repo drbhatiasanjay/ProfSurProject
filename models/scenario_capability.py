@@ -49,7 +49,7 @@ class ScenarioAdapter:
     """
 
     _STATUS_MESSAGE = (
-        "SCENARIO PREVIEW (not validated counterfactual): "
+        "INTERVENTION PREVIEW (not validated counterfactual): "
         "Variable shifts have been applied to the dataset copy. "
         "A fitted model, baseline predictions, uncertainty quantification, "
         "and intervention/baseline comparison are required for validated scenario analysis."
@@ -126,6 +126,11 @@ class ScenarioAdapter:
             ascii_output=ascii_out,
             table=summary_rows,
             message=ScenarioAdapter._STATUS_MESSAGE,
+            metadata={
+                "methodology_status": "CANDIDATE",
+                "result_type": "INTERVENTION_PREVIEW",
+                "interventions": applied,
+            },
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )
