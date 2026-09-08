@@ -25,7 +25,7 @@ from models.analytical_contracts import (
 from models.analysis_run_envelope import AnalysisRunEnvelope
 from models.command_registry import CommandEntry, resolve_capability
 from models.capability_registry import get_handler
-from models.stata_engine import resolve_panel_variable
+from models.stata_engine import ModelResultContext, resolve_panel_variable
 from models.stata_validation import validate_stata_command
 
 logger = logging.getLogger("profsur.router")
@@ -127,6 +127,23 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
     )
 
     try:
+        if isinstance(request.session_context, ModelResultContext):
+            try:
+                request.session_context.bind_session(request.session_id)
+            except ValueError as exc:
+                raise AnalyticalError(
+                    code="DATA_SCOPE_ERROR",
+                    user_message=(
+                        "Post-estimation state belongs to another session. "
+                        "Reuse the context only with its original session."
+                    ),
+                    technical_message=str(exc),
+                    command=cmd,
+                    normalized_command=cmd,
+                    correlation_id=request.correlation_id,
+                    analysis_run_id=run_id,
+                    suggested_actions=("Create a new ModelResultContext for this session.",),
+                ) from exc
         handler_args = (request.parsed, request.df)
         if request.session_context is not None and len(inspect.signature(handler).parameters) >= 3:
             handler_args += (request.session_context,)

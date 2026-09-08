@@ -65,8 +65,19 @@ class EstimateRecord(dict):
 class ModelResultContext:
     """Session/workspace-scoped model state for post-estimation commands."""
 
+    session_id: str = ""
     last_estimate: EstimateRecord | None = None
     stored_estimates: dict[str, EstimateRecord] = field(default_factory=dict)
+
+    def bind_session(self, session_id: str) -> None:
+        """Bind this state once; reject reuse by a different router session."""
+        if not session_id:
+            return
+        if self.session_id and self.session_id != session_id:
+            raise ValueError(
+                f"post-estimation context is bound to session {self.session_id!r}"
+            )
+        self.session_id = session_id
 
     def get_last_estimate(self):
         return self.last_estimate
