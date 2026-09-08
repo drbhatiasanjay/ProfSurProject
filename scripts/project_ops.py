@@ -136,33 +136,37 @@ async def _run_verify_async(target_url, username, password, out_img):
     from playwright.async_api import async_playwright
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page(viewport={"width": 1400, "height": 900})
-        print(f"Navigating to {target_url}...")
-        await page.goto(target_url, wait_until="networkidle", timeout=60000)
-        await page.wait_for_timeout(2000)
+        try:
+            page = await browser.new_page(viewport={"width": 1400, "height": 900})
+            page.set_default_timeout(30_000)
+            print(f"Navigating to {target_url}...")
+            await page.goto(target_url, wait_until="networkidle", timeout=30_000)
+            await page.wait_for_timeout(2_000)
 
-        # Handle login if needed
-        user_input = page.locator('input[aria-label="Username"], input[type="text"]').first
-        pwd_input = page.locator('input[aria-label="Password"], input[type="password"]').first
-        if await user_input.is_visible():
-            if not password:
-                raise RuntimeError("Set PROFSUR_VERIFY_PASSWORD or pass --password for authenticated verification.")
-            await user_input.fill(username)
-            await pwd_input.fill(password)
-            await page.locator('button:has-text("Login"), button:has-text("Sign In")').first.click()
-            await page.wait_for_timeout(3000)
+            user_input = page.locator('input[aria-label="Username"], input[type="text"]').first
+            pwd_input = page.locator('input[aria-label="Password"], input[type="password"]').first
+            if await user_input.is_visible():
+                if not password:
+                    raise RuntimeError("Set PROFSUR_VERIFY_PASSWORD or pass --password for authenticated verification.")
+                await user_input.fill(username)
+                await pwd_input.fill(password)
+                await page.locator('button:has-text("Login"), button:has-text("Sign In")').first.click()
+                await page.wait_for_timeout(3_000)
 
-        os.makedirs(os.path.dirname(os.path.abspath(out_img)), exist_ok=True)
-        await page.screenshot(path=out_img)
-        print(f"Verification screenshot saved to: {out_img}")
-        await browser.close()
+            os.makedirs(os.path.dirname(os.path.abspath(out_img)), exist_ok=True)
+            await page.screenshot(path=out_img)
+            print(f"Verification screenshot saved to: {out_img}")
+        finally:
+            await browser.close()
 
 def cmd_verify(args):
     env = args.env
     url = "http://localhost:8501" if env == "local" else "https://lifecycle-leverage-779655496440.us-east1.run.app"
     out_img = f"scratch/verify_{env}_screen.png"
     print(f"=== VERIFYING {env.upper()} DEPLOYMENT ===")
-    asyncio.run(_run_verify_async(url, args.user, args.password, out_img))
+    asyncio.run(asyncio.wait_for(
+        _run_verify_async(url, args.user, args.password, out_img), timeout=120
+    ))
 
 def main():
     parser = argparse.ArgumentParser(description="LifeCycle Leverage Project Ops CLI")

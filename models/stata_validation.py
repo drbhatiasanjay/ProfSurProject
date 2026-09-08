@@ -34,7 +34,18 @@ def validation_error(
     }
 
 
-def _resolve(variable: str, df: pd.DataFrame, resolver: Resolver) -> str | None:
+def _resolve(
+    variable: str, df: pd.DataFrame, resolver: Resolver, *, role: str = "variable"
+) -> str | None:
+    # Stata grouping/cluster identifiers are semantic arguments.  They must
+    # name an actual column; analytical aliases such as stage/firm/id are not
+    # valid substitutes for an explicitly requested grouping variable.
+    if role in {"by", "cluster"}:
+        raw = str(variable).strip()
+        for column in df.columns:
+            if raw == column or raw.lower() == str(column).lower():
+                return str(column)
+        return None
     try:
         return resolver(variable, df.columns, df=df)
     except TypeError:
@@ -206,7 +217,7 @@ def validate_stata_command(
         normalized["indepvars"] = variables
         if "by" in normalized["options"]:
             raw_by = str(normalized["options"]["by"])
-            by_variable = _resolve(raw_by, df, resolver)
+            by_variable = _resolve(raw_by, df, resolver, role="by")
             if by_variable is None:
                 return normalized, validation_error(
                     "VARIABLE_NOT_FOUND", 111, f"variable {raw_by} not found (by)",
@@ -251,7 +262,7 @@ def validate_stata_command(
         cluster_variable = None
         cluster_count = None
         if cluster_raw:
-            cluster_variable = _resolve(cluster_raw, df, resolver)
+            cluster_variable = _resolve(cluster_raw, df, resolver, role="cluster")
             if cluster_variable is None:
                 return normalized, validation_error(
                     "VARIABLE_NOT_FOUND", 111,

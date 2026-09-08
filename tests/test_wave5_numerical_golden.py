@@ -89,7 +89,6 @@ def test_iv_2sls_matches_closed_form_reference_but_remains_partial():
 
 
 def test_hdfe_matches_two_way_fixed_effects_fixture_but_remains_partial():
-    pytest.importorskip("pyfixest")
     from models.causal_adapters import HDFEAdapter
 
     firms = np.repeat(np.arange(20), 6)

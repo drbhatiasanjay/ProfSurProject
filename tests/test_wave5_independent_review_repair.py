@@ -135,6 +135,31 @@ def test_router_validation_failure_prevents_handler_resolution(monkeypatch, pane
 
 
 @pytest.mark.parametrize(
+    "command",
+    [
+        "ivregress 2sls leverage profitability (tangibility = tax)",
+        "test profitability = 0",
+        "predict yhat, xb",
+        "winsor2 leverage, cuts(1 99)",
+    ],
+)
+def test_ws1_commands_use_behavioral_router_registry_path(monkeypatch, command, panel_df):
+    original = analytical_router.get_handler
+    seen = []
+
+    def observed_handler(capability, cmd=""):
+        handler = original(capability, cmd=cmd)
+        seen.append((capability, cmd, handler is not None))
+        return handler
+
+    monkeypatch.setattr(analytical_router, "get_handler", observed_handler)
+    result = route(_request(command, panel_df))
+
+    assert seen and seen[-1][2] is True
+    assert result.status != "unsupported"
+
+
+@pytest.mark.parametrize(
     ("command", "invalid_name", "role"),
     [
         (
@@ -245,6 +270,18 @@ def test_parser_preserves_covariance_contract(command, covariance_type, cluster_
     assert result.metadata["cluster_variable"] == cluster_variable
 
 
+@pytest.mark.parametrize("command", [
+    "tabstat leverage, by(stage)",
+    "regress leverage profitability, vce(cluster firm)",
+    "xtreg leverage profitability, fe vce(cluster id)",
+])
+def test_grouping_and_cluster_roles_do_not_use_analytical_aliases(command, panel_df):
+    result = execute_stata_command(command, panel_df, {})
+    assert result["status"] == "error"
+    assert result["error_code"] == "VARIABLE_NOT_FOUND"
+    assert result["metadata"]["stata_rc"] == 111
+
+
 @pytest.mark.parametrize(
     "command",
     [
@@ -292,7 +329,6 @@ def test_unknown_scenario_intervention_fails_before_adapter(panel_df):
 
 
 def test_hdfe_absorb_parser_to_estimator_contract(panel_df):
-    pytest.importorskip("pyfixest")
     command = "hdfe leverage profitability, absorb(company_code year)"
     parsed = parse_stata_command(command)
     result = execute_stata_command(command, panel_df, {})

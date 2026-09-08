@@ -54,6 +54,9 @@ INVALID_COMMANDS = [
     "xtreg leverage nonexistent_var, fe",
     "regress leverage profitability, vce(cluster nonexistent_col)",
     "xtreg leverage profitability, fe vce(cluster nonexistent_col)",
+    "tabstat leverage, by(stage)",
+    "regress leverage profitability, vce(cluster firm)",
+    "xtreg leverage profitability, fe vce(cluster id)",
     "hdfe leverage profitability, absorb(company_code nonexistent_col)",
     "scenario leverage nonexistent_col=-0.05",
 ]
@@ -121,6 +124,8 @@ def run_audit(source_db: Path) -> dict:
             for result in invalid.values()
         )
         assert all(result["status"] == "success" for result in covariance.values())
+        assert covariance[COVARIANCE_COMMANDS[2]]["metadata"]["cluster_count"] == 400
+        assert covariance[COVARIANCE_COMMANDS[5]]["metadata"]["cluster_count"] == 400
         assert all(result["status"] == "partial" for result in scenarios)
         assert hdfe["status"] == "partial" or (
             hdfe["status"] == "error" and hdfe.get("error_code") == "DEPENDENCY_UNAVAILABLE"
