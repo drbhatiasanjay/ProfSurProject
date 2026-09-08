@@ -122,6 +122,10 @@ or fail closed with a typed user-visible error before estimation.
 - Result: **852 passed, 1 skipped, 38 warnings in 117.98 seconds**.
 - Local runtime: Python 3.12; Python 3.11 is not installed locally.
 
+### Push hook
+
+- Code push hook: **115 passed, 18 warnings in 29.67 seconds**.
+
 ### Targeted Playwright
 
 - Four bounded Stata Studio journeys covering 19 commands/interactions.

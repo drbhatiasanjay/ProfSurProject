@@ -114,6 +114,9 @@ Result: **67 passed, 1 warning in 2.94s**.
 An initial sandboxed attempt produced one pytest temporary-lock permission error;
 the exact hook passed outside the sandbox with no code change.
 
+The actual code push hook expanded its selection because model and engine files
+were changed and passed **115 tests, 18 warnings in 29.67s**.
+
 ## Real 9,031-Row Panel Audit
 
 The audit used a disposable database copy. Both source and copy hashes remained

@@ -278,8 +278,8 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - Added public parser-to-adapter contracts for scenario interventions and HDFE absorb lists.
 - Removed inherited System-GMM and Arellano–Bond claims for the levels IV-GMM proxy.
 - Separated WS1 IV execution availability from methodological validation.
-- Verification: 134 targeted tests passed; 852 full-suite tests passed; 67 push-hook
-  tests passed; four Playwright journeys passed across 19 interactions.
+- Verification: 134 targeted tests passed; 852 full-suite tests passed; the code
+  push hook passed 115 tests; four Playwright journeys passed across 19 interactions.
 - Disposable 9,031-row audit: 22 core commands and four WS1 commands succeeded;
   eight invalid requests failed closed; source and copy database hashes were unchanged.
 - Resume point: `READY_FOR_INDEPENDENT_RE_REVIEW`.
