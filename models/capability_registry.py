@@ -60,6 +60,15 @@ try:
 except ImportError:
     _HAS_WAVE1_HANDLERS = False
 
+from models.stata_expansion_handlers import (
+    _handle_gmm,
+    _handle_ivregress as _w5_handle_ivregress,
+    _handle_hdfe,
+    _handle_didregress,
+    _handle_scenario,
+    _handle_ml_predict,
+)
+
 
 CapabilityHandler = Callable[[dict, pd.DataFrame], dict]
 
@@ -133,6 +142,13 @@ CAPABILITY_REGISTRY: dict[str, CapabilityHandler] = {
     "xttab":                _handle_xttab,
     "xtline":               _handle_xtline,
     "linear_combination":   _handle_lincom,
+    # Wave 5 capabilities
+    "gmm":                  _handle_gmm,
+    "iv":                   _w5_handle_ivregress,
+    "hdfe":                 _handle_hdfe,
+    "did":                  _handle_didregress,
+    "scenario":             _handle_scenario,
+    "ml_predict":           _handle_ml_predict,
 }
 
 # Add visualization sub-handlers so router can pick by cmd

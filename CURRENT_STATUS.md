@@ -42,6 +42,11 @@ Comprehensive end-to-end verification executed across 109 checkpoints demonstrat
 - **Phase 5 (Multi-User Matrix):** 4 users (`profsurkumar`, `skumar`, `drbhatia`, `sbhatia`) × Light/Dark themes verified on `localhost:8501` and live GCP Cloud Run.
 - **Phase 6 (Performance Caching):** Core analytical pages load with warm latencies under 1.0s.
 
+## 1. Active Run State
+- **Current Wave**: Wave 5 (Advanced Econometrics & Scenarios)
+- **Status**: IMPLEMENTED & TESTED. 
+- **Last Action**: Successfully wired `gmm_adapter`, `causal_adapters`, `ml_adapters`, and `scenario_capability` into `models/capability_registry.py` and `stata_engine.py` on branch `feature/wave5-advanced-methods`. Tests are passing cleanly.
+
 **Primary Evidence Locations:**
 - Summary Report: `scratch/exhaustive_suite/EXHAUSTIVE_HEALTH_AUDIT_REPORT.md`
 - Results JSON: `scratch/exhaustive_suite/phase[1-4]_results.json`, `performance_benchmark_results.json`

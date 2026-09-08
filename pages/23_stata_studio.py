@@ -181,6 +181,30 @@ def get_financial_translation(cmd_str: str) -> str:
         return (
             "Computes linear combinations of estimated coefficients ($c'\\hat{\\beta}$) with Delta-method standard errors and confidence bounds."
         )
+    if low.startswith("gmm"):
+        return (
+            "Estimates dynamic panel data models using Generalized Method of Moments (Arellano-Bond), addressing endogeneity by using lagged levels as instruments for first-differenced equations."
+        )
+    if low.startswith("ivregress") or low.startswith("iv "):
+        return (
+            "Performs Instrumental Variable (IV) regression via 2SLS to estimate causal effects in the presence of endogenous regressors, utilizing exogenous instruments."
+        )
+    if low.startswith("hdfe"):
+        return (
+            "Estimates High-Dimensional Fixed Effects (HDFE) models to stringently absorb multiple layers of unobserved heterogeneity (e.g., firm, year, and industry shocks) efficiently."
+        )
+    if low.startswith("didregress") or low.startswith("did "):
+        return (
+            "Estimates Difference-in-Differences (DiD) models to evaluate the causal impact of policy interventions (e.g., IBC 2016) by comparing treatment and control groups over time."
+        )
+    if low.startswith("scenario"):
+        return (
+            "Executes post-estimation counterfactual scenario analysis to quantify the predicted changes in capital structure under simulated economic interventions."
+        )
+    if low.startswith("predict_ml"):
+        return (
+            "Applies Machine Learning (Ridge Regression with Cross-Validation) to generate robust out-of-sample predictions, combating overfitting in high-dimensional financial data."
+        )
     return f"Executes econometric estimation for <code>{html.escape(cmd_str)}</code> on the active longitudinal panel dataset."
 
 # Custom Stata Terminal CSS

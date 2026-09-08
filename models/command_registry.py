@@ -103,6 +103,13 @@ COMMAND_REGISTRY: dict[str, CommandEntry] = {
     "testparm":     CommandEntry("wald_test",           "VALIDATED"),
     "lincom":       CommandEntry("linear_combination",  "VALIDATED"),
     "nlcom":        CommandEntry("nonlinear_combination", "IMPLEMENTED_UNVERIFIED"),
+    # ── Wave 5: Advanced Econometrics & Scenarios ─────────────────────────
+    "gmm":          CommandEntry("gmm",                 "IMPLEMENTED_UNVERIFIED"),
+    "ivregress":    CommandEntry("iv",                  "CANDIDATE"),
+    "hdfe":         CommandEntry("hdfe",                "CANDIDATE"),
+    "didregress":   CommandEntry("did",                 "CANDIDATE"),
+    "scenario":     CommandEntry("scenario",            "CANDIDATE"),
+    "predict_ml":   CommandEntry("ml_predict",          "CANDIDATE"),
 }
 
 

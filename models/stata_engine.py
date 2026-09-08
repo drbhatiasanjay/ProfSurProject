@@ -270,11 +270,13 @@ def parse_stata_command(cmd_str: str) -> dict:
     depvar = ""
     indepvars = []
 
-    if cmd in ("xtreg", "regress", "reg"):
+    if cmd in ("xtreg", "regress", "reg", "gmm", "ivregress", "hdfe", "didregress", "predict_ml"):
         if len(tokens) >= 2:
             depvar = tokens[1]
         if len(tokens) >= 3:
             indepvars = tokens[2:]
+    elif cmd == "scenario":
+        indepvars = tokens[1:]
     elif cmd in ("summarize", "sum", "tabstat", "pwcorr", "correlate", "corr"):
         indepvars = tokens[1:]
     elif cmd in ("tabulate", "tab"):
