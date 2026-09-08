@@ -290,4 +290,39 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - **PRD report:** `docs/implementation-reports/WAVE_2_PR_01_CAPABILITY_ABSTRACTION_REPORT.md`
 - **`stata_engine.py`: ZERO LINES CHANGED**
 
+---
+
+## Session: 2026-09-08 — Wave 3 Open-Source Technology Evaluation Spike
+
+### Evaluation Scope & Setup
+- Created frozen benchmark dataset: `tests/fixtures/wave3_benchmark.parquet` (9,031 rows × 30 columns, SHA-256: `e70dcc...`).
+- Evaluated 7 candidate backends: `statsmodels` (0.14.6), `linearmodels` (7.0), `pyfixest` (0.60.0), `scikit-learn` (1.7.1), `xgboost` (3.0.5), `lightgbm` (4.6.0), `dowhy` (0.14) against baseline `stata_engine_v1`.
+- Built spike runner: `scripts/wave3_engine_spike.py` covering all 12 PRD §10 econometric scenarios.
+
+### 12-Scenario Benchmark Summary
+- **S-01 Descriptive:** `statsmodels`/`pandas` matches baseline Stata mean/SD to $\Delta = 0.00000$ (10.4 ms).
+- **S-02 OLS:** `statsmodels`, `linearmodels`, `pyfixest`, `sklearn` match coefficients and $R^2 = 0.08483$ to $\Delta < 10^{-12}$.
+- **S-03 FE (Firm):** `pyfixest` and `linearmodels` match within-$R^2 = 0.02927$ ($\Delta < 10^{-12}$). `pyfixest` executes in 34 ms.
+- **S-04 Two-Way FE:** `pyfixest` (48 ms) is 2.3× faster than `linearmodels` (110 ms) on Entity+Time clustering.
+- **S-05 Lifecycle Interaction:** `statsmodels.formula` and `pyfixest` isolate stage-specific slope interactions.
+- **S-06 Random Effects:** `linearmodels.panel.RandomEffects` estimates GLS $\theta = 0.6710$, overall $R^2 = 0.0663$.
+- **S-07 HDFE:** `pyfixest` absorbs 3-way fixed effects (firm + year + industry) in 27 ms.
+- **S-08 IV/2SLS:** `linearmodels.iv.IV2SLS` and `pyfixest` calculate 2SLS with 1st-stage $F = 14.78$.
+- **S-09 Dynamic GMM:** Reviewed `CurrentProfSurGMMAdapter`; flagged for lag instrument matrix expansion in Wave 5.
+- **S-10 DID / Causal:** `pyfixest` TWFE DID ($ATT = 3.0102$) and `dowhy` backdoor identification completed in 43 ms.
+- **S-11 Prediction / ML:** `scikit-learn` Ridge (RMSE 56.24, 4.9 ms) and `xgboost` (238 ms) evaluated for financial forecasting.
+- **S-12 Controlled Failure:** Multi-collinearity auto-handled by `pyfixest` (drops collinear terms with structured warnings).
+
+### Artifacts & Repository State
+- **Branch:** `feature/wave3-engine-evaluation`
+- **Tag:** `v2.2.0-wave3-complete`
+- **Deliverables:**
+  - `docs/implementation-reports/WAVE_3_ENGINE_EVALUATION_REPORT.md`
+  - `docs/implementation-reports/wave3_engine_matrix.json`
+  - `scripts/wave3_engine_spike.py`
+  - `tests/fixtures/wave3_benchmark.parquet`
+- **Regression:** 126 passed, 1 skipped, 0 failures (6.66s).
+- **GitHub Status:** Synchronized and pushed to remote with tag `v2.2.0-wave3-complete`.
+
+
 
