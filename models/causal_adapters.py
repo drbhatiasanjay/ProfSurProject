@@ -15,6 +15,7 @@ import pandas as pd
 
 from .analytical_contracts import AnalyticalRequest, CapabilityResult
 from .analysis_run_envelope import AnalysisRunEnvelope
+from .capability_status import result_status_metadata
 
 
 _IDENTIFICATION_DISCLAIMER = (
@@ -128,10 +129,7 @@ class IVAdapter:
             ascii_output=ascii_out,
             table=coef_rows,
             message=_IDENTIFICATION_DISCLAIMER,
-            metadata={
-                "methodology_status": "IMPLEMENTED_UNVERIFIED",
-                "estimator": "IV2SLS",
-            },
+            metadata=result_status_metadata("ivregress", estimator="IV2SLS"),
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )
@@ -163,7 +161,7 @@ class HDFEAdapter:
                 status="error",
                 message="absorb() must be a validated list of variables.",
                 error_code="SYNTAX_ERROR",
-                metadata={"methodology_status": "IMPLEMENTED_UNVERIFIED"},
+                metadata=result_status_metadata("hdfe"),
                 correlation_id=request.correlation_id,
             )
 
@@ -214,11 +212,9 @@ class HDFEAdapter:
             ascii_output=ascii_out,
             table=coef_rows,
             message=_IDENTIFICATION_DISCLAIMER,
-            metadata={
-                "methodology_status": "IMPLEMENTED_UNVERIFIED",
-                "estimator": "pyfixest.feols",
-                "absorbed_variables": fe_cols,
-            },
+            metadata=result_status_metadata(
+                "hdfe", estimator="pyfixest.feols", absorbed_variables=fe_cols
+            ),
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )
@@ -251,6 +247,6 @@ class DIDAdapter:
                 "Use xtreg with treatment interaction as interim approach."
             ),
             error_code="UNSUPPORTED_CAPABILITY",
-            metadata={"methodology_status": "CANDIDATE"},
+            metadata=result_status_metadata("didregress"),
             correlation_id=request.correlation_id,
         )

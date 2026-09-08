@@ -112,15 +112,10 @@ Cluster requests are never mapped to HC1 and are never silently replaced with
 
 ## Capability and Methodology Status
 
-| Capability | Implemented | Executable | Numerically checked | Methodologically validated |
-|---|---:|---:|---:|---:|
-| WS1 `test`, `predict`, `winsor2` | Yes | Yes | Yes | Not a causal-method claim |
-| WS1 `ivregress` | Yes | Yes | Synthetic checks | No |
-| Experimental IV-GMM proxy | Yes | Yes | Limited | No |
-| HDFE | Yes | Dependency-gated | Synthetic checks | No |
-| ML Ridge | Yes | Yes | Group-holdout checks | No |
-| Scenario preview | Yes | Yes (`partial`) | Contract checks | No |
-| DiD | No | No (`unsupported`) | No | No |
+The authoritative matrix is generated from `models/capability_status.py`:
 
-The authoritative status must remain consistent across command registry, router,
+- `docs/CAPABILITY_STATUS.md`
+- verify with `py -3.12 scripts/render_capability_status.py --check`
+
+The generated status must remain consistent across command registry, router,
 result metadata, UI copy, reports, and `CURRENT_STATUS.md`.

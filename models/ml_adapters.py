@@ -17,6 +17,7 @@ import numpy as np
 
 from .analytical_contracts import AnalyticalRequest, CapabilityResult
 from .analysis_run_envelope import AnalysisRunEnvelope
+from .capability_status import result_status_metadata
 
 _VALIDATION_DISCLAIMER = (
     "VALIDATION NOTE: Uses GroupShuffleSplit on 'company_code' to prevent "
@@ -136,11 +137,9 @@ class MLPredictAdapter:
             ascii_output=ascii_out,
             table=feat_rows,
             message=_VALIDATION_DISCLAIMER,
-            metadata={
-                "methodology_status": "IMPLEMENTED_UNVERIFIED",
-                "validation": "GroupShuffleSplit",
-                "cluster_variable": "company_code",
-            },
+            metadata=result_status_metadata(
+                "predict_ml", validation="GroupShuffleSplit", cluster_variable="company_code"
+            ),
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )

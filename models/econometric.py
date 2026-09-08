@@ -8,6 +8,7 @@ import pandas as pd
 import statsmodels.api as sm
 from scipy import stats
 from .base import prepare_panel, DEFAULT_X_COLS, DEFAULT_Y_COL
+from .capability_status import capability_status
 
 
 def run_pooled_ols(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", time="year"):
@@ -837,9 +838,12 @@ def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", 
     # Hansen J overidentification test (built into IVGMM result)
     j = result.j_stat  # WaldTestStatistic with .stat, .pval, .df
 
+    status = capability_status("gmm")
     return {
-        "type": "Experimental IV-GMM proxy",
-        "methodology_status": "IMPLEMENTED_UNVERIFIED",
+        "type": status["label"],
+        "methodology_status": status["registry_status"],
+        "methodology_validation": status["methodology"],
+        "methodology_limitation": status["limitation"],
         "is_system_gmm": False,
         "diagnostics_validated": False,
         "coef_table": coef_table,

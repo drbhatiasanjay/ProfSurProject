@@ -23,6 +23,7 @@ import pandas as pd
 
 from .analytical_contracts import AnalyticalRequest, CapabilityResult
 from .analysis_run_envelope import AnalysisRunEnvelope
+from .capability_status import result_status_metadata
 
 
 @dataclass
@@ -126,11 +127,9 @@ class ScenarioAdapter:
             ascii_output=ascii_out,
             table=summary_rows,
             message=ScenarioAdapter._STATUS_MESSAGE,
-            metadata={
-                "methodology_status": "CANDIDATE",
-                "result_type": "INTERVENTION_PREVIEW",
-                "interventions": applied,
-            },
+            metadata=result_status_metadata(
+                "scenario", result_type="INTERVENTION_PREVIEW", interventions=applied
+            ),
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )

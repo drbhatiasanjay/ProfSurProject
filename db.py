@@ -33,17 +33,26 @@ def is_cmie_lab_enabled() -> bool:
         return False
 
 
-# Set WAL mode and performance indexes once at import time
-_init_conn = sqlite3.connect(DB_PATH)
-_init_conn.execute("PRAGMA journal_mode=WAL")
-try:
-    _init_conn.execute("CREATE INDEX IF NOT EXISTS idx_fin_vint_stage_lev ON financials(panel_vintage, life_stage, leverage)")
-    _init_conn.execute("CREATE INDEX IF NOT EXISTS idx_fin_vint_yr_lev ON financials(panel_vintage, year, leverage)")
-    _init_conn.execute("CREATE INDEX IF NOT EXISTS idx_comp_code_ind ON companies(company_code, industry_group)")
-    _init_conn.commit()
-except Exception:
-    pass
-_init_conn.close()
+_DB_INITIALIZED = False
+
+
+def _ensure_db_initialized() -> None:
+    """Apply optional SQLite tuning on first database use, never at import time."""
+    global _DB_INITIALIZED
+    if _DB_INITIALIZED:
+        return
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_fin_vint_stage_lev ON financials(panel_vintage, life_stage, leverage)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_fin_vint_yr_lev ON financials(panel_vintage, year, leverage)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_comp_code_ind ON companies(company_code, industry_group)")
+        conn.commit()
+    except sqlite3.Error:
+        pass
+    finally:
+        conn.close()
+    _DB_INITIALIZED = True
 
 
 def _register_sqlite_stats_functions(conn):
@@ -96,6 +105,7 @@ def _register_sqlite_stats_functions(conn):
 
 
 def get_connection():
+    _ensure_db_initialized()
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     _register_sqlite_stats_functions(conn)
     return conn

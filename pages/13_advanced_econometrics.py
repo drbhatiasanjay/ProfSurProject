@@ -24,6 +24,7 @@ from models.llm_adapters import generate_econometric_narrative
 from models.base import DEFAULT_X_COLS
 from models.econometric_literature_vault import get_relevant_vault_citations
 from models.rich_chat_renderer import render_academic_vault_html
+from models.capability_status import capability_status
 
 ensure_session_state()
 db.log_page_visit("Advanced Econometrics")
@@ -75,6 +76,7 @@ if panel_df.empty:
 _username = (st.session_state.get("user") or {}).get("username", "")
 _n_obs_adv = len(panel_df)
 _n_firms_adv = panel_df["company_code"].nunique()
+_gmm_status = capability_status("gmm")
 audit_trail_download_button(
     page="Advanced Econometrics",
     filters=filters,
@@ -90,7 +92,7 @@ audit_trail_download_button(
 )
 
 tab_gmm, tab_delta, tab_compare, tab_iv = st.tabs([
-    "Experimental IV-GMM",
+    _gmm_status["label"],
     "Delta-Leverage",
     "Stage Comparisons",
     "IV / 2SLS",
@@ -101,8 +103,8 @@ tab_gmm, tab_delta, tab_compare, tab_iv = st.tabs([
 # TAB 1: Experimental IV-GMM proxy
 # ══════════════════════════════════════════════
 with tab_gmm:
-    st.subheader("Experimental IV-GMM proxy")
-    st.caption("Levels IV-GMM with lagged instruments; not Arellano-Bond or Blundell-Bond System GMM")
+    st.subheader(_gmm_status["label"])
+    st.caption(_gmm_status["limitation"])
 
     if st.button("Run experimental IV-GMM", type="primary", key="run_gmm"):
         with st.spinner("Estimating experimental IV-GMM proxy..."):

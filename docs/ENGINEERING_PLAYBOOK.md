@@ -69,6 +69,23 @@ For hooks, scripts, pipelines, agents, queues, cron, CI:
 | **Secrets / env** | Which vars exist; never commit values |
 | **Prod constraints** | Regions, DB modes, feature flags |
 
+### ProfSurProject verification tiers
+
+- **Fast:** `py -3.12 scripts/project_ops.py test --tier fast` — syntax, diff,
+  static contracts, generated status, and change-mapped tests.
+- **Targeted:** `py -3.12 scripts/project_ops.py test --tier targeted` — Wave
+  parser/runtime, status, import-safety, and regression contracts.
+- **Full:** `py -3.12 scripts/project_ops.py test --tier full` — GitHub-equivalent
+  suite using a disposable copy of `capital_structure.db`.
+- Run the full tier only after stable code checkpoints. Documentation-only changes
+  use fast checks unless the documentation is executable or contract-tested.
+- Reuse one verified disposable database per command run; never test against the
+  tracked database for write-capable paths.
+- Start Streamlit once per stable revision and bind Playwright assertions to the
+  current terminal command title.
+- Generate Graphify only at bootstrap and after the final commit, unless call-graph
+  evidence is genuinely stale for a changed architecture boundary.
+
 ---
 
 ## Where to install (by tool)

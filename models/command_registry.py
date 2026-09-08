@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from models.capability_status import capability_status
+
 
 CapabilityStatus = Literal[
     "CANDIDATE",
@@ -76,7 +78,7 @@ COMMAND_REGISTRY: dict[str, CommandEntry] = {
     # ── Lifecycle graph (community compat) ───────────────────────────────
     "lgraph":       CommandEntry("lifecycle_chart",     "COMMUNITY_COMPATIBILITY"),
     # ── IV estimation ─────────────────────────────────────────────────────
-    "ivregress":    CommandEntry("iv_estimation",       "IMPLEMENTED_UNVERIFIED"),
+    "ivregress":    CommandEntry("iv_estimation",       capability_status("ivregress")["registry_status"]),
     # ── Wald test ─────────────────────────────────────────────────────────
     "test":         CommandEntry("wald_test",           "VALIDATED"),
     # ── Prediction ────────────────────────────────────────────────────────
@@ -107,11 +109,11 @@ COMMAND_REGISTRY: dict[str, CommandEntry] = {
     # NOTE: 'ivregress' is kept as Wave 1 validated mapping (iv_estimation).
     # Wave 5 IV is registered under 'iv_candidate' to avoid displacing the
     # validated handler. Use 'hdfe' or 'didregress' for Wave 5 causal work.
-    "gmm":          CommandEntry("gmm",                 "IMPLEMENTED_UNVERIFIED"),
-    "hdfe":         CommandEntry("hdfe",                "IMPLEMENTED_UNVERIFIED"),
-    "didregress":   CommandEntry("did",                 "CANDIDATE"),
-    "scenario":     CommandEntry("scenario",            "CANDIDATE"),
-    "predict_ml":   CommandEntry("ml_predict",          "IMPLEMENTED_UNVERIFIED"),
+    "gmm":          CommandEntry("gmm",                 capability_status("gmm")["registry_status"]),
+    "hdfe":         CommandEntry("hdfe",                capability_status("hdfe")["registry_status"]),
+    "didregress":   CommandEntry("did",                 capability_status("didregress")["registry_status"]),
+    "scenario":     CommandEntry("scenario",            capability_status("scenario")["registry_status"]),
+    "predict_ml":   CommandEntry("ml_predict",          capability_status("predict_ml")["registry_status"]),
 }
 
 

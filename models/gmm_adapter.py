@@ -17,6 +17,7 @@ from scipy import stats
 
 from .analytical_contracts import AnalyticalRequest, CapabilityResult, ANALYTICAL_ERROR_CODES
 from .analysis_run_envelope import AnalysisRunEnvelope
+from .capability_status import result_status_metadata
 
 
 class CurrentProfSurGMMAdapter:
@@ -179,11 +180,9 @@ class CurrentProfSurGMMAdapter:
             ascii_output="\n".join(ascii_lines),
             table=coef_rows,
             message=CurrentProfSurGMMAdapter._METHODOLOGY_DISCLAIMER,
-            metadata={
-                "methodology_status": "IMPLEMENTED_UNVERIFIED",
-                "estimator": "IVGMM_PROXY",
-                "is_system_gmm": False,
-            },
+            metadata=result_status_metadata(
+                "gmm", estimator="IVGMM_PROXY", is_system_gmm=False
+            ),
             correlation_id=request.correlation_id,
             run_id=run_envelope.run_id,
         )

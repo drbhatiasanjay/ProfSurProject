@@ -8,9 +8,12 @@ import pickle
 import time
 
 CACHE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".cache", "models")
-os.makedirs(CACHE_DIR, exist_ok=True)
 
 TTL_SECONDS = 24 * 3600  # 24 hours
+
+
+def _ensure_cache_dir():
+    os.makedirs(CACHE_DIR, exist_ok=True)
 
 
 def _hash_key(model_type, params_dict):
@@ -19,6 +22,7 @@ def _hash_key(model_type, params_dict):
 
 
 def save_model(model_type, params_dict, model_obj):
+    _ensure_cache_dir()
     key = _hash_key(model_type, params_dict)
     path = os.path.join(CACHE_DIR, f"{model_type}_{key}.pkl")
     with open(path, "wb") as f:
@@ -40,6 +44,8 @@ def load_model(model_type, params_dict):
 
 
 def list_cached():
+    if not os.path.isdir(CACHE_DIR):
+        return []
     items = []
     for fname in os.listdir(CACHE_DIR):
         if fname.endswith(".pkl"):
@@ -50,6 +56,8 @@ def list_cached():
 
 
 def clear_cache():
+    if not os.path.isdir(CACHE_DIR):
+        return 0
     count = 0
     for fname in os.listdir(CACHE_DIR):
         if fname.endswith(".pkl"):

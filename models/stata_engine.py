@@ -21,11 +21,11 @@ from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+from models.stata_syntax import parse_absorb_spec, parse_interventions_spec
 from models.stata_validation import (
-    parse_absorb_spec,
-    parse_interventions_spec,
     validate_stata_command,
 )
+from models.capability_status import result_status_metadata
 
 try:
     import docx
@@ -2926,11 +2926,9 @@ def _handle_ivregress(parsed: dict, df: pd.DataFrame, stata_session_state: dict 
         "r2": r2,
         "message": methodology_notice,
         "methodology_status": "IMPLEMENTED_UNVERIFIED",
-        "metadata": {
-            "methodology_status": "IMPLEMENTED_UNVERIFIED",
-            "estimator": "IV2SLS",
-            "execution_status": "success",
-        },
+        "metadata": result_status_metadata(
+            "ivregress", estimator="IV2SLS", execution_status="success"
+        ),
         "coefficients": coefs,
         "ascii_output": "\n".join(lines),
         "result_obj": res,

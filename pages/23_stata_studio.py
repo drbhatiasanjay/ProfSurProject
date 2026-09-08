@@ -36,6 +36,7 @@ from models.stata_engine import (
     prepare_df_for_stata,
     _STORED_ESTIMATES,
 )
+from models.capability_status import capability_status
 
 ensure_session_state()
 db.log_page_visit("Stata Studio")
@@ -107,35 +108,41 @@ def get_financial_translation(cmd_str: str) -> str:
             "VIF values strictly below 5–10 confirm parameter stability and regression robustness."
         )
     if low.startswith("ivregress"):
+        status = capability_status("ivregress")
         return (
-            "Executes an <b>IMPLEMENTED_UNVERIFIED</b> IV/2SLS specification. "
+            f"Executes an <b>{status['registry_status']}</b> {status['label']} specification. "
             "Instrument relevance, exogeneity, and exclusion restrictions require independent validation; "
             "successful execution does not establish a causal effect."
         )
     if low.startswith("gmm"):
+        status = capability_status("gmm")
         return (
-            "Runs an <b>IMPLEMENTED_UNVERIFIED IV-GMM proxy</b> using lagged instruments. "
+            f"Runs an <b>{status['registry_status']} {status['label']}</b> using lagged instruments. "
             "This is not Arellano–Bond or Blundell–Bond System GMM, and its residual correlations "
             "are not formal Arellano–Bond AR tests. Do not cite results until numerical validation is complete."
         )
     if low.startswith("hdfe"):
+        status = capability_status("hdfe")
         return (
-            "Runs an <b>IMPLEMENTED_UNVERIFIED</b> high-dimensional fixed-effects regression via pyfixest. "
+            f"Runs an <b>{status['registry_status']}</b> {status['label']} regression via pyfixest. "
             "Coefficient, standard-error, sample-membership, and absorbed-effects parity require a golden benchmark before validation."
         )
     if low.startswith("didregress"):
+        status = capability_status("didregress")
         return (
-            "Difference-in-Differences is a <b>CANDIDATE</b> capability and currently fails closed. "
+            f"{status['label']} is a <b>{status['registry_status']}</b> capability and currently fails closed. "
             "A cohort-robust estimator, explicit treatment timing, and parallel-trends diagnostics are required before execution."
         )
     if low.startswith("scenario"):
+        status = capability_status("scenario")
         return (
-            "Creates an <b>intervention preview only</b>; it is not a validated counterfactual forecast. "
+            f"Creates an <b>{status['label']}</b>; it is not a validated counterfactual forecast. "
             "A fitted model, baseline comparison, uncertainty quantification, and provenance are required before claiming scenario results."
         )
     if low.startswith("predict_ml"):
+        status = capability_status("predict_ml")
         return (
-            "Runs an <b>IMPLEMENTED_UNVERIFIED</b> Ridge model with a firm-aware group holdout "
+            f"Runs an <b>{status['registry_status']}</b> Ridge model with a firm-aware group holdout "
             "(<code>GroupShuffleSplit</code> on <code>company_code</code>) to prevent firm-level leakage. "
             "No k-fold cross-validation or temporal forecasting validation is performed."
         )

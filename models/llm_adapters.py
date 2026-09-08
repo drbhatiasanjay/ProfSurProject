@@ -10,6 +10,7 @@ panel OLS outputs + descriptive statistics.
 """
 
 import json
+import logging
 import re
 import os
 import functools
@@ -29,16 +30,46 @@ except ImportError:
     _GENAI_SDK = None
     _GENAI_TYPES = None
 
-# tiktoken for token counting; fall back to a rough char/4 heuristic if not installed
-try:
-    import tiktoken
-    _ENC = tiktoken.get_encoding("cl100k_base")
+logger = logging.getLogger(__name__)
 
-    def count_tokens(text: str) -> int:
-        return len(_ENC.encode(text))
-except ImportError:
-    def count_tokens(text: str) -> int:  # type: ignore[misc]
-        return max(1, len(text) // 4)
+_TOKEN_ENCODER = None
+_TOKEN_ENCODER_INITIALIZED = False
+_TOKEN_FALLBACK_WARNED = False
+
+
+def _warn_token_fallback(exc: Exception) -> None:
+    global _TOKEN_FALLBACK_WARNED
+    if not _TOKEN_FALLBACK_WARNED:
+        logger.warning(
+            "tiktoken encoder unavailable; using approximate token counts (%s: %s)",
+            type(exc).__name__,
+            exc,
+        )
+        _TOKEN_FALLBACK_WARNED = True
+
+
+def _get_token_encoder():
+    global _TOKEN_ENCODER, _TOKEN_ENCODER_INITIALIZED
+    if not _TOKEN_ENCODER_INITIALIZED:
+        _TOKEN_ENCODER_INITIALIZED = True
+        try:
+            import tiktoken
+            _TOKEN_ENCODER = tiktoken.get_encoding("cl100k_base")
+        except Exception as exc:
+            _warn_token_fallback(exc)
+    return _TOKEN_ENCODER
+
+
+def count_tokens(text: str) -> int:
+    global _TOKEN_ENCODER
+    encoder = _get_token_encoder()
+    if encoder is not None:
+        try:
+            return len(encoder.encode(text))
+        except Exception as exc:
+            _TOKEN_ENCODER = None
+            _warn_token_fallback(exc)
+    return max(1, len(text) // 4)
 
 
 _PANEL_DISPLAY_LABELS = {

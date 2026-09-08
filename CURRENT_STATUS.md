@@ -50,14 +50,9 @@ The recovery audit found no staged changes.
 
 No Wave 5 advanced method is `VALIDATED`.
 
-| Capability | Registry state | Runtime state | Truthful limitation |
-|---|---|---|---|
-| `gmm` | `IMPLEMENTED_UNVERIFIED` | `partial` / typed error | IV-GMM proxy; not Arellano-Bond or Blundell-Bond System GMM |
-| Wave 5 IV | isolated candidate | `partial` / typed error | Does not replace executable WS1 `ivregress`; neither is methodologically validated |
-| `hdfe` | `IMPLEMENTED_UNVERIFIED` | `partial` / typed error | Requires independent sample, SE, covariance, and absorbed-FE review |
-| `didregress` | `CANDIDATE` | `unsupported` | No cohort-robust estimator or parallel-trends validation |
-| `scenario` | `CANDIDATE` | `partial` preview / `unsupported` | No fitted counterfactual model or uncertainty |
-| `predict_ml` | `IMPLEMENTED_UNVERIFIED` | `partial` / typed error | Firm holdout only; no forward-time validation or k-fold CV |
+Authoritative status is defined in `models/capability_status.py` and generated to
+`docs/CAPABILITY_STATUS.md`. CI and pre-push checks fail when the generated file,
+registry, result metadata, or primary UI labels drift from that catalog.
 
 The router demotes any false `success` from candidate or unverified registry
 entries. `AnalysisRunEnvelope` and `CapabilityResult` both support `partial`.
@@ -119,7 +114,7 @@ or fail closed with a typed user-visible error before estimation.
 ### Complete GitHub-equivalent pytest selection
 
 - Command selection matches `.github/workflows/deploy.yml`.
-- Result: **852 passed, 1 skipped, 38 warnings in 117.98 seconds**.
+- Result after automation closure: **871 passed, 1 skipped, 37 warnings in 154.87 seconds**.
 - Local runtime: Python 3.12; Python 3.11 is not installed locally.
 
 ### Push hook
@@ -146,6 +141,21 @@ or fail closed with a typed user-visible error before estimation.
 - `docs/implementation-reports/WAVE_5_PR_02_WS1_RECONCILIATION_REPORT.md`
 - `docs/implementation-reports/WAVE_5_PR_03_INDEPENDENT_REVIEW_REPAIR_REPORT.md`
 - `docs/WAVE5_COMMAND_CONTRACTS.md`
+- `docs/CAPABILITY_STATUS.md`
+- `docs/implementation-reports/WAVE_5_PR_04_AUTOMATION_PERFORMANCE_REPORT.md`
+
+## 8A. Automation and Performance
+
+- Fast, targeted, and full verification tiers use disposable database copies.
+- Test runs support machine-readable JSON evidence via `project_ops.py --evidence`.
+- Pre-push and CI enforce import safety, no-silent-substitution rules, generated
+  status consistency, parser documentation contracts, and Wave 5 repair tests.
+- A reusable real-panel audit verifies 22 core commands, four WS1 commands, typed
+  negative paths, covariance semantics, scenario, HDFE, and database hashes.
+- `import models` is lightweight and does not import the LLM stack.
+- Tiktoken initialization is lazy, Docker-pre-cached, and covered by offline,
+  corrupted-cache, and one-warning fallback tests.
+- Reusable Playwright helpers bind checks to the active Stata terminal command.
 
 ## 9. Security and Data Boundaries
 
