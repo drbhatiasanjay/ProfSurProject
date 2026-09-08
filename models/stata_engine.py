@@ -48,10 +48,8 @@ class PanelContext:
     has_duplicates: bool = False
     gaps: bool = False
 
-# Global session panel context & stored estimates
+# Panel metadata is process-local; estimation results are never stored here.
 _ACTIVE_PANEL_CONTEXT: PanelContext | None = None
-_STORED_ESTIMATES = {}
-_LAST_ESTIMATE = None
 
 
 class EstimateRecord(dict):
@@ -85,32 +83,28 @@ def _get_last_estimate(stata_session_state=None):
         return stata_session_state.get_last_estimate()
     if stata_session_state is not None:
         return stata_session_state.get("_LAST_ESTIMATE")
-    return _LAST_ESTIMATE
+    return None
 
 
 def _set_last_estimate(stata_session_state, estimate):
-    global _LAST_ESTIMATE
     if isinstance(stata_session_state, ModelResultContext):
         stata_session_state.set_last_estimate(estimate)
     elif stata_session_state is not None:
         stata_session_state["_LAST_ESTIMATE"] = estimate
-        if stata_session_state.get("_USE_GLOBAL_FALLBACK"):
-            _LAST_ESTIMATE = estimate
-    else:
-        _LAST_ESTIMATE = estimate
+        return
 
 
 def _get_stored_estimates(stata_session_state=None):
     if isinstance(stata_session_state, ModelResultContext):
         return stata_session_state.stored_estimates
-    return _STORED_ESTIMATES
+    return {}
 
 
 def _store_estimate(stata_session_state, name: str, estimate):
     if isinstance(stata_session_state, ModelResultContext):
         stata_session_state.store_estimate(name, estimate)
     else:
-        _STORED_ESTIMATES[name] = estimate
+        return
 
 COMMON_VAR_ALIASES = {
     "prof": "profitability",
@@ -480,14 +474,10 @@ def execute_stata_command(
     stata_session_state: dict | ModelResultContext = None,
 ) -> dict:
     """Execute a parsed Stata command against the provided pandas DataFrame."""
-    # global _LAST_ESTIMATE
     if stata_session_state is None:
-        stata_session_state = {"_LAST_ESTIMATE": _LAST_ESTIMATE, "_USE_GLOBAL_FALLBACK": True}
+        stata_session_state = ModelResultContext()
     elif isinstance(stata_session_state, ModelResultContext):
         pass
-    elif "_LAST_ESTIMATE" not in stata_session_state:
-        stata_session_state["_LAST_ESTIMATE"] = _LAST_ESTIMATE
-    global _STORED_ESTIMATES
 
     if df is None:
         try:
@@ -2957,8 +2947,10 @@ def _handle_test(parsed: dict, df: pd.DataFrame, stata_session_state: dict = Non
     if not last_est or "result_obj" not in last_est:
         return {
             "status": "error",
+            "error_code": "NO_ACTIVE_ESTIMATION",
             "message": "r(301); last estimates not found",
             "ascii_output": "r(301); last estimates not found",
+            "metadata": {"stata_rc": 301, "argument_role": "post_estimation"},
         }
 
     raw_formula = parsed.get("formula", "")
@@ -3072,8 +3064,10 @@ def _handle_predict(parsed: dict, df: pd.DataFrame, stata_session_state: dict = 
     if not last_est or "result_obj" not in last_est:
         return {
             "status": "error",
+            "error_code": "NO_ACTIVE_ESTIMATION",
             "message": "r(301); last estimates not found",
             "ascii_output": "r(301); last estimates not found",
+            "metadata": {"stata_rc": 301, "argument_role": "post_estimation"},
         }
 
     varname = parsed.get("depvar")

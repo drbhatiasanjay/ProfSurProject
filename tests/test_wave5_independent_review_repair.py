@@ -1,6 +1,7 @@
 """End-to-end acceptance contracts from the Wave 5 independent review."""
 
 import uuid
+import dataclasses
 from pathlib import Path
 
 import numpy as np
@@ -32,6 +33,7 @@ def panel_df() -> pd.DataFrame:
         "leverage": leverage,
         "profitability": profitability,
         "tangibility": tangibility,
+        "log_size": rng.normal(5, 0.4, len(firms)),
         "tax": rng.uniform(0.15, 0.35, len(firms)),
         "life_stage": np.where(firms % 2, "Growth", "Maturity"),
     })
@@ -299,11 +301,50 @@ def test_all_grouping_roles_fail_closed_without_alias_substitution(command, pane
     assert result["metadata"]["stata_rc"] == 111
 
 
+@pytest.mark.parametrize("command", [
+    "graph box leverage, over(life_stage)",
+    "margins life_stage",
+])
+def test_valid_grouping_roles_are_normalized_and_preserved(command, panel_df):
+    result = execute_stata_command(command, panel_df, {})
+    assert result["status"] == "success"
+    if command.startswith("graph"):
+        assert result["boxplot_data"]["group"] == "life_stage"
+    else:
+        assert result["margins_data"]["group"] == "life_stage"
+
+
 def test_post_estimation_test_unknown_variable_has_typed_error(panel_df):
     result = execute_stata_command("test nonexistent_col = 0", panel_df, {})
     assert result["status"] == "error"
     assert result["error_code"] == "VARIABLE_NOT_FOUND"
     assert result["metadata"]["argument_role"] == "test_variable"
+
+
+def test_router_preserves_explicit_session_context_for_post_estimation(panel_df):
+    from models.stata_engine import ModelResultContext
+
+    context_a = ModelResultContext()
+    context_b = ModelResultContext()
+    fit_request = dataclasses.replace(
+        _request("xtreg leverage profitability, fe", panel_df),
+        session_context=context_a, session_id="a",
+    )
+    fitted = route(fit_request)
+    assert fitted.status in {"success", "partial"}
+    same_session = dataclasses.replace(
+        _request("test profitability = 0", panel_df),
+        session_context=context_a, session_id="a",
+    )
+    isolated = dataclasses.replace(
+        _request("test profitability = 0", panel_df),
+        session_context=context_b, session_id="b",
+    )
+    same_result = route(same_session)
+    isolated_result = route(isolated)
+    assert same_result.status == "success"
+    assert isolated_result.status == "error"
+    assert isolated_result.error_code == "NO_ACTIVE_ESTIMATION"
 
 
 @pytest.mark.parametrize(

@@ -11,6 +11,7 @@ Flow:
 from __future__ import annotations
 
 import logging
+import inspect
 import time
 import uuid
 from dataclasses import replace
@@ -126,7 +127,10 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
     )
 
     try:
-        raw: dict = handler(request.parsed, request.df)
+        handler_args = (request.parsed, request.df)
+        if request.session_context is not None and len(inspect.signature(handler).parameters) >= 3:
+            handler_args += (request.session_context,)
+        raw: dict = handler(*handler_args)
 
         # Wrap raw chart dict in VisualizationSpec if present
         chart_raw = raw.pop("chart", None)

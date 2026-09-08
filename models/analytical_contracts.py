@@ -23,6 +23,7 @@ ANALYTICAL_ERROR_CODES: frozenset[str] = frozenset({
     "UNSUPPORTED_OPTION",
     "UNSUPPORTED_CAPABILITY",
     "VARIABLE_NOT_FOUND",
+    "NO_ACTIVE_ESTIMATION",
     "AMBIGUOUS_VARIABLE",
     "PANEL_NOT_DECLARED",
     "DUPLICATE_PANEL_KEYS",
@@ -153,6 +154,7 @@ class AnalyticalRequest:
     dataset_ref: DatasetSnapshotRef # lightweight fingerprint
     tenant_id: str = ""             # Wave 8 multi-tenant scoping
     session_id: str = ""            # Streamlit session_id
+    session_context: Any = None      # Explicit per-session post-estimation context
 
     class Config:
         arbitrary_types_allowed = True  # for pd.DataFrame

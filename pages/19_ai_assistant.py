@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 from helpers import require_role, plotly_layout
 import db
 from components.citation_inspector import show_citation_dialog, render_citation_selector
+from models.stata_engine import ModelResultContext
 
 require_role("admin", "researcher", "viewer", "cfo", "guest")
 db.log_page_visit("ai_assistant_page")
@@ -1029,6 +1030,8 @@ if user_q:
                 df=_df,
                 correlation_id=str(_uuid.uuid4()),
                 dataset_ref=_fp(_df),
+                session_id=st.session_state.get("chat_session_id", ""),
+                session_context=st.session_state.setdefault("_model_result_context", ModelResultContext()),
             )
             _res = _route(_req)
             stata_res = _res.to_dict()

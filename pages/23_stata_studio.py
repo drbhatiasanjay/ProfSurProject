@@ -35,14 +35,16 @@ from models.stata_engine import (
     generate_esttab_latex,
     generate_esttab_docx,
     prepare_df_for_stata,
-    _STORED_ESTIMATES,
 )
 from models.analytical_contracts import AnalyticalRequest, fingerprint_df
 from models.analytical_router import route
 from models.stata_engine import parse_stata_command
+from models.stata_engine import ModelResultContext
 from models.capability_status import capability_status
 
 ensure_session_state()
+if "_model_result_context" not in st.session_state:
+    st.session_state["_model_result_context"] = ModelResultContext()
 db.log_page_visit("Stata Studio")
 
 st.set_page_config(
@@ -549,6 +551,7 @@ with tab_cli:
                     correlation_id=str(uuid.uuid4()),
                     dataset_ref=fingerprint_df(stata_working_df),
                     session_id="stata_studio",
+                    session_context=st.session_state["_model_result_context"],
                 )
                 res = route(request).to_dict()
                 elapsed = time.time() - t0

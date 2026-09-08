@@ -246,7 +246,12 @@ def validate_stata_command(
         normalized["indepvars"][0] = group
 
     if command == "test":
-        for reference in _variable_references(normalized.get("formula", "")):
+        formula = str(normalized.get("formula", ""))
+        references = [
+            token for token in re.findall(r"[A-Za-z_]\w*", formula)
+            if token.lower() not in {"const", "_cons"}
+        ]
+        for reference in references:
             if _resolve(reference, df, resolver) is None:
                 return normalized, validation_error(
                     "VARIABLE_NOT_FOUND", 111,

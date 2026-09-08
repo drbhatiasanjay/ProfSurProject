@@ -75,13 +75,15 @@ from models.stata_expansion_handlers import (
 CapabilityHandler = Callable[[dict, pd.DataFrame], dict]
 
 
-def _estimates_handler(parsed: dict, df: pd.DataFrame) -> dict:
+def _estimates_handler(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """Inline handler for stored estimates — logic lifted from execute_stata_command."""
-    from models.stata_engine import _STORED_ESTIMATES, _LAST_ESTIMATE  # type: ignore[attr-defined]
+    from models.stata_engine import _get_last_estimate, _get_stored_estimates
+    stored_estimates = _get_stored_estimates(session_context)
+    last_estimate = _get_last_estimate(session_context)
     if parsed.get("indepvars") and parsed["indepvars"][0] == "store":
         name = parsed["indepvars"][1] if len(parsed["indepvars"]) > 1 else "m1"
-        if _LAST_ESTIMATE:
-            _STORED_ESTIMATES[name] = _LAST_ESTIMATE
+        if last_estimate:
+            stored_estimates[name] = last_estimate
             return {
                 "status": "success",
                 "message": f"Saved current model as '{name}'",
@@ -92,11 +94,10 @@ def _estimates_handler(parsed: dict, df: pd.DataFrame) -> dict:
             "message": "No estimation results found to store.",
             "ascii_output": "r(301); last estimates not found",
         }
-    from models.stata_engine import _STORED_ESTIMATES  # type: ignore[attr-defined]
-    return {"status": "success", "ascii_output": f"Stored estimates: {list(_STORED_ESTIMATES.keys())}"}
+    return {"status": "success", "ascii_output": f"Stored estimates: {list(stored_estimates.keys())}"}
 
 
-def _estat_dispatcher(parsed: dict, df: pd.DataFrame) -> dict:
+def _estat_dispatcher(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """Dispatch estat subcommands (vif, ic, summarize)."""
     indep = parsed.get("indepvars", [])
     opts = parsed.get("options", [])
@@ -105,25 +106,26 @@ def _estat_dispatcher(parsed: dict, df: pd.DataFrame) -> dict:
     if "ic" in indep or "ic" in opts:
         return _handle_estat_ic(parsed, df)
     if "summarize" in indep or "summarize" in opts:
-        return _handle_estat_summarize(parsed, df)
+        return _handle_estat_summarize(parsed, df, session_context)
     return {
         "status": "error",
         "message": f"Unsupported estat subcommand: {indep}",
         "ascii_output": "r(198); invalid estat subcommand",
     }
 
-def _handle_estat_summarize(parsed: dict, df):
-    from models.stata_engine import _LAST_ESTIMATE
+def _handle_estat_summarize(parsed: dict, df, session_context=None):
+    from models.stata_engine import _get_last_estimate
 
-    if not _LAST_ESTIMATE:
+    last_estimate = _get_last_estimate(session_context)
+    if not last_estimate:
         return {
             "status": "error",
             "message": "No estimation results found.",
             "ascii_output": "r(301); last estimates not found",
         }
 
-    depvar = _LAST_ESTIMATE.get("depvar", "leverage")
-    indepvars = _LAST_ESTIMATE.get("indepvars", [])
+    depvar = last_estimate.get("depvar", "leverage")
+    indepvars = last_estimate.get("indepvars", [])
     model_vars = [depvar] + [var for var in indepvars if var in df.columns]
     lines = [
         "Estimation sample summary",
