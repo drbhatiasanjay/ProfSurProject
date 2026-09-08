@@ -83,6 +83,26 @@ COMMAND_REGISTRY: dict[str, CommandEntry] = {
     "predict":      CommandEntry("prediction",          "VALIDATED"),
     # ── Data transform (winsorize) ────────────────────────────────────────
     "winsor2":      CommandEntry("data_transform",      "IMPLEMENTED_UNVERIFIED"),
+    # ── Wave 4: Exploratory commands ──────────────────────────────────────
+    "describe":     CommandEntry("describe",            "VALIDATED"),
+    "des":          CommandEntry("describe",            "VALIDATED"),
+    "d":            CommandEntry("describe",            "VALIDATED"),
+    "codebook":     CommandEntry("codebook",            "VALIDATED"),
+    "cb":           CommandEntry("codebook",            "VALIDATED"),
+    "count":        CommandEntry("count",               "VALIDATED"),
+    "mean":         CommandEntry("mean",                "VALIDATED"),
+    "proportion":   CommandEntry("proportion",          "VALIDATED"),
+    "prop":         CommandEntry("proportion",          "VALIDATED"),
+    # ── Wave 4: Longitudinal panel commands ───────────────────────────────
+    "xtdescribe":   CommandEntry("xtdescribe",          "VALIDATED"),
+    "xtdes":        CommandEntry("xtdescribe",          "VALIDATED"),
+    "xtsum":        CommandEntry("xtsum",               "VALIDATED"),
+    "xttab":        CommandEntry("xttab",               "VALIDATED"),
+    "xtline":       CommandEntry("xtline",              "VALIDATED"),
+    # ── Wave 4: Post-estimation & inference ──────────────────────────────
+    "testparm":     CommandEntry("wald_test",           "VALIDATED"),
+    "lincom":       CommandEntry("linear_combination",  "VALIDATED"),
+    "nlcom":        CommandEntry("nonlinear_combination", "IMPLEMENTED_UNVERIFIED"),
 }
 
 

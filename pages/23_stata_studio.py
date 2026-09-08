@@ -128,6 +128,59 @@ def get_financial_translation(cmd_str: str) -> str:
             "Computes Variance Inflation Factors (VIF) to formally test for severe multicollinearity among explanatory financial ratios. "
             "VIF values strictly below 5–10 confirm parameter stability and regression robustness."
         )
+    if low.startswith("estat ic") or low.startswith("ic"):
+        return (
+            "Computes <b>Akaike (AIC) and Bayesian (BIC) Information Criteria</b> to assess model parsimony and goodness-of-fit, "
+            "penalizing over-parameterization when selecting optimal capital structure specifications."
+        )
+    if low.startswith("estat summarize"):
+        return (
+            "Displays summary statistics (mean, SD, min, max) strictly evaluated across the exact estimation sample used in the model."
+        )
+    if low.startswith("describe") or low.startswith("des ") or low == "des" or low == "d":
+        return (
+            "Reports comprehensive dataset schema metadata: observation counts, variable list, memory storage formats, and display types."
+        )
+    if low.startswith("codebook") or low.startswith("cb "):
+        return (
+            "Produces detailed data dictionary summaries, missing observation audits, unique value counts, and percentile distributions."
+        )
+    if low.startswith("count"):
+        return (
+            "Enumerates sample size or subsets meeting specific conditional filters across panel dimensions."
+        )
+    if low.startswith("mean"):
+        return (
+            "Computes population mean estimates with exact standard errors and 95% confidence intervals."
+        )
+    if low.startswith("proportion") or low.startswith("prop "):
+        return (
+            "Estimates categorical proportions, standard errors, and confidence bounds across discrete business dimensions."
+        )
+    if low.startswith("xtdescribe") or low.startswith("xtdes"):
+        return (
+            "Analyzes panel participation patterns over time ($T_i$), detecting balanced status, entry/exit vintages, and temporal gaps."
+        )
+    if low.startswith("xtsum"):
+        return (
+            "Decomposes panel variable variances into <b>overall</b>, <b>between-firm</b>, and <b>within-firm</b> standard deviations."
+        )
+    if low.startswith("xttab"):
+        return (
+            "Evaluates within-firm transition frequencies and between-firm persistence for discrete categorical states."
+        )
+    if low.startswith("xtline"):
+        return (
+            "Renders longitudinal panel trajectory line charts tracking firm metrics over time."
+        )
+    if low.startswith("testparm") or low.startswith("test "):
+        return (
+            "Executes joint Wald $F$-tests / $\chi^2$ hypothesis tests across multiple regression parameters."
+        )
+    if low.startswith("lincom"):
+        return (
+            "Computes linear combinations of estimated coefficients ($c'\\hat{\\beta}$) with Delta-method standard errors and confidence bounds."
+        )
     return f"Executes econometric estimation for <code>{html.escape(cmd_str)}</code> on the active longitudinal panel dataset."
 
 # Custom Stata Terminal CSS

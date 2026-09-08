@@ -32,6 +32,20 @@ from models.stata_engine import (
     _handle_margins,
     _handle_export,
     _handle_thesis,
+    # Wave 4 handlers
+    _handle_describe,
+    _handle_codebook,
+    _handle_count,
+    _handle_mean,
+    _handle_proportion,
+    _handle_xtdescribe,
+    _handle_xtsum,
+    _handle_xttab,
+    _handle_xtline,
+    _handle_estat_ic,
+    _handle_estat_summarize,
+    _handle_testparm,
+    _handle_lincom,
 )
 
 # Wave 1 handlers (may not exist on older branches — import gracefully)
@@ -72,12 +86,18 @@ def _estimates_handler(parsed: dict, df: pd.DataFrame) -> dict:
 
 
 def _estat_dispatcher(parsed: dict, df: pd.DataFrame) -> dict:
-    """Dispatch estat subcommands."""
-    if "vif" in parsed.get("indepvars", []) or "vif" in parsed.get("options", []):
+    """Dispatch estat subcommands (vif, ic, summarize)."""
+    indep = parsed.get("indepvars", [])
+    opts = parsed.get("options", [])
+    if "vif" in indep or "vif" in opts:
         return _handle_estat_vif(parsed, df)
+    if "ic" in indep or "ic" in opts:
+        return _handle_estat_ic(parsed, df)
+    if "summarize" in indep or "summarize" in opts:
+        return _handle_estat_summarize(parsed, df)
     return {
         "status": "error",
-        "message": f"Unsupported estat subcommand: {parsed.get('indepvars')}",
+        "message": f"Unsupported estat subcommand: {indep}",
         "ascii_output": "r(198); invalid estat subcommand",
     }
 
@@ -86,22 +106,33 @@ def _estat_dispatcher(parsed: dict, df: pd.DataFrame) -> dict:
 # Capability → handler map
 # ---------------------------------------------------------------------------
 CAPABILITY_REGISTRY: dict[str, CapabilityHandler] = {
-    "descriptive":        _handle_summarize,
-    "correlation":        _handle_pwcorr,
-    "ols":                _handle_regress,
-    "panel_fe_re":        _handle_xtreg,
-    "panel_declare":      _handle_xtset,
-    "specification_test": _handle_hausman,
-    "post_estimation":    _handle_estat_vif,   # full dispatch via _estat_dispatcher
-    "stored_estimates":   _estimates_handler,
-    "table_export":       _handle_esttab,
-    "visualization":      _handle_coefplot,    # overridden per cmd in router if needed
-    "file_export":        _handle_export,
-    "phd_figure":         _handle_thesis,
-    "frequency":          _handle_tabulate,
-    "diagnostic":         _handle_xttest0,    # xtserial also maps here; router picks by cmd
-    "marginal_effects":   _handle_margins,
-    "lifecycle_chart":    _handle_lgraph,
+    "descriptive":          _handle_summarize,
+    "correlation":          _handle_pwcorr,
+    "ols":                  _handle_regress,
+    "panel_fe_re":          _handle_xtreg,
+    "panel_declare":        _handle_xtset,
+    "specification_test":   _handle_hausman,
+    "post_estimation":      _estat_dispatcher,
+    "stored_estimates":     _estimates_handler,
+    "table_export":         _handle_esttab,
+    "visualization":        _handle_coefplot,
+    "file_export":          _handle_export,
+    "phd_figure":           _handle_thesis,
+    "frequency":            _handle_tabulate,
+    "diagnostic":           _handle_xttest0,
+    "marginal_effects":     _handle_margins,
+    "lifecycle_chart":      _handle_lgraph,
+    # Wave 4 capabilities
+    "describe":             _handle_describe,
+    "codebook":             _handle_codebook,
+    "count":                _handle_count,
+    "mean":                 _handle_mean,
+    "proportion":           _handle_proportion,
+    "xtdescribe":           _handle_xtdescribe,
+    "xtsum":                _handle_xtsum,
+    "xttab":                _handle_xttab,
+    "xtline":               _handle_xtline,
+    "linear_combination":   _handle_lincom,
 }
 
 # Add visualization sub-handlers so router can pick by cmd
@@ -120,11 +151,18 @@ _DIAG_HANDLERS: dict[str, CapabilityHandler] = {
     "xtserial": _handle_xtserial,
 }
 
+_WALD_HANDLERS: dict[str, CapabilityHandler] = {
+    "test":     _handle_test if _HAS_WAVE1_HANDLERS else _handle_testparm,
+    "testparm": _handle_testparm,
+}
+
 if _HAS_WAVE1_HANDLERS:
     CAPABILITY_REGISTRY["iv_estimation"] = _handle_ivregress  # type: ignore[assignment]
     CAPABILITY_REGISTRY["wald_test"]     = _handle_test       # type: ignore[assignment]
     CAPABILITY_REGISTRY["prediction"]    = _handle_predict    # type: ignore[assignment]
     CAPABILITY_REGISTRY["data_transform"] = _handle_winsor2   # type: ignore[assignment]
+else:
+    CAPABILITY_REGISTRY["wald_test"]     = _handle_testparm
 
 
 def get_handler(capability: str, cmd: str = "") -> CapabilityHandler | None:
@@ -133,6 +171,8 @@ def get_handler(capability: str, cmd: str = "") -> CapabilityHandler | None:
         return _VIZ_HANDLERS[cmd]
     if capability == "diagnostic" and cmd in _DIAG_HANDLERS:
         return _DIAG_HANDLERS[cmd]
+    if capability == "wald_test" and cmd in _WALD_HANDLERS:
+        return _WALD_HANDLERS[cmd]
     if capability == "post_estimation":
         return _estat_dispatcher
     if capability == "stored_estimates":

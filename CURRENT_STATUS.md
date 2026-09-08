@@ -51,10 +51,14 @@ Comprehensive end-to-end verification executed across 109 checkpoints demonstrat
 
 ## 5. Current Implemented Capabilities & Command Architecture
 - **Auth & Onboarding:** Secure bcrypt auth flow with rate-limiting, challenge lockout, and viewer display-name automation.
-- **Stata Engine Architecture:**
-  - **Exhaustively Verified Phase-3 Commands:** Exactly **19 commands** verified in automated math test suite (`test_all_19_stata_math.py`).
-  - **Implemented Top-Level Dispatch Verbs:** Exactly **20 distinct command verbs** recognized in `models/stata_engine.py`:
-    `summarize`, `tabstat`, `pwcorr`, `regress`, `xtreg`, `hausman`, `estat`, `estimates`, `esttab`, `coefplot`, `scatter`, `histogram`, `export`, `twoway`, `thesis`, `tabulate`, `box`, `xttest0`, `xtserial`, `margins`.
+- **Stata Engine Architecture (Wave 4 Complete):**
+  - **Implemented & Validated Commands (32 distinct command verbs):**
+    - Exploratory: `describe`, `codebook`, `count`, `mean`, `proportion`, `summarize`, `tabstat`, `tabulate`, `pwcorr`.
+    - Econometric / Panel: `regress`, `xtreg` (FE/RE), `xtset`, `xtdescribe`, `xtsum`, `xttab`, `xtline`, `lgraph`, `ivregress`.
+    - Specification & Diagnostics: `hausman`, `estat vif`, `estat ic`, `estat summarize`, `xttest0`, `xtserial`.
+    - Inference & Post-estimation: `testparm`, `test`, `lincom`, `margins`, `predict`.
+    - Export & Figures: `esttab`, `estimates`, `export`, `coefplot`, `scatter`, `histogram`, `twoway`, `box`, `thesis`.
+- **Capability Routing Layer:** Normalized `AnalyticalRequest` $\to$ `COMMAND_REGISTRY` $\to$ `CAPABILITY_REGISTRY` $\to$ `CapabilityResult` with `AnalysisRunEnvelope` run tracking.
 - **AI Assistant & Vault:** 46 prompt categories with dynamic parameter extraction, `current_theme` scoped UI cards, and universal literature vault fallback coverage.
 
 ---

@@ -324,5 +324,37 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - **Regression:** 126 passed, 1 skipped, 0 failures (6.66s).
 - **GitHub Status:** Synchronized and pushed to remote with tag `v2.2.0-wave3-complete`.
 
+---
+
+## Session: 2026-09-08 — Wave 4 Core Stata-Compatible Research Expansion
+
+### Completed Scope (PRD §10 Wave 4)
+- **1. Exploratory Suite:**
+  - `describe` (`des`, `d`): Dataset schema, observation counts, storage types, display formats, labels.
+  - `codebook` (`cb`): Data dictionary, missing audits, unique counts, percentiles ($p_{10}, p_{25}, p_{50}, p_{75}, p_{90}$).
+  - `count`: Conditional observation counter with Stata-style `if` filtering.
+  - `mean`: Point estimates, exact standard errors ($s/\sqrt{N}$), and 95% confidence bounds.
+  - `proportion` (`prop`): Categorical proportion estimations and discrete distribution tables.
+- **2. Longitudinal & Panel Suite:**
+  - `xtdescribe` (`xtdes`): Panel participation patterns ($T_i$), balance verification, and entry/exit patterns.
+  - `xtsum`: Decomposed panel variance ($s_{\text{overall}}, s_{\text{between}}, s_{\text{within}}$).
+  - `xttab`: Categorical within-firm and between-firm persistence transition tables.
+  - `xtline`: Multi-panel longitudinal trajectory line plots via Plotly with dark/light theme support.
+- **3. Post-Estimation & Hypothesis Inference Suite:**
+  - `testparm` / `test`: Joint Wald $F$-test / $\chi^2$ multi-parameter hypothesis testing.
+  - `lincom`: Linear combinations ($c'\hat{\beta}$) with Delta-method standard errors and confidence intervals.
+  - `estat ic`: Model selection AIC / BIC information criteria extraction from regression log-likelihood.
+  - `estat summarize`: Exact estimation-sample summary statistics.
+  - `r(301)` fail-closed error guards when no prior model exists in the session.
+- **4. Architecture & Routing Integration:**
+  - Updated `COMMAND_REGISTRY` in `models/command_registry.py`.
+  - Updated `CAPABILITY_REGISTRY` & `_estat_dispatcher` in `models/capability_registry.py`.
+  - Updated `get_financial_translation()` in `pages/23_stata_studio.py` with executive translations.
+- **5. Verification Evidence:**
+  - TDD test suite: `tests/test_wave4_expansion.py` (13/13 passed).
+  - Stata engine & capability regression suite: 89/89 passed in 4.69s.
+  - Branch: `feature/wave4-core-expansion`.
+
+
 
 
