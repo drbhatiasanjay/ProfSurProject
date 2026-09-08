@@ -1,111 +1,238 @@
+"""
+models/causal_adapters.py — Wave 5 causal method adapters (contract-repaired).
+
+STATUS:
+  IVAdapter   — IMPLEMENTED_UNVERIFIED (IV2SLS via linearmodels; requires golden benchmark)
+  HDFEAdapter — IMPLEMENTED_UNVERIFIED (pyfixest feols; requires golden benchmark)
+  DIDAdapter  — CANDIDATE / UNSUPPORTED (no model estimated; placeholder only)
+
+Do not displace Wave 1 validated ivregress handler without explicit coefficient,
+standard-error, diagnostic, and sample-membership comparison.
+"""
+from __future__ import annotations
+
 import pandas as pd
-from .analytical_contracts import AnalyticalRequest, CapabilityResult, AnalysisRunEnvelope
 
-class CausalAdapter:
-    """Base class for methodology-gated causal methods."""
-    @staticmethod
-    def apply_methodology_gate(messages: list) -> list:
-        messages.append("WARNING (Methodology Gate): Identification relies on specific causal assumptions (e.g. parallel trends, exogeneity). These assumptions have not been formally verified by this agent.")
-        return messages
+from .analytical_contracts import AnalyticalRequest, CapabilityResult
+from .analysis_run_envelope import AnalysisRunEnvelope
 
-class IVAdapter(CausalAdapter):
+
+_IDENTIFICATION_DISCLAIMER = (
+    "METHODOLOGY GATE: Identification relies on specific causal assumptions "
+    "(e.g. instrument exogeneity, parallel trends, exclusion restriction). "
+    "These assumptions have NOT been formally verified by this agent. "
+    "Results are IMPLEMENTED_UNVERIFIED and must not be cited without independent validation."
+)
+
+
+class IVAdapter:
+    """IMPLEMENTED_UNVERIFIED — IV 2SLS via linearmodels.iv.IV2SLS."""
+
     @staticmethod
     def run(request: AnalyticalRequest, run_envelope: AnalysisRunEnvelope) -> CapabilityResult:
         try:
             from linearmodels.iv import IV2SLS
         except ImportError:
-            return CapabilityResult(request_id=request.id, success=False, error="linearmodels missing")
-        
-        df = request.dataset.copy()
-        y_col = request.command.dependent_var
-        
-        # Simple extraction for IV: assume independent_vars[-1] is endogenous and we need instruments
-        # This is simplified; the actual command parser needs to extract endogenous vs instruments
-        exog_cols = request.command.independent_vars
-        
-        # For this adapter, we just do a placeholder or basic OLS if no instruments are passed
-        # In a real scenario, Stata syntax: ivregress 2sls y x1 (x2 = z1 z2)
-        # We will parse this in stata_engine.py and pass it via request.options
-        endog = request.options.get("endog", [])
-        instruments = request.options.get("instruments", [])
-        
-        if not endog or not instruments:
-            return CapabilityResult(request_id=request.id, success=False, error="IV regression requires endogenous variables and instruments.")
+            return CapabilityResult(
+                status="error",
+                message="linearmodels not installed. Run: pip install linearmodels>=7.0",
+                error_code="DEPENDENCY_UNAVAILABLE",
+                correlation_id=request.correlation_id,
+            )
 
-        # Keep needed cols
-        needed = [y_col] + exog_cols + endog + instruments
+        parsed = request.parsed
+        df: pd.DataFrame = request.df.copy()
+        y_col: str = parsed.get("depvar", "")
+        exog_cols: list = list(parsed.get("indepvars", []))
+        opts: dict = parsed.get("options", {})
+
+        endog: list = opts.get("endog", [])
+        instruments: list = opts.get("instruments", [])
+
+        if not y_col:
+            return CapabilityResult(
+                status="error",
+                message="IV regression requires a dependent variable.",
+                error_code="SYNTAX_ERROR",
+                correlation_id=request.correlation_id,
+            )
+
+        if not endog or not instruments:
+            return CapabilityResult(
+                status="unsupported",
+                message=(
+                    "IV regression requires endogenous variable(s) and instrument(s). "
+                    "Provide via options: endog=[...], instruments=[...]. "
+                    "Stata syntax: ivregress 2sls y x1 (x2 = z1 z2)"
+                ),
+                error_code="INVALID_INSTRUMENT_SPEC",
+                correlation_id=request.correlation_id,
+            )
+
+        needed = [y_col] + exog_cols + list(endog) + list(instruments)
+        missing = [c for c in needed if c not in df.columns]
+        if missing:
+            return CapabilityResult(
+                status="error",
+                message=f"Variables not found: {missing}",
+                error_code="VARIABLE_NOT_FOUND",
+                correlation_id=request.correlation_id,
+            )
+
         df = df.dropna(subset=needed)
 
         y = df[y_col]
-        exog = df[exog_cols]
-        exog.insert(0, "const", 1.0)
-        endog_df = df[endog]
-        instr_df = df[instruments]
+        exog = df[exog_cols].copy()
+        if "const" not in exog.columns:
+            exog.insert(0, "const", 1.0)
+        endog_df = df[list(endog)]
+        instr_df = df[list(instruments)]
 
         try:
             model = IV2SLS(y, exog, endog_df, instr_df)
             result = model.fit(cov_type="robust")
-        except Exception as e:
-            return CapabilityResult(request_id=request.id, success=False, error=str(e))
+        except Exception as exc:
+            return CapabilityResult(
+                status="error",
+                message=f"IV2SLS estimation failed: {exc}",
+                error_code="ENGINE_FAILURE",
+                correlation_id=request.correlation_id,
+            )
 
-        coef_table = pd.DataFrame({
-            "Variable": result.params.index,
-            "Coefficient": result.params.values,
-            "Std Error": result.std_errors.values,
-            "t-stat": result.tstats.values,
-            "p-value": result.pvalues.values,
-        })
+        coef_rows = [
+            {
+                "Variable": var,
+                "Coefficient": round(float(coef), 6),
+                "Std Error": round(float(se), 6),
+                "t-stat": round(float(tstat), 4),
+                "p-value": round(float(pval), 4),
+            }
+            for var, coef, se, tstat, pval in zip(
+                result.params.index,
+                result.params.values,
+                result.std_errors.values,
+                result.tstats.values,
+                result.pvalues.values,
+            )
+        ]
 
-        messages = IVAdapter.apply_methodology_gate([f"IV 2SLS executed. N={result.nobs}"])
-        return CapabilityResult(
-            request_id=request.id,
-            success=True,
-            display_tables={"IV 2SLS (Robust)": coef_table},
-            run_envelope=run_envelope,
-            messages=messages,
-            internal_data={"result_obj": result}
+        ascii_out = (
+            f"{_IDENTIFICATION_DISCLAIMER}\n\n"
+            f"IV 2SLS (Robust SE) — Dependent: {y_col}\n"
+            f"Endogenous: {endog}   Instruments: {instruments}\n"
+            f"Observations: {int(result.nobs)}"
         )
 
-class HDFEAdapter(CausalAdapter):
+        return CapabilityResult(
+            status="success",
+            ascii_output=ascii_out,
+            table=coef_rows,
+            message=_IDENTIFICATION_DISCLAIMER,
+            correlation_id=request.correlation_id,
+            run_id=run_envelope.run_id,
+        )
+
+
+class HDFEAdapter:
+    """IMPLEMENTED_UNVERIFIED — High-Dimensional FE via pyfixest."""
+
     @staticmethod
     def run(request: AnalyticalRequest, run_envelope: AnalysisRunEnvelope) -> CapabilityResult:
         try:
             import pyfixest as pf
         except ImportError:
-            return CapabilityResult(request_id=request.id, success=False, error="pyfixest missing")
-            
-        df = request.dataset.copy()
-        y_col = request.command.dependent_var
-        x_cols = request.command.independent_vars
-        fe_cols = request.options.get("absorb", ["company_code", "year"])
-        
-        # Build formula: Y ~ X1 + X2 | FE1 + FE2
+            return CapabilityResult(
+                status="error",
+                message="pyfixest not installed. Run: pip install pyfixest>=0.13",
+                error_code="DEPENDENCY_UNAVAILABLE",
+                correlation_id=request.correlation_id,
+            )
+
+        parsed = request.parsed
+        df: pd.DataFrame = request.df.copy()
+        y_col: str = parsed.get("depvar", "")
+        x_cols: list = list(parsed.get("indepvars", []))
+        opts: dict = parsed.get("options", {})
+        fe_cols: list = list(opts.get("absorb", ["company_code", "year"]))
+
+        if not y_col:
+            return CapabilityResult(
+                status="error",
+                message="HDFE requires a dependent variable.",
+                error_code="SYNTAX_ERROR",
+                correlation_id=request.correlation_id,
+            )
+
         x_formula = " + ".join(x_cols) if x_cols else "1"
         fe_formula = " + ".join(fe_cols) if fe_cols else ""
         formula = f"{y_col} ~ {x_formula}"
         if fe_formula:
             formula += f" | {fe_formula}"
-            
+
         try:
             model = pf.feols(formula, data=df, vcov="hetero")
-        except Exception as e:
-            return CapabilityResult(request_id=request.id, success=False, error=str(e))
-            
+        except Exception as exc:
+            return CapabilityResult(
+                status="error",
+                message=f"HDFE (pyfixest) estimation failed: {exc}",
+                error_code="ENGINE_FAILURE",
+                correlation_id=request.correlation_id,
+            )
+
         tidy = model.tidy()
-        coef_table = pd.DataFrame({
-            "Variable": tidy["term"],
-            "Coefficient": tidy["Estimate"],
-            "Std Error": tidy["Std. Error"],
-            "t-stat": tidy["t value"],
-            "p-value": tidy["Pr(>|t|)"]
-        })
-        
-        messages = HDFEAdapter.apply_methodology_gate([f"HDFE executed with absorbed fixed effects: {fe_formula}"])
+        coef_rows = [
+            {
+                "Variable": str(var_name),
+                "Coefficient": round(float(row["Estimate"]), 6),
+                "Std Error": round(float(row["Std. Error"]), 6),
+                "t-stat": round(float(row["t value"]), 4),
+                "p-value": round(float(row["Pr(>|t|)"]), 4),
+            }
+            for var_name, row in tidy.iterrows()
+        ]
+
+        ascii_out = (
+            f"{_IDENTIFICATION_DISCLAIMER}\n\n"
+            f"HDFE (pyfixest) — Formula: {formula}\n"
+            f"Absorbed fixed effects: {fe_formula}"
+        )
+
         return CapabilityResult(
-            request_id=request.id,
-            success=True,
-            display_tables={"HDFE": coef_table},
-            run_envelope=run_envelope,
-            messages=messages,
-            internal_data={"result_obj": model}
+            status="success",
+            ascii_output=ascii_out,
+            table=coef_rows,
+            message=_IDENTIFICATION_DISCLAIMER,
+            correlation_id=request.correlation_id,
+            run_id=run_envelope.run_id,
+        )
+
+
+class DIDAdapter:
+    """
+    CANDIDATE / UNSUPPORTED — Difference-in-Differences.
+
+    A validated DiD implementation requires:
+      - Explicit treatment indicator
+      - Pre/post time indicator
+      - Parallel trends validation
+      - Cohort-robust estimator (Callaway-Sant'Anna or Sun-Abraham)
+      - Staggered adoption support (if applicable)
+
+    Until these are implemented and validated against a benchmark,
+    this handler returns 'unsupported' and must NOT claim success.
+    """
+
+    @staticmethod
+    def run(request: AnalyticalRequest, run_envelope: AnalysisRunEnvelope) -> CapabilityResult:
+        return CapabilityResult(
+            status="unsupported",
+            message=(
+                "Difference-in-Differences (DiD) is registered as CANDIDATE. "
+                "A validated DiD implementation requires explicit treatment/time indicators, "
+                "parallel trends validation, and a cohort-robust estimator "
+                "(e.g. Callaway-Sant'Anna). "
+                "Use xtreg with treatment interaction as interim approach."
+            ),
+            error_code="UNSUPPORTED_CAPABILITY",
+            correlation_id=request.correlation_id,
         )

@@ -144,7 +144,9 @@ CAPABILITY_REGISTRY: dict[str, CapabilityHandler] = {
     "linear_combination":   _handle_lincom,
     # Wave 5 capabilities
     "gmm":                  _handle_gmm,
-    "iv":                   _w5_handle_ivregress,
+    # NOTE: 'iv' key intentionally omitted to preserve validated Wave 1 'iv_estimation'.
+    # Wave 5 IV candidate registered under 'iv_candidate':
+    "iv_candidate":         _w5_handle_ivregress,
     "hdfe":                 _handle_hdfe,
     "did":                  _handle_didregress,
     "scenario":             _handle_scenario,

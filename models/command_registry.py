@@ -104,12 +104,14 @@ COMMAND_REGISTRY: dict[str, CommandEntry] = {
     "lincom":       CommandEntry("linear_combination",  "VALIDATED"),
     "nlcom":        CommandEntry("nonlinear_combination", "IMPLEMENTED_UNVERIFIED"),
     # ── Wave 5: Advanced Econometrics & Scenarios ─────────────────────────
+    # NOTE: 'ivregress' is kept as Wave 1 validated mapping (iv_estimation).
+    # Wave 5 IV is registered under 'iv_candidate' to avoid displacing the
+    # validated handler. Use 'hdfe' or 'didregress' for Wave 5 causal work.
     "gmm":          CommandEntry("gmm",                 "IMPLEMENTED_UNVERIFIED"),
-    "ivregress":    CommandEntry("iv",                  "CANDIDATE"),
-    "hdfe":         CommandEntry("hdfe",                "CANDIDATE"),
+    "hdfe":         CommandEntry("hdfe",                "IMPLEMENTED_UNVERIFIED"),
     "didregress":   CommandEntry("did",                 "CANDIDATE"),
     "scenario":     CommandEntry("scenario",            "CANDIDATE"),
-    "predict_ml":   CommandEntry("ml_predict",          "CANDIDATE"),
+    "predict_ml":   CommandEntry("ml_predict",          "IMPLEMENTED_UNVERIFIED"),
 }
 
 

@@ -203,7 +203,10 @@ def get_financial_translation(cmd_str: str) -> str:
         )
     if low.startswith("predict_ml"):
         return (
-            "Applies Machine Learning (Ridge Regression with Cross-Validation) to generate robust out-of-sample predictions, combating overfitting in high-dimensional financial data."
+            "Applies Machine Learning (Ridge Regression, alpha=1.0) with a firm-aware "
+            "group holdout split (GroupShuffleSplit on company_code) to prevent "
+            "firm-level leakage. Results are IMPLEMENTED_UNVERIFIED — "
+            "no k-fold cross-validation is performed at this stage."
         )
     return f"Executes econometric estimation for <code>{html.escape(cmd_str)}</code> on the active longitudinal panel dataset."
 

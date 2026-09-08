@@ -988,64 +988,85 @@ def _handle_qnorm(parsed: dict, df: pd.DataFrame) -> dict:
 
 # ---------------------------------------------------------------------------
 # Wave 5: Advanced Econometrics (GMM, Causal, ML, Scenario)
+# Contract-repaired shims — bridge parsed dict → canonical AnalyticalRequest
 # ---------------------------------------------------------------------------
-def _create_mock_request_from_parsed(parsed: dict, df: pd.DataFrame):
-    """Shim to bridge parsed dict to AnalyticalRequest for Wave 5 adapters."""
-    from .analytical_contracts import AnalyticalRequest, CommandSpec
+def _create_w5_request_and_envelope(parsed: dict, df: pd.DataFrame, capability: str):
+    """
+    Build canonical AnalyticalRequest + AnalysisRunEnvelope from a parsed dict.
+    Uses only fields that exist on the dataclass — no invented CommandSpec.
+    """
+    import uuid
+    from .analytical_contracts import AnalyticalRequest, fingerprint_df
     from .analysis_run_envelope import AnalysisRunEnvelope
-    
-    cmd = CommandSpec(
-        raw_input=" ".join(parsed.get("indepvars", [])),
-        command_verb=parsed.get("command", ""),
-        dependent_var=parsed.get("depvar", ""),
-        independent_vars=parsed.get("indepvars", []),
-        options=parsed.get("options", {}),
-        modifiers=[]
-    )
+
+    ref = fingerprint_df(df)
     req = AnalyticalRequest(
-        id="run_wave5_" + parsed.get("command", "cmd"),
-        session_id="session_w5",
-        command=cmd,
-        dataset=df,
-        dataset_snapshot_ref={"id": "dataset_1", "version": "1.0"},
-        options=parsed.get("options", {})
+        command_str=parsed.get("raw", parsed.get("command", "")),
+        parsed=parsed,
+        df=df,
+        correlation_id=str(uuid.uuid4()),
+        dataset_ref=ref,
+        session_id="stata_studio",
     )
-    env = AnalysisRunEnvelope(run_id=req.id, status="PENDING")
+    env = AnalysisRunEnvelope.create(
+        run_id=str(uuid.uuid4()),
+        correlation_id=req.correlation_id,
+        dataset_fingerprint=ref.fingerprint,
+        normalized_command=req.command_str,
+        capability=capability,
+    )
     return req, env
+
+
+def _capability_result_to_dict(res) -> dict:
+    """Convert a CapabilityResult to the legacy dict format used by stata_engine."""
+    return {
+        "status": res.status,           # already lowercase: success/error/unsupported/partial
+        "ascii_output": res.ascii_output,
+        "error_msg": res.message if res.status in ("error", "unsupported") else "",
+        "table": res.table,
+        "chart": res.chart.to_dict() if res.chart else None,
+    }
+
 
 def _handle_gmm(parsed: dict, df: pd.DataFrame) -> dict:
     from .gmm_adapter import CurrentProfSurGMMAdapter
-    req, env = _create_mock_request_from_parsed(parsed, df)
+    req, env = _create_w5_request_and_envelope(parsed, df, "gmm")
     res = CurrentProfSurGMMAdapter.run(req, env)
-    return {"status": "SUCCESS" if res.success else "ERROR", "ascii_output": "\n".join(res.messages) if res.messages else "", "error_msg": res.error}
+    return _capability_result_to_dict(res)
+
 
 def _handle_ivregress(parsed: dict, df: pd.DataFrame) -> dict:
     from .causal_adapters import IVAdapter
-    req, env = _create_mock_request_from_parsed(parsed, df)
+    req, env = _create_w5_request_and_envelope(parsed, df, "iv")
     res = IVAdapter.run(req, env)
-    return {"status": "SUCCESS" if res.success else "ERROR", "ascii_output": "\n".join(res.messages) if res.messages else "", "error_msg": res.error}
+    return _capability_result_to_dict(res)
+
 
 def _handle_hdfe(parsed: dict, df: pd.DataFrame) -> dict:
     from .causal_adapters import HDFEAdapter
-    req, env = _create_mock_request_from_parsed(parsed, df)
+    req, env = _create_w5_request_and_envelope(parsed, df, "hdfe")
     res = HDFEAdapter.run(req, env)
-    return {"status": "SUCCESS" if res.success else "ERROR", "ascii_output": "\n".join(res.messages) if res.messages else "", "error_msg": res.error}
+    return _capability_result_to_dict(res)
+
 
 def _handle_didregress(parsed: dict, df: pd.DataFrame) -> dict:
-    from .causal_adapters import CausalAdapter
-    req, env = _create_mock_request_from_parsed(parsed, df)
-    messages = CausalAdapter.apply_methodology_gate(["DID Regress executed"])
-    return {"status": "SUCCESS", "ascii_output": "\n".join(messages)}
+    """CF-08 repaired: routes to DIDAdapter which returns 'unsupported'."""
+    from .causal_adapters import DIDAdapter
+    req, env = _create_w5_request_and_envelope(parsed, df, "did")
+    res = DIDAdapter.run(req, env)
+    return _capability_result_to_dict(res)
+
 
 def _handle_scenario(parsed: dict, df: pd.DataFrame) -> dict:
     from .scenario_capability import ScenarioAdapter
-    req, env = _create_mock_request_from_parsed(parsed, df)
+    req, env = _create_w5_request_and_envelope(parsed, df, "scenario")
     res = ScenarioAdapter.run(req, env)
-    return {"status": "SUCCESS" if res.success else "ERROR", "ascii_output": "\n".join(res.messages) if res.messages else "", "error_msg": res.error}
+    return _capability_result_to_dict(res)
+
 
 def _handle_ml_predict(parsed: dict, df: pd.DataFrame) -> dict:
     from .ml_adapters import MLPredictAdapter
-    req, env = _create_mock_request_from_parsed(parsed, df)
+    req, env = _create_w5_request_and_envelope(parsed, df, "ml_predict")
     res = MLPredictAdapter.run(req, env)
-    return {"status": "SUCCESS" if res.success else "ERROR", "ascii_output": "\n".join(res.messages) if res.messages else "", "error_msg": res.error}
-
+    return _capability_result_to_dict(res)
