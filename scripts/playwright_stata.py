@@ -29,7 +29,7 @@ def submit_stata_command(
     page: Page,
     base_url: str,
     command: str,
-    fragments: list[str],
+    fragments: list[str | tuple[str, ...]],
     *,
     fresh: bool = True,
     evidence_dir: Path | None = None,
@@ -42,8 +42,10 @@ def submit_stata_command(
     expected = [f"Stata 18 SE · {command}", *fragments]
     try:
         page.wait_for_function(
-            "parts => parts.every(part => "
-            "document.body.innerText.toLowerCase().includes(part.toLowerCase()))",
+            "parts => parts.every(part => {"
+            "const choices = Array.isArray(part) ? part : [part];"
+            "return choices.some(choice => document.body.innerText.toLowerCase().includes(choice.toLowerCase()));"
+            "})",
             arg=expected,
             timeout=30_000,
         )

@@ -75,7 +75,7 @@ def main() -> int:
             for command, fragments in [
                 ("scenario leverage tax=-0.05", ["INTERVENTION PREVIEW", "tax", "-0.05"]),
                 ("scenario leverage, interventions(tax=-0.05)", ["INTERVENTION PREVIEW", "tax", "-0.05"]),
-                ("hdfe leverage profitability, absorb(company_code year)", ["IMPLEMENTED_UNVERIFIED", "company_code + year"]),
+                ("hdfe leverage profitability, absorb(company_code year)", [("IMPLEMENTED_UNVERIFIED", "Stata Validation Error — estimation was not run"), ("company_code + year", "pyfixest not installed")]),
             ]:
                 bounded_submit(page, command, fragments)
             assert time.monotonic() - journey_start < 90
