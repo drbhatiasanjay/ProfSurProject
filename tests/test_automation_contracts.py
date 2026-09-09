@@ -49,6 +49,7 @@ def test_realdata_audit_uses_disposable_copy_and_hash_checks():
 
 def test_ci_runs_contract_gates_with_disposable_database():
     source = (ROOT / ".github" / "workflows" / "deploy.yml").read_text(encoding="utf-8")
+    assert "pip install -r requirements-dev.txt" in source
     assert 'PROFSUR_DB_PATH: "/tmp/profsur-ci.db"' in source
     assert 'PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"' in source
     assert "python scripts/check_stata_contracts.py" in source
