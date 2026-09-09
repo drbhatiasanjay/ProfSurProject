@@ -1,0 +1,22 @@
+{
+  "run": 1,
+  "timestamps": {
+    "goto": 1788953553.46357,
+    "first_fill": 1788953569.0876167,
+    "first_click": 1788953569.7963388,
+    "first_clicked": 1788953569.9782953,
+    "first_result": 1788953570.996899,
+    "second_fill": 1788953571.0428638,
+    "second_click": 1788953571.0850568,
+    "second_clicked": 1788953571.1665828
+  },
+  "before_title": true,
+  "before_value": "xtreg leverage profitability tangibility log_size, fe",
+  "before_enabled": true,
+  "before_body_tail": "26\nGroup variable: company_code                    Number of groups  =        400\nR-squared:                                      Obs per group:\n     Within  = 0.0293                                         min =          1\n     Between = -0.8995                                        avg =       22.6\n     Overall = -0.4331                                        max =         25\n                                                F(3, 8623)        =      86.67\n                                                Prob > F          =     0.0000\n----------------------------------------------------------------------------------------\n      leverage |  Coefficient   Std. err.         t    P>|t|       [95% conf. interval]\n---------------+-------------------------------------------------------------------------\n profitability |     -0.22111    0.025914     -8.53    0.000      -0.27191     -0.17031\n   tangibility |      0.21994    0.031966      6.88    0.000       0.15728      0.28260\n      log_size |     -0.02428    0.002412    -10.07    0.000      -0.02901     -0.01955\n---------------+-------------------------------------------------------------------------\nkeyboard_arrow_right\n\n\ud83d\udcdc Command History",
+  "after_fill_value": "test profitability = 0",
+  "outcome": "TIMEOUT_OR_ERROR",
+  "error": "TimeoutError: Page.wait_for_function: Timeout 30000ms exceeded.",
+  "after_value": "xtreg leverage profitability tangibility log_size, fe",
+  "after_body_tail": "ants.\nIdentification: Within-firm de-meaning transformation purges all time-invariant unobserved firm heterogeneity (management quality, firm culture, founding lineage).\nInference: Standard errors clustered at firm level, robust to heteroskedasticity and arbitrary within-firm serial correlation across time.\nTheory: Directly tests Pecking Order (negative profitability beta) versus Trade-Off Theory (positive tangibility beta) on Indian corporate panels.\nStata 18 SE \u00b7 xtreg leverage profitability tangibility log_size, fe\nFixed-effects (within) regression               Number of obs     =      9,026\nGroup variable: company_code                    Number of groups  =        400\nR-squared:                                      Obs per group:\n     Within  = 0.0293                                         min =          1\n     Between = -0.8995                                        avg =       22.6\n     Overall = -0.4331                                        max =         25\n                                                F(3, 8623)        =      86.67\n                                                Prob > F          =     0.0000\n----------------------------------------------------------------------------------------\n      leverage |  Coefficient   Std. err.         t    P>|t|       [95% conf. interval]\n---------------+-------------------------------------------------------------------------\n profitability |     -0.22111    0.025914     -8.53    0.000      -0.27191     -0.17031\n   tangibility |      0.21994    0.031966      6.88    0.000       0.15728      0.28260\n      log_size |     -0.02428    0.002412    -10.07    0.000      -0.02901     -0.01955\n---------------+-------------------------------------------------------------------------\nkeyboard_arrow_right\n\n\ud83d\udcdc Command History"
+}

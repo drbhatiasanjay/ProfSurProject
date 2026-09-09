@@ -1,0 +1,27 @@
+{
+  "candidate_sha": "d5ffdf2b2d9f77d3f4f83bd2bf90a19475d4001f",
+  "classification": "PRODUCT_UI_SUBMISSION_OR_STATE_DEFECT",
+  "commands": [
+    "xtreg leverage profitability tangibility log_size, fe",
+    "test profitability = 0"
+  ],
+  "backend": {
+    "rows": 9031,
+    "first_status": "success",
+    "context_populated": true,
+    "second_status": "success",
+    "second_f_stat": 72.8,
+    "second_df": "1, 8623",
+    "second_p_value": 0.0
+  },
+  "ui": {
+    "original_helper": {"port": 8504, "runs": 3, "failures": 3},
+    "stability_controlled": {"port": 8505, "runs": 3, "failures": 3, "exact_value_before_click": true},
+    "failure": "current test command title and Prob > F result absent after click; input reverted to prior xtreg command"
+  },
+  "source_db_sha256_before_after": "354E9B4E62E54AACC0C4306253E9473EB65A7FC37F8ED9545EFEBABDBC915975",
+  "disposable_db_sha256_after_original": "1A3497CBB1983683AB1F584C1DF393AA814E6A1AB4754638DA548719AEB42D80",
+  "disposable_db_sha256_after_stability": "CAA960BD218C95718A284944B7F674D3830F58AF9772CD2FB228141AB360F4E",
+  "smallest_justified_repair": "stabilize the keyed Stata command input/session-state submission path in pages/23_stata_studio.py",
+  "evidence_directory": "docs/review-evidence/wave5-playwright-root-cause/"
+}
