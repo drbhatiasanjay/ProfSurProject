@@ -190,13 +190,14 @@ def test_analytical_error_has_14_prd_fields():
 
 
 # ---------------------------------------------------------------------------
-# T-10  All 25 PRD error codes present in ANALYTICAL_ERROR_CODES     [L1]
+# T-10  All PRD error codes present in ANALYTICAL_ERROR_CODES                [L1]
 # ---------------------------------------------------------------------------
-def test_all_25_error_codes_present():
+def test_all_error_codes_present():
     from models.analytical_contracts import ANALYTICAL_ERROR_CODES
     expected = {
         "SYNTAX_ERROR", "UNRECOGNIZED_COMMAND", "UNSUPPORTED_OPTION",
-        "UNSUPPORTED_CAPABILITY", "VARIABLE_NOT_FOUND", "AMBIGUOUS_VARIABLE",
+        "UNSUPPORTED_CAPABILITY", "VARIABLE_NOT_FOUND", "NO_ACTIVE_ESTIMATION",
+        "AMBIGUOUS_VARIABLE",
         "PANEL_NOT_DECLARED", "DUPLICATE_PANEL_KEYS", "INVALID_TIME_VARIABLE",
         "INSUFFICIENT_OBSERVATIONS", "INSUFFICIENT_VARIATION", "COLLINEARITY",
         "SINGULAR_MATRIX", "NONCONVERGENCE", "PERFECT_SEPARATION",
@@ -290,12 +291,12 @@ def test_fingerprint_df_is_deterministic():
 
 
 # ---------------------------------------------------------------------------
-# T-16  All 25 PRD error codes are str literals — none missing       [L1]
+# T-16  All PRD error codes are str literals — none missing                  [L1]
 # ---------------------------------------------------------------------------
 def test_error_codes_are_strings():
     from models.analytical_contracts import ANALYTICAL_ERROR_CODES
     assert all(isinstance(c, str) for c in ANALYTICAL_ERROR_CODES)
-    assert len(ANALYTICAL_ERROR_CODES) == 26  # 25 + INTERNAL_ERROR = 26 total
+    assert len(ANALYTICAL_ERROR_CODES) == 27  # 25 + INTERNAL_ERROR + NO_ACTIVE_ESTIMATION = 27 total
 
 
 # ---------------------------------------------------------------------------

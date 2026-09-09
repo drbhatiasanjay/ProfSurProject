@@ -16,6 +16,8 @@ from models.analytical_contracts import AnalyticalRequest, DatasetSnapshotRef, f
 from models.analytical_router import route
 from models.command_registry import resolve_capability
 import models.stata_engine as se
+from models.stata_engine import ModelResultContext
+from typing import Any
 
 
 @pytest.fixture
@@ -46,7 +48,7 @@ def sample_panel_df() -> pd.DataFrame:
     return pd.DataFrame(records)
 
 
-def make_request(raw_cmd: str, df: pd.DataFrame) -> AnalyticalRequest:
+def make_request(raw_cmd: str, df: pd.DataFrame, session_context: Any = None) -> AnalyticalRequest:
     parsed = se.parse_stata_command(raw_cmd)
     ref = fingerprint_df(df)
     return AnalyticalRequest(
@@ -56,6 +58,7 @@ def make_request(raw_cmd: str, df: pd.DataFrame) -> AnalyticalRequest:
         dataset_ref=ref,
         correlation_id="test-corr-w4",
         session_id="test-sess-w4",
+        session_context=session_context,
     )
 
 
@@ -173,17 +176,18 @@ def test_xtline_command(sample_panel_df):
 
 def test_estat_ic_and_summarize(sample_panel_df):
     """Test 'estat ic' (AIC/BIC) and 'estat summarize' after regression."""
-    route(make_request("regress leverage profitability tangibility size", sample_panel_df))
+    ctx = ModelResultContext(session_id="test-sess-w4")
+    route(make_request("regress leverage profitability tangibility size", sample_panel_df, session_context=ctx))
     
     # estat ic
-    req_ic = make_request("estat ic", sample_panel_df)
+    req_ic = make_request("estat ic", sample_panel_df, session_context=ctx)
     res_ic = route(req_ic)
     assert res_ic.status == "success"
     assert "AIC" in res_ic.ascii_output or "Akaike" in res_ic.ascii_output
     assert "BIC" in res_ic.ascii_output or "Bayesian" in res_ic.ascii_output
 
     # estat summarize
-    req_sum = make_request("estat summarize", sample_panel_df)
+    req_sum = make_request("estat summarize", sample_panel_df, session_context=ctx)
     res_sum = route(req_sum)
     assert res_sum.status == "success"
     assert "leverage" in res_sum.ascii_output
@@ -191,9 +195,10 @@ def test_estat_ic_and_summarize(sample_panel_df):
 
 def test_testparm_command(sample_panel_df):
     """Test 'testparm' executes joint hypothesis test on multiple parameters."""
-    route(make_request("regress leverage profitability tangibility size", sample_panel_df))
+    ctx = ModelResultContext(session_id="test-sess-w4")
+    route(make_request("regress leverage profitability tangibility size", sample_panel_df, session_context=ctx))
     
-    req = make_request("testparm profitability tangibility", sample_panel_df)
+    req = make_request("testparm profitability tangibility", sample_panel_df, session_context=ctx)
     res = route(req)
     assert res.status == "success"
     assert "F(" in res.ascii_output or "chi2(" in res.ascii_output or "Prob >" in res.ascii_output
@@ -201,9 +206,10 @@ def test_testparm_command(sample_panel_df):
 
 def test_lincom_command(sample_panel_df):
     """Test 'lincom' calculates linear combinations of coefficients with SE and CI."""
-    route(make_request("regress leverage profitability tangibility size", sample_panel_df))
+    ctx = ModelResultContext(session_id="test-sess-w4")
+    route(make_request("regress leverage profitability tangibility size", sample_panel_df, session_context=ctx))
     
-    req = make_request("lincom profitability - tangibility", sample_panel_df)
+    req = make_request("lincom profitability - tangibility", sample_panel_df, session_context=ctx)
     res = route(req)
     assert res.status == "success"
     assert "Coef." in res.ascii_output or "Estimate" in res.ascii_output
@@ -212,9 +218,9 @@ def test_lincom_command(sample_panel_df):
 
 def test_post_estimation_no_model_error(sample_panel_df):
     """Test that post-estimation without prior model cleanly returns r(301)."""
-    se._LAST_ESTIMATE = None
+    ctx = ModelResultContext(session_id="test-sess-w4")
     
-    req = make_request("testparm profitability", sample_panel_df)
+    req = make_request("testparm profitability", sample_panel_df, session_context=ctx)
     res = route(req)
     assert res.status in ("error", "unsupported")
     assert "r(301)" in res.ascii_output or "last estimates not found" in res.message.lower()
