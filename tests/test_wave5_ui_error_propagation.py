@@ -1,6 +1,7 @@
 """Cross-layer error propagation contracts for both Wave 5 UI consumers."""
 
 import uuid
+from pathlib import Path
 
 import pandas as pd
 
@@ -41,3 +42,10 @@ def test_stata_studio_boundary_receives_no_active_estimation_error():
     assert payload["error_code"] == "NO_ACTIVE_ESTIMATION"
     assert payload["message"]
     assert payload.get("coefficients") is None
+
+
+def test_stata_command_input_has_stable_session_key_for_follow_on_submissions():
+    source = (Path(__file__).parents[1] / "pages" / "23_stata_studio.py").read_text(encoding="utf-8")
+    input_block = source[source.index('typed_cmd = st.text_input('):source.index('trigger_run =', source.index('typed_cmd = st.text_input('))]
+    assert 'key="stata_cmd_input"' in input_block
+    assert 'value=st.session_state.get("stata_cmd_input", "")' not in input_block

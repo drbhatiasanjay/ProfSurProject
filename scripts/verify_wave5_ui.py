@@ -87,7 +87,7 @@ def main() -> int:
                 ("predict y_hat, xb", ["variable y_hat created"]),
                 ("ivregress 2sls leverage profitability (tangibility = log_size)", ["IMPLEMENTED_UNVERIFIED", "Instrumental variables (2SLS) regression"]),
                 ("winsor2 leverage tangibility, cuts(1 99) replace", ["winsorized"]),
-                ("gmm leverage profitability tangibility", ["IMPLEMENTED_UNVERIFIED IV-GMM proxy"]),
+                ("gmm leverage profitability tangibility", ["IMPLEMENTED_UNVERIFIED", "IV-GMM proxy"]),
                 ("didregress leverage profitability", ["CANDIDATE", "Difference-in-Differences"]),
                 ("predict_ml leverage profitability tangibility", ["IMPLEMENTED_UNVERIFIED", "GroupShuffleSplit", "Test RMSE"]),
             ]:

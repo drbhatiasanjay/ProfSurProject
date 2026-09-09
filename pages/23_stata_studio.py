@@ -521,8 +521,8 @@ with tab_cli:
         with c_in1:
             typed_cmd = st.text_input(
                 "Stata Command Prompt:",
-                value=st.session_state.get("stata_cmd_input", ""),
                 placeholder=". xtreg leverage profitability tangibility log_size, fe cluster(company_code)",
+                key="stata_cmd_input",
                 label_visibility="collapsed",
             )
         with c_in2:
@@ -537,7 +537,6 @@ with tab_cli:
     output_placeholder = st.empty()
 
     if should_run:
-        st.session_state["stata_cmd_input"] = active_cmd
         st.session_state["_prev_cmd"] = active_cmd
         st.session_state["stata_last_result"] = None  # Clear previous result so stale text does not linger
 
