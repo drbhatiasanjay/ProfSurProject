@@ -1,0 +1,117 @@
+keyboard_double_arrow_left
+app
+overview
+dashboard
+peer benchmarks
+scenarios
+bulk upload
+data explorer
+settings
+knowledge graph
+econometrics
+ml models
+forecasting
+clustering
+transitions
+advanced econometrics
+workbench
+interaction effects
+admin activity
+board export
+company navigator
+ai assistant
+life stage dynamics
+knowledge graph2
+comparison
+stata studio
+ai chat guide
+💻 Stata Studio
+
+Autonomous Stata Command Line & Econometric Publication Suite · Longitudinal Panel Econometric Engine
+
+🌙 Dark
+
+PANEL SETTING
+xtset company_code year
+OBSERVATIONS (N)
+9,031
+Balanced
+CROSS-SECTION (I)
+400
+Firms
+TIME HORIZON (T)
+2001–2025
+(25Y)
+INDUSTRY SECTORS
+104
+Sectors
+
+💻 Stata Command Console
+
+📑 esttab Publication Matrix
+
+📈 coefplot Visualizer
+
+💾 Export .dta & Replication .do
+
+⚡ Interactive Stata Terminal
+
+Type any standard Stata econometric or summary command below, or click any pre-configured template.
+
+📊 . xtreg leverage roa tang size, fe cluster(id)
+
+🔗 . ivregress 2sls leverage (tang = L.tang) roa
+
+📈 . xtreg leverage roa tang size, re
+
+🧪 . hausman fe re
+
+🔍 . test profitability = 0
+
+🧪 . hausman fe re
+
+🔍 . estat vif
+
+📋 . predict y_hat, xb
+
+⚙ . winsor2 leverage tangibility, cuts(1 99)
+
+📋 . summarize leverage roa tang, detail
+
+🔗 . pwcorr leverage roa tang size, sig
+
+🗑 Reset Dataset
+
+keyboard_arrow_right
+
+📚 PhD Dissertation Figure Replications (Chapters 5 & 8) — 1-Click Stata Command & Graph
+
+▶ Run Command
+
+💡 Corporate Finance Translation & Economic Intent:
+Estimates a within-firm Fixed Effects panel regression analyzing how corporate debt ratios (leverage) respond to firm profitability, asset tangibility, and size. By de-meaning data within each firm across 2001–2024, it purges all unobserved time-invariant firm heterogeneity (governance heritage, founding culture, corporate lineage), identifying within-firm associations. Evaluates Pecking Order Theory (profitability draining debt) vs. Trade-Off Theory (tangibility providing pledgeable debt capacity).
+📚 Econometric Deconstruction:
+
+Intent: Estimate within-firm panel fixed effects regression of debt on corporate financial determinants.
+Identification: Within-firm de-meaning transformation purges all time-invariant unobserved firm heterogeneity (management quality, firm culture, founding lineage).
+Inference: Standard errors clustered at firm level, robust to heteroskedasticity and arbitrary within-firm serial correlation across time.
+Theory: Directly tests Pecking Order (negative profitability beta) versus Trade-Off Theory (positive tangibility beta) on Indian corporate panels.
+Stata 18 SE · xtreg leverage profitability tangibility log_size, fe
+Fixed-effects (within) regression               Number of obs     =      9,026
+Group variable: company_code                    Number of groups  =        400
+R-squared:                                      Obs per group:
+     Within  = 0.0293                                         min =          1
+     Between = -0.8995                                        avg =       22.6
+     Overall = -0.4331                                        max =         25
+                                                F(3, 8623)        =      86.67
+                                                Prob > F          =     0.0000
+----------------------------------------------------------------------------------------
+      leverage |  Coefficient   Std. err.         t    P>|t|       [95% conf. interval]
+---------------+-------------------------------------------------------------------------
+ profitability |     -0.22111    0.025914     -8.53    0.000      -0.27191     -0.17031
+   tangibility |      0.21994    0.031966      6.88    0.000       0.15728      0.28260
+      log_size |     -0.02428    0.002412    -10.07    0.000      -0.02901     -0.01955
+---------------+-------------------------------------------------------------------------
+keyboard_arrow_right
+
+📜 Command History
