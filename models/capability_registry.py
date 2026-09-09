@@ -102,9 +102,9 @@ def _estat_dispatcher(parsed: dict, df: pd.DataFrame, session_context=None) -> d
     indep = parsed.get("indepvars", [])
     opts = parsed.get("options", [])
     if "vif" in indep or "vif" in opts:
-        return _handle_estat_vif(parsed, df)
+        return _handle_estat_vif(parsed, df, session_context)
     if "ic" in indep or "ic" in opts:
-        return _handle_estat_ic(parsed, df)
+        return _handle_estat_ic(parsed, df, session_context)
     if "summarize" in indep or "summarize" in opts:
         return _handle_estat_summarize(parsed, df, session_context)
     return {

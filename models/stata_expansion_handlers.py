@@ -59,48 +59,44 @@ def set_active_estimation(
     }
 
 
-def get_active_estimation() -> Optional[Dict[str, Any]]:
+def get_active_estimation(session_context=None) -> Optional[Dict[str, Any]]:
     """Retrieve the active estimation state if available."""
+    if session_context is not None:
+        from models.stata_engine import _get_last_estimate
+        last_estimate = _get_last_estimate(session_context)
+        if last_estimate:
+            result_obj = last_estimate.get("result_obj")
+            params_obj = getattr(result_obj, "params", None)
+            if params_obj is not None:
+                if hasattr(result_obj, "cov_params"):
+                    cov_matrix = np.asarray(result_obj.cov_params(), dtype=float)
+                else:
+                    cov_matrix = np.asarray(getattr(result_obj, "cov", None), dtype=float)
+                residuals_obj = getattr(result_obj, "resid", getattr(result_obj, "resids", []))
+                fitted_obj = getattr(result_obj, "fittedvalues", getattr(result_obj, "fitted_values", []))
+                return {
+                    "depvar": last_estimate.get("depvar", ""),
+                    "indepvars": last_estimate.get("indepvars", []),
+                    "params": {str(k): float(v) for k, v in params_obj.items()},
+                    "cov_matrix": cov_matrix,
+                    "residuals": np.asarray(residuals_obj, dtype=float).reshape(-1),
+                    "fitted_values": np.asarray(fitted_obj, dtype=float).reshape(-1),
+                    "n_obs": int(getattr(result_obj, "nobs", last_estimate.get("n_obs", 0))),
+                    "r_squared": float(last_estimate.get("r2", 0.0)),
+                    "df_model": int(getattr(result_obj, "df_model", len(params_obj))),
+                    "df_resid": int(getattr(result_obj, "df_resid", 0)),
+                    "model_type": last_estimate.get("model_type", "regress"),
+                }
     return _ACTIVE_ESTIMATION_STATE if _ACTIVE_ESTIMATION_STATE else None
 
 
-def _require_active_estimation() -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+def _require_active_estimation(session_context=None) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
     """Guardrail H-01: Check active estimation state, failing gracefully if absent."""
-    est = get_active_estimation()
-    if not est:
-        from models.stata_engine import _LAST_ESTIMATE
-
-        last_estimate = _LAST_ESTIMATE
-        result_obj = last_estimate.get("result_obj") if last_estimate else None
-        params_obj = getattr(result_obj, "params", None)
-        if last_estimate and params_obj is not None:
-            if hasattr(result_obj, "cov_params"):
-                cov_matrix = np.asarray(result_obj.cov_params(), dtype=float)
-            else:
-                cov_matrix = np.asarray(getattr(result_obj, "cov", None), dtype=float)
-            residuals_obj = getattr(result_obj, "resid", getattr(result_obj, "resids", []))
-            fitted_obj = getattr(
-                result_obj,
-                "fittedvalues",
-                getattr(result_obj, "fitted_values", []),
-            )
-            est = {
-                "depvar": last_estimate.get("depvar", ""),
-                "indepvars": last_estimate.get("indepvars", []),
-                "params": {str(k): float(v) for k, v in params_obj.items()},
-                "cov_matrix": cov_matrix,
-                "residuals": np.asarray(residuals_obj, dtype=float).reshape(-1),
-                "fitted_values": np.asarray(fitted_obj, dtype=float).reshape(-1),
-                "n_obs": int(getattr(result_obj, "nobs", last_estimate.get("n_obs", 0))),
-                "r_squared": float(last_estimate.get("r2", 0.0)),
-                "df_model": int(getattr(result_obj, "df_model", len(params_obj))),
-                "df_resid": int(getattr(result_obj, "df_resid", 0)),
-                "model_type": last_estimate.get("model_type", "regress"),
-            }
+    est = get_active_estimation(session_context)
     if not est:
         return None, {
             "status": "ERROR",
-            "error_code": "INVALID_POST_ESTIMATION_STATE",
+            "error_code": "NO_ACTIVE_ESTIMATION",
             "ascii_output": "r(301); last estimates not found\n"
                            "Error: no valid regression estimation found in memory.\n"
                            "Please estimate a model first (e.g. `regress leverage profitability tangibility log_size` or `xtreg ...`).",
@@ -481,13 +477,13 @@ def _handle_xtline(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 10. Post-Estimation: test & testparm (with H-01 & M-01 Wald Restriction Parser)
 # ---------------------------------------------------------------------------
-def _handle_test(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_test(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """
     Stata-compatible `test` / `testparm` [spec]: Wald test of linear hypotheses.
     Guardrail H-01: Verifies active estimation state.
     Guardrail M-01: Constructs linear constraint matrix R and vector q for R*beta = q.
     """
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -573,12 +569,12 @@ def _handle_test(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 11. Post-Estimation: lincom
 # ---------------------------------------------------------------------------
-def _handle_lincom(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_lincom(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """
     Stata-compatible `lincom` [exp]: Linear combination of parameter estimates with SE and 95% CI.
     Guardrail H-01: Verifies active estimation state.
     """
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -646,11 +642,11 @@ def _handle_lincom(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 12. Post-Estimation: nlcom (with M-02 Delta Method)
 # ---------------------------------------------------------------------------
-def _handle_nlcom(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_nlcom(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """
     Stata-compatible `nlcom` [exp]: Non-linear combination of parameters using the Delta Method.
     """
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -698,9 +694,9 @@ def _handle_nlcom(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 13. Post-Estimation: predict (expanded options)
 # ---------------------------------------------------------------------------
-def _handle_predict(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_predict(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """Stata-compatible `predict` newvar, [xb | residuals | stdp]: generate prediction vectors."""
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -725,12 +721,12 @@ def _handle_predict(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 14. Diagnostics: estat vif (with H-02 Multicollinearity Singularity Clamping)
 # ---------------------------------------------------------------------------
-def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_estat_vif(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """
     Stata-compatible `estat vif`: Variance Inflation Factors for model regressors.
     Guardrail H-02: Clamps VIF at 1.0e6 if tolerance < 1.0e-6.
     """
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -782,9 +778,9 @@ def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 15. Diagnostics: estat hettest (Breusch-Pagan / Cook-Weisberg)
 # ---------------------------------------------------------------------------
-def _handle_estat_hettest(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_estat_hettest(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """Stata-compatible `estat hettest`: Breusch-Pagan / Cook-Weisberg heteroskedasticity test."""
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -824,9 +820,9 @@ def _handle_estat_hettest(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 16. Diagnostics: estat dwatson & durbinalt
 # ---------------------------------------------------------------------------
-def _handle_estat_dwatson(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_estat_dwatson(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """Stata-compatible `estat dwatson`: Durbin-Watson test for first-order serial correlation."""
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -847,9 +843,9 @@ def _handle_estat_dwatson(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 17. Diagnostics: estat bgodfrey (Breusch-Godfrey LM Test)
 # ---------------------------------------------------------------------------
-def _handle_estat_bgodfrey(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_estat_bgodfrey(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """Stata-compatible `estat bgodfrey`: Breusch-Godfrey LM test for higher-order autocorrelation."""
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -882,9 +878,9 @@ def _handle_estat_bgodfrey(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 18. Diagnostics: estat ic (Information Criteria)
 # ---------------------------------------------------------------------------
-def _handle_estat_ic(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_estat_ic(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """Stata-compatible `estat ic`: Akaike (AIC) and Bayesian (BIC) information criteria."""
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -916,12 +912,12 @@ def _handle_estat_ic(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 19. Diagnostic Visual: rvfplot (Residual vs Fitted Plot)
 # ---------------------------------------------------------------------------
-def _handle_rvfplot(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_rvfplot(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """
     Stata-compatible `rvfplot`: Residuals versus Fitted values scatter plot with zero reference line.
     Guardrail M-03: Returns both formatted ASCII description and interactive Plotly spec.
     """
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
@@ -969,11 +965,11 @@ def _handle_rvfplot(parsed: dict, df: pd.DataFrame) -> dict:
 # ---------------------------------------------------------------------------
 # 20. Diagnostic Visual: qnorm (Normal Quantile-Quantile Plot)
 # ---------------------------------------------------------------------------
-def _handle_qnorm(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_qnorm(parsed: dict, df: pd.DataFrame, session_context=None) -> dict:
     """
     Stata-compatible `qnorm`: Quantile-Quantile (Q-Q) plot of residuals vs standard normal.
     """
-    est, err = _require_active_estimation()
+    est, err = _require_active_estimation(session_context)
     if err:
         return err
 
