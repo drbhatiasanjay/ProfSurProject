@@ -87,6 +87,7 @@ def get_active_estimation(session_context=None) -> Optional[Dict[str, Any]]:
                     "df_resid": int(getattr(result_obj, "df_resid", 0)),
                     "model_type": last_estimate.get("model_type", "regress"),
                 }
+        return None
     return _ACTIVE_ESTIMATION_STATE if _ACTIVE_ESTIMATION_STATE else None
 
 

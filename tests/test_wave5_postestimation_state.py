@@ -33,3 +33,32 @@ def test_implicit_calls_do_not_share_post_estimation_state():
     result = execute_stata_command("predict fitted, xb", frame)
     assert result["status"] == "error"
     assert result["error_code"] == "NO_ACTIVE_ESTIMATION"
+
+
+def test_scoped_context_does_not_fallback_to_legacy_state():
+    from models.stata_expansion_handlers import set_active_estimation, _ACTIVE_ESTIMATION_STATE
+    
+    set_active_estimation(
+        depvar="y",
+        indepvars=["x"],
+        params={"x": 1.0, "_cons": 0.5},
+        cov_matrix=[[0.1, 0.0], [0.0, 0.1]],
+        residuals=[0.0] * 8,
+        fitted_values=[0.0] * 8,
+        n_obs=8,
+        r_squared=0.5,
+        df_model=1,
+        df_resid=6,
+        model_type="regress"
+    )
+    
+    try:
+        frame = _frame()
+        context = ModelResultContext()
+        result = execute_stata_command("test x = 0", frame, context)
+        
+        assert result["status"] == "error"
+        assert result["error_code"] == "NO_ACTIVE_ESTIMATION"
+        assert result["metadata"]["stata_rc"] == 301
+    finally:
+        _ACTIVE_ESTIMATION_STATE.clear()
