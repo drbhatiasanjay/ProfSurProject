@@ -1,0 +1,16 @@
+{
+  "target_sha": "cea188e03c6509093a0725c517c1c24e0d1897de",
+  "verdict": "PASS",
+  "gates": {
+    "explainability": "PASS",
+    "grounding": "PASS",
+    "errors": "PASS",
+    "exit": "PASS",
+    "truthfulness": "PASS",
+    "boundaries": "PASS",
+    "scope": "PASS",
+    "tests": "PASS",
+    "security": "PASS",
+    "hygiene": "PASS"
+  }
+}
