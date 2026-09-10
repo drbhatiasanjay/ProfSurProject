@@ -18,3 +18,19 @@ This policy applies to bounded independent reviews only.
   scientific evidence.
 - Return structured findings with exact evidence locations and a final verdict.
 - Codex retains final adjudication and integration authority.
+
+## Durable publication invariant
+
+- Every qualifying review must run in a fresh context with no implementation
+  role or inherited development history.
+- Publish evidence only on the dedicated reviewer branch and only under the
+  exact evidence directory specified by that review request.
+- A qualifying publication must contain the requested Markdown report, valid
+  JSON report, and hash-complete manifest; do not substitute another path or
+  modify `SESSION_LOG.md`.
+- Commit only the requested evidence files. Never include application code,
+  tests, workflows, databases, status logs, or unrelated documentation.
+- If any of these conditions is not met, declare
+  `REVIEW_CLASSIFICATION = NON_QUALIFYING_REVIEW_EVIDENCE`; preserve the
+  original artifacts, do not silently repair or relabel them, and require a
+  fresh correctly scoped review.
