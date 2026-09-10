@@ -20,6 +20,7 @@ from typing import Iterator, Generator, Literal, Optional, List, Dict, Union, An
 import pandas as pd
 
 import db
+from models.decision_contracts import build_chat_error
 
 # Import once at module load so provider tests and runtime calls do not import
 # the SDK while a caller is temporarily patching process environment access.
@@ -567,7 +568,7 @@ def stream_ollama(
     try:
         from ollama import chat as _ollama_chat
     except ImportError:
-        yield "[Ollama backend not installed. Run: pip install ollama>=0.6.2]"
+        yield build_chat_error("PROVIDER_NOT_CONFIGURED", "Ollama is not installed.")
         return
     try:
         stream = _ollama_chat(
@@ -585,7 +586,8 @@ def stream_ollama(
             if content:
                 yield content
     except Exception as e:
-        yield f"[Ollama error: {type(e).__name__}: {e}]"
+        logger.exception("Ollama provider request failed")
+        yield build_chat_error("PROVIDER_REQUEST_FAILED", "Ollama could not complete this request.")
 
 
 def stream_anthropic(
@@ -621,7 +623,7 @@ def stream_anthropic(
     try:
         import anthropic
     except ImportError:
-        yield "[Anthropic backend not installed. Run: pip install anthropic>=0.25]"
+        yield build_chat_error("PROVIDER_NOT_CONFIGURED", "Anthropic is not installed.")
         return
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -631,7 +633,7 @@ def stream_anthropic(
         except Exception:
             api_key = None
     if not api_key:
-        yield "[Anthropic backend not configured. Set ANTHROPIC_API_KEY in .streamlit/secrets.toml]"
+        yield build_chat_error("PROVIDER_NOT_CONFIGURED", "Anthropic is not configured.")
         return
     try:
         client = anthropic.Anthropic(api_key=api_key)
@@ -689,7 +691,8 @@ def stream_anthropic(
                 for text in stream.text_stream:
                     yield text
     except Exception as e:
-        yield f"[Anthropic error: {type(e).__name__}: {e}]"
+        logger.exception("Anthropic provider request failed")
+        yield build_chat_error("PROVIDER_REQUEST_FAILED", "Anthropic could not complete this request.")
 
 
 def query_financial_database(

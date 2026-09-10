@@ -188,9 +188,8 @@ class TestStreamAnthropic:
         monkeypatch.delitem(__import__("sys").modules, "streamlit", raising=False)
         from models.llm_adapters import stream_anthropic
         chunks = list(stream_anthropic([{"role": "user", "content": "hi"}]))
-        # Either "not configured" (no key) or "not installed" (no SDK) — both acceptable graceful paths
-        joined = " ".join(chunks).lower()
-        assert ("not configured" in joined) or ("not installed" in joined)
+        assert chunks[0]["type"] == "error"
+        assert chunks[0]["error_code"] == "PROVIDER_NOT_CONFIGURED"
 
 
 # ---------------------------------------------------------------------------
@@ -497,7 +496,8 @@ class TestStreamAnthropicScenarios:
         monkeypatch.setattr(anthropic, "Anthropic", BrokenClient)
         monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-fake")
         chunks = list(stream_anthropic([{"role": "user", "content": "hi"}]))
-        assert any("error" in c.lower() for c in chunks)
+        assert chunks[0]["type"] == "error"
+        assert chunks[0]["error_code"] == "PROVIDER_REQUEST_FAILED"
 
     def test_empty_messages_no_crash(self, monkeypatch):
         captured = {}
@@ -523,7 +523,8 @@ class TestStreamOllamaNegative:
             pytest.skip("ollama not installed")
         from models.llm_adapters import stream_ollama
         chunks = list(stream_ollama([{"role": "user", "content": "hi"}]))
-        assert any("error" in c.lower() for c in chunks)
+        assert chunks[0]["type"] == "error"
+        assert chunks[0]["error_code"] == "PROVIDER_REQUEST_FAILED"
 
 
 # ---------------------------------------------------------------------------

@@ -161,10 +161,11 @@ class TestPromptCachingFallback:
                     [{"role": "user", "content": "hello"}],
                     system="base context",
                 ))
-        # Should yield exactly one error string, not raise
+        # Should yield exactly one typed error envelope, not raise
         assert isinstance(result, list)
-        assert len(result) >= 1
-        assert all(isinstance(r, str) for r in result)
+        assert len(result) == 1
+        assert result[0]["type"] == "error"
+        assert result[0]["error_code"] == "PROVIDER_REQUEST_FAILED"
 
     def test_missing_api_key_yields_error_string(self):
         """Missing ANTHROPIC_API_KEY should yield an explanatory string, not crash."""
@@ -177,4 +178,5 @@ class TestPromptCachingFallback:
                     system="base context",
                 ))
         assert len(result) == 1
-        assert "configured" in result[0].lower() or "api" in result[0].lower() or "[" in result[0]
+        assert result[0]["type"] == "error"
+        assert result[0]["error_code"] == "PROVIDER_NOT_CONFIGURED"
