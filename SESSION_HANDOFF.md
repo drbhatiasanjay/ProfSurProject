@@ -1,0 +1,145 @@
+# ProfSurProject — Restart-Safe Operational Handoff
+
+**Updated:** 2026-09-10  
+**Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
+**Canonical branch:** `master`  
+**Latest baseline:** `0437f2c`  
+**Canonical demo:** `http://localhost:8501/`
+
+## 1. Current truth
+
+The current root application is `app.py`. It owns the Streamlit shell, fixed
+header, global sidebar, dataset filters, theme, and `st.navigation()`.
+`pages/19_ai_assistant.py` owns AI Chat content and page-specific controls.
+`pages/23_stata_studio.py` owns the raw Stata interface.
+
+Never launch a page file directly. Directly launching either page produces the
+legacy auto-discovered lowercase sidebar and is archived behavior. Authenticate
+at the root URL, then click the registered sidebar page.
+
+## 2. Latest committed changes
+
+- `82d9afb` — persisted direct Stata AI-chat follow-up actions.
+- `fd71c83` — archived legacy shell convention, added source-to-screen mapping,
+  synchronization contract, and four-user QA report.
+- `8599dc6` — routed supported `xtset` and `lgraph` commands through AI Chat.
+- `0437f2c` — recorded the honest 25-command matrix and current gaps.
+
+## 3. Verification status
+
+### Passed
+
+- Canonical 8501 Streamlit process restarted from root `app.py`; health endpoint
+  returned `ok`.
+- Four-user authenticated UI matrix passed for `drbhatia`, `profsurkumar`,
+  `skumar`, and `sbhatia`: login, sidebar navigation, Stata estimation, and
+  both themes.
+- `xtset companycode year` executes successfully in the Stata engine and is now
+  routed directly by AI Chat.
+- 17 of the supplied 25 deterministic Stata inputs return successful results.
+
+### Open product gaps
+
+The canonical dispatcher currently returns typed unsupported-command responses
+for these eight inputs:
+
+`ivregress`, `hdfe`, `gmm`, `didregress`, `test`, `predict`, `predict_ml`,
+`scenario`.
+
+These are real implementation gaps, not test failures to suppress. Do not
+promote the 25-command matrix to VERIFIED until each is implemented or formally
+deferred with an approved decision.
+
+The AI natural-language equivalent sweep has not been run in this checkpoint.
+It requires explicit authorization to transmit active panel context and the
+provided prompts to the configured external LLM backend.
+
+## 4. Evidence and mappings
+
+- Screen/code mapping: `docs/operations/AI_CHAT_SCREEN_CODE_MAPPING.md`
+- 25-command status: `docs/implementation-reports/AI_STATA_25_COMMAND_MATRIX_2026-09-10.md`
+- Four-user QA: `docs/implementation-reports/AI_CHAT_FOUR_USER_MATRIX_2026-09-10.md`
+- Canonical status: `CURRENT_STATUS.md`
+- Session history: `SESSION_LOG.md`
+- Project rules: `AGENTS.md`
+- Orchestration loop: `docs/operations/AGENT_ORCHESTRATION_FRAMEWORK.md`
+
+Evidence must be GitHub-ready Markdown. Local screenshots and JSON are useful
+supporting artifacts but never the sole acceptance record.
+
+## 5. Credential handling
+
+- Approved sources are `.streamlit/secrets.toml` and approved environment
+  variables such as `PROFSUR_VERIFY_PASSWORD`.
+- Never write, print, commit, or place plaintext passwords or bcrypt hashes in
+  handoff files, tests, prompts, screenshots, logs, or command output.
+- Test profiles: `drbhatia` (admin), `profsurkumar` (researcher), `skumar`
+  (researcher), and `sbhatia` (viewer).
+- Use a process-only environment variable for authenticated automation. Clear
+  it after the run. If absent, stop at the credential gate rather than guessing.
+- Administrative credential rotation remains separate if any credential was
+  previously exposed in historical artifacts.
+
+## 6. Repeatable automation
+
+1. Verify workspace and read `CURRENT_STATUS.md` first.
+2. Check Graphify freshness; regenerate only when absent/stale with
+   `graphify extract .` and `graphify cluster-only .`.
+3. Kill only the intended local Streamlit listener before restarting 8501.
+4. Launch the absolute root `app.py` with an explicit port.
+5. Run focused deterministic tests, then the authenticated four-user matrix.
+6. For UI tests, wait for the new result/card or command-specific marker after
+   every Streamlit rerun; never read a previous card as the current result.
+7. Record command, user, role, interface, expected/actual outcome, evidence
+   reference, and timestamp in Markdown.
+8. Run `git diff --check`, stage only intentional files, commit, and update
+   this handoff plus `CURRENT_STATUS.md`/`SESSION_LOG.md`.
+
+The reusable harness is `scratch/run_25_dual_matrix_8501.py`; its external AI
+phase is opt-in and must not be silently run. Intentional invalid inputs count
+as PASS only when the application fails closed with a typed response.
+
+## 7. Lessons learned
+
+- A healthy port is not proof of the correct application. Verify the launch
+  command and visible shell marker (`lc-navbar`, title-case registered pages).
+- Streamlit reruns recreate the shell. Page controls must extend the global
+  sidebar, not create a competing navigation system.
+- AI Stata routing must stay synchronized with engine dispatch; missing `xtset`
+  caused an avoidable Anthropic call.
+- Stateful post-estimation commands must not be cached without model identity
+  and result context.
+- Harnesses must synchronize on newly rendered results, not fixed sleeps or the
+  last DOM card. Fixed sleeps caused stale-card false classifications.
+- A broad pytest stall is not a pass; use quiet focused tests and report
+  Windows/process limitations.
+- Antigravity claims are evidence leads, not acceptance proof. Verify files,
+  branch, process, output, and report locally before promotion.
+
+## 8. Token, memory, and context-drift controls
+
+- Read this handoff, `CURRENT_STATUS.md`, and `SESSION_LOG.md` before decisions.
+- Use Graphify/search for discovery, then read narrow source slices.
+- Keep reports concise and append-only; reference large screenshots/JSON from
+  Markdown instead of loading them into context.
+- Maintain one canonical branch and one canonical port for demo evidence.
+- Record material work as `goal → plan → implementation → test → evidence →
+  review → checkpoint`.
+- Never carry experimental-worktree claims into `master` without reproducible
+  evidence.
+- Every checkpoint records commit, server command, test command, result, open
+  gaps, credential source location only, and next action.
+
+## 9. Resume procedure
+
+```powershell
+Set-Location C:\Users\hemas\Downloads\ProfSurProject
+Get-Content CURRENT_STATUS.md -Tail 40
+Get-Content SESSION_HANDOFF.md -Tail 40
+git status --short
+git log -3 --oneline
+```
+
+Resume from the eight-command implementation/defer decision and the separately
+authorized AI natural-language test gate. Do not restart old worktrees or old
+page-file entrypoints for demo evidence.

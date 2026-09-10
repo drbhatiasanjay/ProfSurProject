@@ -42,3 +42,11 @@ Every agent (Antigravity, Codex, Claude, Cline) MUST follow this deterministic b
 - **Left-panel contract:** The global sidebar owns dataset, filters, theme, and navigation. Page-specific controls may extend it, but must not create a competing navigation list or replace the global shell.
 - **Right-panel contract:** Every submit, navigation, theme, chart, download, follow-up, and session action must survive the expected Streamlit rerun or be explicitly session-scoped. Persist user-visible chat actions that must survive reload.
 - **Evidence gate:** Any UI change requires a source-to-screen mapping and an authenticated browser check for all four configured profiles (`profsurkumar`, `skumar`, `drbhatia`, `sbhatia`). A healthy HTTP endpoint alone is not UI evidence.
+
+## 5. Operational Directives & Learned Safeguards
+Detailed rule: `.agents/rules/engineering_safeguards.md`.
+- **Baseline Truth:** GitHub `origin/master` (`6075708`) is immutable ground truth. All unmerged designs are strictly experimental.
+- **Trace Full Auth Path:** Do not guess password failures. Verify complete path (`secrets.toml` -> SQLite `UNIQUE(email)` constraint -> native `bcrypt.checkpw()`). Duplicate emails in `secrets.toml` break database synchronization!
+- **Native bcrypt Only:** Always generate hashes using Python's native `bcrypt` (12 rounds), never unverified library wrapper classes with divergent salt schemes.
+- **Deterministic 1s Validation:** Test DB rows and credentials via CLI one-liners before launching browser subagents.
+- **Strict Phase Gate:** Keep large UI/UX designs (e.g. Apple Liquid Glass) as `DESIGNED BUT NOT IMPLEMENTED` until explicit user greenlight.

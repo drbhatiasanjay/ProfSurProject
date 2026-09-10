@@ -15,7 +15,7 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 
 ## 2. Git Baseline & Tracking Qualification
 - **Active Branch:** `master`
-- **Head Commit:** `efe4729` (`feat(wave6): add validation ledger and profile matrix`)
+- **Head Commit:** `0437f2c` (`test(stata): record 25-command matrix gaps`)
 - **Release Tag:** `v2.0.0-ws2-complete`
 - **Previous Baseline:** `6075708` (auth fix)
 - **Remote Tracking State:** Local `HEAD` is ahead of `origin/master` by 1 commit. GCP deployment pending.
@@ -150,6 +150,10 @@ References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,
 - Source-to-screen mapping is recorded in
   `docs/operations/AI_CHAT_SCREEN_CODE_MAPPING.md`.
 - Direct Stata AI-chat follow-up actions now persist across Streamlit reruns.
-- Four-profile authenticated UI verification remains pending until the approved
-  `PROFSUR_VERIFY_PASSWORD` is available in the environment; no credential was
-  written to the repository.
+- Four-profile authenticated UI verification passed for login, sidebar
+  navigation, Stata estimation, and both themes; no credential was written to
+  the repository.
+- Deterministic 25-command sweep: 17 successful, 8 typed unsupported-command
+  gaps (`ivregress`, `hdfe`, `gmm`, `didregress`, `test`, `predict`,
+  `predict_ml`, `scenario`). The AI natural-language sweep remains externally
+  authorized but not executed.

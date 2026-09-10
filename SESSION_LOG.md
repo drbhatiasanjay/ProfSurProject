@@ -307,6 +307,9 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
   launch convention, and added mandatory screen/code synchronization rules to
   `AGENTS.md`.
 - Fixed persistence of direct Stata AI-chat follow-up actions; commit `82d9afb`.
-- Four-user UI matrix is the next required acceptance gate; credentials remain
-  environment/secrets-only.
+- Four-user UI matrix passed for the requested profiles and both themes;
+  credentials remain environment/secrets-only.
+- The deterministic 25-command sweep found 17 successes and 8 real dispatcher
+  gaps. The external AI natural-language sweep remains a separately authorized
+  gate because it transmits active panel context to an LLM.
 
