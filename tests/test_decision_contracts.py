@@ -3,6 +3,7 @@
 from models.decision_contracts import (
     ActionTraceEvent,
     EvidenceItem,
+    GroundingItem,
     ScenarioCase,
     build_decision_brief,
     validate_chart_table,
@@ -31,6 +32,16 @@ def test_decision_brief_carries_user_visible_trace_without_private_reasoning():
         "execute",
     ]
     assert all("reasoning" not in event for event in payload["trace"])
+
+
+def test_decision_brief_carries_explicit_grounding_labels():
+    brief = build_decision_brief(
+        answer="The panel mean is computed from available rows.",
+        grounding=[GroundingItem("COMPUTED", "Panel mean", "panel rows")],
+    )
+    assert brief.to_dict()["grounding"] == (
+        {"label": "COMPUTED", "text": "Panel mean", "source": "panel rows"}
+    ,)
 
 
 def test_valid_chart_matches_categories_and_table():

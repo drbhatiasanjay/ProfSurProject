@@ -12,6 +12,7 @@ from typing import Any, Literal
 
 
 EvidenceKind = Literal["observed", "derived", "modeled", "assumption", "interpretation"]
+GroundingLabel = Literal["FACT", "COMPUTED", "INTERPRETATION", "HYPOTHESIS", "UNSUPPORTED"]
 AnalysisRunStatus = Literal["pending", "running", "completed", "failed"]
 TraceStatus = Literal["pending", "running", "completed", "failed", "skipped"]
 
@@ -95,6 +96,19 @@ class EvidenceItem:
 
 
 @dataclass(frozen=True)
+class GroundingItem:
+    """User-facing claim classification; labels do not imply scientific validity."""
+
+    label: GroundingLabel
+    text: str
+    source: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.text.strip():
+            raise ValueError("grounding item text must not be empty")
+
+
+@dataclass(frozen=True)
 class ScenarioCase:
     """A named CFO case with transparent, user-editable assumptions."""
 
@@ -122,6 +136,7 @@ class DecisionBrief:
     intent: str = ""
     selected_capability: str = ""
     trace: tuple[ActionTraceEvent, ...] = ()
+    grounding: tuple[GroundingItem, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize without requiring a provider-specific model library."""
@@ -183,6 +198,7 @@ def build_decision_brief(
     intent: str = "",
     selected_capability: str = "",
     trace: list[ActionTraceEvent] | None = None,
+    grounding: list[GroundingItem] | None = None,
 ) -> DecisionBrief:
     """Create the common envelope after provider output is normalized."""
     validation = validate_chart_table(table, chart)
@@ -200,5 +216,6 @@ def build_decision_brief(
         intent=intent.strip(),
         selected_capability=selected_capability.strip(),
         trace=tuple(trace or []),
+        grounding=tuple(grounding or []),
     )
 

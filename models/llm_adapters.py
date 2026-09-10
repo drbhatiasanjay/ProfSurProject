@@ -1141,7 +1141,7 @@ def normalize_assistant_response(
     if chart_requested and resolved_chart is None:
         resolved_chart = extract_table_chart_spec(answer, user_q=user_query)
         resolved_chart = _filter_chart_series_for_query(resolved_chart, user_query)
-    from models.decision_contracts import ActionTraceEvent, build_decision_brief
+    from models.decision_contracts import ActionTraceEvent, GroundingItem, build_decision_brief
     trace = [
         ActionTraceEvent("classify_request", "completed", "current user request classified"),
         ActionTraceEvent("ground_evidence", "completed", "available panel context applied"),
@@ -1156,6 +1156,10 @@ def normalize_assistant_response(
         intent="chart_request" if chart_requested else "grounded_response",
         selected_capability="chat.grounded_response",
         trace=trace,
+        grounding=[
+            GroundingItem("COMPUTED", "Response normalized from the current request and available panel context", "panel context"),
+            GroundingItem("INTERPRETATION", "Economic interpretation is bounded by the displayed evidence", "response envelope"),
+        ],
     )
     # Keep the existing flat response keys for compatibility while exposing a
     # provider-neutral envelope for the CFO UI and future export paths.

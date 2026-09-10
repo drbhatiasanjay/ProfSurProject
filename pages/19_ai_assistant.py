@@ -1214,6 +1214,13 @@ if user_q:
                             f"{event.get('status', 'unknown').upper()}: "
                             f"{event.get('name', 'action')} — {event.get('detail', '')}"
                         )
+        grounding_items = (normalized.get("decision_brief") or {}).get("grounding", [])
+        if grounding_items:
+            with st.expander("🏷️ Grounding labels", expanded=False):
+                for item in grounding_items:
+                    if isinstance(item, dict):
+                        source = f" [{item.get('source')}]" if item.get("source") else ""
+                        st.write(f"{item.get('label', 'UNSUPPORTED')}: {item.get('text', '')}{source}")
         full = normalized["answer"]
         if normalized["chart_spec"]:
             # Apply the same query-aware series filtering to tool-generated
