@@ -267,7 +267,9 @@ the narrative adapter. Integration work is limited to these boundaries:
    helper; do not alter response text or current TTL defaults.
 2. Derive dataset fingerprint and trusted authorization scope at the caller or
    immediately before the cache operation; deny anonymous callers, unknown
-   roles, and missing dataset scope.
+   roles, and missing dataset scope. For the shared MVP dataset, the authorized
+   scope is reusable across users; role remains part of role-sensitive output
+   identity.
 3. Preserve legacy reads only for explicitly public, versioned entries; never
    guess a tenant for an old unscoped entry.
 4. Add per-caller tests proving changes in fingerprint, tenant/scope, command,

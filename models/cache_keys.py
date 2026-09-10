@@ -20,7 +20,9 @@ def authorized_cache_scope(username: str, role: str = "viewer", *, dataset_scope
     The MVP policy permits authenticated principals with approved application
     roles to access the shared analytical panel. This is deny-by-default and
     must be extended with dataset entitlements before tenant-private data is
-    introduced. The result remains an isolation label, not the policy itself.
+    introduced. The returned scope is shared across authorized users so the
+    cache can actually be reused; it remains an isolation label, not the
+    policy itself.
     """
     identity = str(username or "").strip().lower()
     if not identity:
@@ -31,8 +33,8 @@ def authorized_cache_scope(username: str, role: str = "viewer", *, dataset_scope
     scope = str(dataset_scope or "").strip()
     if not scope:
         raise CacheAuthorizationError("dataset authorization scope is required")
-    digest = hashlib.sha256(f"{identity}:{normalized_role}:{scope}".encode("utf-8")).hexdigest()
-    return f"principal:{digest}"
+    digest = hashlib.sha256(scope.encode("utf-8")).hexdigest()
+    return f"dataset:{digest}"
 
 
 authenticated_cache_scope = authorized_cache_scope

@@ -45,9 +45,9 @@ def test_anonymous_cache_scope_fails_closed():
         authorized_cache_scope("")
 
 
-def test_authenticated_scope_is_stable_but_role_isolated():
+def test_authorized_shared_scope_is_reusable_but_policy_is_strict():
     assert authorized_cache_scope("Alice", "viewer") == authorized_cache_scope("alice", "viewer")
-    assert authorized_cache_scope("alice", "viewer") != authorized_cache_scope("alice", "researcher")
+    assert authorized_cache_scope("alice", "viewer") == authorized_cache_scope("alice", "researcher")
 
 
 def test_cache_policy_denies_unknown_roles_and_empty_dataset_scope():

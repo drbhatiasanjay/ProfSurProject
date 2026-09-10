@@ -493,5 +493,6 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
   10 warnings**; push-hook selection passed **146 tests**. Published commit
   `8bf9883` to `origin/experimental-performance-fixes`.
 - Implemented the approved legacy-caller slice. Authenticated page callers now
-  pass trusted username-derived cache scope; anonymous direct adapter calls
-  bypass cache access. Focused verification: **89 passed, 10 warnings**.
+  pass trusted shared-dataset scope; anonymous direct adapter calls bypass
+  cache access, with role included for role-sensitive narratives. Focused
+  verification: **90 passed, 10 warnings**.

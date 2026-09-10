@@ -57,11 +57,11 @@ def initialize_engines():
 _CACHE = {}
 _CACHE_LOCK = threading.Lock()
 
-# Whitelist of pure, non-mutating analytical commands
+# Whitelist of pure, non-mutating, context-independent analytical commands.
+# Post-estimation commands are deliberately excluded because they depend on
+# the active ModelResultContext and must execute through the state machine.
 IDEMPOTENT_COMMANDS = {
-    "summarize", "regress", "correlate", "pwcorr", "tabulate", "tabstat", 
-    "xtreg", "didregress", "ivregress", "gmm", "test", "margins", "predict",
-    "estat", "estimates", "hausman"
+    "summarize", "describe", "count", "correlate", "pwcorr", "tabulate", "tabstat",
 }
 
 def route(request: AnalyticalRequest) -> CapabilityResult:
@@ -79,23 +79,22 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
     
     if is_idempotent:
         with _CACHE_LOCK:
-            if cache_key in _CACHE:
-                # 🚨 Guard 2: Cache Immutability via Deep Copy
-                cached_result = copy.deepcopy(_CACHE[cache_key])
-                
-                # Overwrite dynamic fields so the cached result looks like a fresh run
-                cached_result = replace(
-                    cached_result, 
-                    correlation_id=request.correlation_id,
-                    run_id=str(uuid.uuid4())
-                )
-                #print(f"[CACHE HIT] {cmd}")
-                return cached_result
+            cached_result = _CACHE.get(cache_key)
+        if cached_result is not None:
+            # Copy outside the process-wide lock; the lock protects the map,
+            # not the potentially large analytical payload.
+            cached_result = copy.deepcopy(cached_result)
+            return replace(
+                cached_result,
+                correlation_id=request.correlation_id,
+                run_id=str(uuid.uuid4()),
+            )
     
     # Cache Miss or Mutating Command
     result = _execute_route(request)
     
     if is_idempotent and result.status in ("success", "partial"):
+        immutable_result = copy.deepcopy(result)
         with _CACHE_LOCK:
             # Store in cache (limit size to prevent memory leak)
             if len(_CACHE) > 128:
@@ -103,7 +102,7 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
                 _CACHE.pop(next(iter(_CACHE)))
             
             # 🚨 Guard 2: Cache Immutability via Deep Copy
-            _CACHE[cache_key] = copy.deepcopy(result)
+            _CACHE[cache_key] = immutable_result
     
     # Overwrite dynamic fields
     result = replace(

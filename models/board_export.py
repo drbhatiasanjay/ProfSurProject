@@ -1271,7 +1271,7 @@ def build_topic_ai_narrative(
             command="board_topic_ai_narrative",
             tenant_id=scope,
             model=model,
-            filters={"company_code": company_code, "panel_mode": panel_mode, "title": title},
+            filters={"company_code": company_code, "panel_mode": panel_mode, "title": title, "role": role},
         )
         cached = db.ai_cache_get(cache_key, "cache-v2", model, ttl_hours=ttl_hours)
         if cached:

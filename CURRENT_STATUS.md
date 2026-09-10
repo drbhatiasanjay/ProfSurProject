@@ -287,10 +287,11 @@ the authentication/session issue non-blocking; no deployment, merge, or push.
   compatibility, failure, migration, and rollback gates.
 - Fingerprints remain identifiers/integrity metadata only; they are not an
   authorization control.
-- Slice 2 implementation is complete: legacy narrative/page callers use
-  authenticated username-derived cache scope; anonymous direct calls bypass
-  cache access. Focused verification: **89 passed, 10 warnings**. No Redis,
-  AST, or performance-improvement claim is included in this baseline.
+- Slice 2 implementation is complete: legacy narrative/page callers use an
+  authenticated shared-dataset scope; anonymous direct calls bypass cache
+  access, and role-sensitive narratives include role in the cache identity.
+  Focused verification: **90 passed, 10 warnings**. No Redis, AST, or
+  performance-improvement claim is included in this baseline.
 - Final authorization correction commit: `8bf9883`; published on
   `origin/experimental-performance-fixes`. Push-hook selection passed **146
   tests**.

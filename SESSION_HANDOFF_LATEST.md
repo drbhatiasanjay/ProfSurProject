@@ -80,8 +80,9 @@ available.
   **15 focused tests passed with 8 warnings**. Existing SQLite cache behavior
   is unchanged and legacy-caller integration remains the next scoped action.
 - Approved performance Slice 2 is complete: legacy page/narrative callers pass
-  authenticated username-derived cache scope; anonymous direct calls bypass
-  cache reads and writes. Focused result: **89 passed, 10 warnings**.
+  authenticated shared-dataset scope; anonymous direct calls bypass cache
+  reads and writes, with role included for role-sensitive narratives. Focused
+  result: **90 passed, 10 warnings**.
 - Baseline exclusions remain explicit: no AST implementation, production Redis,
   measured performance claim, or fingerprint-only security claim.
 - Published baseline: `8bf9883` on `origin/experimental-performance-fixes`.

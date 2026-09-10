@@ -1651,7 +1651,7 @@ def generate_econometric_narrative(
             command="econometric_narrative",
             tenant_id=authorized_cache_scope(username, role),
             model="claude-sonnet-4-6",
-            filters={"model_type": model_type, "panel_mode": panel_mode, "citations": citations},
+            filters={"model_type": model_type, "panel_mode": panel_mode, "citations": citations, "role": role},
         )
         cached = db.ai_cache_get(cache_key, "cache-v2", "claude-sonnet-4-6", ttl_hours=168)
         if cached:
@@ -1746,7 +1746,7 @@ def generate_page_insights(
             command=f"page_insights:{page}",
             tenant_id=authorized_cache_scope(username, role),
             model="claude-sonnet-4-6",
-            filters=filters,
+            filters={**filters, "role": role},
         )
         cached = db.ai_cache_get(cache_key, "cache-v2", "claude-sonnet-4-6", ttl_hours=24)
         if cached:
