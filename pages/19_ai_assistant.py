@@ -1048,6 +1048,7 @@ if user_q:
             reply_content,
             model_used="Stata-Engine",
             elapsed_s=0.05,
+            followups=st_turn.get("followups"),
             chart_spec=st_turn.get("chart_spec"),
         )
         st.rerun()
