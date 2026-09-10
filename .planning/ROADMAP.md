@@ -2,7 +2,7 @@
 
 ## Milestones
 
-- ✅ **v1.1 Advanced Analytics** — Phases 1–5 (shipped ~2026-04-22)
+- ✅ **v1.1 Advanced Analytics** — Phases 1–5 (historical implementation milestone; not blanket scientific validation)
 - ✅ **v1.2 Individual Company Intelligence** — Phases 6–7 (shipped 2026-05-10)
 - ✅ **v1.3 Automation & Analytical Depth** — Phases 8–11 (shipped 2026-05-10)
 - 📋 **v1.4** — To be defined
@@ -13,7 +13,7 @@
 <summary>✅ v1.1 Advanced Analytics (Phases 1–5) — SHIPPED ~2026-04-22</summary>
 
 - [x] Phase 1: Delta-Leverage Diagnostics (1/1 plans) — completed 2026-04-22
-- [x] Phase 2: System GMM (2/2 plans) — completed 2026-04-22
+- [x] Phase 2: Legacy GMM implementation (historical milestone; not System GMM validation) — completed 2026-04-22
 - [x] Phase 3: Stage Comparisons (1/1 plans) — completed 2026-04-22
 - [x] Phase 4: Advanced Econometrics Page (1/1 plans) — completed 2026-04-22
 - [x] Phase 5: Post-COVID Cohort Analysis (1/1 plans) — completed 2026-04-22
@@ -40,9 +40,18 @@ Full archive: `.planning/milestones/v1.3-ROADMAP.md`
 
 </details>
 
-### 📋 v1.4 Demo & Distribution
+### 📋 v1.4 Trustworthy Research Workbench
 
-- [ ] Phase 12: Professional Demo Production — stitch 16-section screen+voice recording into a polished MP4 with intro/outro, audio normalisation, fade transitions, chapter markers, and pre-flight validation
+- [ ] Phase 12: Explainability and grounded orchestration — query classification, evidence labels, visible action trace, and prompt-injection guardrails
+- [ ] Phase 13: Descriptive and statistical analyst — grounded summaries, statistical computations, sample disclosure, and reproducible result envelopes
+- [ ] Phase 14: Econometrics workbench — explicit estimator/covariance/sample provenance, typed errors, and post-estimation context isolation
+- [ ] Phase 15: Parallel simulations and perspectives — isolated seeds, disposable data copies, sensitivity comparison, and disagreement reporting
+- [ ] Phase 16: Advanced-capability validation gates — separate numerical and methodological gates for HDFE, IV, GMM, ML, DiD, and forecasting
+- [ ] Phase 17: Professional demo and distribution — demonstrate the completed trace, evidence, simulation, and guardrail flows
+
+Every phase follows: `DRAFT → ADVERSARIAL_REVIEW → RECONCILED → APPROVED →
+IMPLEMENTING → TARGETED_VERIFICATION → DEMO → INDEPENDENT_REVIEW → VERIFIED`.
+No phase is baselined from a first draft or reviewer label alone.
 
 ## Progress
 
