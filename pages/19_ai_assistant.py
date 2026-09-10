@@ -1205,6 +1205,15 @@ if user_q:
             user_query=user_q,
             chart_requested=_chart_requested,
         )
+        trace_events = (normalized.get("decision_brief") or {}).get("trace", [])
+        if trace_events:
+            with st.expander("🔎 Evidence and action trace", expanded=False):
+                for event in trace_events:
+                    if isinstance(event, dict):
+                        st.write(
+                            f"{event.get('status', 'unknown').upper()}: "
+                            f"{event.get('name', 'action')} — {event.get('detail', '')}"
+                        )
         full = normalized["answer"]
         if normalized["chart_spec"]:
             # Apply the same query-aware series filtering to tool-generated

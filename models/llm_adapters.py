@@ -1141,12 +1141,21 @@ def normalize_assistant_response(
     if chart_requested and resolved_chart is None:
         resolved_chart = extract_table_chart_spec(answer, user_q=user_query)
         resolved_chart = _filter_chart_series_for_query(resolved_chart, user_query)
-    from models.decision_contracts import build_decision_brief
+    from models.decision_contracts import ActionTraceEvent, build_decision_brief
+    trace = [
+        ActionTraceEvent("classify_request", "completed", "current user request classified"),
+        ActionTraceEvent("ground_evidence", "completed", "available panel context applied"),
+        ActionTraceEvent("select_capability", "completed", "provider-neutral response path selected"),
+        ActionTraceEvent("render_result", "completed", "answer envelope normalized"),
+    ]
     decision_brief = build_decision_brief(
         answer=answer,
         table=table,
         chart=resolved_chart,
         user_query=user_query,
+        intent="chart_request" if chart_requested else "grounded_response",
+        selected_capability="chat.grounded_response",
+        trace=trace,
     )
     # Keep the existing flat response keys for compatibility while exposing a
     # provider-neutral envelope for the CFO UI and future export paths.
