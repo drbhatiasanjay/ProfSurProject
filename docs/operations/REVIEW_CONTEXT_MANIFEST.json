@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "purpose": "bounded independent planning review",
+  "required_context": [
+    "docs/operations/CONTEXT_PACK.md",
+    "docs/operations/INDEPENDENT_REVIEW_HARNESS_SPEC.md",
+    "docs/planning/FDI_ADOPTION_MATRIX.md",
+    ".planning/phases/12-explainable-grounded-orchestration/12-01-PLAN.md",
+    "docs/CAPABILITY_STATUS.md"
+  ],
+  "allowed_actions": ["read_committed_files", "return_structured_review"],
+  "forbidden_actions": [
+    "edit_application",
+    "edit_tests",
+    "run_unbounded_tests",
+    "commit",
+    "push",
+    "deploy",
+    "create_pr",
+    "modify_credentials",
+    "expose_private_chain_of_thought"
+  ],
+  "required_outputs": [
+    "adjudication_table",
+    "evidence",
+    "risk",
+    "required_change",
+    "final_verdict"
+  ],
+  "advanced_capabilities": "remain_non_validated_without_separate_numerical_methodological_and_reproducibility_evidence"
+}

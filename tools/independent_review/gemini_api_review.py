@@ -25,6 +25,7 @@ DEFAULT_FILES = (
     ".planning/phases/12-explainable-grounded-orchestration/12-01-PLAN.md",
     "docs/CAPABILITY_STATUS.md",
 )
+MANIFEST = "docs/operations/REVIEW_CONTEXT_MANIFEST.json"
 
 
 def git_show(sha: str, path: str) -> str:
@@ -40,6 +41,10 @@ def git_show(sha: str, path: str) -> str:
 
 def snapshot(sha: str, paths: tuple[str, ...]) -> tuple[str, dict[str, str]]:
     subprocess.run(["git", "cat-file", "-e", f"{sha}^{{commit}}"], check=True)
+    manifest = json.loads(git_show(sha, MANIFEST))
+    declared = tuple(manifest["required_context"])
+    if declared != paths:
+        raise RuntimeError("review manifest does not match adapter context paths")
     files = {path: git_show(sha, path) for path in paths}
     payload = json.dumps(files, sort_keys=True, ensure_ascii=False).encode()
     return hashlib.sha256(payload).hexdigest(), files
