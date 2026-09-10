@@ -129,3 +129,15 @@ All future feature work is restricted to exactly two isolated, TDD-governed work
 - Historical Artifacts: `implementation_plan.md` (Last Write: `06-09-2026 00:14:39 IST`), `walkthrough.md` (`05-09-2026 23:41:36 IST`).
 - Canonical Implementation Plan: `docs/CANONICAL_IMPLEMENTATION_PLAN.md`
 - Master Milestone Log: `SESSION_LOG.md`
+
+## 13. Authorized Wave 6 Status (2026-09-10)
+
+The user explicitly authorized Wave 6 as a new PRD-backed workstream despite
+the earlier two-workstream closure. Slice A is complete on `master`: the
+provider-neutral validation ledger and profile/capability matrix are present,
+with 4 focused tests passing. No analytical capability has been promoted to
+`VALIDATED`; independent numerical and assumption evidence is the next gate.
+
+References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,
+`docs/operations/WAVE6_VALIDATION_MATRIX.md`, and
+`docs/implementation-reports/WAVE6_VALIDATION_REPORT.md`.

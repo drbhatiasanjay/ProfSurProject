@@ -265,3 +265,18 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - **Targeted Regression (Stata Studio + AI Chat):** 109 passed, 1 skipped, 0 failures (4.14s).
 - **Deployment Status:** **PR #4 CREATED AND READY FOR MERGE**.
 
+---
+
+# Wave 6 Validation Workbench — Slice A (2026-09-10)
+
+- Authorized by user as a new workstream after the prior canonical closure.
+- Added immutable `ValidationRecord` and fail-closed derived release status in
+  `models/validation_ledger.py`.
+- Added real-role profile/capability matrix and GitHub-ready Wave 6 report.
+- Verification: `tests/test_validation_ledger.py` — **4 passed**.
+- Promotion: no capability promoted; numerical, assumption, reproducibility,
+  and independent-review gates remain open for later slices.
+- Resume point: implement independent IV/HDFE benchmark contracts and run the
+  role authorization matrix; preserve the separate known `skumar` page-routing
+  issue as a tracked UI defect.
+
