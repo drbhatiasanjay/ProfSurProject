@@ -1,6 +1,6 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Operational Status
 
-**Last Updated:** 2026-09-08
+**Last Updated:** 2026-09-10
 **Operational Role:** Single canonical source of operational truth and resume point
 
 ---
@@ -10,7 +10,7 @@
 - **Repository:** `C:\Users\hemas\Downloads\ProfSurProject`
 - **Authorized workspace:** ProfSurProject only
 - **Active branch:** `reconcile/wave5-independent-review-repair-2026-09-08`
-- **Review state:** `WAVE_5_CLOSURE_BLOCKED`
+- **Review state:** `WAVE_5_CORE_BASELINE_PASS`
 - **No deployment or master merge is authorized from this checkpoint.**
 
 ## 2. Git and Lineage State
@@ -209,3 +209,20 @@ Independent re-review only:
   treated as source-code evidence.
 
 **Final verdict:** `WAVE_5_CLOSURE_BLOCKED`
+
+## 12. Current Core Baseline Closure (2026-09-10)
+
+The historical blocked verdict above is superseded by the final closure transaction below.
+
+- `FINAL_APPLICATION_CODE_CANDIDATE_SHA`: `5c02509f18b1fa8cb2070f88d78fb2cf5393e48f`
+- `INDEPENDENT_REVIEW_COMMIT`: `2d888841dde56a4fd1fae562d0c770d6b2a55da5`
+- `CI_CLOSURE_REPAIR_COMMIT`: `527530b1bf08d2c0ac2770f405c66941a423ce32`
+- `CLOSURE_WORKFLOW`: [Test and Deploy run 34438698064](https://github.com/drbhatiasanjay/ProfSurProject/actions/runs/34438698064)
+- Workflow result: Python 3.11 and OCaml jobs passed; deployment was skipped on this reconciliation branch.
+- Independent verdicts: native Playwright PASS; methodology review PASS.
+- Canonical full automation remains historical `871 passed, 1 skipped, 37 warnings`; the `852 passed` result remains superseded historical evidence.
+- Advanced capabilities remain non-validated. This is an engineering/truthfulness baseline, not blanket scientific validation.
+- Graphify report header retains stale build metadata `219e7768`; the inconsistency is recorded as tooling provenance and does not alter the source tree finding.
+- Final closure head is the documentation commit containing this section and the durable closure packet.
+
+**Current verdict:** `WAVE_5_CORE_BASELINE_PASS`

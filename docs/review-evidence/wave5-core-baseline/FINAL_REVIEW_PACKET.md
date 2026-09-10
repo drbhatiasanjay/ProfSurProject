@@ -52,3 +52,21 @@ Inspect the final code candidate and the published evidence. Distinguish product
 ## Current result
 
 Core engineering evidence is substantially complete, but the closure gate remains **BLOCKED** until both qualifying independent verdicts exist. No PR, merge, deployment, or Wave 6 action is authorized by this packet.
+
+## Final closure addendum (2026-09-10)
+
+The historical blocked conclusion above is superseded by the qualifying review
+and successful closure workflow.
+
+- Final application candidate: `5c02509f18b1fa8cb2070f88d78fb2cf5393e48f`
+- Independent evidence commit: `2d888841dde56a4fd1fae562d0c770d6b2a55da5`
+- CI closure repair/current branch head: `527530b1bf08d2c0ac2770f405c66941a423ce32`
+- Workflow: [Test and Deploy run 34438698064](https://github.com/drbhatiasanjay/ProfSurProject/actions/runs/34438698064) — PASS; deployment skipped.
+- `NATIVE_PLAYWRIGHT_ACCEPTANCE = PASS`; `INDEPENDENT_METHODOLOGY_REVIEW = PASS`.
+- `PLAYWRIGHT_PASS journeys=4 commands=19`.
+- All 14 core-baseline gates are PASS. The detailed matrix is in `WAVE_5_CORE_BASELINE_CLOSURE.md`.
+- This is an engineering/truthfulness baseline. Advanced methods remain non-validated.
+- `852 passed` remains historical/superseded; `871 passed, 1 skipped, 37 warnings` remains the latest existing canonical full result. No new full-suite result is claimed.
+- Graphify’s `219e7768` header mismatch and reviewer evidence limitations remain transparently recorded.
+
+**WAVE_5_CORE_BASELINE_GATE = PASS**

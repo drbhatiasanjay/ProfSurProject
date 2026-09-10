@@ -298,3 +298,15 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - Verification: fast 242 passed/1 skipped; targeted 153 passed; full 871 passed/1 skipped;
   reusable UI verifier passed four journeys; real-data audit passed with unchanged hashes.
 - Resume point remains `READY_FOR_INDEPENDENT_RE_REVIEW` pending a fresh independent gate.
+
+# ProfSurProject — Session Log (2026-09-10 Final Core Baseline Closure)
+
+- Canonical application candidate: `5c02509f18b1fa8cb2070f88d78fb2cf5393e48f`.
+- CI repair/current branch head: `527530b1bf08d2c0ac2770f405c66941a423ce32`.
+- The bounded suite passed under Python 3.12 with PyFixest 0.60.0: `132 passed, 1 warning`.
+- Closure workflow [34438698064](https://github.com/drbhatiasanjay/ProfSurProject/actions/runs/34438698064) passed Python 3.11 and OCaml; deployment was skipped.
+- Fresh independent review passed native Playwright and methodology gates; marker: `PLAYWRIGHT_PASS journeys=4 commands=19`.
+- Wave 5 core baseline is closed as an engineering/truthfulness baseline. Advanced methods remain non-validated.
+- Historical `852 passed` remains superseded by the existing `871 passed, 1 skipped, 37 warnings` result; no new full-suite count is claimed.
+- Graphify’s stale `219e7768` header remains recorded as tooling provenance.
+- Closure documentation commit is the current resume boundary; no PR, merge, deployment, or Wave 6 action was performed.

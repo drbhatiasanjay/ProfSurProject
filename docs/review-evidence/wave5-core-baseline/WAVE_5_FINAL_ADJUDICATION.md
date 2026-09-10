@@ -33,3 +33,20 @@ The independent gates remain **BLOCKED**, because the artifact itself reports na
 - No accepted repair is required. `FINAL_CODE_CANDIDATE_SHA` remains `d5ffdf2b2d9f77d3f4f83bd2bf90a19475d4001f`.
 
 This adjudication does not self-certify the two independent gates. A qualifying reviewer must return separate verdicts against the final code candidate: `NATIVE_PLAYWRIGHT_ACCEPTANCE = PASS | BLOCKED` and `INDEPENDENT_METHODOLOGY_REVIEW = PASS | BLOCKED`, with evidence sufficient for adjudication.
+
+## Final closure addendum (2026-09-10)
+
+The prior blocked statements are historical and are superseded by the fresh
+implementation-independent evidence published in
+`docs/review-evidence/wave5-final-qualifying-independent-review/`.
+
+- Final application candidate: `5c02509f18b1fa8cb2070f88d78fb2cf5393e48f`
+- Independent review commit: `2d888841dde56a4fd1fae562d0c770d6b2a55da5`
+- CI closure repair/current branch head: `527530b1bf08d2c0ac2770f405c66941a423ce32`
+- Closure workflow: [34438698064](https://github.com/drbhatiasanjay/ProfSurProject/actions/runs/34438698064) — PASS; Python and OCaml jobs passed and deployment was skipped.
+- `NATIVE_PLAYWRIGHT_ACCEPTANCE = PASS` with `PLAYWRIGHT_PASS journeys=4 commands=19`.
+- `INDEPENDENT_METHODOLOGY_REVIEW = PASS`.
+- All 14 core-baseline gates are PASS; see `WAVE_5_CORE_BASELINE_CLOSURE.md`.
+- The baseline is an engineering/truthfulness closure, not scientific validation of advanced methods.
+- Historical `852 passed` remains superseded by the existing canonical `871 passed, 1 skipped, 37 warnings`; no new full-suite count is claimed here.
+- Graphify’s stale `219e7768` header remains recorded as tooling provenance.
