@@ -1,7 +1,7 @@
 # Wave 6 Validation Report
 
 **Date:** 2026-09-10
-**Current state:** Slice A complete; Wave 6 remains `IN_PROGRESS`
+**Current state:** Slices A–B complete; Wave 6 remains `IN_PROGRESS`
 
 ## Completed
 
@@ -20,6 +20,21 @@
 
 Result: **4 passed**.
 
+Slice B verification:
+
+`PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 py -3.12 -m pytest tests/test_benchmark_contracts.py tests/test_validation_ledger.py -q`
+
+Result: **7 passed**.
+
+## Slice B implementation
+
+- Added `models/benchmark_contracts.py` for independent reference comparison.
+- Enforced benchmark identity, covariance identity, exact coefficient terms,
+  finite numeric output, sample accounting, and explicit coefficient/SE
+  tolerance results.
+- Added red-team coverage for missing terms, tolerance failure, covariance
+  mismatch, and inconsistent effective samples.
+
 ## Not yet approved
 
 No IV, GMM, HDFE, ML, DiD, forecasting, or scenario capability is marked
@@ -28,5 +43,6 @@ independent review evidence remain required in later slices.
 
 ## Next slice
 
-Build independent IV/HDFE benchmark fixtures with sample and covariance audits,
+Build the actual independent IV/HDFE fixture runners only after the missing
+Wave 5 adapter modules are restored or explicitly scoped into this workstream;
 then run the profile authorization matrix against the public application gates.

@@ -134,8 +134,8 @@ All future feature work is restricted to exactly two isolated, TDD-governed work
 
 The user explicitly authorized Wave 6 as a new PRD-backed workstream despite
 the earlier two-workstream closure. Slice A is complete on `master`: the
-provider-neutral validation ledger and profile/capability matrix are present,
-with 4 focused tests passing. No analytical capability has been promoted to
+provider-neutral validation ledger, profile/capability matrix, and independent
+benchmark contract are present, with 7 focused tests passing. No analytical capability has been promoted to
 `VALIDATED`; independent numerical and assumption evidence is the next gate.
 
 References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,

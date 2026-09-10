@@ -280,3 +280,11 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
   role authorization matrix; preserve the separate known `skumar` page-routing
   issue as a tracked UI defect.
 
+## Wave 6 Slice B checkpoint
+
+- Added `models/benchmark_contracts.py` with independent-reference comparison
+  and sample/covariance integrity checks.
+- Verification: `tests/test_benchmark_contracts.py` + ledger — **7 passed**.
+- No estimator was promoted. Actual IV/HDFE execution remains blocked by the
+  canonical branch's missing Wave 5 adapter modules.
+
