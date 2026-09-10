@@ -321,3 +321,173 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - Verdict: PASS. All constraints and criteria met.
 - Documentation created at docs/operations/FINAL_INDEPENDENT_REVIEW.md.
 
+# ProfSurProject — Session Log (2026-09-10 Phase 12 Reconciliation)
+
+- Reconciled Phase 12 planning state from `DRAFT` to `IMPLEMENTED` after the
+  committed independent review verdict `PASS`.
+- Preserved `VERIFIED` as pending because targeted pytest runs stalled before
+  collection under the known local `napari` plugin condition.
+- Updated the next action to the plugin-isolated targeted tests and bounded UI
+  acceptance gate.
+- Deferred the Google GenAI SDK import from module load to the Gemini call
+  path; Phase 12 contract/provider tests then passed: 86 passed in 23.22s.
+- Ran the repository four-user Playwright matrix with its configured test
+  users under elevated browser permissions; it produced no progress within the
+  bounded runtime and was interrupted. UI acceptance remains pending.
+- Regenerated the configured bcrypt test-user hashes, restarted Streamlit, and
+  reran the matrix successfully: all four users, both themes, and Stata Studio
+  estimation passed. Phase 12 verification is closed.
+
+# ProfSurProject — Session Log (2026-09-10 Active Orchestration Framework)
+
+- Recorded the operating model in
+  `docs/operations/AGENT_ORCHESTRATION_FRAMEWORK.md`.
+- Codex remains goal owner and integration authority; Gemini is a bounded,
+  evidence-producing worker through the approved SDK/API path when available.
+- Roadmap work remains phase-gated through tests, evidence, independent review,
+  and checkpoints.
+
+# ProfSurProject — Session Log (2026-09-10 Phase 13 Implementation)
+
+- Drafted and locally adversarially reviewed the bounded Phase 13 plan.
+- Added deterministic `describe_panel()` with typed fail-closed errors and
+  canonical `AnalysisRun` provenance.
+- Regression evidence: Phase 12/13/orchestration selection passed 13 tests with
+  one warning; compilation and targeted diff checks passed.
+- Integrated `describe_financial_database` into the Gemini tool list and added
+  deterministic visible metadata rendering for panel, sample, grounding, and
+  source fingerprint. Regression selection passed 14 tests with one warning.
+- The live Gemini UI journey was blocked before launch by the external-data
+  destination gate. No database/context payload was transmitted; local app was
+  stopped and the handoff was updated with the required approval point.
+- Added database-tool refusal and source-immutability tests; the Phase 13
+  contract/integration selection now passes 16 tests with one warning.
+- Delegated the same verification through the local Antigravity `/run` API;
+  HTTP 200 and 16 tests passed with one warning.
+- Approved targeted project tier passed 167 tests in 65.22s. Published the
+  Phase 13 implementation report with boundaries and remaining external UI gate.
+
+# ProfSurProject — Session Log (2026-09-10 Restart-Safe Handoff)
+
+- Created `SESSION_HANDOFF_LATEST.md` as the canonical reboot recovery packet.
+- Included active goal, current checkpoints, service startup commands, test and
+  UI verification parameters, Gemini/Antigravity operating boundaries, and
+  credential references without copying secret values.
+
+# ProfSurProject — Session Log (2026-09-10 Codex/Antigravity Link)
+
+- Started the local Antigravity orchestration API at `127.0.0.1:8000`.
+- Authenticated `/run` with the local HS256 orchestration secret and received
+  `Orchestrator Link Established`.
+- Added `.agents/mcp_config.json` for the installed codebase-memory MCP and
+  `.agents/hooks.json` for workspace-open status checks.
+- Verified both configuration files through the orchestration `/run` endpoint.
+
+# ProfSurProject — Session Log (2026-09-10 Autonomous Gate Update)
+
+- Added the mandatory pre-action challenge and post-implementation adversarial
+  review gate to `docs/operations/AGENT_ORCHESTRATION_FRAMEWORK.md`.
+- Live Gemini UI acceptance was attempted with explicit user approval. The
+  protected route exposed the custom login screen, but the current Playwright
+  harness could not reliably select its username field; no auth bypass or
+  unapproved data transmission occurred.
+- Recorded non-blocking `ISSUE-13-UI-AUTH` in the restart handoff, status, and
+  Phase 13 report. Deterministic Phase 13 verification remains green:
+  **16 passed, 1 warning**; `git diff --check` passed.
+- Core fast tier initially exposed two Gemini adapter failures. The SDK module
+  compatibility import was repaired while keeping credential lookup lazy;
+  isolated Gemini tests passed **2/2**, then canonical fast tier passed **146**.
+- Authenticated core UI matrix passed for all four established users, both
+  themes, and Stata estimation.
+- Converted that matrix into the canonical local `project_ops.py regression`
+  gate after the fast core tier; the combined command passed end to end.
+- Adversarial review caught process-randomized descriptive run IDs. Replaced
+  them with stable SHA-256 IDs and added regression coverage; focused gate
+  passed **11 tests**.
+- Phase 13 advanced to `TARGETED_VERIFICATION`; conditional independent review
+  accepted the deterministic implementation. Live UI metadata acceptance stays
+  pending under `ISSUE-13-UI-AUTH`.
+- Follow-up UI attempt authenticated successfully, but `/ai_assistant` returned
+  to the dashboard without a chat input. Refined `ISSUE-13-UI-AUTH`; no bypass
+  was used and live acceptance remains unclaimed.
+- A bounded sidebar probe reproduced the issue as an authenticated session with
+  no visible sidebar links or chat input. Preserved as the only pending Phase
+  13 demo gate; deterministic and role-matrix evidence remain green.
+- Recorded Antigravity’s valid routing lesson: root login plus physical sidebar
+  click is authoritative for Streamlit navigation. Its older adversarial
+  artifacts were qualified as out of scope for Phase 13 evidence.
+- Continued Codex design work while Antigravity testing runs: added the Phase
+  13 UI specification and repaired Gemini descriptive calls to forward active
+  panel filters. Focused verification passed **33 tests**; unrelated page
+  whitespace remains preserved.
+- Antigravity’s Phase 13 run exposed that lifecycle-stage grouping was absent
+  from the deterministic allowlist. Added `life_stage` support and a grouped
+  summary regression; focused verification passed **29 tests**.
+- Antigravity passed the repaired Phase 13 UI metadata journey. Native
+  `AnalysisRun` rendering and deterministic descriptive preflight are accepted;
+  Phase 13 promoted to `VERIFIED`.
+- Reviewed and approved D-EXH-001, D-AGY-001, and D-AGY-002 remediations with
+  regression evidence; advanced scientific capabilities remain unvalidated.
+- Re-audited Antigravity's new Phase 13 evidence. UI and backend JSON reports
+  pass; the GMM lag-cap harness passes lag 4 and rejects lag 5 with typed
+  `INVALID_INSTRUMENT_SPEC`. The IV offensive scaffold skipped because no
+  local `ivregress_adapter` exists, so IV remains `IMPLEMENTED_UNVERIFIED`.
+- New baseline checkpoint: `HEAD 74ffadef74de1341f1af718cce653e36f8779a3a`;
+  canonical fast tier **203 passed**; diff check passed. Phase 13 is approved
+  as `VERIFIED`; Phase 14 is the next planning gate.
+- Phase 14 completed end to end within the bounded engineering scope:
+  estimation provenance was unified, focused contracts passed **23 tests**, and
+  the canonical fast tier passed **203 tests**. Roadmap and handoff now mark
+  Phase 14 `VERIFIED`; advanced scientific validation remains deferred.
+- Re-audited Antigravity's later QA handoff. The new adapter harness is useful
+  boundary evidence, but ML is `partial`, Session A in the state-bleed harness
+  errors, and the older JSON still records A-01/A-04/A-05 failures. Added a
+  Codex qualification to the QA report; no blanket adversarial sign-off or PR
+  action was authorized.
+- Phase 15 completed: added deterministic isolated simulation orchestration with
+  source/branch fingerprints, sensitivity deltas, and explicit perspective
+  disagreement reporting. Focused tests passed **6** and canonical fast tier
+  passed **203**; Phase 15 is now `VERIFIED` within engineering scope.
+- User-approved roadmap consolidation: Phase 16 and Phase 17 are now one
+  delivery program with two mandatory sub-gates—advanced numerical/methodological
+  validation first, then evidence-backed demo/distribution. Antigravity testing
+  may support the demo gate but cannot replace scientific validation.
+- Combined Phase 16–17 Gate A executed: advanced numerical/contract selection
+  passed **14 tests with 1 warning** after HDFE absorb fail-closed validation was
+  added. Methodological validation remains open,
+  so the combined program is correctly recorded as `GATE A PARTIAL`; no
+  advanced capability was promoted and Gate B is restricted to truthful flows.
+- Reproduced Antigravity's Phase 16 benchmark: IV/HDFE synthetic coefficient
+  differences were 0.009980/0.010918 under tolerance. The 50-request load
+  harness had zero crashes but all requests were handled errors; qualified as
+  no-crash load evidence only. Phase 17 remains incomplete with baseline-only
+  UI evidence.
+- User clarified priority: suspend optimization work and focus Codex execution
+  on completing combined Phase 16–17. Added the ownership and completion-gate
+  contract in `docs/operations/CODEX_PHASE16_17_EXECUTION_SCOPE.md`.
+
+- User requested closure and transition. Combined Phase 16–17 is recorded as
+  `CLOSED — QUALIFIED`, preserving unresolved methodological validation and
+  incomplete demo evidence for Wave 6. Wave 6 design is now the active next
+  wave.
+- Restart-safe synchronization checkpoint refreshed: branch, HEAD, qualified
+  Phase 16–17 closure, Wave 6 active design, evidence qualification, and the
+  GitHub-ready evidence rule in `AGENTS.md` are reflected in
+  `SESSION_HANDOFF_LATEST.md` and `CURRENT_STATUS.md`.
+- Cross-checked Antigravity's performance architecture claims. The prompt file
+  is absent; SQLite AI caching exists, model artifacts are host-local pickle
+  files, and Stata parsing is regex/token based. Focused audit passed **32 tests
+  with 8 warnings**. Current implementation is frozen; redesign is deferred to
+  a separately evidenced Wave 6 plan.
+- User approved scoped performance architecture work. Implemented canonical
+  cache identity construction with dataset/tenant/command/model/filter inputs;
+  focused cache validation passed **15 tests with 8 warnings**. Distributed
+  cache and AST parser redesign remain deferred pending dedicated plans.
+- Deep research and adversarial architecture review completed. Recorded
+  `docs/design/PERFORMANCE_ARCHITECTURE_RESEARCH_AND_PLAN.md`: approve legacy
+  caller integration plus trusted authorization context; gate distributed
+  cache and AST migration behind topology/locking/eviction/failure/rollback or
+  grammar/compatibility evidence; reject fingerprint-only authorization.
+- Implemented the approved legacy-caller slice. Authenticated page callers now
+  pass trusted username-derived cache scope; anonymous direct adapter calls
+  bypass cache access. Focused verification: **89 passed, 10 warnings**.

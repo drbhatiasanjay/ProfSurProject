@@ -1228,6 +1228,7 @@ def build_topic_ai_narrative(
     panel_mode: str = "thesis",
     role: str = "researcher",
     citations: bool = False,
+    username: str = "",
 ) -> str:
     """Generate a 100-150 word board-ready prose paragraph for any topic result.
 
@@ -1236,6 +1237,7 @@ def build_topic_ai_narrative(
     """
     import hashlib, json as _json
     import db
+    from models.cache_keys import authenticated_cache_scope, build_cache_key
     from models.llm_adapters import build_company_context, stream_anthropic
 
     # Build a compact text summary from the topic result
@@ -1259,20 +1261,27 @@ def build_topic_ai_narrative(
         f"Reference specific numbers. Do not use bullet points."
     )
 
-    query_hash = hashlib.sha256(prompt.encode()).hexdigest()[:16]
-    ctx_hash = hashlib.sha256(ctx.encode()).hexdigest()[:16]
     model = "claude-sonnet-4-6"
     ttl_hours = 168  # 7 days — company data is rarely refreshed intraday
-
-    cached = db.ai_cache_get(query_hash, ctx_hash, model, ttl_hours=ttl_hours)
-    if cached:
-        return cached
+    cache_key = None
+    if username:
+        scope = authenticated_cache_scope(username, role)
+        cache_key = build_cache_key(
+            dataset_fingerprint=hashlib.sha256(ctx.encode()).hexdigest(),
+            command="board_topic_ai_narrative",
+            tenant_id=scope,
+            model=model,
+            filters={"company_code": company_code, "panel_mode": panel_mode, "title": title},
+        )
+        cached = db.ai_cache_get(cache_key, "cache-v2", model, ttl_hours=ttl_hours)
+        if cached:
+            return cached
 
     messages = [{"role": "user", "content": prompt}]
     response = "".join(stream_anthropic(messages, system=ctx, model=model,
                                         role=role, citations=citations))
-    if response:
-        db.ai_cache_set(query_hash, ctx_hash, model, response)
+    if response and cache_key:
+        db.ai_cache_set(cache_key, "cache-v2", model, response)
     return response
 
 

@@ -191,7 +191,8 @@ with st.expander("🤖 AI Insights", expanded=False):
         with st.spinner("Generating AI analysis..."):
             st.session_state["dash_ai"] = "".join(
                 generate_page_insights("dashboard", _d_summary, st.session_state.filters,
-                                       role=_user_role, citations=_citations)
+                                       role=_user_role, citations=_citations,
+                                       username=st.session_state.get("user", {}).get("username", ""))
             )
     if st.session_state.get("dash_ai"):
         st.markdown(st.session_state["dash_ai"])

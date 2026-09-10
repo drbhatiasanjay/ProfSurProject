@@ -406,6 +406,7 @@ if st.session_state.get("deck_previewed"):
                         st.session_state[_ai_key] = build_topic_ai_narrative(
                             topic_data, company_code,
                             panel_mode=panel_mode, role=_user_role, citations=_citations,
+                            username=_username,
                         )
                 if st.session_state.get(_ai_key):
                     with st.expander("🤖 Board AI Narrative", expanded=True):

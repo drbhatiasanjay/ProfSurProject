@@ -564,6 +564,7 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
                         panel_mode=_panel,
                         role=_user_role,
                         citations=_citations,
+                        username=st.session_state.get("user", {}).get("username", ""),
                     )
                 )
         if st.session_state.get(_ai_key):

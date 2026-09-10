@@ -171,13 +171,126 @@ or fail closed with a typed user-visible error before estimation.
 - No original Wave 5 PR.
 - No merge into `master`.
 - No deployment.
-- No Wave 6.
+- No Wave 6 implementation was performed before the qualified Wave 1.4 closure.
 - No force-push, broad stash, branch deletion, `git clean`, or hard reset.
 - No unrelated untracked files staged or committed.
 
 ## 11. Next Authorized Action
 
-Independent re-review only:
+Wave 6 planning/design is active. Preserve the Phase 13/14/15 evidence and keep
+the authentication/session issue non-blocking; no deployment, merge, or push.
+
+## 17. Phase 13 Antigravity Re-review Baseline (2026-09-10)
+
+- Antigravity Phase 13 UI evidence independently rechecked:
+  `AGY_ADVERSARIAL_TRACK/agy_defects/phase13_ui_defect_report.json` is
+  `PASS`; required metadata is present and no leak markers were reported.
+- Antigravity backend evidence independently rechecked:
+  `phase13_backend_report.json` passes grouped summaries, invalid-variable,
+  empty-sample, and reproducibility scenarios.
+- D-AGY-002 is approved as a safety-boundary remediation: the live adapter
+  allows requested lag 4 to proceed and rejects lag 5 with typed
+  `INVALID_INSTRUMENT_SPEC` before estimation. This is not scientific GMM
+  validation.
+- The new IV offensive harness is **not a validation result**: it skips because
+  `models.ivregress_adapter` is not present in this workspace. `ivregress`
+  remains `IMPLEMENTED_UNVERIFIED` and requires a real adapter/backend test in
+  Phase 16.
+- Phase 13 remains **VERIFIED**. New operational baseline is this `HEAD`
+  (`74ffadef74de1341f1af718cce653e36f8779a3a`) plus the reproducible evidence
+  above. No deployment, merge, or push is authorized.
+
+## 18. Phase 14 Checkpoint (2026-09-10)
+
+- Phase 14 is **VERIFIED** for its engineering contract scope.
+- Estimation results now carry estimator, covariance, requested command,
+  effective sample count, sample columns, and deterministic sample fingerprint.
+- Focused Phase 14/post-estimation/IV selection: **23 passed**; canonical fast
+  tier: **203 passed**.
+- Advanced methods remain `IMPLEMENTED_UNVERIFIED` or `CANDIDATE`; this is not
+  scientific validation. Next roadmap gate is Wave 6 implementation planning.
+
+## 19. Antigravity QA Qualification (2026-09-10)
+
+- The new causal/ML harness executes real adapter calls and confirms safe IV,
+  HDFE, and DiD boundary behavior; ML returns the expected `partial` status.
+- The state-bleed harness confirms cross-session rejection and no-active-model
+  refusal, but its Session A setup also errors, so it is not a clean successful
+  end-to-end journey.
+- Older Antigravity JSON still records A-01, A-04, and A-05 as failures, and no
+  `AGY_ADVERSARIAL_TRACK/agy_defects/exhaustive/` directory was found. These
+  claims remain qualified; no blanket adversarial sign-off is recorded.
+
+## 20. Phase 15 Checkpoint (2026-09-10)
+
+- Phase 15 is **VERIFIED** for its orchestration contract scope.
+- `models/parallel_simulations.py` now provides deterministic isolated branches,
+  disposable copies, source/branch fingerprints, sensitivity deltas, and
+  explicit perspective disagreement states.
+- Focused Phase 15 tests: **6 passed**; canonical fast tier: **203 passed**.
+- No causal counterfactual or advanced estimator validation was claimed. Next
+  roadmap gate is Wave 6 implementation planning.
+
+## 21. Combined Phase 16–17 Gate A Status (2026-09-10)
+
+- Numerical engineering selection: **14 passed, 1 warning** after adding
+  pre-estimation HDFE absorb-variable validation; canonical fast tier remains
+  **203 passed**.
+- Gate A is **PARTIAL**, not VERIFIED: methodological validation remains open
+  for IV, GMM, HDFE, ML, DiD, and forecasting.
+- Gate B demo/distribution is limited to verified trace, provenance, isolated
+  simulations, guardrails, and typed errors; advanced estimator demos must show
+  their unvalidated status.
+- Evidence: `docs/implementation-reports/PHASE_16_17_GATE_A_STATUS.md`.
+- Antigravity benchmark reproduction: IV diff **0.009980**, HDFE diff
+  **0.010918** under the stated synthetic tolerance. Its 50-request load test
+  had zero crashes but 50 handled errors; no successful-throughput or perfect
+  thread-safety claim is accepted. Phase 17 has only baseline UI evidence.
+- Codex execution scope and ownership split:
+  `docs/operations/CODEX_PHASE16_17_EXECUTION_SCOPE.md`. Optimization work is
+  out of scope for this checkpoint.
+
+## 22. Wave 1.4 Closure and Wave 6 Handoff (2026-09-10)
+
+- Combined Phase 16–17 is **CLOSED — QUALIFIED**.
+- Numerical/engineering evidence is accepted; methodological validation and
+  complete professional demo evidence were not promoted to VERIFIED.
+- Unresolved advanced-capability validation is transferred to Wave 6, whose
+  design is recorded in `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`.
+- Next active roadmap item: Wave 6 validation-ledger and evidence-packet
+  planning. No capability status changes were made.
+
+## 23. Performance Cross-check and Scoped Implementation (2026-09-10)
+
+- Performance redesign was not applied. `CODEX_PERFORMANCE_PROMPT.md` is absent
+  from the workspace.
+- Current AI response cache is SQLite-backed; model artifacts remain local
+  pickle files; the Stata parser remains regex/token based.
+- Cache/parser/Phase 14/Phase 15 focused verification: **32 passed, 8 warnings**.
+- Current implementation is frozen except for the approved cache-identity
+  slice. Any distributed cache, tenant-key migration, or AST parser requires a
+  separate plan and evidence packet.
+
+## 24. Approved Performance Slice 1 (2026-09-10)
+
+- `models/cache_keys.py` implements canonical cache identity from dataset
+  fingerprint, tenant scope, command, model, filters, and schema version.
+- Focused cache verification: **15 passed, 8 warnings**.
+- SQLite AI-cache behavior remains unchanged; the new helper is not yet wired
+  into every legacy caller. Integration is the next scoped performance action.
+## 25. Wave 6 Performance Architecture Decision (2026-09-10)
+- Formal challenge and research plan: `docs/design/PERFORMANCE_ARCHITECTURE_RESEARCH_AND_PLAN.md`.
+- Approved next slice: integrate canonical cache identity through legacy callers
+  and require trusted authorization scope before cache lookup/population.
+- Not approved for implementation yet: Redis/distributed cache rollout or a
+  big-bang AST parser rewrite. Both require their documented topology/grammar,
+  compatibility, failure, migration, and rollback gates.
+- Fingerprints remain identifiers/integrity metadata only; they are not an
+  authorization control.
+- Slice 2 implementation is complete: legacy narrative/page callers use
+  authenticated username-derived cache scope; anonymous direct calls bypass
+  cache access. Focused verification: **89 passed, 10 warnings**. No Redis,
+  AST, or performance-improvement claim is included in this baseline.
 
 1. Review the successor diff against immutable commit `88ab5c2`.
 2. Re-run bounded parser/runtime, covariance, scenario, HDFE, GMM-label, and UI gates.
@@ -226,3 +339,94 @@ The historical blocked verdict above is superseded by the final closure transact
 - Final closure head is the documentation commit containing this section and the durable closure packet.
 
 **Current verdict:** `WAVE_5_CORE_BASELINE_PASS`
+
+## 13. Phase 12 Resume State (2026-09-10)
+
+- Phase 12 implementation is present through commits `b72998a`–`bad7cef`.
+- Independent adversarial review is `PASS`, documented at
+  `docs/operations/FINAL_INDEPENDENT_REVIEW.md` and committed in `74ffade`.
+- Planning state is reconciled to `VERIFIED` after targeted verification and
+  bounded UI acceptance.
+- A direct targeted pytest invocation and the project targeted wrapper both
+  stalled before collection due the known local `napari` plugin condition; no
+  verification result is claimed from those interrupted runs.
+- After deferring the Google GenAI SDK import until an actual Gemini call,
+  Phase 12 contract/provider tests passed: **86 passed in 23.22s** with plugin
+  autoload disabled.
+- The repository four-user Playwright matrix passed with elevated browser
+  permissions: all four users, both themes, and Stata Studio estimation passed.
+- Phase 12 is now `VERIFIED`; advanced capabilities remain non-validated.
+
+## 15. Phase 13 Resume State (2026-09-10)
+
+- Phase 13 plan passed the bounded local adversarial review recorded in
+  `docs/operations/PHASE13_LOCAL_ADVERSARIAL_REVIEW.md`.
+- Implemented `models/descriptive_analyst.py`, a deterministic descriptive
+  analyst returning the existing `AnalysisRun` envelope with grouped stats,
+  sample/firm counts, panel scope, grounding, and source fingerprint.
+- Combined Phase 12/13/orchestration gate: **13 passed, 1 warning**; module
+  compilation passed.
+- Phase 13 remains `IMPLEMENTING`; UI evidence and fresh independent review
+  are still required before `VERIFIED`.
+- Live Gemini UI verification is paused at the external-destination approval
+  gate; no internal database/context payload was sent.
+- Added database-tool refusal and source-immutability coverage; Phase 13
+  contract/integration gate now passes **16 tests, 1 warning**.
+- Antigravity `/run` delegated the same Phase 13 gate in-workspace and returned
+  HTTP 200 with **16 passed, 1 warning**.
+- Approved targeted project tier passed: **167 tests in 65.22s**. Durable
+  report: `docs/implementation-reports/PHASE_13_DESCRIPTIVE_ANALYST_REPORT.md`.
+- Integrated the deterministic analyst into the Gemini tool surface and visible
+  metadata path; combined Phase 13/contract/orchestration gate is now **14
+  passed, 1 warning** with compilation and diff checks passing.
+- Recorded non-blocking `ISSUE-13-UI-AUTH`: visible-field authentication now
+  succeeds, but `/ai_assistant` navigation returns to the dashboard without a
+  chat input. Roadmap execution continues; live UI acceptance remains
+  unclaimed.
+- Core functionality checkpoint restored: canonical fast tier **146 passed**;
+  four-user authenticated matrix passed for all roles, both themes, and Stata
+  estimation. Gemini adapter regression was fixed by preserving a patchable
+  SDK module import while retaining lazy credential lookup.
+- Added canonical local regression command: `py -3.12 scripts/project_ops.py
+  regression` runs both the fast core tier and the four-user authenticated UI
+  matrix. Latest run passed end to end.
+- Independent adversarial review found and repaired nondeterministic Phase 13
+  descriptive run IDs; stable SHA-256 identifiers are now covered by a
+  regression test. Focused verification: **11 passed, 2 warnings**.
+- Phase 13 advanced to `TARGETED_VERIFICATION`; conditional independent review
+  is recorded at `docs/operations/PHASE13_INDEPENDENT_REVIEW.md`. It remains
+  unverified pending the supported UI metadata journey.
+- Latest bounded UI probe still found no sidebar links/chat input in the
+  authenticated Playwright session; no bypass or false acceptance was recorded.
+- Design hardening added `docs/design/PHASE13_DESCRIPTIVE_ANALYST_UI_SPEC.md`.
+  Gemini descriptive tool calls now forward active panel filters into the
+  deterministic analyst; focused provider/design tests pass **33 tests**.
+- Antigravity Phase 13 evidence identified missing deterministic `life_stage`
+  grouping support. Added the allowlisted grouping dimension and regression
+  coverage; focused Phase 13/provider tests now pass **29 tests**.
+- Phase 13 UI metadata remediation completed: native `AnalysisRun` rendering
+  plus provider-independent descriptive preflight. Antigravity fresh result:
+  `PHASE13_UI_PASS`.
+- Approved remediations: causal disclaimers are hard-mounted and mandated
+  verbatim; GMM requested lags above 4 fail with `INVALID_INSTRUMENT_SPEC`;
+  command vocabulary documents `gmm`, `ivregress`, `didregress`, and `hdfe`.
+- Phase 13 is now `VERIFIED` after deterministic, UI, and independent gates.
+
+## 16. Restart-Safe Handoff
+
+- Canonical recovery packet: `SESSION_HANDOFF_LATEST.md`.
+- It records the active autonomous goal, phase/checkpoint state, service ports,
+  test commands, Gemini/Antigravity boundaries, credential locations without
+  secret values, and recovery procedure.
+
+## 14. Active Agent Operating Framework (2026-09-10)
+
+- Codex is the canonical goal owner, orchestrator, reviewer, checkpoint
+  manager, and integration authority.
+- Gemini is a bounded implementation/review worker using the approved SDK/API
+  path when available, with explicit scope and durable evidence.
+- Roadmap execution uses: goal → bounded plan → work → tests → evidence →
+  independent review → checkpoint.
+- Whole-roadmap autonomous execution, unapproved merges/deployments, recursive
+  agent calls, and unsupported capability promotion remain prohibited.
+- Full framework: `docs/operations/AGENT_ORCHESTRATION_FRAMEWORK.md`.

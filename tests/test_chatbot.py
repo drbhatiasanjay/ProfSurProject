@@ -561,7 +561,7 @@ class TestGenerateEconometricNarrative:
         self._patch(monkeypatch)
         from models.llm_adapters import generate_econometric_narrative
         chunks = list(generate_econometric_narrative(
-            {"coef_table": coef_df, "r_squared": 0.42, "n_obs": 5000}
+            {"coef_table": coef_df, "r_squared": 0.42, "n_obs": 5000}, username="alice"
         ))
         assert "".join(chunks) != ""
 
@@ -574,7 +574,7 @@ class TestGenerateEconometricNarrative:
         monkeypatch.setattr(_db, "ai_cache_set", lambda *a, **kw: None)
         from models.llm_adapters import generate_econometric_narrative
         chunks = list(generate_econometric_narrative(
-            {"coef_table": coef_df, "r_squared": 0.42, "n_obs": 5000}
+            {"coef_table": coef_df, "r_squared": 0.42, "n_obs": 5000}, username="alice"
         ))
         assert "Cached interpretation" in "".join(chunks)
         assert len(called) == 0  # LLM not called on cache hit
@@ -676,7 +676,7 @@ class TestGeneratePageInsights:
         monkeypatch.setattr(_db, "ai_cache_get", lambda *a, **kw: "Cached insight text")
         monkeypatch.setattr(_db, "ai_cache_set", lambda *a, **kw: None)
         from models.llm_adapters import generate_page_insights
-        chunks = list(generate_page_insights("dashboard", {"x": 1}, self._filters()))
+        chunks = list(generate_page_insights("dashboard", {"x": 1}, self._filters(), username="alice"))
         assert "Cached insight text" in "".join(chunks)
         assert len(called) == 0
 

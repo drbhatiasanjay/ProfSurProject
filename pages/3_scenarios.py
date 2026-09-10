@@ -401,7 +401,8 @@ with res_right:
             with st.spinner("Generating scenario narrative..."):
                 st.session_state[_s_key] = "".join(
                     generate_page_insights("scenarios", _summary, st.session_state.filters,
-                                           role=_user_role, citations=_citations)
+                                           role=_user_role, citations=_citations,
+                                           username=st.session_state.get("user", {}).get("username", ""))
                 )
         if st.session_state.get(_s_key):
             st.markdown(st.session_state[_s_key])

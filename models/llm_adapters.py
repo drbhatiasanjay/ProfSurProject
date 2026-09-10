@@ -22,14 +22,12 @@ import pandas as pd
 import db
 from models.decision_contracts import build_chat_error
 
-# Import once at module load so provider tests and runtime calls do not import
-# the SDK while a caller is temporarily patching process environment access.
 try:
-    from google import genai as _GENAI_SDK
-    from google.genai import types as _GENAI_TYPES
-except ImportError:
-    _GENAI_SDK = None
-    _GENAI_TYPES = None
+    # Keep the SDK module patchable for tests and load it before callers mock
+    # environment access; API-key lookup remains lazy in stream_gemini_agent.
+    from google import genai as _genai_sdk
+except ImportError:  # pragma: no cover - optional dependency
+    _genai_sdk = None
 
 logger = logging.getLogger(__name__)
 
@@ -711,6 +709,18 @@ def query_financial_database(
     return json.dumps(res, default=str)
 
 
+def describe_financial_database(
+    variables_csv: str,
+    group_by: str = "",
+    panel_mode: str = "thesis",
+) -> str:
+    """Return grounded descriptive statistics with sample and source metadata."""
+    import json
+    from models.agent_tools import describe_financial_database as _dfd
+    variables = [value.strip() for value in str(variables_csv).split(",") if value.strip()]
+    return json.dumps(_dfd(variables, group_by=group_by, panel_mode=panel_mode), default=str)
+
+
 def generate_chat_chart(
     chart_type: str,
     title: str,
@@ -845,6 +855,7 @@ def run_cfo_stress_simulation(
 
 
 query_financial_database.__annotations__ = typing.get_type_hints(query_financial_database)
+describe_financial_database.__annotations__ = typing.get_type_hints(describe_financial_database)
 generate_chat_chart.__annotations__ = typing.get_type_hints(generate_chat_chart)
 query_semantic_ontology.__annotations__ = typing.get_type_hints(query_semantic_ontology)
 run_live_econometric_model.__annotations__ = typing.get_type_hints(run_live_econometric_model)
@@ -1051,6 +1062,37 @@ def normalize_assistant_chunk(chunk: Any) -> tuple[str, Optional[dict]]:
     return str(text), chart
 
 
+def _descriptive_result_text(payload: Any) -> str:
+    """Render only public descriptive metadata from a tool response."""
+    value = payload
+    for _ in range(3):
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except json.JSONDecodeError:
+                return ""
+        if isinstance(value, dict) and isinstance(value.get("result"), str):
+            value = value["result"]
+            continue
+        if isinstance(value, dict) and isinstance(value.get("response"), (dict, str)):
+            value = value["response"]
+            continue
+        break
+    if not isinstance(value, dict) or value.get("status") != "success":
+        return ""
+    run = value.get("analysis_run") or {}
+    provenance = run.get("provenance") or {}
+    return (
+        "\n\n**Descriptive computation metadata**\n"
+        f"- Grounding: `COMPUTED`\n"
+        f"- Panel: `{provenance.get('panel_mode', 'unknown')}`; "
+        f"observations: `{provenance.get('n_obs', 'unknown')}`; "
+        f"firms: `{provenance.get('n_firms', 'unknown')}`\n"
+        f"- Variables: `{', '.join(provenance.get('variables') or [])}`; "
+        f"source fingerprint: `{provenance.get('source_fingerprint', 'unavailable')}`"
+    )
+
+
 def stream_with_fallback(primary: Iterator[Any], fallback_factory) -> Iterator[Any]:
     """Use one fallback provider when the primary fails before yielding content."""
     yielded_content = False
@@ -1246,6 +1288,8 @@ def stream_gemini_agent(
     - query_financial_database (safe read-only SQL querying on capital_structure.db)
     - generate_chat_chart (interactive Plotly spec generation)
     - query_semantic_ontology (KG2 semantic ontology lookups)
+    - Explicit command vocabulary includes `gmm`, `ivregress`, `didregress`,
+      and `hdfe`; these remain subject to capability and methodology gates.
 
     Args:
         messages: List of {role, content} dicts.
@@ -1277,24 +1321,33 @@ def stream_gemini_agent(
         return
 
     try:
+        from google.genai import types
         from models.agent_tools import get_database_schema_summary
         from models.agent_tools import query_financial_database as _qfd
+        from models.agent_tools import describe_financial_database as _dfd
     except ImportError as _imp_err:
         yield f"[Google GenAI SDK not installed. Run: pip install google-genai] Error: {_imp_err}"
         return
-    genai = _GENAI_SDK
-    types = _GENAI_TYPES
-    if genai is None or types is None:
-        yield "[Google GenAI SDK not installed. Run: pip install google-genai]"
-        return
-
     try:
-        client = genai.Client(api_key=api_key)
+        if _genai_sdk is None:
+            raise ImportError("google-genai is not installed")
+        client = _genai_sdk.Client(api_key=api_key)
 
         def query_financial_database(sql_query: str) -> str:
             return json.dumps(_qfd(sql_query, panel_mode=panel_mode, filters=filters), default=str)
 
         query_financial_database.__annotations__ = {"sql_query": str, "return": str}
+
+        def describe_financial_database(variables_csv: str, group_by: str = "") -> str:
+            variables = [value.strip() for value in str(variables_csv).split(",") if value.strip()]
+            return json.dumps(
+                _dfd(variables, group_by=group_by, panel_mode=panel_mode, filters=filters),
+                default=str,
+            )
+
+        describe_financial_database.__annotations__ = {
+            "variables_csv": str, "group_by": str, "return": str
+        }
 
         def run_stata_command(command: str) -> str:
             from models.agent_tools import run_stata_command as _rsc
@@ -1322,12 +1375,13 @@ def stream_gemini_agent(
         agent_instructions = (
             "PANEL COVERAGE & CRITICAL RULES:\n"
             "1. The panel database covers annual corporate financial records from 2001 to 2025 inclusive (400 Indian listed firms, 9,031 observations).\n"
-            "2. Whenever the user requests specific company lookups, top rankings, distributions (median, standard deviation, percentiles, min, max), Year-overYear (YoY) tables, or queries about specific years (e.g. 2024, 2025), YOU MUST call query_financial_database to query capital_structure.db.\n"
+            "2. Whenever the user requests descriptive statistics, sample counts, distributions (median, standard deviation, percentiles, min, max), or grouped summaries, YOU MUST call describe_financial_database and disclose its panel, filters, observation count, firm count, and source fingerprint. For raw lookups, rankings, or year tables, call query_financial_database.\n"
             "3. Join companies and financials on company_code: JOIN companies c ON f.company_code = c.company_code (Note: use company_code, not company_id).\n"
             "4. When the user requests a chart, plot, graph, or visual representation, query the database if needed, call generate_chat_chart, and accompany the interactive visualization with the complete data table and an insightful economic analysis. For industry comparisons, return all qualifying industry groups (do not reduce the query to two examples); for time comparisons, return every year in the requested range. The UI automatically renders the interactive Plotly graph and provides category selectors.\n"
             "5. LIVE ON-THE-FLY STATISTICAL & ECONOMETRIC MODELING: Whenever the user asks natural language questions about relationships between variables, empirical effects, or regressions (e.g. 'Do auto firms use profits to pay down debt?', 'How does tangibility impact leverage?', 'Test if profitability reduces debt post-COVID'), YOU MUST call run_live_econometric_model. Structure your response with the 5-Step Scientific Method: (1) Variable & Sample Formulation, (2) Automated Diagnostic Selection Rationale (Hausman & Breusch-Pagan tests), (3) Live Regression Table with exact β and p-values, (4) Economic & Theoretical Interpretation (Pecking Order vs Trade-Off vs Dickinson Stages), (5) Strict Methodological Guardrails & Limitations.\n"
             "6. DYNAMIC CFO COUNTERFACTUAL STRESS TESTING: Whenever the user asks 'What-If' macro/operating shock questions (e.g. 'What happens if RBI hikes rates 100 bps?', 'Simulate a 15% margin drop on Tata Motors', 'What is our debt headroom?'), YOU MUST call run_cfo_stress_simulation to compute covenant floors, ICR, headroom in ₹ Cr, and the 3-point C-suite action playbook.\n"
             "7. Cite sources using [Source: Theory], [Source: Latest (2001-2025)], or [Source: OLS Model] where appropriate.\n"
+            "7a. When an econometric tool returns a capability_message, METHODOLOGY NOTICE, or METHODOLOGY GATE, reproduce it verbatim in the final answer; never summarize, omit, or soften it.\n"
             "8. The interactive charting system is fully supported and operational. NEVER output apologies or statements claiming you are unable to generate charts or graphs.\n"
             "9. CONVERSATION SCOPE & TURN ISOLATION: Focus STRICTLY and EXCLUSIVELY on answering the LATEST user prompt. NEVER preface your response with recaps, summaries, or repetitions of previous conversation turns or previous tool calls (e.g. NEVER say 'Here is the analysis for [Previous Company] and [Current Subject]'). Treat each new prompt as a focused task.\n"
         )
@@ -1367,6 +1421,7 @@ def stream_gemini_agent(
             max_output_tokens=max_tokens,
             tools=[
                 query_financial_database,
+                describe_financial_database,
                 generate_chat_chart,
                 query_semantic_ontology,
                 run_live_econometric_model,
@@ -1418,6 +1473,7 @@ def stream_gemini_agent(
         has_yielded_chart = False
         has_yielded_text = False
         query_datasets = []
+        descriptive_metadata = []
 
         # 1. Check if generate_chat_chart was called in automatic_function_calling_history
         for item in (getattr(response, "automatic_function_calling_history", None) or []):
@@ -1440,6 +1496,29 @@ def stream_gemini_agent(
                     if spec and not has_yielded_chart:
                         yield {"type": "chart", "spec": spec}
                         has_yielded_chart = True
+                if fn_resp and "describe_financial_database" in getattr(fn_resp, "name", ""):
+                    response_payload = getattr(fn_resp, "response", None)
+                    metadata_text = _descriptive_result_text(response_payload)
+                    if metadata_text:
+                        descriptive_metadata.append(metadata_text)
+                    payload = response_payload
+                    for _ in range(3):
+                        if isinstance(payload, str):
+                            try:
+                                payload = json.loads(payload)
+                            except json.JSONDecodeError:
+                                break
+                        if isinstance(payload, dict) and isinstance(payload.get("result"), str):
+                            payload = payload["result"]
+                            continue
+                        if isinstance(payload, dict) and isinstance(payload.get("response"), (dict, str)):
+                            payload = payload["response"]
+                            continue
+                        break
+                    if isinstance(payload, dict) and payload.get("status") == "success":
+                        run = payload.get("analysis_run")
+                        if isinstance(run, dict):
+                            yield {"type": "descriptive_metadata", "analysis_run": run}
 
         query_rows = select_chart_rows_for_query(
             query_datasets, user_query=messages[-1].get("content", "")
@@ -1474,7 +1553,7 @@ def stream_gemini_agent(
             final_text = re.sub(r"\n\s*\n\s*\n", "\n\n", cleaned).strip()
 
         if final_text.strip():
-            yield final_text
+            yield final_text + ("\n".join(descriptive_metadata) if descriptive_metadata else "")
             has_yielded_text = True
         elif not has_yielded_text and has_yielded_chart:
             yield "Here is the interactive visualization based on the requested panel dataset."
@@ -1493,6 +1572,7 @@ def generate_econometric_narrative(
     panel_mode: str = "thesis",
     role: str = "viewer",
     citations: bool = False,
+    username: str = "",
 ) -> "Iterator[str]":
     """Stream an AI interpretation of econometric regression results.
 
@@ -1512,6 +1592,7 @@ def generate_econometric_narrative(
         String chunks from the LLM.
     """
     import hashlib
+    from models.cache_keys import authenticated_cache_scope, build_cache_key
 
     ct = result.get("coef_table")
     if ct is None:
@@ -1561,13 +1642,21 @@ def generate_econometric_narrative(
         "Be specific — quote exact coefficient values and p-values."
     )
 
-    # Cache key
-    cache_key = hashlib.sha256(prompt.encode()).hexdigest()
-    ctx_key = hashlib.sha256(f"{model_type}:{panel_mode}".encode()).hexdigest()
-    cached = db.ai_cache_get(cache_key, ctx_key, "claude-sonnet-4-6", ttl_hours=168)
-    if cached:
-        yield cached
-        return
+    # Cache access is opt-in for authenticated page callers. Anonymous direct
+    # calls bypass cache rather than reading or populating a shared scope.
+    cache_key = None
+    if username:
+        cache_key = build_cache_key(
+            dataset_fingerprint=hashlib.sha256(prompt.encode()).hexdigest(),
+            command="econometric_narrative",
+            tenant_id=authenticated_cache_scope(username, role),
+            model="claude-sonnet-4-6",
+            filters={"model_type": model_type, "panel_mode": panel_mode, "citations": citations},
+        )
+        cached = db.ai_cache_get(cache_key, "cache-v2", "claude-sonnet-4-6", ttl_hours=168)
+        if cached:
+            yield cached
+            return
 
     full = ""
     for chunk in stream_anthropic(
@@ -1581,8 +1670,8 @@ def generate_econometric_narrative(
         full += chunk
         yield chunk
 
-    if full:
-        db.ai_cache_set(cache_key, ctx_key, "claude-sonnet-4-6", full)
+    if full and cache_key:
+        db.ai_cache_set(cache_key, "cache-v2", "claude-sonnet-4-6", full)
 
 
 def generate_page_insights(
@@ -1591,6 +1680,7 @@ def generate_page_insights(
     filters: dict,
     role: str = "viewer",
     citations: bool = False,
+    username: str = "",
 ) -> "Iterator[str]":
     """Stream AI insights for a specific dashboard page.
 
@@ -1608,6 +1698,7 @@ def generate_page_insights(
     """
     import hashlib
     import json as _json
+    from models.cache_keys import authenticated_cache_scope, build_cache_key
 
     # Build prompt from data_summary
     summary_lines = "\n".join(f"- **{k}**: {v}" for k, v in data_summary.items() if v is not None)
@@ -1646,12 +1737,21 @@ def generate_page_insights(
         f"**Task**: {task}"
     )
 
-    cache_key = hashlib.sha256(prompt.encode()).hexdigest()
-    ctx_key = hashlib.sha256(_json.dumps(data_summary, default=str, sort_keys=True).encode()).hexdigest()
-    cached = db.ai_cache_get(cache_key, ctx_key, "claude-sonnet-4-6", ttl_hours=24)
-    if cached:
-        yield cached
-        return
+    cache_key = None
+    if username:
+        cache_key = build_cache_key(
+            dataset_fingerprint=hashlib.sha256(
+                _json.dumps(data_summary, default=str, sort_keys=True).encode()
+            ).hexdigest(),
+            command=f"page_insights:{page}",
+            tenant_id=authenticated_cache_scope(username, role),
+            model="claude-sonnet-4-6",
+            filters=filters,
+        )
+        cached = db.ai_cache_get(cache_key, "cache-v2", "claude-sonnet-4-6", ttl_hours=24)
+        if cached:
+            yield cached
+            return
 
     full = ""
     for chunk in stream_anthropic(
@@ -1665,8 +1765,8 @@ def generate_page_insights(
         full += chunk
         yield chunk
 
-    if full:
-        db.ai_cache_set(cache_key, ctx_key, "claude-sonnet-4-6", full)
+    if full and cache_key:
+        db.ai_cache_set(cache_key, "cache-v2", "claude-sonnet-4-6", full)
 
 
 def parse_llm_json(raw: str) -> dict:

@@ -261,7 +261,8 @@ Then explore the other tabs:
                 with st.spinner("Generating ML analysis..."):
                     st.session_state["ml_ai"] = "".join(
                         generate_page_insights("ml", _ml_summary, st.session_state.filters,
-                                               role=_user_role, citations=_citations)
+                                               role=_user_role, citations=_citations,
+                                               username=st.session_state.get("user", {}).get("username", ""))
                     )
             if st.session_state.get("ml_ai"):
                 st.markdown(st.session_state["ml_ai"])

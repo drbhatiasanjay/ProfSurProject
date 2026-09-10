@@ -383,6 +383,7 @@ with tab_gmm:
                             generate_econometric_narrative(
                         gmm, model_type="Experimental IV-GMM proxy (IMPLEMENTED_UNVERIFIED)",
                                 panel_mode=_panel, role=_user_role, citations=_citations,
+                                username=st.session_state.get("user", {}).get("username", ""),
                             )
                         )
                 if st.session_state.get("p13_gmm_ai"):
