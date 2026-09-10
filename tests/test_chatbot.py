@@ -158,7 +158,8 @@ class TestStreamOllama:
         sys.modules.pop("ollama", None)
         from models.llm_adapters import stream_ollama
         chunks = list(stream_ollama([{"role": "user", "content": "hi"}]))
-        assert any("not installed" in c.lower() for c in chunks)
+        assert chunks[0]["type"] == "error"
+        assert chunks[0]["error_code"] == "PROVIDER_NOT_CONFIGURED"
 
 
 class TestStreamAnthropic:
