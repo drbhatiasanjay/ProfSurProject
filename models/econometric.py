@@ -1,6 +1,6 @@
 """
 Tier 1 Econometric Models — Thesis replication.
-OLS, Fixed Effects, Random Effects, System GMM, Hausman Test, ANOVA.
+OLS, Fixed Effects, Random Effects, experimental IV-GMM proxy, Hausman Test, ANOVA.
 """
 
 import numpy as np
@@ -8,6 +8,7 @@ import pandas as pd
 import statsmodels.api as sm
 from scipy import stats
 from .base import prepare_panel, DEFAULT_X_COLS, DEFAULT_Y_COL
+from .capability_status import capability_status
 
 
 def run_pooled_ols(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", time="year"):
@@ -767,13 +768,13 @@ def run_iv_regression(df, y_col=DEFAULT_Y_COL, x_endog="profitability", x_exog=N
     }
 
 
-# ── System GMM (Dynamic Panel) ──
+# ── Experimental IV-GMM proxy (not dynamic-panel System GMM) ──
 
 def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", time="year"):
     """
-    System GMM estimation with lagged dependent variable (Arellano-Bond instrument approach).
-    Uses linearmodels.iv.IVGMM with lag2 and lag3 of DV as excluded instruments.
-    Matches thesis Table 5.12.
+    Experimental levels IV-GMM proxy with a lagged dependent variable.
+    Uses linearmodels.iv.IVGMM with lag2 and lag3 of the dependent variable as
+    excluded instruments. This is not Arellano-Bond or Blundell-Bond System GMM.
     Phase 2 requirement: GMM-01, GMM-02, GMM-03, GMM-04.
 
     Returns dict with keys:
@@ -815,7 +816,7 @@ def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", 
         "p-value":     result.pvalues.values,
     })
 
-    # AR(1)/AR(2) tests via Pearson correlation on IVGMM residuals
+    # Descriptive residual lag correlations, not Arellano-Bond AR diagnostics
     resid_df = result.resids.reset_index()
     resid_df.columns = [entity, time, "resid"]
     resid_df = resid_df.sort_values([entity, time])
@@ -837,8 +838,14 @@ def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", 
     # Hansen J overidentification test (built into IVGMM result)
     j = result.j_stat  # WaldTestStatistic with .stat, .pval, .df
 
+    status = capability_status("gmm")
     return {
-        "type": "System GMM",
+        "type": status["label"],
+        "methodology_status": status["registry_status"],
+        "methodology_validation": status["methodology"],
+        "methodology_limitation": status["limitation"],
+        "is_system_gmm": False,
+        "diagnostics_validated": False,
         "coef_table": coef_table,
         "r_squared": float(result.rsquared),
         "adj_r_squared": float(getattr(result, "rsquared_adj", result.rsquared)),
@@ -846,25 +853,29 @@ def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", 
         "n_firms": int(work.index.get_level_values(0).nunique()),
         "lag_dv_included": True,
         "ar1": {
+            "label": "Residual Pearson lag-1 correlation",
+            "diagnostic_type": "descriptive_residual_correlation",
             "correlation": float(ar1_corr),
             "p_value":     float(ar1_p),
-            "verdict":     ("AR(1) expected significant"
-                            if ar1_p < 0.05 else "AR(1) not significant"),
+            "verdict":     "Descriptive only; not a formal dynamic-panel specification test.",
         },
         "ar2": {
+            "label": "Residual Pearson lag-2 correlation",
+            "diagnostic_type": "descriptive_residual_correlation",
             "correlation": float(ar2_corr),
             "p_value":     float(ar2_p),
-            "verdict":     ("AR(2) not significant (good)"
-                            if ar2_p > 0.05 else
-                            "AR(2) significant (instruments may be invalid)"),
+            "verdict":     "Descriptive only; not a formal dynamic-panel specification test.",
         },
         "sargan": {
+            "label": "IV-GMM J-statistic",
             "j_stat":  float(j.stat),
             "df":      int(j.df),
             "p_value": float(j.pval),
-            "verdict": ("Instruments valid (cannot reject H0)"
-                        if j.pval > 0.05 else
-                        "Instruments may be invalid (reject H0)"),
+            "verdict": (
+                "Moment restrictions are not rejected; this alone does not establish instrument validity."
+                if j.pval > 0.05 else
+                "Moment restrictions are rejected for this experimental proxy."
+            ),
         },
         "result_obj": result,
     }

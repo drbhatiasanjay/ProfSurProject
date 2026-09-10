@@ -118,7 +118,7 @@ The objective of this Test Plan is to guarantee **100% mathematical integrity, z
   * **Page 9 (ML Models)**: Random Forest, XGBoost, LightGBM inference, SHAP summary values.
   * **Page 10 (Forecasting)**: LSTM/GRU sequence generation.
   * **Page 12 (Transitions)**: Markov transition matrix row-stochasticity ($\sum_j P_{ij} = 1.0$).
-  * **Page 13 (Advanced Econometrics)**: Two-step System GMM, Arellano-Bond AR(1)/AR(2), Hansen test.
+  * **Page 13 (Advanced Econometrics)**: Experimental IV-GMM proxy with explicit unverified status; no formal dynamic-panel or instrument-validity conclusion.
   * **Page 15 (Interaction Effects)**: Cross-term $\text{Prof} \times \text{Tang}$ OLS and simple slopes.
   * **Page 17 (Board Export)**: 13 topic builders output valid figures and tables.
   * **Page 18 & 21 (Knowledge Graph V1/V2)**: Graph bridge contract adherence and ego-graph node counts.

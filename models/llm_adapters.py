@@ -10,6 +10,7 @@ panel OLS outputs + descriptive statistics.
 """
 
 import json
+import logging
 import re
 import os
 import functools
@@ -19,6 +20,7 @@ from typing import Iterator, Generator, Literal, Optional, List, Dict, Union, An
 import pandas as pd
 
 import db
+from models.decision_contracts import build_chat_error
 
 # Import once at module load so provider tests and runtime calls do not import
 # the SDK while a caller is temporarily patching process environment access.
@@ -29,16 +31,46 @@ except ImportError:
     _GENAI_SDK = None
     _GENAI_TYPES = None
 
-# tiktoken for token counting; fall back to a rough char/4 heuristic if not installed
-try:
-    import tiktoken
-    _ENC = tiktoken.get_encoding("cl100k_base")
+logger = logging.getLogger(__name__)
 
-    def count_tokens(text: str) -> int:
-        return len(_ENC.encode(text))
-except ImportError:
-    def count_tokens(text: str) -> int:  # type: ignore[misc]
-        return max(1, len(text) // 4)
+_TOKEN_ENCODER = None
+_TOKEN_ENCODER_INITIALIZED = False
+_TOKEN_FALLBACK_WARNED = False
+
+
+def _warn_token_fallback(exc: Exception) -> None:
+    global _TOKEN_FALLBACK_WARNED
+    if not _TOKEN_FALLBACK_WARNED:
+        logger.warning(
+            "tiktoken encoder unavailable; using approximate token counts (%s: %s)",
+            type(exc).__name__,
+            exc,
+        )
+        _TOKEN_FALLBACK_WARNED = True
+
+
+def _get_token_encoder():
+    global _TOKEN_ENCODER, _TOKEN_ENCODER_INITIALIZED
+    if not _TOKEN_ENCODER_INITIALIZED:
+        _TOKEN_ENCODER_INITIALIZED = True
+        try:
+            import tiktoken
+            _TOKEN_ENCODER = tiktoken.get_encoding("cl100k_base")
+        except Exception as exc:
+            _warn_token_fallback(exc)
+    return _TOKEN_ENCODER
+
+
+def count_tokens(text: str) -> int:
+    global _TOKEN_ENCODER
+    encoder = _get_token_encoder()
+    if encoder is not None:
+        try:
+            return len(encoder.encode(text))
+        except Exception as exc:
+            _TOKEN_ENCODER = None
+            _warn_token_fallback(exc)
+    return max(1, len(text) // 4)
 
 
 _PANEL_DISPLAY_LABELS = {
@@ -536,7 +568,7 @@ def stream_ollama(
     try:
         from ollama import chat as _ollama_chat
     except ImportError:
-        yield "[Ollama backend not installed. Run: pip install ollama>=0.6.2]"
+        yield build_chat_error("PROVIDER_NOT_CONFIGURED", "Ollama is not installed.")
         return
     try:
         stream = _ollama_chat(
@@ -554,7 +586,8 @@ def stream_ollama(
             if content:
                 yield content
     except Exception as e:
-        yield f"[Ollama error: {type(e).__name__}: {e}]"
+        logger.exception("Ollama provider request failed")
+        yield build_chat_error("PROVIDER_REQUEST_FAILED", "Ollama could not complete this request.")
 
 
 def stream_anthropic(
@@ -590,7 +623,7 @@ def stream_anthropic(
     try:
         import anthropic
     except ImportError:
-        yield "[Anthropic backend not installed. Run: pip install anthropic>=0.25]"
+        yield build_chat_error("PROVIDER_NOT_CONFIGURED", "Anthropic is not installed.")
         return
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -600,7 +633,7 @@ def stream_anthropic(
         except Exception:
             api_key = None
     if not api_key:
-        yield "[Anthropic backend not configured. Set ANTHROPIC_API_KEY in .streamlit/secrets.toml]"
+        yield build_chat_error("PROVIDER_NOT_CONFIGURED", "Anthropic is not configured.")
         return
     try:
         client = anthropic.Anthropic(api_key=api_key)
@@ -658,7 +691,8 @@ def stream_anthropic(
                 for text in stream.text_stream:
                     yield text
     except Exception as e:
-        yield f"[Anthropic error: {type(e).__name__}: {e}]"
+        logger.exception("Anthropic provider request failed")
+        yield build_chat_error("PROVIDER_REQUEST_FAILED", "Anthropic could not complete this request.")
 
 
 def query_financial_database(
@@ -1008,6 +1042,8 @@ def normalize_assistant_chunk(chunk: Any) -> tuple[str, Optional[dict]]:
         return chunk, None
     if not isinstance(chunk, dict):
         return "", None
+    if chunk.get("type") == "error":
+        return str(chunk.get("message") or "The chat request could not be completed."), None
     chart = chunk.get("spec") if chunk.get("type") == "chart" else chunk.get("chart_spec")
     if not isinstance(chart, dict):
         chart = None
@@ -1019,6 +1055,12 @@ def stream_with_fallback(primary: Iterator[Any], fallback_factory) -> Iterator[A
     """Use one fallback provider when the primary fails before yielding content."""
     yielded_content = False
     for chunk in primary:
+        if isinstance(chunk, dict) and chunk.get("type") == "error":
+            if not yielded_content:
+                yield from fallback_factory()
+                return
+            yield chunk
+            return
         text, _chart = normalize_assistant_chunk(chunk)
         is_error = text.lstrip().startswith("[") and any(
             err_marker in text[:120].lower()
@@ -1110,12 +1152,25 @@ def normalize_assistant_response(
     if chart_requested and resolved_chart is None:
         resolved_chart = extract_table_chart_spec(answer, user_q=user_query)
         resolved_chart = _filter_chart_series_for_query(resolved_chart, user_query)
-    from models.decision_contracts import build_decision_brief
+    from models.decision_contracts import ActionTraceEvent, GroundingItem, build_decision_brief
+    trace = [
+        ActionTraceEvent("classify_request", "completed", "current user request classified"),
+        ActionTraceEvent("ground_evidence", "completed", "available panel context applied"),
+        ActionTraceEvent("select_capability", "completed", "provider-neutral response path selected"),
+        ActionTraceEvent("render_result", "completed", "answer envelope normalized"),
+    ]
     decision_brief = build_decision_brief(
         answer=answer,
         table=table,
         chart=resolved_chart,
         user_query=user_query,
+        intent="chart_request" if chart_requested else "grounded_response",
+        selected_capability="chat.grounded_response",
+        trace=trace,
+        grounding=[
+            GroundingItem("COMPUTED", "Response normalized from the current request and available panel context", "panel context"),
+            GroundingItem("INTERPRETATION", "Economic interpretation is bounded by the displayed evidence", "response envelope"),
+        ],
     )
     # Keep the existing flat response keys for compatibility while exposing a
     # provider-neutral envelope for the CFO UI and future export paths.
@@ -1425,7 +1480,9 @@ def stream_gemini_agent(
             yield "Here is the interactive visualization based on the requested panel dataset."
 
     except Exception as e:
-        yield f"[Gemini error: {type(e).__name__}: {e}]"
+        from models.decision_contracts import build_chat_error
+        logger.exception("Gemini provider request failed")
+        yield build_chat_error("PROVIDER_REQUEST_FAILED", "Gemini could not complete this request.")
 
 
 

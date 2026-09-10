@@ -904,8 +904,8 @@ def build_audit_json(
                     - Econometrics: {"estimator": "Fixed Effects", "dep_var": "leverage",
                                      "indep_vars": [...]}
                     - ML Models: {"model_type": "Random Forest", "features": [...]}
-                    - Advanced Econometrics: {"active_tab": "System GMM",
-                                             "estimator": "System GMM", "dep_var": "leverage",
+- Advanced Econometrics: {"active_tab": "Experimental IV-GMM proxy",
+  "estimator": "IV-GMM proxy (IMPLEMENTED_UNVERIFIED)", "dep_var": "leverage",
                                              "indep_vars": [...]}
         n_obs: Number of observations used in the analysis.
         n_firms: Number of unique firms in the filtered panel.

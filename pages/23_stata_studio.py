@@ -20,6 +20,7 @@ import html
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import uuid
 
 import db
 from helpers import (
@@ -34,10 +35,16 @@ from models.stata_engine import (
     generate_esttab_latex,
     generate_esttab_docx,
     prepare_df_for_stata,
-    _STORED_ESTIMATES,
 )
+from models.analytical_contracts import AnalyticalRequest, fingerprint_df
+from models.analytical_router import route
+from models.stata_engine import parse_stata_command
+from models.stata_engine import ModelResultContext
+from models.capability_status import capability_status
 
 ensure_session_state()
+if "_model_result_context" not in st.session_state:
+    st.session_state["_model_result_context"] = ModelResultContext()
 db.log_page_visit("Stata Studio")
 
 st.set_page_config(
@@ -105,6 +112,45 @@ def get_financial_translation(cmd_str: str) -> str:
         return (
             "Computes Variance Inflation Factors (VIF) to formally test for severe multicollinearity among explanatory financial ratios. "
             "VIF values strictly below 5–10 confirm parameter stability and regression robustness."
+        )
+    if low.startswith("ivregress"):
+        status = capability_status("ivregress")
+        return (
+            f"Executes an <b>{status['registry_status']}</b> {status['label']} specification. "
+            "Instrument relevance, exogeneity, and exclusion restrictions require independent validation; "
+            "successful execution does not establish a causal effect."
+        )
+    if low.startswith("gmm"):
+        status = capability_status("gmm")
+        return (
+            f"Runs an <b>{status['registry_status']} {status['label']}</b> using lagged instruments. "
+            "This is not Arellano–Bond or Blundell–Bond System GMM, and its residual correlations "
+            "are not formal Arellano–Bond AR tests. Do not cite results until numerical validation is complete."
+        )
+    if low.startswith("hdfe"):
+        status = capability_status("hdfe")
+        return (
+            f"Runs an <b>{status['registry_status']}</b> {status['label']} regression via pyfixest. "
+            "Coefficient, standard-error, sample-membership, and absorbed-effects parity require a golden benchmark before validation."
+        )
+    if low.startswith("didregress"):
+        status = capability_status("didregress")
+        return (
+            f"{status['label']} is a <b>{status['registry_status']}</b> capability and currently fails closed. "
+            "A cohort-robust estimator, explicit treatment timing, and parallel-trends diagnostics are required before execution."
+        )
+    if low.startswith("scenario"):
+        status = capability_status("scenario")
+        return (
+            f"Creates an <b>{status['label']}</b>; it is not a validated counterfactual forecast. "
+            "A fitted model, baseline comparison, uncertainty quantification, and provenance are required before claiming scenario results."
+        )
+    if low.startswith("predict_ml"):
+        status = capability_status("predict_ml")
+        return (
+            f"Runs an <b>{status['registry_status']}</b> Ridge model with a firm-aware group holdout "
+            "(<code>GroupShuffleSplit</code> on <code>company_code</code>) to prevent firm-level leakage. "
+            "No k-fold cross-validation or temporal forecasting validation is performed."
         )
     return f"Executes econometric estimation for <code>{html.escape(cmd_str)}</code> on the active longitudinal panel dataset."
 
@@ -205,6 +251,15 @@ filters = st.session_state.get("filters", {})
 ft = db.filters_to_tuple(filters)
 panel_df = db.get_active_panel_data(ft)
 
+if panel_df is not None and not panel_df.empty:
+    if "stata_working_df" not in st.session_state or st.session_state.get("_reset_stata_df", False):
+        st.session_state["stata_working_df"] = panel_df.copy(deep=True)
+        st.session_state["_reset_stata_df"] = False
+    stata_working_df = st.session_state["stata_working_df"]
+else:
+    stata_working_df = None
+
+
 if panel_df is None or panel_df.empty:
     st.error("No active panel data loaded. Please check database connection.")
     st.stop()
@@ -216,10 +271,10 @@ if "stata_last_result" not in st.session_state:
     st.session_state["stata_last_result"] = None
 
 # ── Metric Ribbons ────────────────────────────────────────────────────────────
-n_obs = len(panel_df)
-n_firms = panel_df["company_code"].nunique() if "company_code" in panel_df.columns else 0
-years = (int(panel_df["year"].min()), int(panel_df["year"].max())) if "year" in panel_df.columns else (2001, 2025)
-n_industries = panel_df["industry_group"].nunique() if "industry_group" in panel_df.columns else 104
+n_obs = len(stata_working_df)
+n_firms = stata_working_df["company_code"].nunique() if "company_code" in panel_df.columns else 0
+years = (int(stata_working_df["year"].min()), int(stata_working_df["year"].max())) if "year" in panel_df.columns else (2001, 2025)
+n_industries = stata_working_df["industry_group"].nunique() if "industry_group" in panel_df.columns else 104
 
 col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
 is_dark = st.session_state.get("theme", "light") == "dark"
@@ -313,9 +368,41 @@ with tab_cli:
         st.session_state["stata_cmd_input"] = ""
 
     # Quick Template Buttons
-    col_q1, col_q2, col_q3 = st.columns(3)
+    col_q1, col_q2, col_q3, col_q4 = st.columns(4)
     with col_q1:
         if st.button("📊 . xtreg leverage roa tang size, fe cluster(id)", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+        if st.button("🔗 . ivregress 2sls leverage (tang = L.tang) roa", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "ivregress 2sls leverage (tangibility = L.tangibility) profitability log_size"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+    with col_q2:
+        if st.button("🧪 . hausman fe re", use_container_width=True, key="btn_tmpl_hausman_primary"):
+            st.session_state["stata_cmd_input"] = "hausman fe re"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+        if st.button("🔍 . test profitability = 0", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "test profitability = 0"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+    with col_q3:
+        if st.button("📋 . predict y_hat, xb", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "predict y_hat, xb"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+        if st.button("⚙ . winsor2 leverage tangibility, cuts(1 99)", use_container_width=True):
+            st.session_state["stata_cmd_input"] = "winsor2 leverage tangibility, cuts(1 99) replace"
+            st.session_state["_trigger_stata_run"] = True
+            st.rerun()
+    with col_q4:
+        if st.button("🗑 Reset Dataset", use_container_width=True, type="secondary"):
+            st.session_state["_reset_stata_df"] = True
+            st.rerun()
+
+    with col_q1: # Dummy replace to avoid removing the original blocks incorrectly
+        if False:
             st.session_state["stata_cmd_input"] = "xtreg leverage profitability tangibility log_size, fe cluster(company_code)"
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
@@ -324,7 +411,7 @@ with tab_cli:
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
     with col_q2:
-        if st.button("🧪 . hausman fe re", use_container_width=True):
+        if st.button("🧪 . hausman fe re", use_container_width=True, key="btn_tmpl_hausman_secondary"):
             st.session_state["stata_cmd_input"] = "hausman fe re"
             st.session_state["_trigger_stata_run"] = True
             st.rerun()
@@ -434,8 +521,8 @@ with tab_cli:
         with c_in1:
             typed_cmd = st.text_input(
                 "Stata Command Prompt:",
-                value=st.session_state.get("stata_cmd_input", ""),
                 placeholder=". xtreg leverage profitability tangibility log_size, fe cluster(company_code)",
+                key="stata_cmd_input",
                 label_visibility="collapsed",
             )
         with c_in2:
@@ -445,19 +532,27 @@ with tab_cli:
     active_cmd = (typed_cmd or "").strip()
 
     # Trigger execution if form was submitted (Enter or button click), template clicked, or new command entered
-    should_run = (run_clicked or trigger_run or (active_cmd and active_cmd != st.session_state.get("_prev_cmd", "").strip())) and bool(active_cmd)
+    should_run = (run_clicked or trigger_run) and bool(active_cmd)
 
     output_placeholder = st.empty()
 
     if should_run:
-        st.session_state["stata_cmd_input"] = active_cmd
         st.session_state["_prev_cmd"] = active_cmd
         st.session_state["stata_last_result"] = None  # Clear previous result so stale text does not linger
 
         with output_placeholder.container():
             with st.spinner(f"⏳ Processing Stata command `.{active_cmd}`… Estimating econometric parameters & compiling results"):
                 t0 = time.time()
-                res = execute_stata_command(active_cmd, df=panel_df)
+                request = AnalyticalRequest(
+                    command_str=active_cmd,
+                    parsed=parse_stata_command(active_cmd),
+                    df=stata_working_df,
+                    correlation_id=str(uuid.uuid4()),
+                    dataset_ref=fingerprint_df(stata_working_df),
+                    session_id="stata_studio",
+                    session_context=st.session_state["_model_result_context"],
+                )
+                res = route(request).to_dict()
                 elapsed = time.time() - t0
                 if elapsed < 0.6:
                     time.sleep(0.6 - elapsed)
@@ -484,18 +579,37 @@ with tab_cli:
 
         is_dark = current_theme == "dark"
 
-        # ── TIER 1: Corporate Finance Translation ──────────────────────────
-        fin_trans = get_financial_translation(clean_cmd)
-        card_bg    = "#0f172a" if is_dark else "#F0FDF4"
-        card_border= "#1e293b" if is_dark else "#BBF7D0"
-        card_text  = "#e2e8f0" if is_dark else "#166534"
-        st.markdown(f"""
-        <div style="background:{card_bg};border:1px solid {card_border};border-radius:8px;
-                    padding:12px 16px;margin-bottom:14px;font-size:13px;
-                    line-height:1.5;color:{card_text};">
-            <b>💡 Corporate Finance Translation &amp; Economic Intent:</b><br/>{fin_trans}
-        </div>
-        """, unsafe_allow_html=True)
+        is_failed_command = last_res.get("status") in ("error", "unsupported")
+        if not is_failed_command:
+            # ── TIER 1: Corporate Finance Translation ──────────────────────
+            fin_trans = get_financial_translation(clean_cmd)
+            card_bg    = "#0f172a" if is_dark else "#F0FDF4"
+            card_border= "#1e293b" if is_dark else "#BBF7D0"
+            card_text  = "#e2e8f0" if is_dark else "#166534"
+            st.markdown(f"""
+            <div style="background:{card_bg};border:1px solid {card_border};border-radius:8px;
+                        padding:12px 16px;margin-bottom:14px;font-size:13px;
+                        line-height:1.5;color:{card_text};">
+                <b>💡 Corporate Finance Translation &amp; Economic Intent:</b><br/>{fin_trans}
+            </div>
+            """, unsafe_allow_html=True)
+
+            from models.stata_explainer import explain_stata_command
+            explainer = explain_stata_command(clean_cmd, last_res)
+            exp_bg = "#0f172a" if is_dark else "#F8FAFC"
+            exp_br = "#1e293b" if is_dark else "#E2E8F0"
+            exp_tc = "#e2e8f0" if is_dark else "#0F172A"
+            st.markdown(f"""
+            <div style="background:{exp_bg};border:1px solid {exp_br};border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.5;color:{exp_tc};">
+                <b>📚 Econometric Deconstruction:</b><br/>
+                <ul>
+                    <li><b>Intent:</b> {explainer.get("intent", "")}</li>
+                    <li><b>Identification:</b> {explainer.get("identification", "")}</li>
+                    <li><b>Inference:</b> {explainer.get("inference", "")}</li>
+                    <li><b>Theory:</b> {explainer.get("economic_theory", "")}</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
 
         # ── TIER 2: Stata Monospace Terminal ──────────────────────────────
         ascii_out = last_res.get("ascii_output", "No output generated.")
@@ -514,14 +628,26 @@ with tab_cli:
         if last_res.get("status") == "unsupported":
             st.warning(
                 f"⚠️ **Command Not Supported (`{last_res.get('command', clean_cmd)}`)**\n\n"
-                f"The Stata command `.{last_res.get('command', clean_cmd)}` is not currently implemented in the open-source econometric engine runtime.\n\n"
+                f"{last_res.get('message', 'This command is not currently implemented in the open-source econometric engine runtime.')}\n\n"
                 f"📧 **Request Support:** If your research requires this econometric capability enabled, please contact the administrator at `{last_res.get('admin_contact', 'admin@lifecycle-leverage.internal')}`.\n\n"
                 f"**Currently Supported Commands:** `xtset`, `xtreg`, `lgraph`, `regress`, `summarize`, `tabstat`, `pwcorr`, `tabulate`, `scatter`, `histogram`, `graph box`, `hausman`, `estat vif`, `estimates store`, `esttab`, `coefplot`, `xttest0`, `xtserial`, `margins`."
             )
         elif last_res.get("status") == "error":
+            error_metadata = last_res.get("metadata") or {}
+            stata_rc = error_metadata.get("stata_rc")
+            invalid_argument = error_metadata.get("invalid_argument")
+            argument_role = error_metadata.get("argument_role")
+            validation_detail = ""
+            if stata_rc:
+                validation_detail = f"\n\n**Validation code:** `r({stata_rc})`"
+            if invalid_argument:
+                validation_detail += (
+                    f"\n\n**Invalid {argument_role or 'argument'}:** `{invalid_argument}`"
+                )
             st.error(
-                f"❌ **Stata Runtime Error**\n\n"
+                f"❌ **Stata Validation Error — estimation was not run**\n\n"
                 f"{last_res.get('message', 'An error occurred during command estimation.')}\n\n"
+                f"{validation_detail}\n\n"
                 f"Please check variable spelling, data availability, and syntax against the active panel dataset."
             )
 
@@ -735,9 +861,9 @@ with tab_esttab:
     df_stored = get_stored_models_table()
     if df_stored.empty:
         # Pre-populate with standard specifications
-        execute_stata_command("regress leverage profitability tangibility log_size", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=panel_df)
+        execute_stata_command("regress leverage profitability tangibility log_size", df=stata_working_df, stata_session_state=st.session_state)
+        execute_stata_command("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=stata_working_df, stata_session_state=st.session_state)
+        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=stata_working_df, stata_session_state=st.session_state)
         df_stored = get_stored_models_table()
 
     st.dataframe(df_stored, use_container_width=True, hide_index=True)
@@ -792,7 +918,7 @@ with tab_coefplot:
     st.markdown("### 📈 Visual Determinants (`coefplot`)")
     st.caption("Point estimates with 95% confidence interval whiskers. Determinants with confidence intervals that do not cross zero (dashed line) are statistically significant.")
 
-    coef_res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=panel_df)
+    coef_res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=stata_working_df, stata_session_state=st.session_state)
     spec = coef_res.get("chart_spec", {})
 
     if spec and spec.get("categories"):

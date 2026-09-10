@@ -27,10 +27,22 @@ jobs:
           # Install torch CPU-only first (matches Dockerfile pattern, avoids 2GB GPU wheel)
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -r requirements.txt
-          pip install pytest  # pytest removed from requirements.txt (prod-only); install explicitly for CI
+          pip install -r requirements-dev.txt
 
       - name: Run tests
         run: |
+          cp capital_structure.db "$PROFSUR_DB_PATH"
+          python scripts/check_stata_contracts.py
+          python scripts/check_import_side_effects.py
+          python scripts/render_capability_status.py --check
+          python scripts/wave5_realdata_audit.py --source-db capital_structure.db --output /tmp/wave5-realdata-audit.json
+          python -m pytest \
+            tests/test_llm_adapter_import_safety.py \
+            tests/test_capability_status_contract.py \
+            tests/test_command_contract_docs.py \
+            tests/test_automation_contracts.py \
+            tests/test_wave5_independent_review_repair.py \
+            -q --tb=short
           python -m pytest tests/ \
             --ignore=tests/smoke_auth.py \
             --ignore=tests/smoke_phase1.py \
@@ -38,6 +50,8 @@ jobs:
         env:
           # Disable CMIE so tests don't need secrets.toml
           ENABLE_CMIE: "false"
+          PROFSUR_DB_PATH: "/tmp/profsur-ci.db"
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
 
   ocaml:
     name: OCaml build + tests (lifecycle-ontology)

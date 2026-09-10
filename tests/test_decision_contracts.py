@@ -1,11 +1,58 @@
 """Contract tests for provider-neutral CFO decision briefs."""
 
 from models.decision_contracts import (
+    ActionTraceEvent,
+    build_chat_error,
     EvidenceItem,
+    GroundingItem,
     ScenarioCase,
     build_decision_brief,
     validate_chart_table,
 )
+
+
+def test_decision_brief_carries_user_visible_trace_without_private_reasoning():
+    brief = build_decision_brief(
+        answer="Computed result",
+        user_query="Summarize leverage",
+        intent="descriptive_computation",
+        selected_capability="stata.summarize",
+        trace=[
+            ActionTraceEvent("classify_request", "completed", "descriptive computation"),
+            ActionTraceEvent("select_capability", "completed", "stata.summarize"),
+            ActionTraceEvent("execute", "completed", "result envelope created"),
+        ],
+    )
+
+    payload = brief.to_dict()
+    assert payload["intent"] == "descriptive_computation"
+    assert payload["selected_capability"] == "stata.summarize"
+    assert [event["name"] for event in payload["trace"]] == [
+        "classify_request",
+        "select_capability",
+        "execute",
+    ]
+    assert all("reasoning" not in event for event in payload["trace"])
+
+
+def test_decision_brief_carries_explicit_grounding_labels():
+    brief = build_decision_brief(
+        answer="The panel mean is computed from available rows.",
+        grounding=[GroundingItem("COMPUTED", "Panel mean", "panel rows")],
+    )
+    assert brief.to_dict()["grounding"] == (
+        {"label": "COMPUTED", "text": "Panel mean", "source": "panel rows"}
+    ,)
+
+
+def test_chat_error_uses_standard_code_and_safe_envelope():
+    error = build_chat_error("PROVIDER_REQUEST_FAILED", "Provider unavailable")
+    assert error == {
+        "type": "error",
+        "error_code": "PROVIDER_REQUEST_FAILED",
+        "message": "Provider unavailable",
+        "recoverable": True,
+    }
 
 
 def test_valid_chart_matches_categories_and_table():

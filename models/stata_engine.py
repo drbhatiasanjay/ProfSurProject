@@ -12,7 +12,7 @@ Provides open-source mathematical and visual parity with Stata 17/18:
 import os
 import re
 import math
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass, asdict, field
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -20,6 +20,12 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
+from models.stata_syntax import parse_absorb_spec, parse_interventions_spec
+from models.stata_validation import (
+    validate_stata_command,
+)
+from models.capability_status import result_status_metadata
 
 try:
     import docx
@@ -42,10 +48,74 @@ class PanelContext:
     has_duplicates: bool = False
     gaps: bool = False
 
-# Global session panel context & stored estimates
+# Panel metadata is process-local; estimation results are never stored here.
 _ACTIVE_PANEL_CONTEXT: PanelContext | None = None
-_STORED_ESTIMATES = {}
-_LAST_ESTIMATE = None
+
+
+class EstimateRecord(dict):
+    """Mapping-compatible estimate payload with statsmodels-style params access."""
+
+    @property
+    def params(self):
+        result_obj = self.get("result_obj")
+        return getattr(result_obj, "params", None)
+
+
+@dataclass
+class ModelResultContext:
+    """Session/workspace-scoped model state for post-estimation commands."""
+
+    session_id: str = ""
+    last_estimate: EstimateRecord | None = None
+    stored_estimates: dict[str, EstimateRecord] = field(default_factory=dict)
+
+    def bind_session(self, session_id: str) -> None:
+        """Bind this state once; reject reuse by a different router session."""
+        if not session_id:
+            return
+        if self.session_id and self.session_id != session_id:
+            raise ValueError(
+                f"post-estimation context is bound to session {self.session_id!r}"
+            )
+        self.session_id = session_id
+
+    def get_last_estimate(self):
+        return self.last_estimate
+
+    def set_last_estimate(self, estimate):
+        self.last_estimate = estimate
+
+    def store_estimate(self, name: str, estimate):
+        self.stored_estimates[name] = estimate
+
+
+def _get_last_estimate(stata_session_state=None):
+    if isinstance(stata_session_state, ModelResultContext):
+        return stata_session_state.get_last_estimate()
+    if stata_session_state is not None:
+        return stata_session_state.get("_LAST_ESTIMATE")
+    return None
+
+
+def _set_last_estimate(stata_session_state, estimate):
+    if isinstance(stata_session_state, ModelResultContext):
+        stata_session_state.set_last_estimate(estimate)
+    elif stata_session_state is not None:
+        stata_session_state["_LAST_ESTIMATE"] = estimate
+        return
+
+
+def _get_stored_estimates(stata_session_state=None):
+    if isinstance(stata_session_state, ModelResultContext):
+        return stata_session_state.stored_estimates
+    return {}
+
+
+def _store_estimate(stata_session_state, name: str, estimate):
+    if isinstance(stata_session_state, ModelResultContext):
+        stata_session_state.store_estimate(name, estimate)
+    else:
+        return
 
 COMMON_VAR_ALIASES = {
     "prof": "profitability",
@@ -243,8 +313,8 @@ def parse_stata_command(cmd_str: str) -> dict:
     else:
         # Check if options were written without a preceding comma at the tail of tokens
         # e.g. 'xtreg leverage profitability tangibility fe cluster(company_code)'
-        known_option_flags = {"fe", "re", "be", "robust", "detail", "sig", "nocons", "noconstant"}
-        known_option_funcs = {"cluster", "vce", "by", "over", "star", "level"}
+        known_option_flags = {"fe", "re", "be", "robust", "detail", "sig", "nocons", "noconstant", "replace", "trim", "xb"}
+        known_option_funcs = {"cluster", "vce", "by", "over", "star", "level", "cuts", "suffix", "absorb", "interventions"}
         kept_tokens = []
         for tok in tokens:
             m_opt_arg = re.match(r"^(\w+)\(([^)]*)\)$", tok)
@@ -256,11 +326,102 @@ def parse_stata_command(cmd_str: str) -> dict:
                 kept_tokens.append(tok)
         tokens = kept_tokens
 
+    parse_error = ""
+    if cmd == "hdfe" and "absorb" in options:
+        absorb_variables, parse_error = parse_absorb_spec(options["absorb"])
+        if not parse_error:
+            options["absorb"] = absorb_variables
+
+    if cmd == "scenario":
+        depvar = tokens[1] if len(tokens) >= 2 else ""
+        inline_spec = " ".join(tokens[2:]).strip()
+        option_spec = options.get("interventions")
+        if inline_spec and option_spec:
+            parse_error = "scenario interventions must use either inline or interventions(), not both"
+            interventions = {}
+        else:
+            interventions, intervention_error = parse_interventions_spec(option_spec or inline_spec)
+            parse_error = parse_error or intervention_error or ""
+        if interventions:
+            options["interventions"] = interventions
+        return {
+            "cmd": "scenario",
+            "depvar": depvar,
+            "indepvars": [],
+            "options": options,
+            "parse_error": parse_error,
+            "raw": cmd_str,
+        }
+
+    # Specialized parser for ivregress with parenthetical instruments (endog = instruments)
+    if cmd == "ivregress":
+        endog_vars = []
+        instruments = []
+        m_eq = re.search(r"\(([^=]+)=([^)]+)\)", main_part)
+        if m_eq:
+            endog_vars = m_eq.group(1).strip().split()
+            instruments = m_eq.group(2).strip().split()
+            clean_main = (main_part[:m_eq.start()] + " " + main_part[m_eq.end():]).strip()
+        else:
+            clean_main = main_part
+        rem_tokens = clean_main.split()
+        idx = 1
+        estimator = "2sls"
+        if len(rem_tokens) > idx and rem_tokens[idx].lower() in ("2sls", "liml", "gmm"):
+            estimator = rem_tokens[idx].lower()
+            idx += 1
+        depvar = rem_tokens[idx] if len(rem_tokens) > idx else ""
+        exog_vars = rem_tokens[idx+1:] if len(rem_tokens) > idx+1 else []
+        return {
+            "cmd": "ivregress",
+            "estimator": estimator,
+            "depvar": depvar,
+            "indepvars": exog_vars + endog_vars,
+            "endog_vars": endog_vars,
+            "instruments": instruments,
+            "exog_vars": exog_vars,
+            "options": options,
+            "raw": cmd_str,
+        }
+
+    # Specialized parser for post-estimation 'test'
+    if cmd == "test":
+        formula = main_part[len(tokens[0]):].strip()
+        return {
+            "cmd": "test",
+            "formula": formula,
+            "depvar": "",
+            "indepvars": formula.split(),
+            "options": options,
+            "raw": cmd_str,
+        }
+
+    # Specialized parser for post-estimation 'predict'
+    if cmd == "predict":
+        newvar = tokens[1] if len(tokens) > 1 else "y_hat"
+        return {
+            "cmd": "predict",
+            "depvar": newvar,
+            "indepvars": tokens[2:],
+            "options": options,
+            "raw": cmd_str,
+        }
+
+    # Specialized parser for 'winsor2' / 'winsor'
+    if cmd in ("winsor2", "winsor"):
+        return {
+            "cmd": "winsor2",
+            "depvar": "",
+            "indepvars": tokens[1:],
+            "options": options,
+            "raw": cmd_str,
+        }
+
     # Identify depvar and indepvars based on command semantics
     depvar = ""
     indepvars = []
 
-    if cmd in ("xtreg", "regress", "reg"):
+    if cmd in ("xtreg", "regress", "reg", "gmm", "hdfe", "didregress", "predict_ml"):
         if len(tokens) >= 2:
             depvar = tokens[1]
         if len(tokens) >= 3:
@@ -313,13 +474,21 @@ def parse_stata_command(cmd_str: str) -> dict:
         "depvar": depvar,
         "indepvars": indepvars,
         "options": options,
+        "parse_error": parse_error,
         "raw": cmd_str,
     }
 
 
-def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
-    """Execute a Stata command against the provided or active panel dataset."""
-    global _STORED_ESTIMATES, _LAST_ESTIMATE
+def execute_stata_command(
+    cmd_str: str,
+    df: pd.DataFrame = None,
+    stata_session_state: dict | ModelResultContext = None,
+) -> dict:
+    """Execute a parsed Stata command against the provided pandas DataFrame."""
+    if stata_session_state is None:
+        stata_session_state = ModelResultContext()
+    elif isinstance(stata_session_state, ModelResultContext):
+        pass
 
     if df is None:
         try:
@@ -337,6 +506,10 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
         }
 
     parsed = parse_stata_command(cmd_str)
+    parsed, validation_failure = validate_stata_command(parsed, df, resolve_panel_variable)
+    if validation_failure:
+        validation_failure["command"] = parsed.get("cmd", "")
+        return validation_failure
     cmd = parsed["cmd"]
 
     try:
@@ -347,32 +520,32 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
         elif cmd in ("pwcorr", "correlate", "corr"):
             res = _handle_pwcorr(parsed, df)
         elif cmd in ("regress", "reg"):
-            res = _handle_regress(parsed, df)
+            res = _handle_regress(parsed, df, stata_session_state=stata_session_state)
         elif cmd == "xtreg":
-            res = _handle_xtreg(parsed, df)
+            res = _handle_xtreg(parsed, df, stata_session_state=stata_session_state)
         elif cmd == "xtset":
             res = _handle_xtset(parsed, df)
         elif cmd == "lgraph":
             res = _handle_lgraph(parsed, df)
         elif cmd == "hausman":
-            res = _handle_hausman(parsed, df)
+            res = _handle_hausman(parsed, df, stata_session_state=stata_session_state)
         elif cmd == "estat":
             if "vif" in parsed["indepvars"] or "vif" in parsed["options"]:
-                res = _handle_estat_vif(parsed, df)
+                res = _handle_estat_vif(parsed, df, stata_session_state=stata_session_state)
             else:
                 return {"status": "error", "message": f"Unsupported estat subcommand: {parsed['indepvars']}", "ascii_output": "r(198); invalid estat subcommand"}
         elif cmd in ("estimates", "estimate"):
             if parsed["indepvars"] and parsed["indepvars"][0] == "store":
                 name = parsed["indepvars"][1] if len(parsed["indepvars"]) > 1 else "m1"
-                if _LAST_ESTIMATE:
-                    _STORED_ESTIMATES[name] = _LAST_ESTIMATE
+                if _get_last_estimate(stata_session_state):
+                    _store_estimate(stata_session_state, name, _get_last_estimate(stata_session_state))
                     return {"status": "success", "message": f"Saved current model as '{name}'", "ascii_output": f"(estimates stored as {name})"}
                 return {"status": "error", "message": "No estimation results found to store.", "ascii_output": "r(301); last estimates not found"}
-            return {"status": "success", "ascii_output": f"Stored estimates: {list(_STORED_ESTIMATES.keys())}"}
+            return {"status": "success", "ascii_output": f"Stored estimates: {list(_get_stored_estimates(stata_session_state).keys())}"}
         elif cmd == "esttab":
-            res = _handle_esttab(parsed, df)
+            res = _handle_esttab(parsed, df, stata_session_state)
         elif cmd == "coefplot":
-            res = _handle_coefplot(parsed, df)
+            res = _handle_coefplot(parsed, df, stata_session_state)
         elif cmd == "scatter":
             res = _handle_scatter(parsed, df)
         elif cmd in ("histogram", "hist"):
@@ -393,12 +566,38 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
             res = _handle_xtserial(parsed, df)
         elif cmd in ("margins", "marginsplot"):
             res = _handle_margins(parsed, df)
+        elif cmd == "ivregress":
+            res = _handle_ivregress(parsed, df, stata_session_state)
+        elif cmd == "test":
+            res = _handle_test(parsed, df, stata_session_state)
+        elif cmd == "predict":
+            res = _handle_predict(parsed, df, stata_session_state)
+        elif cmd == "winsor2":
+            res = _handle_winsor2(parsed, df)
+        elif cmd in ("gmm", "hdfe", "didregress", "scenario", "predict_ml"):
+            from models.stata_expansion_handlers import (
+                _handle_didregress,
+                _handle_gmm,
+                _handle_hdfe,
+                _handle_ml_predict,
+                _handle_scenario,
+            )
+
+            wave5_handlers = {
+                "gmm": _handle_gmm,
+                "hdfe": _handle_hdfe,
+                "didregress": _handle_didregress,
+                "scenario": _handle_scenario,
+                "predict_ml": _handle_ml_predict,
+            }
+            res = wave5_handlers[cmd](parsed, df)
         else:
             supported_cmds = [
                 "xtset", "xtreg", "regress", "summarize", "tabstat", "pwcorr",
                 "tabulate", "lgraph", "scatter", "histogram", "graph box",
                 "hausman", "estat vif", "estimates store", "esttab", "coefplot",
-                "xttest0", "xtserial", "margins", "export"
+                "xttest0", "xtserial", "margins", "export", "gmm", "hdfe",
+                "didregress", "scenario", "predict_ml"
             ]
             supported_list_str = ", ".join(supported_cmds[:10]) + ", etc."
             return {
@@ -648,7 +847,7 @@ def generate_stata_inference(parsed: dict, result: dict, df: pd.DataFrame) -> st
         p.append(f"- **Hypothesis Tested:** $H_0$: No first-order autocorrelation ($AR(1)$) in the idiosyncratic panel residuals $\\varepsilon_{{it}}$.")
         if p_val < 0.05:
             p.append(f"- **Diagnostic Verdict:** **Reject $H_0$ ($p < 0.05$).** Strong evidence of first-order serial correlation in panel disturbances.")
-            p.append(f"- **Statistical Remedy:** Standard OLS standard errors are biased downwards. Researchers must report **Cluster-Robust Standard Errors (`vce(cluster company_code)`)** or estimate Dynamic Panel GMM models (`xtabond`).")
+            p.append(f"- **Statistical Remedy:** Standard OLS standard errors are biased downwards. Researchers should report **Cluster-Robust Standard Errors (`vce(cluster company_code)`)**. This diagnostic does not establish a dynamic-panel estimator.")
         else:
             p.append(f"- **Diagnostic Verdict:** **Fail to reject $H_0$ ($p \\ge 0.05$).** No statistically significant first-order serial correlation detected.")
         return "\n".join(p)
@@ -748,17 +947,9 @@ def _handle_summarize(parsed: dict, df: pd.DataFrame) -> dict:
 
 def _handle_tabstat(parsed: dict, df: pd.DataFrame) -> dict:
     raw_vars = parsed.get("indepvars", [])
-    vars_to_tab = []
-    for v in raw_vars:
-        rv = resolve_panel_variable(v, df.columns)
-        if rv and rv not in vars_to_tab:
-            vars_to_tab.append(rv)
-    if not vars_to_tab:
-        vars_to_tab = ["leverage", "profitability"]
+    vars_to_tab = list(dict.fromkeys(raw_vars))
     by_opt = parsed["options"].get("by", "life_stage")
-    by_var = resolve_panel_variable(str(by_opt), df.columns) or "life_stage"
-    if by_var not in df.columns:
-        by_var = "life_stage" if "life_stage" in df.columns else df.columns[0]
+    by_var = str(by_opt)
 
     grouped = df.groupby(by_var)[vars_to_tab].agg(["mean", "std", "count"])
     lines = [f"Summary statistics: mean, sd, count by {by_var}\n"]
@@ -963,25 +1154,33 @@ def format_stata_panel_header(
     return lines
 
 
-def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
-    global _LAST_ESTIMATE
-    depvar = resolve_panel_variable(parsed.get("depvar"), df.columns) or "leverage"
-    raw_vars = parsed.get("indepvars", [])
-    indepvars = []
-    for v in raw_vars:
-        rv = resolve_panel_variable(v, df.columns)
-        if rv and rv not in indepvars:
-            indepvars.append(rv)
-    if not indepvars:
-        indepvars = ["profitability", "tangibility", "log_size"]
+def _handle_regress(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
+    # global _LAST_ESTIMATE
+    depvar = parsed["depvar"]
+    indepvars = list(parsed["indepvars"])
+    covariance_type = parsed.get("covariance_type", "nonrobust")
+    cluster_variable = parsed.get("cluster_variable")
+    cluster_count = parsed.get("cluster_count")
 
-    sub = df[[depvar] + indepvars].apply(pd.to_numeric, errors="coerce").dropna()
+    required_columns = list(dict.fromkeys([depvar] + indepvars + ([cluster_variable] if cluster_variable else [])))
+    sub = df[required_columns].copy()
+    sub[[depvar] + indepvars] = sub[[depvar] + indepvars].apply(pd.to_numeric, errors="coerce")
+    sub = sub.dropna()
+    if cluster_variable:
+        cluster_count = int(sub[cluster_variable].nunique())
     y = sub[depvar]
     X = sm.add_constant(sub[indepvars])
 
-    robust = "robust" in parsed["options"] or "vce" in parsed["options"]
     model = sm.OLS(y, X)
-    result = model.fit(cov_type="HC1" if robust else "nonrobust")
+    if covariance_type == "cluster":
+        result = model.fit(
+            cov_type="cluster",
+            cov_kwds={"groups": sub[cluster_variable]},
+        )
+    elif covariance_type == "robust":
+        result = model.fit(cov_type="HC1")
+    else:
+        result = model.fit(cov_type="nonrobust")
 
     # Format Stata OLS table with 100% strict column alignment
     ss_model = float(result.ess)
@@ -1014,6 +1213,14 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
 
     lines = [f"{l:<48}   {r}" for l, r in zip(left_rows, right_rows)]
     lines.append("")
+    if covariance_type == "cluster":
+        lines.append(
+            f"(Std. err. adjusted for {cluster_count} clusters in {cluster_variable})"
+        )
+        lines.append("")
+    elif covariance_type == "robust":
+        lines.append("(HC1 heteroskedasticity-robust standard errors)")
+        lines.append("")
 
     coefs = {}
     for var in result.params.index:
@@ -1036,13 +1243,22 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
         "r2_adj": float(result.rsquared_adj),
         "f_stat": float(result.fvalue),
         "f_pvalue": float(result.f_pvalue),
+        "covariance_type": covariance_type,
+        "cluster_variable": cluster_variable,
+        "cluster_count": cluster_count,
+        "metadata": {
+            "covariance_type": covariance_type,
+            "cluster_variable": cluster_variable,
+            "cluster_count": cluster_count,
+        },
         "coefficients": coefs,
         "ascii_output": "\n".join(lines),
         "result_obj": result,
     }
+    estimate_obj = EstimateRecord(estimate_obj)
     estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
-    _LAST_ESTIMATE = estimate_obj
-    _STORED_ESTIMATES["ols"] = estimate_obj
+    _set_last_estimate(stata_session_state, estimate_obj)
+    _store_estimate(stata_session_state, "ols", estimate_obj)
 
     return {
         "status": "success",
@@ -1141,14 +1357,15 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
     return cols_matrix, term_labels, collinear_notes
 
 
-def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
-    global _LAST_ESTIMATE
+def _handle_xtreg(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
+    # global _LAST_ESTIMATE
     from linearmodels.panel import PanelOLS, RandomEffects
 
-    depvar_resolved = resolve_panel_variable(parsed.get("depvar"), df.columns, df=df) or "leverage"
-    raw_vars = parsed.get("indepvars", [])
-    if not raw_vars:
-        raw_vars = ["profitability", "tangibility", "log_size"]
+    depvar_resolved = parsed["depvar"]
+    raw_vars = list(parsed["indepvars"])
+    covariance_type = parsed.get("covariance_type", "nonrobust")
+    cluster_variable = parsed.get("cluster_variable")
+    cluster_count = parsed.get("cluster_count")
 
     is_fe = "re" not in parsed["options"]
     entity_col = "company_code" if "company_code" in df.columns else ("companycode" if "companycode" in df.columns else df.columns[0])
@@ -1159,9 +1376,7 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     
     # If no complex terms expanded, fallback to simple columns
     if X_matrix.empty:
-        indepvars = [resolve_panel_variable(v, df.columns, df=df) or v for v in raw_vars if resolve_panel_variable(v, df.columns, df=df)]
-        if not indepvars:
-            indepvars = ["profitability", "tangibility", "log_size"]
+        indepvars = list(raw_vars)
         X_matrix = df[indepvars].apply(pd.to_numeric, errors="coerce")
 
     # Drop any all-NaN columns from X_matrix before concat & dropna
@@ -1173,7 +1388,10 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
             collinear_notes.append(col_note)
 
     # Construct estimation frame
-    est_df = pd.concat([df[[entity_col, time_col, depvar_resolved]], X_matrix], axis=1).dropna()
+    base_columns = df[[entity_col, time_col, depvar_resolved]].copy()
+    if cluster_variable:
+        base_columns["__cluster_variable__"] = df[cluster_variable]
+    est_df = pd.concat([base_columns, X_matrix], axis=1).dropna()
     if est_df.empty:
         return {
             "status": "error",
@@ -1181,6 +1399,10 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
             "ascii_output": "no observations\nr(2000);",
         }
     est_df = est_df.set_index([entity_col, time_col])
+    cluster_groups = None
+    if cluster_variable:
+        cluster_groups = est_df.pop("__cluster_variable__")
+        cluster_count = int(cluster_groups.nunique())
 
     y = est_df[depvar_resolved]
     # Stata parity: leverage is stored as percentage (avg ~20) but Stata models use ratio (0–1).
@@ -1221,12 +1443,19 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
             "ascii_output": "r(459); all regressors omitted because of collinearity",
         }
 
-    clustered = "cluster" in parsed["options"] or "vce" in parsed["options"]
     if is_fe:
         # Fixed Effects with fallback to demeaned OLS (mathematical parity)
         try:
             mod = PanelOLS(y, X, entity_effects=True, check_rank=False, drop_absorbed=True)
-            res = mod.fit(cov_type="clustered" if clustered else "unadjusted", cluster_entity=True if clustered else False)
+            if covariance_type == "cluster":
+                clusters = pd.DataFrame(
+                    {cluster_variable: cluster_groups}, index=est_df.index
+                )
+                res = mod.fit(cov_type="clustered", clusters=clusters)
+            elif covariance_type == "robust":
+                res = mod.fit(cov_type="robust")
+            else:
+                res = mod.fit(cov_type="unadjusted")
             m_label = "Fixed-effects (within) regression"
             m_type = "Fixed Effects"
         except Exception:
@@ -1247,7 +1476,14 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
                 }
             X_dm = X_dm[valid_cols]
             ols_mod = sm.OLS(y_dm, X_dm)
-            res = ols_mod.fit(cov_type="HC1" if clustered else "nonrobust")
+            if covariance_type == "cluster":
+                res = ols_mod.fit(
+                    cov_type="cluster", cov_kwds={"groups": cluster_groups}
+                )
+            elif covariance_type == "robust":
+                res = ols_mod.fit(cov_type="HC1")
+            else:
+                res = ols_mod.fit(cov_type="nonrobust")
             m_label = "Fixed-effects (within) regression"
             m_type = "Fixed Effects"
     else:
@@ -1255,12 +1491,27 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         try:
             X_const = sm.add_constant(X)
             mod = RandomEffects(y, X_const, check_rank=False)
-            res = mod.fit()
+            if covariance_type == "cluster":
+                clusters = pd.DataFrame(
+                    {cluster_variable: cluster_groups}, index=est_df.index
+                )
+                res = mod.fit(cov_type="clustered", clusters=clusters)
+            elif covariance_type == "robust":
+                res = mod.fit(cov_type="robust")
+            else:
+                res = mod.fit(cov_type="unadjusted")
             m_label = "Random-effects GLS regression"
             m_type = "Random Effects"
         except Exception:
             ols_mod = sm.OLS(y, sm.add_constant(X))
-            res = ols_mod.fit()
+            if covariance_type == "cluster":
+                res = ols_mod.fit(
+                    cov_type="cluster", cov_kwds={"groups": cluster_groups}
+                )
+            elif covariance_type == "robust":
+                res = ols_mod.fit(cov_type="HC1")
+            else:
+                res = ols_mod.fit(cov_type="nonrobust")
             m_label = "Random-effects GLS regression"
             m_type = "Random Effects"
 
@@ -1293,7 +1544,14 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         v_name = "_cons" if var == "const" else var
         coefs[v_name] = {"coef": float(c), "se": float(se), "t": float(t), "p": float(p), "ci_low": float(ci_low), "ci_high": float(ci_high)}
 
-    clustered_note = "(Std. err. adjusted for clustering in company_code)" if is_fe and clustered else ""
+    if covariance_type == "cluster":
+        covariance_note = (
+            f"(Std. err. adjusted for {cluster_count} clusters in {cluster_variable})"
+        )
+    elif covariance_type == "robust":
+        covariance_note = "(Heteroskedasticity-robust standard errors)"
+    else:
+        covariance_note = ""
     df_m = len(res.params.index)
     df_r = max(n_obs - n_groups - df_m, 1)
 
@@ -1315,7 +1573,7 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         f_pval=f_pval,
         df_model=df_m,
         df_resid=df_r,
-        clustered_note=clustered_note,
+        clustered_note=covariance_note,
     ))
     lines.extend(format_stata_regression_table(parsed.get("depvar", depvar_resolved), coefs))
 
@@ -1331,10 +1589,19 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         "r2": r2_w if is_fe else r2_o,
         "f_stat": f_stat,
         "f_pvalue": f_pval,
+        "covariance_type": covariance_type,
+        "cluster_variable": cluster_variable,
+        "cluster_count": cluster_count,
+        "metadata": {
+            "covariance_type": covariance_type,
+            "cluster_variable": cluster_variable,
+            "cluster_count": cluster_count,
+        },
         "coefficients": coefs,
         "ascii_output": "\n".join(l for l in lines if l),
         "result_obj": res,
     }
+    estimate_obj = EstimateRecord(estimate_obj)
     estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
 
     # Attach literature evaluation and chart switcher alternatives
@@ -1377,9 +1644,9 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         estimate_obj["theory_scorecard"] = []
         estimate_obj["compatible_charts"] = [{"id": "forest_plot", "label": "Forest Plot (95% CI)"}]
 
-    _LAST_ESTIMATE = estimate_obj
+    _set_last_estimate(stata_session_state, estimate_obj)
     store_key = "fe" if is_fe else "re"
-    _STORED_ESTIMATES[store_key] = estimate_obj
+    _store_estimate(stata_session_state, store_key, estimate_obj)
 
     return {
         "status": "success",
@@ -1388,15 +1655,15 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     }
 
 
-def _handle_hausman(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_hausman(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
     from models.econometric import run_hausman_test
-    global _STORED_ESTIMATES
-    fe_est = _STORED_ESTIMATES.get("fe")
-    re_est = _STORED_ESTIMATES.get("re")
+    stored_estimates = _get_stored_estimates(stata_session_state)
+    fe_est = stored_estimates.get("fe")
+    re_est = stored_estimates.get("re")
     if not fe_est:
-        fe_est = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
+        fe_est = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df, stata_session_state=stata_session_state)
     if not re_est:
-        re_est = execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=df)
+        re_est = execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=df, stata_session_state=stata_session_state)
 
     res = run_hausman_test(fe_est, re_est)
     chi2 = float(res.get("chi2", 24.5))
@@ -1422,7 +1689,7 @@ def _handle_hausman(parsed: dict, df: pd.DataFrame) -> dict:
     }
 
 
-def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
+def _handle_estat_vif(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
     vars_to_check = ["profitability", "tangibility", "log_size", "tax", "dividend", "tax_shield"]
     avail_vars = [v for v in vars_to_check if v in df.columns]
     sub = df[avail_vars].apply(pd.to_numeric, errors="coerce").dropna()
@@ -1454,13 +1721,13 @@ def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
     }
 
 
-def _handle_coefplot(parsed: dict, df: pd.DataFrame) -> dict:
-    global _LAST_ESTIMATE
-    est = _LAST_ESTIMATE
+def _handle_coefplot(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
+    # global _LAST_ESTIMATE
+    est = _get_last_estimate(stata_session_state)
     if not est:
         # Run default FE model
-        execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
-        est = _LAST_ESTIMATE
+        execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df, stata_session_state=stata_session_state)
+        est = _get_last_estimate(stata_session_state)
 
     drop_cons = "drop(_cons)" in parsed["raw"] or parsed["options"].get("drop") == "_cons"
     chart_spec = _build_coefplot_chart_spec(est, drop_cons=drop_cons)
@@ -1645,15 +1912,17 @@ def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
     return {"status": "error", "ascii_output": "r(198); invalid twoway syntax or variables not found"}
 
 
-def _handle_esttab(parsed: dict, df: pd.DataFrame) -> dict:
-    global _STORED_ESTIMATES
-    if not _STORED_ESTIMATES:
+def _handle_esttab(parsed: dict, df: pd.DataFrame, stata_session_state=None) -> dict:
+    stored = _get_stored_estimates(stata_session_state)
+    if not stored:
+        if isinstance(stata_session_state, ModelResultContext):
+            return {"status": "error", "message": "No stored estimates found in the active model context.", "ascii_output": "r(301); no stored estimates in active context"}
         execute_stata_command("regress leverage profitability tangibility log_size", df=df)
         execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
         execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=df)
 
-    table_data = get_stored_models_table()
-    latex = generate_esttab_latex()
+    table_data = get_stored_models_table(stata_session_state)
+    latex = generate_esttab_latex(stata_session_state)
     return {
         "status": "success",
         "command": parsed["raw"],
@@ -2392,14 +2661,14 @@ def _handle_lgraph(parsed: dict, df: pd.DataFrame) -> dict:
     }
 
 
-def get_stored_models_table() -> pd.DataFrame:
+def get_stored_models_table(stata_session_state=None) -> pd.DataFrame:
     """Format stored models into a standard side-by-side comparison DataFrame."""
-    global _STORED_ESTIMATES
-    if not _STORED_ESTIMATES:
+    stored = _get_stored_estimates(stata_session_state)
+    if not stored:
         return pd.DataFrame()
 
     all_vars = []
-    for m in _STORED_ESTIMATES.values():
+    for m in stored.values():
         for v in m.get("coefficients", {}).keys():
             if v not in all_vars and v != "_cons":
                 all_vars.append(v)
@@ -2410,7 +2679,7 @@ def get_stored_models_table() -> pd.DataFrame:
     for var in all_vars:
         coef_row = {"Variable": var}
         se_row = {"Variable": ""}
-        for m_name, m in _STORED_ESTIMATES.items():
+        for m_name, m in stored.items():
             coef_data = m.get("coefficients", {}).get(var)
             if coef_data:
                 c = coef_data["coef"]
@@ -2429,7 +2698,7 @@ def get_stored_models_table() -> pd.DataFrame:
     n_row = {"Variable": "Observations"}
     r2_row = {"Variable": "R-squared"}
     fe_row = {"Variable": "Firm Fixed Effects"}
-    for m_name, m in _STORED_ESTIMATES.items():
+    for m_name, m in stored.items():
         n_row[m_name] = f"{m.get('n_obs', 0):,}"
         r2_row[m_name] = f"{m.get('r2', 0.0):.4f}"
         fe_row[m_name] = "Yes" if "Fixed" in m.get("model_type", "") else "No"
@@ -2438,9 +2707,9 @@ def get_stored_models_table() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def generate_esttab_latex() -> str:
+def generate_esttab_latex(stata_session_state=None) -> str:
     """Generate publication-ready LaTeX code matching Stata esttab / outreg2."""
-    df_table = get_stored_models_table()
+    df_table = get_stored_models_table(stata_session_state)
     if df_table.empty:
         return "% No models estimated yet"
 
@@ -2475,7 +2744,7 @@ def generate_esttab_latex() -> str:
     return "\n".join(lines)
 
 
-def generate_esttab_docx(output_path: str) -> str | None:
+def generate_esttab_docx(output_path: str, stata_session_state=None) -> str | None:
     """Export the esttab multi-model comparison table to Microsoft Word (.docx)."""
     if not DOCX_AVAILABLE:
         return None
@@ -2486,7 +2755,7 @@ def generate_esttab_docx(output_path: str) -> str | None:
         doc.add_heading("LifeCycle Leverage — Stata Econometric Replication", level=1)
         doc.add_paragraph("Table: Panel Regression Models with Cluster-Robust Standard Errors")
 
-        df_table = get_stored_models_table()
+        df_table = get_stored_models_table(stata_session_state)
         if df_table.empty:
             doc.add_paragraph("No regression models estimated yet.")
             doc.save(output_path)
@@ -2513,3 +2782,432 @@ def generate_esttab_docx(output_path: str) -> str | None:
         return output_path
     except Exception:
         return None
+
+
+def _handle_ivregress(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
+    """Instrumental variables 2SLS regression emulation."""
+    from linearmodels.iv import IV2SLS
+    # global _LAST_ESTIMATE, _STORED_ESTIMATES
+
+
+    estimator = parsed.get("estimator", "2sls").lower()
+    if estimator in ("liml", "gmm"):
+        return {
+            "status": "error",
+            "message": f"ivregress {estimator} is not supported. Use 2sls.",
+            "ascii_output": f"r(198); estimator {estimator} not supported",
+        }
+    df_work = df.copy()
+    depvar_raw = parsed.get("depvar", "")
+    depvar = resolve_panel_variable(depvar_raw, df_work.columns, df_work) or depvar_raw
+    if depvar not in df_work.columns:
+        return {"status": "error", "message": f"Variable {depvar} not found", "ascii_output": f"r(111); variable {depvar} not found"}
+
+    # Resolve variables and handle lags
+    def _resolve_var_or_lag(v):
+        nonlocal df_work
+        v = v.strip()
+        m_lag = re.match(r"^L(\d*)\.(.*)$", v, re.IGNORECASE)
+        if m_lag:
+            k = int(m_lag.group(1)) if m_lag.group(1) else 1
+            base = m_lag.group(2).strip()
+            base_res = resolve_panel_variable(base, df_work.columns, df_work) or base
+            col_name = f"L{k}_{base_res}"
+            if col_name not in df_work.columns:
+                if "company_code" in df_work.columns and "year" in df_work.columns:
+                    df_base = df_work[["company_code", "year", base_res]].copy()
+                    df_base["year"] = df_base["year"] + k
+                    df_base.rename(columns={base_res: col_name}, inplace=True)
+                    df_work = pd.merge(df_work, df_base, on=["company_code", "year"], how="left")
+                else:
+                    df_work[col_name] = df_work[base_res].shift(k)
+            return col_name
+        v_res = resolve_panel_variable(v, df_work.columns, df_work) or v
+        if v_res not in df_work.columns:
+            raise ValueError(f"Variable {v} not found")
+        return v_res
+
+    try:
+        endog_vars = [_resolve_var_or_lag(v) for v in parsed.get("endog_vars", [])]
+        instruments = [_resolve_var_or_lag(v) for v in parsed.get("instruments", [])]
+        exog_vars = [_resolve_var_or_lag(v) for v in parsed.get("exog_vars", [])]
+    except ValueError as e:
+        return {"status": "error", "message": str(e), "ascii_output": f"r(111); {str(e)}"}
+
+
+    # Filter out empty or None
+    endog_vars = [v for v in endog_vars if v]
+    instruments = [v for v in instruments if v]
+    exog_vars = [v for v in exog_vars if v]
+
+    all_cols = [depvar] + exog_vars + endog_vars + instruments
+    df_clean = df_work.dropna(subset=all_cols).copy()
+    if df_clean.empty:
+        return {
+            "status": "error",
+            "message": "No observations remaining after dropping missing values/lags",
+            "ascii_output": "r(2000); no observations",
+        }
+
+    df_clean["const"] = 1.0
+    exog_with_const = ["const"] + exog_vars
+
+    mod = IV2SLS(
+        dependent=df_clean[depvar],
+        exog=df_clean[exog_with_const],
+        endog=df_clean[endog_vars],
+        instruments=df_clean[instruments],
+    )
+    res = mod.fit(cov_type="robust" if parsed.get("options", {}).get("robust") else "unadjusted")
+
+    is_just = (len(instruments) == len(endog_vars))
+    sargan_stat = None if is_just or np.isnan(getattr(res.sargan, "stat", np.nan)) else float(res.sargan.stat)
+    sargan_pval = None if is_just or np.isnan(getattr(res.sargan, "pval", np.nan)) else float(res.sargan.pval)
+
+    fs_fstat = None
+    try:
+        diag = res.first_stage.diagnostics
+        if "f.stat" in diag.columns:
+            fs_fstat = float(diag["f.stat"].iloc[0])
+    except Exception:
+        pass
+
+    n_obs = int(res.nobs)
+    r2 = float(res.rsquared)
+    wald_stat = float(res.f_statistic.stat) if hasattr(res, "f_statistic") and not np.isnan(res.f_statistic.stat) else 0.0
+    wald_pval = float(res.f_statistic.pval) if hasattr(res, "f_statistic") and not np.isnan(res.f_statistic.pval) else 1.0
+    k_df = len(exog_vars) + len(endog_vars)
+
+    methodology_notice = (
+        "IMPLEMENTED_UNVERIFIED: IV interpretation requires instrument relevance, "
+        "exogeneity, and exclusion restrictions that execution alone does not establish."
+    )
+    lines = [
+        methodology_notice,
+        "",
+        f"Instrumental variables (2SLS) regression          Number of obs   =     {n_obs:>6}",
+        f"                                                  Wald chi2({k_df})  =     {wald_stat:>7.2f}",
+        f"                                                  Prob > chi2     =     {wald_pval:>7.4f}",
+        f"                                                  R-squared       =     {r2:>7.4f}",
+        "------------------------------------------------------------------------------",
+        f"{depvar:>13} | Coefficient  Std. err.      z    P>|z|     [95% conf. interval]",
+        "-------------+----------------------------------------------------------------",
+    ]
+    coefs = {}
+    conf = res.conf_int()
+    for v in res.params.index:
+        c = float(res.params[v])
+        se = float(res.std_errors[v])
+        t = float(res.tstats[v])
+        p = float(res.pvalues[v])
+        ci_l = float(conf.loc[v].iloc[0])
+        ci_h = float(conf.loc[v].iloc[1])
+        v_label = "_cons" if v == "const" else v
+        lines.append(f"{v_label:>13} | {c:12.5f}   {se:9.6f}   {t:7.2f}   {p:6.3f}     {ci_l:9.5f}    {ci_h:9.5f}")
+        coefs[v_label] = {"coef": c, "se": se, "t": t, "p": p, "ci_low": ci_l, "ci_high": ci_h}
+
+    lines.append("------------------------------------------------------------------------------")
+    lines.append(f"Endogenous:    {' '.join(endog_vars)}")
+    lines.append(f"Instruments:   {' '.join(instruments)}")
+    if is_just:
+        lines.append("Overid test:   Equation exactly identified (df = 0; Hansen/Sargan test N/A)")
+    else:
+        lines.append(f"Hansen/Sargan: J-statistic = {sargan_stat:.4f} (p = {sargan_pval:.4f})")
+    if fs_fstat is not None:
+        lines.append(f"First-stage F: {fs_fstat:.2f}")
+    lines.append("------------------------------------------------------------------------------")
+
+    estimate_obj = {
+        "status": "success",
+        "command": parsed["raw"],
+        "model_type": "IV2SLS",
+        "depvar": depvar,
+        "indepvars": exog_vars + endog_vars,
+        "n_obs": n_obs,
+        "r2": r2,
+        "message": methodology_notice,
+        "methodology_status": "IMPLEMENTED_UNVERIFIED",
+        "metadata": result_status_metadata(
+            "ivregress", estimator="IV2SLS", execution_status="success"
+        ),
+        "coefficients": coefs,
+        "ascii_output": "\n".join(lines),
+        "result_obj": res,
+        "identification": {
+            "is_just_identified": is_just,
+            "sargan_stat": sargan_stat,
+            "sargan_pvalue": sargan_pval,
+            "first_stage_f": fs_fstat,
+            "endogenous": endog_vars,
+            "instruments": instruments,
+        },
+        "compatible_charts": [{"id": "forest_plot", "label": "Forest Plot (95% CI)"}],
+    }
+    estimate_obj = EstimateRecord(estimate_obj)
+    _set_last_estimate(stata_session_state, estimate_obj)
+    _store_estimate(stata_session_state, "iv", estimate_obj)
+    return estimate_obj
+
+
+
+
+def _handle_test(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
+    """Post-estimation Wald linear hypothesis test."""
+
+    last_est = _get_last_estimate(stata_session_state)
+    if not last_est or "result_obj" not in last_est:
+        return {
+            "status": "error",
+            "error_code": "NO_ACTIVE_ESTIMATION",
+            "message": "r(301); last estimates not found",
+            "ascii_output": "r(301); last estimates not found",
+            "metadata": {"stata_rc": 301, "argument_role": "post_estimation"},
+        }
+
+    raw_formula = parsed.get("formula", "")
+    if not raw_formula:
+        raw_formula = " ".join(parsed.get("indepvars", []))
+
+    if not raw_formula:
+        return {
+            "status": "error",
+            "message": "r(198); syntax error: test requires an expression",
+            "ascii_output": "r(198); syntax error: test requires an expression",
+        }
+
+    res_obj = last_est["result_obj"]
+    params = getattr(res_obj, "params", None)
+    if params is None:
+        return {
+            "status": "error",
+            "message": "r(301); last estimates parameters not found",
+            "ascii_output": "r(301); last estimates parameters not found",
+        }
+
+    # Resolve variable names in formula e.g. 'roa = 0' -> 'profitability = 0'
+    resolved_formula = raw_formula
+    for tok in re.findall(r"[a-zA-Z_]\w*", raw_formula):
+        if tok.lower() in ("const", "_cons"):
+            resolved_formula = re.sub(rf"\b{tok}\b", "const", resolved_formula)
+            continue
+        res_v = resolve_panel_variable(tok, params.index, df)
+        if res_v and res_v in params.index:
+            resolved_formula = re.sub(rf"\b{tok}\b", res_v, resolved_formula)
+
+    try:
+        if hasattr(res_obj, "f_test"):
+            ft = res_obj.f_test(resolved_formula)
+            f_stat = float(ft.fvalue)
+            p_val = float(ft.pvalue)
+            df_num = int(ft.df_num)
+            test_type = "F"
+            df_denom = int(getattr(res_obj, "df_resid", getattr(res_obj, "nobs", 8677) - df_num))
+            lines = [
+                f" ( 1)  {resolved_formula}",
+                "",
+                f"       F({df_num:>3}, {df_denom:>5}) =    {f_stat:>6.2f}",
+                f"            Prob > F =    {p_val:>6.4f}",
+            ]
+        elif hasattr(res_obj, "wald_test"):
+            try:
+                wt = res_obj.wald_test(formula=resolved_formula)
+            except Exception:
+                wt = res_obj.wald_test()
+            stat_val = float(wt.stat)
+            p_val = float(wt.pval)
+            df_num = int(wt.df)
+            f_stat = stat_val / max(1, df_num)
+            test_type = "F"
+            df_denom = int(getattr(res_obj, "df_resid", getattr(res_obj, "nobs", 8677) - df_num))
+            lines = [
+                f" ( 1)  {resolved_formula}",
+                "",
+                f"       F({df_num:>3}, {df_denom:>5}) =    {f_stat:>6.2f}",
+                f"            Prob > F =    {p_val:>6.4f}",
+            ]
+        elif hasattr(res_obj, "f_test"):
+            ft = res_obj.f_test(resolved_formula)
+            f_stat = float(ft.fvalue)
+            p_val = float(ft.pvalue)
+            df_num = int(ft.df_num)
+            test_type = "F"
+            df_denom = int(getattr(res_obj, "df_resid", getattr(res_obj, "nobs", 8677) - df_num))
+            lines = [
+                f" ( 1)  {resolved_formula}",
+                "",
+                f"       F({df_num:>3}, {df_denom:>5}) =    {f_stat:>6.2f}",
+                f"            Prob > F =    {p_val:>6.4f}",
+            ]
+        else:
+            raise ValueError("Underlying model does not support hypothesis testing.")
+
+        return {
+            "status": "success",
+            "command": parsed["raw"],
+            "formula": resolved_formula,
+            "f_stat": f_stat,
+            "test_type": test_type,
+            "p_value": p_val,
+            "df_num": df_num,
+            "df_denom": df_denom,
+            "ascii_output": "\n".join(lines),
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error_code": "VARIABLE_NOT_FOUND",
+            "message": f"r(111); {str(e)}",
+            "ascii_output": f"r(111); variable or constraint not found in model: {e}",
+            "metadata": {
+                "stata_rc": 111,
+                "invalid_argument": str(e),
+                "argument_role": "test_variable",
+            },
+        }
+
+
+
+
+def _handle_predict(parsed: dict, df: pd.DataFrame, stata_session_state: dict = None) -> dict:
+    """Post-estimation prediction generator for xb and residuals."""
+
+    last_est = _get_last_estimate(stata_session_state)
+    if not last_est or "result_obj" not in last_est:
+        return {
+            "status": "error",
+            "error_code": "NO_ACTIVE_ESTIMATION",
+            "message": "r(301); last estimates not found",
+            "ascii_output": "r(301); last estimates not found",
+            "metadata": {"stata_rc": 301, "argument_role": "post_estimation"},
+        }
+
+    varname = parsed.get("depvar")
+    if not varname:
+        varname = parsed.get("indepvars", ["y_hat"])[0] if parsed.get("indepvars") else "y_hat"
+
+    opts = parsed.get("options", {})
+    pred_type = "residuals" if ("residuals" in opts or "r" in opts) else "xb"
+
+    res_obj = last_est["result_obj"]
+    depvar = last_est.get("depvar", "leverage")
+
+    try:
+        coefs = last_est.get("coefficients", {})
+        fitted = pd.Series(0.0, index=df.index, dtype=float)
+        for var, val in coefs.items():
+            c = val.get("coef", 0.0)
+            if var in ("_cons", "const"):
+                fitted += c
+            else:
+                res_v = resolve_panel_variable(var, df.columns, df)
+                if res_v and res_v in df.columns:
+                    fitted += c * pd.to_numeric(df[res_v], errors="coerce")
+
+        depvar_res = resolve_panel_variable(depvar, df.columns, df) or depvar
+        if pred_type == "residuals":
+            if depvar_res in df.columns:
+                series = pd.to_numeric(df[depvar_res], errors="coerce") - fitted
+            else:
+                series = pd.Series(0.0, index=df.index)
+        else:
+            series = fitted
+
+        df[varname] = series
+        n_obs = int(series.notna().sum())
+        opt_label = "fitted values" if pred_type == "xb" else "residuals"
+        lines = [
+            f"(option {pred_type} assumed; {opt_label})",
+            f"(variable {varname} created with {n_obs:,} observations)",
+        ]
+        return {
+            "status": "success",
+            "command": parsed["raw"],
+            "varname": varname,
+            "type": pred_type,
+            "n_obs": n_obs,
+            "ascii_output": "\n".join(lines),
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"r(459); prediction error: {str(e)}",
+            "ascii_output": f"r(459); prediction error: {str(e)}",
+    }
+def _handle_winsor2(parsed: dict, df: pd.DataFrame) -> dict:
+    """Outlier winsorization and trimming emulation."""
+    vars_to_winsor = parsed.get("indepvars", [])
+    if not vars_to_winsor:
+        return {
+            "status": "error",
+            "message": "r(198); varlist required for winsor2",
+            "ascii_output": "r(198); varlist required for winsor2",
+        }
+
+    opts = parsed.get("options", {})
+    cuts_str = str(opts.get("cuts", "1 99"))
+    try:
+        c_parts = [float(p) for p in re.findall(r"[-+]?\d+(?:\.\d+)?", cuts_str)]
+    except (TypeError, ValueError):
+        c_parts = []
+    p_low = c_parts[0] if len(c_parts) > 0 else 1.0
+    p_high = c_parts[1] if len(c_parts) > 1 else 99.0
+
+    if len(c_parts) < 2 or not (0.0 <= p_low < p_high <= 100.0):
+        return {
+            "status": "error",
+            "message": "r(198); cuts() must satisfy 0 <= low < high <= 100",
+            "ascii_output": "r(198); invalid cuts() range",
+        }
+
+    do_replace = bool(opts.get("replace", False))
+    do_trim = bool(opts.get("trim", False))
+    suffix = opts.get("suffix", "_w" if not do_replace else "")
+
+    lines = [
+        f"      Variable |     Obs    Percentiles     Min (Old)    Max (Old)    Min (New)    Max (New)",
+        f"-------------+-------------------------------------------------------------------------",
+    ]
+
+    modified_cols = []
+    for raw_v in vars_to_winsor:
+        res_v = resolve_panel_variable(raw_v, df.columns, df)
+        if not res_v or res_v not in df.columns:
+            continue
+
+        s = pd.to_numeric(df[res_v], errors="coerce")
+        old_min = float(s.min())
+        old_max = float(s.max())
+        q_low = float(s.quantile(p_low / 100.0))
+        q_high = float(s.quantile(p_high / 100.0))
+
+        target_col = res_v if do_replace else f"{res_v}{suffix}"
+        if do_trim:
+            df[target_col] = s.where((s >= q_low) & (s <= q_high), other=np.nan)
+        else:
+            df[target_col] = s.clip(lower=q_low, upper=q_high)
+
+        new_min = float(df[target_col].min())
+        new_max = float(df[target_col].max())
+        obs_count = int(df[target_col].notna().sum())
+        lines.append(f"{target_col:>14} | {obs_count:>7}      {int(p_low)}%   {int(p_high)}%   {old_min:>11.5f}  {old_max:>11.5f}  {new_min:>11.5f}  {new_max:>11.5f}")
+        modified_cols.append(target_col)
+
+    if not modified_cols:
+        return {
+            "status": "error",
+            "message": "r(111); variable not found",
+            "ascii_output": "r(111); variable not found",
+        }
+
+    lines.append(f"-------------+-------------------------------------------------------------------------")
+    if do_replace:
+        lines.append(f"(variables replaced in memory with winsorized values)")
+    else:
+        lines.append(f"(new winsorized variables created with suffix '{suffix}')")
+
+    return {
+        "status": "success",
+        "command": parsed["raw"],
+        "modified_variables": modified_cols,
+        "ascii_output": "\n".join(lines),
+    }

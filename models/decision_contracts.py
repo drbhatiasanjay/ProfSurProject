@@ -6,11 +6,102 @@ same evidence and visualization rules.
 """
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, field
 from typing import Any, Literal
 
 
 EvidenceKind = Literal["observed", "derived", "modeled", "assumption", "interpretation"]
+GroundingLabel = Literal["FACT", "COMPUTED", "INTERPRETATION", "HYPOTHESIS", "UNSUPPORTED"]
+AnalysisRunStatus = Literal["pending", "running", "completed", "failed"]
+TraceStatus = Literal["pending", "running", "completed", "failed", "skipped"]
+CHAT_ERROR_CODES = frozenset({
+    "PROVIDER_NOT_CONFIGURED",
+    "PROVIDER_UNAVAILABLE",
+    "PROVIDER_RESPONSE_INVALID",
+    "PROVIDER_REQUEST_FAILED",
+    "REQUEST_CANCELLED",
+    "INTERNAL_ERROR",
+})
+
+
+def build_chat_error(code: str, message: str, *, recoverable: bool = True) -> dict[str, Any]:
+    """Return a safe, stable chat error envelope for UI and logs."""
+    if code not in CHAT_ERROR_CODES:
+        raise ValueError(f"unsupported chat error code: {code}")
+    return {
+        "type": "error",
+        "error_code": code,
+        "message": str(message or "The chat request could not be completed."),
+        "recoverable": recoverable,
+    }
+
+
+@dataclass(frozen=True)
+class ActionTraceEvent:
+    """User-visible execution event; never stores private model reasoning."""
+
+    name: str
+    status: TraceStatus
+    detail: str = ""
+    evidence_refs: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.name.strip():
+            raise ValueError("trace event name must not be empty")
+
+
+@dataclass(frozen=True)
+class AnalysisRun:
+    """Provider-neutral envelope for one deterministic analytical execution."""
+
+    run_id: str
+    capability_id: str
+    status: AnalysisRunStatus
+    parameters: dict[str, Any] = field(default_factory=dict)
+    dataset_fingerprint: str = ""
+    result: Any = None
+    provenance: dict[str, Any] = field(default_factory=dict)
+    errors: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.run_id.strip():
+            raise ValueError("run_id must not be empty")
+        if not self.capability_id.strip():
+            raise ValueError("capability_id must not be empty")
+        if self.status not in {"pending", "running", "completed", "failed"}:
+            raise ValueError(f"unsupported analysis run status: {self.status}")
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a JSON-compatible representation with stable field names."""
+        return {
+            "run_id": self.run_id,
+            "capability_id": self.capability_id,
+            "status": self.status,
+            "parameters": dict(self.parameters),
+            "dataset_fingerprint": self.dataset_fingerprint,
+            "result": self.result,
+            "provenance": dict(self.provenance),
+            "errors": list(self.errors),
+        }
+
+    def to_json(self) -> str:
+        """Serialize deterministically for persistence and reproducibility checks."""
+        return json.dumps(self.to_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "AnalysisRun":
+        """Rehydrate a run from the public dictionary representation."""
+        return cls(
+            run_id=str(payload.get("run_id", "")),
+            capability_id=str(payload.get("capability_id", "")),
+            status=payload.get("status", "pending"),
+            parameters=dict(payload.get("parameters") or {}),
+            dataset_fingerprint=str(payload.get("dataset_fingerprint", "")),
+            result=payload.get("result"),
+            provenance=dict(payload.get("provenance") or {}),
+            errors=tuple(payload.get("errors") or ()),
+        )
 
 
 @dataclass(frozen=True)
@@ -22,6 +113,19 @@ class EvidenceItem:
     kind: EvidenceKind
     source: str = ""
     confidence: Literal["high", "medium", "low"] | None = None
+
+
+@dataclass(frozen=True)
+class GroundingItem:
+    """User-facing claim classification; labels do not imply scientific validity."""
+
+    label: GroundingLabel
+    text: str
+    source: str = ""
+
+    def __post_init__(self) -> None:
+        if not self.text.strip():
+            raise ValueError("grounding item text must not be empty")
 
 
 @dataclass(frozen=True)
@@ -49,6 +153,10 @@ class DecisionBrief:
     assumptions: tuple[str, ...] = ()
     limitations: tuple[str, ...] = ()
     validation: dict[str, Any] = field(default_factory=dict)
+    intent: str = ""
+    selected_capability: str = ""
+    trace: tuple[ActionTraceEvent, ...] = ()
+    grounding: tuple[GroundingItem, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize without requiring a provider-specific model library."""
@@ -107,6 +215,10 @@ def build_decision_brief(
     chart: dict[str, Any] | None = None,
     user_query: str = "",
     limitations: list[str] | None = None,
+    intent: str = "",
+    selected_capability: str = "",
+    trace: list[ActionTraceEvent] | None = None,
+    grounding: list[GroundingItem] | None = None,
 ) -> DecisionBrief:
     """Create the common envelope after provider output is normalized."""
     validation = validate_chart_table(table, chart)
@@ -121,5 +233,9 @@ def build_decision_brief(
         chart=effective_chart,
         limitations=tuple(effective_limitations),
         validation=validation,
+        intent=intent.strip(),
+        selected_capability=selected_capability.strip(),
+        trace=tuple(trace or []),
+        grounding=tuple(grounding or []),
     )
 

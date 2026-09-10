@@ -1,0 +1,46 @@
+{
+  "marker": "PLAYWRIGHT_PASS journeys=1 commands=8",
+  "commands": 8,
+  "outcomes": [
+    {
+      "command": "xtreg leverage profitability tangibility log_size, fe",
+      "active_title": true,
+      "fragments": true
+    },
+    {
+      "command": "test profitability = 0",
+      "active_title": true,
+      "fragments": true
+    },
+    {
+      "command": "predict y_hat, xb",
+      "active_title": true,
+      "fragments": true
+    },
+    {
+      "command": "ivregress 2sls leverage profitability (tangibility = log_size)",
+      "active_title": true,
+      "fragments": true
+    },
+    {
+      "command": "winsor2 leverage tangibility, cuts(1 99) replace",
+      "active_title": true,
+      "fragments": true
+    },
+    {
+      "command": "gmm leverage profitability tangibility",
+      "active_title": true,
+      "fragments": true
+    },
+    {
+      "command": "didregress leverage profitability",
+      "active_title": true,
+      "fragments": true
+    },
+    {
+      "command": "predict_ml leverage profitability tangibility",
+      "active_title": true,
+      "fragments": true
+    }
+  ]
+}

@@ -163,9 +163,10 @@ def test_execute_coefplot(sample_panel_df):
 
 
 def test_execute_esttab_latex(sample_panel_df):
-    from models.stata_engine import execute_stata_command, get_stored_models_table
-    execute_stata_command("xtreg leverage profitability tangibility, fe", df=sample_panel_df)
-    res = execute_stata_command("esttab, se r2 star", df=sample_panel_df)
+    from models.stata_engine import ModelResultContext, execute_stata_command, get_stored_models_table
+    state = ModelResultContext()
+    execute_stata_command("xtreg leverage profitability tangibility, fe", df=sample_panel_df, stata_session_state=state)
+    res = execute_stata_command("esttab, se r2 star", df=sample_panel_df, stata_session_state=state)
     assert res["status"] == "success"
     assert "table_html" in res
     assert "latex_code" in res

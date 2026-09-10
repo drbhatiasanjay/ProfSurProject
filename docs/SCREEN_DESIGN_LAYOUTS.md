@@ -179,17 +179,15 @@
 
 ---
 
-## Screen 13: Advanced Econometrics — Dynamic GMM (`13_advanced_econometrics.py`)
+## Screen 13: Advanced Econometrics — Unverified IV-GMM Proxy (`13_advanced_econometrics.py`)
 
 ### Layout Wireframe
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ 🧪 ADVANCED DYNAMIC ECONOMETRICS: TWO-STEP SYSTEM GMM (Blundell-Bond)                                                       │
+│ 🧪 ADVANCED ECONOMETRICS: EXPERIMENTAL IV-GMM PROXY — NOT VALIDATED                                                         │
 ├─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
 │ ┌─────────────────────────────┬─────────────────────────────┬─────────────────────────────┬───────────────────────────────┐ │
-│ │ ⏱️ Target Adjustment Speed  │ 📊 Arellano-Bond AR(1)      │ 📊 Arellano-Bond AR(2)      │ 🛡️ Hansen Overidentification  │ │
-│ │ λ = 0.384 (38.4% per year)  │ z = -4.82 (p < 0.001)       │ z = 0.84 (p = 0.402)        │ χ² = 42.1 (p = 0.284)         │ │
-│ │ Half-Life = 1.44 Years      │ [✓] 1st-order correlation   │ [✓] NO 2nd-order correl.    │ [✓] Instruments are Valid     │ │
+│ │ ⚠️ Method status: unverified │ descriptive lag correlation  │ no formal dynamic-panel test │ instrument validity not established │ │
 │ └─────────────────────────────┴─────────────────────────────┴─────────────────────────────┴───────────────────────────────┘ │
 ├──────────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────┤
 │ 📈 TARGET LEVERAGE ADJUSTMENT PATH                          │ 🦠 COVID-19 REGIME RESILIENCE WATERFALL                      │

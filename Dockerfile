@@ -2,6 +2,10 @@ FROM us-east1-docker.pkg.dev/tempproject-462219/cloud-run-source-deploy/lifecycl
 
 WORKDIR /app
 
+ENV TIKTOKEN_CACHE_DIR=/opt/tiktoken-cache
+RUN mkdir -p "$TIKTOKEN_CACHE_DIR" && \
+    python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
+
 # Install torch CPU separately (too large for base image bake)
 RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 

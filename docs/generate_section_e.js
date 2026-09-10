@@ -502,7 +502,7 @@ const doc = new Document({
 
       // USP 3
       heading3("USP 3: Econometric and Machine Learning Triangulation"),
-      para("The dashboard employs a three-tier analytical architecture: Tier 1 (econometric models: OLS, Fixed Effects, Random Effects, System GMM) provides theory-grounded coefficient estimates with standard errors and specification tests; Tier 2 (ML models: Random Forest, XGBoost, LightGBM with SHAP) provides predictive accuracy and non-linear feature importance; Tier 3 (survival analysis, LSTM forecasting, clustering) provides forward-looking risk and trajectory analysis. Results from all three tiers are presented together, enabling users to triangulate findings. Where econometric models identify causal relationships, ML models confirm predictive relevance, and survival models assess dynamic risk. This multi-method approach is standard in PhD-level research but has never been packaged into a commercial tool."),
+      para("The dashboard employs a three-tier analytical architecture: Tier 1 (econometric models: OLS, Fixed Effects, Random Effects, and explicitly unverified IV-GMM proxy output) provides theory-grounded coefficient estimates with standard errors and specification tests; Tier 2 (ML models: Random Forest, XGBoost, LightGBM with SHAP) provides predictive accuracy and non-linear feature importance; Tier 3 (survival analysis, LSTM forecasting, clustering) provides forward-looking risk and trajectory analysis. Results from all three tiers are presented together, enabling users to triangulate findings. Econometric execution does not by itself establish causal identification or methodological validation."),
 
       // USP 4
       heading3("USP 4: Dynamic AI-Generated Interpretation"),

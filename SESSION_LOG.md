@@ -230,38 +230,83 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 ---
 
-# ProfSurProject — Session Log (2026-09-07 Workstream 2 Citation Inspector Verification)
+# ProfSurProject — Session Log (2026-09-08 Wave 5 / WS1 Reconciliation)
 
-## 1. Workstream 2: Academic Citation Inspector & Literature Vault (`3245356`)
+## 1. Recovery and Lineage
 
-**Target:** `c:\Users\hemas\Downloads\ProfSurProject\.worktrees\citation-inspector-modal`  
-**Branch:** `feature/citation-inspector-modal`  
-**Commit:** `3245356` (`feat(citation): complete Workstream 2 Citation Inspector with dialog modal, catalog metadata, and zero-collision triggers`)  
-**PR:** `#4` (https://github.com/drbhatiasanjay/ProfSurProject/pull/4)  
-**Local URL:** `http://localhost:8501`  
-**Execution Timestamp:** `2026-09-07T23:21:00`  
-**Browser Verification Evidence:** `scratch/citation_inspector_evidence/`  
+- Confirmed exclusive workspace `C:\Users\hemas\Downloads\ProfSurProject`.
+- Preserved historical Wave 5 commit `85ccd1e`.
+- Retained Antigravity repair commit `da4b2b8` and reconciliation merge `3f2e368`.
+- Confirmed Workstream 1 lineage `4119d56` as the second merge parent.
+- Preserved pre-existing `capital_structure.db` mutation and unrelated untracked files.
 
-### Verification Summary
-- **Academic Metadata Catalog (`models/citation_vault_metadata.py`)**:
-  - Registered 8 foundational empirical/theoretical papers: Dickinson (2011), Rajan & Zingales (1995), Myers & Majluf (1984), Jensen & Meckling (1976), Frank & Goyal (2009), Titman & Wessels (1988), DeAngelo et al. (2006), Kumar (2026).
-  - All entries validated with RFC 3986 HTTPS DOIs, theoretical mechanisms, empirical benchmarks, and Indian panel corroboration (CMIE Prowess 2001–2025).
-  - Formatters for dynamic BibTeX, APA 7th, and Stata comment export.
-- **Native Streamlit Dialog Modal (`components/citation_inspector.py`)**:
-  - Built with `@st.dialog("📖 Academic Citation Inspector")` with glassmorphic, theme-adaptive high-contrast styling.
-  - Safe key generator `get_safe_button_key()` guarantees zero Streamlit DuplicateWidgetID collisions across loops and reruns.
-- **Page Integrations**:
-  - `pages/23_stata_studio.py`: Integrated `render_citation_badge_button()` across commentary cards and added quick `render_citation_selector()` dropdown expander.
-  - `pages/19_ai_assistant.py`: Integrated `render_citation_badge_button()` across literature vault expanders for both historical turns and live responses.
-- **TDD Test Suite (`tests/test_citation_inspector.py`)**: 6/6 passed (100% in 0.99s).
-- **Full Project Regression**: 709/709 passed, 0 failures.
-- **Browser Playwright UI Evidence**: Successfully captured modal activation, dialog rendering, and citation lookups in Stata Studio & AI Assistant.
-  - `01_stata_studio_initial.png` (134 KB) — Stata Studio page loaded
-  - `02_stata_studio_expanded.png` (139 KB) — Citation Vault section expanded
-  - `03_stata_dialog_modal.png` (200 KB) — Citation Inspector modal open in Stata Studio ✅
-  - `04_ai_assistant_initial.png` (176 KB) — AI Assistant page loaded
-  - `05_ai_assistant_literature.png` (186 KB) — Academic Citation drawer expanded
-  - `06_ai_assistant_dialog_modal.png` (197 KB) — Inspect Dickinson (2011) modal open in AI Assistant ✅
-- **Targeted Regression (Stata Studio + AI Chat):** 109 passed, 1 skipped, 0 failures (4.14s).
-- **Deployment Status:** **PR #4 CREATED AND READY FOR MERGE**.
+## 2. Contract and Methodology Repair
 
+- Removed fabricated Wave 5 request/result assumptions and retained canonical Wave 2 contracts.
+- Added `partial` run-envelope state and router-level fail-closed demotion.
+- Kept executable WS1 `ivregress` under `IMPLEMENTED_UNVERIFIED`; isolated the Wave 5 IV candidate registration.
+- Restored Wave 4 handlers and post-estimation interoperability lost during WS1 merge.
+- Restored Wave 5 parser/console routing with truthful GMM, HDFE, DiD, scenario, and ML descriptions.
+- No advanced Wave 5 method is marked `VALIDATED`.
+
+## 3. Verification
+
+- RED suite hang recorded: local `napari` pytest plugin stalled before collection; no test node hung.
+- Repaired RED suite: 37 passed in 2.38s.
+- Wave 5 contract + numerical gates: 44 passed in 3.01s.
+- Targeted Wave 2 / Wave 4 / WS1 / Wave 5 gate: 98 passed in 3.96s.
+- Complete GitHub-equivalent selection: 816 passed, 1 skipped in 117.55s.
+- Targeted Playwright: 4/4 fail-closed Stata Studio commands passed.
+
+## 4. Review State
+
+- Durable reports added under `docs/implementation-reports/`.
+- No original Wave 5 PR, master merge, deployment, or Wave 6 work performed.
+- Resume point: `READY_FOR_INDEPENDENT_REVIEW` on
+  `reconcile/wave5-ws1-contract-repair-2026-09-08`.
+
+---
+
+# ProfSurProject — Session Log (2026-09-08 Independent Review Repair)
+
+- Created successor branch `reconcile/wave5-independent-review-repair-2026-09-08`
+  from immutable reviewed commit `88ab5c2`.
+- Added centralized parser-output validation and prohibited silent substitution.
+- Added typed `r(111)` and `r(198)` metadata and prevented estimator dispatch after failure.
+- Implemented exact OLS/panel covariance semantics for conventional, robust, and
+  requested-variable clustered covariance.
+- Added public parser-to-adapter contracts for scenario interventions and HDFE absorb lists.
+- Removed inherited System-GMM and Arellano–Bond claims for the levels IV-GMM proxy.
+- Separated WS1 IV execution availability from methodological validation.
+- Verification: 134 targeted tests passed; 852 full-suite tests passed; the code
+  push hook passed 115 tests; four Playwright journeys passed across 19 interactions.
+- Disposable 9,031-row audit: 22 core commands and four WS1 commands succeeded;
+  eight invalid requests failed closed; source and copy database hashes were unchanged.
+- Resume point: `READY_FOR_INDEPENDENT_RE_REVIEW`.
+
+---
+
+# ProfSurProject — Session Log (2026-09-08 Automation and Performance Closure)
+
+- Integrated tiktoken lazy initialization, Docker cache prefetch, and import tests.
+- Removed eager `models.llm_adapters`, SQLite, and cache-directory import side effects.
+- Added authoritative generated capability status and drift checks.
+- Added reusable static, real-data, and Playwright verification tools.
+- Added fast/targeted/full project-operation tiers with disposable DB and pytest paths.
+- Added GitHub Actions contract gates and safe current-branch push automation.
+- Measured `import models` at 0.000652s versus explicit LLM adapter import at 2.410616s.
+- Verification: fast 242 passed/1 skipped; targeted 153 passed; full 871 passed/1 skipped;
+  reusable UI verifier passed four journeys; real-data audit passed with unchanged hashes.
+- Resume point remains `READY_FOR_INDEPENDENT_RE_REVIEW` pending a fresh independent gate.
+
+# ProfSurProject — Session Log (2026-09-10 Final Core Baseline Closure)
+
+- Canonical application candidate: `5c02509f18b1fa8cb2070f88d78fb2cf5393e48f`.
+- CI repair/current branch head: `527530b1bf08d2c0ac2770f405c66941a423ce32`.
+- The bounded suite passed under Python 3.12 with PyFixest 0.60.0: `132 passed, 1 warning`.
+- Closure workflow [34438698064](https://github.com/drbhatiasanjay/ProfSurProject/actions/runs/34438698064) passed Python 3.11 and OCaml; deployment was skipped.
+- Fresh independent review passed native Playwright and methodology gates; marker: `PLAYWRIGHT_PASS journeys=4 commands=19`.
+- Wave 5 core baseline is closed as an engineering/truthfulness baseline. Advanced methods remain non-validated.
+- Historical `852 passed` remains superseded by the existing `871 passed, 1 skipped, 37 warnings` result; no new full-suite count is claimed.
+- Graphify’s stale `219e7768` header remains recorded as tooling provenance.
+- Closure documentation commit is the current resume boundary; no PR, merge, deployment, or Wave 6 action was performed.

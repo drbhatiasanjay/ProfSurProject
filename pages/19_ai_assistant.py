@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 from helpers import require_role, plotly_layout
 import db
 from components.citation_inspector import show_citation_dialog, render_citation_selector
+from models.stata_engine import ModelResultContext
 
 require_role("admin", "researcher", "viewer", "cfo", "guest")
 db.log_page_visit("ai_assistant_page")
@@ -1005,14 +1006,38 @@ if user_q:
         "pwcorr", "correlate", "corr ", "hausman", "estat", "estimates",
         "esttab", "coefplot", "scatter", "histogram", "hist ", "export", "thesis",
         "tabulate", "tab ", "graph box", "box ", "graph hbox", "xttest0", "xtserial",
-        "margins", "marginsplot"
+        "margins", "marginsplot", "ivregress", "test", "predict", "winsor2"
     )
     is_stata_cmd = _q_clean.startswith(".") or any(_q_clean.lower().startswith(v) for v in _stata_verbs)
 
     if is_stata_cmd:
-        from models.stata_engine import execute_stata_command
-        exec_cmd = _q_clean if _q_clean.startswith(".") else f". {_q_clean}"
-        stata_res = execute_stata_command(exec_cmd)
+        # Wave 2: route via capability layer instead of calling engine directly
+        from models.analytical_router import route as _route
+        from models.analytical_contracts import AnalyticalRequest, fingerprint_df as _fp
+        from models.stata_engine import parse_stata_command
+        import uuid as _uuid
+        exec_cmd = _q_clean if _q_clean.startswith(".") else _q_clean
+        try:
+            import db as _db
+            _ft = _db.filters_to_tuple({})
+            _df = _db.get_active_panel_data(_ft)
+        except Exception:
+            _df = None
+        if _df is not None and not _df.empty:
+            _req = AnalyticalRequest(
+                command_str=exec_cmd,
+                parsed=parse_stata_command(exec_cmd),
+                df=_df,
+                correlation_id=str(_uuid.uuid4()),
+                dataset_ref=_fp(_df),
+                session_id=st.session_state.get("chat_session_id", ""),
+                session_context=st.session_state.setdefault("_model_result_context", ModelResultContext()),
+            )
+            _res = _route(_req)
+            stata_res = _res.to_dict()
+        else:
+            from models.stata_engine import execute_stata_command
+            stata_res = execute_stata_command(exec_cmd)
         ascii_text = stata_res.get("ascii_output", "")
         interpretation = stata_res.get("interpretation", "")
         reply_content = f"```stata\n{exec_cmd}\n\n{ascii_text}\n```"
@@ -1149,7 +1174,11 @@ if user_q:
         _stream = stream_with_fallback(_stream, _fallback_stream)
 
         _first_chunk = True
+        _chat_error = None
         for _chunk in _stream:
+            if isinstance(_chunk, dict) and _chunk.get("type") == "error":
+                _chat_error = _chunk
+                break
             _chunk_text, _chunk_chart = normalize_assistant_chunk(_chunk)
             if _chunk_chart and _chart_found is None:
                 _chart_found = _chunk_chart
@@ -1169,6 +1198,14 @@ if user_q:
                     _buf.append(_chunk_text)
                     _placeholder.markdown("".join(_buf) + " ▌")
         _working_pill.empty()
+        if _chat_error:
+            _placeholder.empty()
+            st.error(
+                f"Chat request failed ({_chat_error.get('error_code', 'INTERNAL_ERROR')}): "
+                f"{_chat_error.get('message', 'Please try again.') }"
+            )
+            _status_box.update(label="Chat stopped safely", state="error", expanded=False)
+            st.stop()
         full = "".join(_buf)
         _elapsed = round(time.time() - _t0, 1)
         _status_box.update(label=f"✓ Reasoning complete ({_elapsed}s)", state="complete", expanded=False)
@@ -1180,6 +1217,22 @@ if user_q:
             user_query=user_q,
             chart_requested=_chart_requested,
         )
+        trace_events = (normalized.get("decision_brief") or {}).get("trace", [])
+        if trace_events:
+            with st.expander("🔎 Evidence and action trace", expanded=False):
+                for event in trace_events:
+                    if isinstance(event, dict):
+                        st.write(
+                            f"{event.get('status', 'unknown').upper()}: "
+                            f"{event.get('name', 'action')} — {event.get('detail', '')}"
+                        )
+        grounding_items = (normalized.get("decision_brief") or {}).get("grounding", [])
+        if grounding_items:
+            with st.expander("🏷️ Grounding labels", expanded=False):
+                for item in grounding_items:
+                    if isinstance(item, dict):
+                        source = f" [{item.get('source')}]" if item.get("source") else ""
+                        st.write(f"{item.get('label', 'UNSUPPORTED')}: {item.get('text', '')}{source}")
         full = normalized["answer"]
         if normalized["chart_spec"]:
             # Apply the same query-aware series filtering to tool-generated

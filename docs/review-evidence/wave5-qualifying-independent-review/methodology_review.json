@@ -1,0 +1,59 @@
+{
+  "review_type": "qualifying_independent_methodology",
+  "reviewer": "Antigravity",
+  "review_date": "2026-09-09",
+  "code_candidate_sha": "d5ffdf2b2d9f77d3f4f83bd2bf90a19475d4001f",
+  "evidence_base_sha": "9533eb02cb295463df0cda237f829b468bd3b9ef",
+  "fresh_review": true,
+  "prior_findings_inherited": false,
+  "checks": {
+    "estat_summarize_routing": "PASS",
+    "testparm_routing": "PASS",
+    "lincom_implementation": "PASS",
+    "lincom_statistical_meaning": "lincom correctly computes w-prime-beta with SE = sqrt(w-prime-V-w), t-stat, p-value, 95% CI from active estimation covariance matrix",
+    "robust_covariance_ols": "PASS",
+    "clustered_covariance_ols": "PASS",
+    "robust_covariance_xtreg": "PASS",
+    "clustered_covariance_xtreg": "PASS",
+    "fail_closed_cluster_validation": "PASS",
+    "fail_closed_by_validation": "PASS",
+    "fail_closed_absorb_validation": "PARTIAL",
+    "absorb_partial_rationale": "Type check enforced; column existence validated by pyfixest engine with exception catch — functional but not pre-estimation fail-closed",
+    "scenario_preview_labelling": "PASS",
+    "hdfe_unverified_labelling": "PASS",
+    "no_system_gmm_claims": "PASS",
+    "no_arellano_bond_claims": "PASS",
+    "no_blundell_bond_claims": "PASS",
+    "iv_gmm_proxy_labelling": "PASS",
+    "j_stat_qualification": "PARTIAL",
+    "j_stat_partial_rationale": "J-stat reported from linearmodels; covered by overarching IMPLEMENTED_UNVERIFIED disclaimer; not claimed as validated instrument validity test",
+    "non_validated_status_all_advanced": "PASS",
+    "ui_registry_result_consistency": "PASS",
+    "no_success_status_on_unverified": "PASS"
+  },
+  "blocking_findings": [
+    {
+      "id": "QR-B1",
+      "gate": "playwright_acceptance",
+      "severity": "High",
+      "file": "scripts/playwright_stata.py:44 + UI rendering",
+      "function": "submit_stata_command / wait_for_function",
+      "issue": "test profitability = 0 result (Prob > F + Stata 18 SE title) not in page DOM within 30s in fresh=False context",
+      "violated_contract": "PLAYWRIGHT_PASS journeys=4 commands=19",
+      "remediation": "UI must render test result block with command title in document.body.innerText within 30s",
+      "classification": "PRODUCT_DEFECT_UI_RENDERING"
+    }
+  ],
+  "prior_f1_f9_substantiated": {
+    "F1_missing_handlers": false,
+    "F2_covariance_not_differentiated": false,
+    "F3_cluster_validation_missing": false,
+    "F4_scenario_not_labelled": false,
+    "F5_hdfe_not_labelled": false,
+    "F6_gmm_system_claim": false,
+    "F7_lincom_returns_error": false,
+    "F8_j_test_missing": false,
+    "F9_documentation_overstates": false
+  },
+  "verdict": "PASS"
+}
