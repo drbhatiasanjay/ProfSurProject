@@ -18,11 +18,11 @@ content until separately reviewed.
 |---|---|---|---|
 | `foundation/01_INTENT.md` | `INTENT.md` | Adopt principles only | Strengthens the existing mission with explicit evidence, uncertainty, and correction rules. ProfSur's capability truth overrides any broader FDI claims. |
 | `design/architecture/ANALYTICAL_INTENT_AND_PLANNING.md` | Phase 12 design | Adopt | Provides a useful query-to-plan model. Plans must expose intent, evidence needs, capability choice, assumptions, and abstention conditions. |
-| `design/architecture/ANALYTICAL_EXECUTION_FABRIC.md` | Phases 12–14 | Adopt selectively | Useful execution/provenance seams. Implement only after contracts are reconciled with existing router, typed errors, and result context. |
-| `design/contracts/ANALYTICAL_PLAN_SCHEMA.json` | Phase 12 contract | Adopt as candidate | Candidate schema for visible plans; must gain versioning, validation, refusal, and source-fingerprint fields before baseline. |
+| `design/architecture/ANALYTICAL_EXECUTION_FABRIC.md` | Phases 12–14 | DEFER for Phase 12 | Useful execution/provenance seams, but implementation waits until contracts are reconciled with existing router, typed errors, and result context. |
+| `design/contracts/ANALYTICAL_PLAN_SCHEMA.json` | Phase 12 contract | DEFER for Phase 12 | Candidate schema for visible plans; it must gain versioning, validation, refusal, and source-fingerprint fields before any baseline adoption. |
 | `design/contracts/ANALYTICAL_EXECUTION_AUDIT_SCHEMA.json` | Phases 13–17 | Adopt as candidate | Good audit envelope. Must remain compatible with existing reproducibility evidence and avoid recording hidden chain-of-thought. |
 | `design/domain-contracts/EVIDENCE_CONTRACT.md` | Evidence vocabulary | Adopt | Directly aligns with `FACT`, `COMPUTED`, `INTERPRETATION`, `HYPOTHESIS`, and `UNSUPPORTED`. |
-| `design/domain-contracts/CLAIM_LEDGER_CONTRACT.md` | Claim/evidence ledger | Adopt selectively | Valuable for claim-to-source traceability; claims must never outrun the capability registry or methodological evidence. |
+| `design/domain-contracts/CLAIM_LEDGER_CONTRACT.md` | Claim/evidence ledger | DEFER for Phase 12 | Valuable for claim-to-source traceability, but deferred until domain semantics are stable and claims remain bounded by capability evidence. |
 | `design/domain-contracts/ABSTENTION_UNCERTAINTY_CONTRACT.md` | Fail-closed UX | Adopt | Makes uncertainty and refusal first-class outputs. Integrate with typed errors and status propagation. |
 | `design/domain-contracts/REPRODUCIBILITY_CONTRACT.md` | Result envelope | Adopt | Aligns with dataset hashes, configuration, seeds, warnings, and elapsed time already required by ProfSur. |
 | `design/evals/ANALYTICAL_ROUTER_AND_ENGINE_EVAL_PLAN.md` | Phase 12–14 evals | Adopt | Establishes adversarial routing and execution evaluation before implementation is treated as a baseline. |
@@ -30,7 +30,7 @@ content until separately reviewed.
 | golden cases and oracle status | `tests/` and evidence docs | Adopt selectively | Use as external test-design input after mapping each case to a ProfSur contract; do not import opaque or environment-specific fixtures. |
 | `design/model-evals/MODEL_ROUTING_BASELINE_PLAN.md` | Phase 12 evaluation | Adopt later | Relevant once embedded model adapters exist; requires cost, latency, abstention, and groundedness metrics. |
 | `design/ux/EVIDENCE_AND_EXPLANATION_UX.md` | North Star / Phase 12 | Adopt | Directly supports visible action traces and evidence labels, while preserving the no-hidden-chain-of-thought rule. |
-| `design/ux/PLAN_REVIEW_AND_APPROVAL_UX.md` | Phase 12 | Adopt selectively | Add review/approval for consequential or ambiguous plans; simple factual answers should not incur unnecessary ceremony. |
+| `design/ux/PLAN_REVIEW_AND_APPROVAL_UX.md` | Phase 12 | DEFER for Phase 12 | Review/approval may later serve consequential or ambiguous plans; simple factual answers should not incur unnecessary ceremony. |
 | `design/policies/CONTEXT_POLICY.md` | Session continuity | Adopt | Useful context hierarchy and drift controls; canonical GitHub artifacts remain authoritative. |
 | `design/policies/CROSS_AGENT_AUTHORITY.md` | Governance | Adopt with reconciliation | Reinforces bounded reviewers and Codex integration authority. Existing ProfSur governance remains canonical. |
 | harness and benchmark plans | Phase 13–17 | Adopt selectively | Reuse the evidence model and benchmark discipline, but define ProfSur-specific datasets, tolerances, and baselines first. |
