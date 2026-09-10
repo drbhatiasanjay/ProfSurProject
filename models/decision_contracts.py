@@ -13,6 +13,21 @@ from typing import Any, Literal
 
 EvidenceKind = Literal["observed", "derived", "modeled", "assumption", "interpretation"]
 AnalysisRunStatus = Literal["pending", "running", "completed", "failed"]
+TraceStatus = Literal["pending", "running", "completed", "failed", "skipped"]
+
+
+@dataclass(frozen=True)
+class ActionTraceEvent:
+    """User-visible execution event; never stores private model reasoning."""
+
+    name: str
+    status: TraceStatus
+    detail: str = ""
+    evidence_refs: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.name.strip():
+            raise ValueError("trace event name must not be empty")
 
 
 @dataclass(frozen=True)
@@ -104,6 +119,9 @@ class DecisionBrief:
     assumptions: tuple[str, ...] = ()
     limitations: tuple[str, ...] = ()
     validation: dict[str, Any] = field(default_factory=dict)
+    intent: str = ""
+    selected_capability: str = ""
+    trace: tuple[ActionTraceEvent, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize without requiring a provider-specific model library."""
@@ -162,6 +180,9 @@ def build_decision_brief(
     chart: dict[str, Any] | None = None,
     user_query: str = "",
     limitations: list[str] | None = None,
+    intent: str = "",
+    selected_capability: str = "",
+    trace: list[ActionTraceEvent] | None = None,
 ) -> DecisionBrief:
     """Create the common envelope after provider output is normalized."""
     validation = validate_chart_table(table, chart)
@@ -176,5 +197,8 @@ def build_decision_brief(
         chart=effective_chart,
         limitations=tuple(effective_limitations),
         validation=validation,
+        intent=intent.strip(),
+        selected_capability=selected_capability.strip(),
+        trace=tuple(trace or []),
     )
 

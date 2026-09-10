@@ -1,11 +1,36 @@
 """Contract tests for provider-neutral CFO decision briefs."""
 
 from models.decision_contracts import (
+    ActionTraceEvent,
     EvidenceItem,
     ScenarioCase,
     build_decision_brief,
     validate_chart_table,
 )
+
+
+def test_decision_brief_carries_user_visible_trace_without_private_reasoning():
+    brief = build_decision_brief(
+        answer="Computed result",
+        user_query="Summarize leverage",
+        intent="descriptive_computation",
+        selected_capability="stata.summarize",
+        trace=[
+            ActionTraceEvent("classify_request", "completed", "descriptive computation"),
+            ActionTraceEvent("select_capability", "completed", "stata.summarize"),
+            ActionTraceEvent("execute", "completed", "result envelope created"),
+        ],
+    )
+
+    payload = brief.to_dict()
+    assert payload["intent"] == "descriptive_computation"
+    assert payload["selected_capability"] == "stata.summarize"
+    assert [event["name"] for event in payload["trace"]] == [
+        "classify_request",
+        "select_capability",
+        "execute",
+    ]
+    assert all("reasoning" not in event for event in payload["trace"])
 
 
 def test_valid_chart_matches_categories_and_table():
