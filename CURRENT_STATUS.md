@@ -295,6 +295,11 @@ the authentication/session issue non-blocking; no deployment, merge, or push.
 - Final authorization correction commit: `8bf9883`; published on
   `origin/experimental-performance-fixes`. Push-hook selection passed **146
   tests**.
+- Phase 16B local benchmark completed: `docs/implementation-reports/PHASE_16B_LOCAL_CACHE_BASELINE.md`.
+  Real 5,000-row `summarize` route measured cold **0.014301s**, hot p95
+  **0.001032s**, and 50 concurrent hot-hit wall **0.030990s**. This is local
+  one-process evidence only; no Redis/Arrow/Plasma or end-to-end performance
+  claim is approved.
 
 1. Review the successor diff against immutable commit `88ab5c2`.
 2. Re-run bounded parser/runtime, covariance, scenario, HDFE, GMM-label, and UI gates.

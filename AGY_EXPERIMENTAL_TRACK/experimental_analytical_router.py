@@ -12,6 +12,7 @@ import uuid
 import inspect
 import threading
 import copy
+import re
 from functools import lru_cache
 from dataclasses import replace
 import pandas as pd
@@ -28,6 +29,7 @@ from models.command_registry import resolve_capability
 from models.capability_registry import get_handler
 from models.stata_engine import ModelResultContext, resolve_panel_variable
 from models.stata_validation import validate_stata_command
+from models.cache_keys import build_cache_key
 
 # --- 1. Comprehensive JIT Pre-Warming ---
 def initialize_engines():
@@ -74,8 +76,13 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
     base_cmd = cmd.split()[0] if cmd else ""
     is_idempotent = base_cmd in IDEMPOTENT_COMMANDS
     
-    # Standardize dictionary for hashing by sorting keys
-    cache_key = f"{request.dataset_ref.fingerprint}::{cmd}::{request.command_str}"
+    # Use the canonical identity; the MVP panel is shared after authorization.
+    cache_key = build_cache_key(
+        dataset_fingerprint=request.dataset_ref.fingerprint,
+        command=re.sub(r"\s+", " ", request.command_str).strip(),
+        tenant_id=request.tenant_id or "shared-analytical-panel",
+        filters=request.parsed,
+    )
     
     if is_idempotent:
         with _CACHE_LOCK:
@@ -97,7 +104,7 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
         immutable_result = copy.deepcopy(result)
         with _CACHE_LOCK:
             # Store in cache (limit size to prevent memory leak)
-            if len(_CACHE) > 128:
+            if len(_CACHE) >= 128:
                 # Simple FIFO eviction under lock
                 _CACHE.pop(next(iter(_CACHE)))
             
