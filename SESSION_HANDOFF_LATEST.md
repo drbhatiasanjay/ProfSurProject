@@ -3,7 +3,7 @@
 **Updated:** 2026-09-10
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject` only
 **Branch:** `review/wave5-cea188e-final-phase12-review-2026-09-10`
-**HEAD:** `74ffadef74de1341f1af718cce653e36f8779a3a`
+**HEAD:** `8bf9883522b8bdcf114d5af35edf42ec2f663620`
 
 ## Active goal
 
@@ -84,6 +84,7 @@ available.
   cache reads and writes. Focused result: **89 passed, 10 warnings**.
 - Baseline exclusions remain explicit: no AST implementation, production Redis,
   measured performance claim, or fingerprint-only security claim.
+- Published baseline: `8bf9883` on `origin/experimental-performance-fixes`.
 - Wave 6 performance architecture decision: distributed Redis/disk-backed
   rollout and a big-bang AST rewrite are gated, not approved. The formal
   topology, lock, eviction, migration, outage, rollback, grammar, and

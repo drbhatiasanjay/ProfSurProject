@@ -291,6 +291,9 @@ the authentication/session issue non-blocking; no deployment, merge, or push.
   authenticated username-derived cache scope; anonymous direct calls bypass
   cache access. Focused verification: **89 passed, 10 warnings**. No Redis,
   AST, or performance-improvement claim is included in this baseline.
+- Final authorization correction commit: `8bf9883`; published on
+  `origin/experimental-performance-fixes`. Push-hook selection passed **146
+  tests**.
 
 1. Review the successor diff against immutable commit `88ab5c2`.
 2. Re-run bounded parser/runtime, covariance, scenario, HDFE, GMM-label, and UI gates.

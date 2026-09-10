@@ -488,6 +488,10 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
   caller integration plus trusted authorization context; gate distributed
   cache and AST migration behind topology/locking/eviction/failure/rollback or
   grammar/compatibility evidence; reject fingerprint-only authorization.
+- Added explicit MVP deny-by-default cache policy for authenticated approved
+  roles and required dataset scope. Focused verification became **90 passed,
+  10 warnings**; push-hook selection passed **146 tests**. Published commit
+  `8bf9883` to `origin/experimental-performance-fixes`.
 - Implemented the approved legacy-caller slice. Authenticated page callers now
   pass trusted username-derived cache scope; anonymous direct adapter calls
   bypass cache access. Focused verification: **89 passed, 10 warnings**.
