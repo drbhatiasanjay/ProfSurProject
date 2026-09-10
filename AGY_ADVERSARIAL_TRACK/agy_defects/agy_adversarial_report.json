@@ -1,0 +1,26 @@
+[
+    {
+        "scenario": "A-05",
+        "status": "FAIL",
+        "details": "Command execution bypassed registry check.",
+        "screenshot": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\AGY_ADVERSARIAL_TRACK\\agy_defects/A-05_unregistered.png"
+    },
+    {
+        "scenario": "A-02",
+        "status": "PASS",
+        "details": "Resolved in 0.22s without permanently hanging UI.",
+        "screenshot": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\AGY_ADVERSARIAL_TRACK\\agy_defects/A-02_gmm_hang.png"
+    },
+    {
+        "scenario": "A-01",
+        "status": "FAIL",
+        "details": "AI suppressed or omitted the causal methodology warning.",
+        "screenshot": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\AGY_ADVERSARIAL_TRACK\\agy_defects/A-01_causal.png"
+    },
+    {
+        "scenario": "A-04",
+        "status": "FAIL",
+        "details": "Backend allowed massive lag matrix generation without blocking.",
+        "screenshot": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\AGY_ADVERSARIAL_TRACK\\agy_defects/A-04_gmm_proliferation.png"
+    }
+]

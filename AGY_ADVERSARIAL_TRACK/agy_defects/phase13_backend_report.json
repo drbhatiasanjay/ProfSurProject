@@ -1,0 +1,22 @@
+[
+    {
+        "scenario": "Grouped Summaries by lifecycle stage",
+        "status": "PASS",
+        "details": "Returned COMPUTED grounding and source fingerprint."
+    },
+    {
+        "scenario": "Invalid-variable refusal",
+        "status": "PASS",
+        "details": "Failed securely with typed error."
+    },
+    {
+        "scenario": "Empty-sample refusal",
+        "status": "PASS",
+        "details": "Failed securely with typed error."
+    },
+    {
+        "scenario": "Repeated identical query reproducibility",
+        "status": "PASS",
+        "details": "Source fingerprint is deterministic."
+    }
+]

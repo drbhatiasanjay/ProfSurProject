@@ -1,0 +1,7 @@
+[
+    {
+        "scenario": "A-03",
+        "status": "ERROR",
+        "details": "AnalyticalRequest.__init__() got an unexpected keyword argument 'command_type'. Did you mean 'command_str'?"
+    }
+]
