@@ -58,6 +58,7 @@ def initialize_engines():
 # --- 2. Computation LRU Cache ---
 _CACHE = {}
 _CACHE_LOCK = threading.Lock()
+_INFLIGHT = {}
 
 # Whitelist of pure, non-mutating, context-independent analytical commands.
 # Post-estimation commands are deliberately excluded because they depend on
@@ -87,37 +88,46 @@ def route(request: AnalyticalRequest) -> CapabilityResult:
     if is_idempotent:
         with _CACHE_LOCK:
             cached_result = _CACHE.get(cache_key)
-        if cached_result is not None:
-            # Copy outside the process-wide lock; the lock protects the map,
-            # not the potentially large analytical payload.
-            cached_result = copy.deepcopy(cached_result)
-            return replace(
-                cached_result,
-                correlation_id=request.correlation_id,
-                run_id=str(uuid.uuid4()),
+            key_lock = None if cached_result is not None else _INFLIGHT.setdefault(
+                cache_key, threading.Lock()
             )
+        if cached_result is not None:
+            return _request_copy(cached_result, request)
+        key_lock.acquire()
+        try:
+            with _CACHE_LOCK:
+                cached_result = _CACHE.get(cache_key)
+            if cached_result is not None:
+                return _request_copy(cached_result, request)
+            result = _execute_route(request)
+            if result.status in ("success", "partial"):
+                _store_cache(cache_key, result)
+            return _fresh_result(result, request)
+        finally:
+            key_lock.release()
+            with _CACHE_LOCK:
+                if _INFLIGHT.get(cache_key) is key_lock:
+                    _INFLIGHT.pop(cache_key, None)
     
-    # Cache Miss or Mutating Command
-    result = _execute_route(request)
-    
-    if is_idempotent and result.status in ("success", "partial"):
-        immutable_result = copy.deepcopy(result)
-        with _CACHE_LOCK:
-            # Store in cache (limit size to prevent memory leak)
-            if len(_CACHE) >= 128:
-                # Simple FIFO eviction under lock
-                _CACHE.pop(next(iter(_CACHE)))
-            
-            # 🚨 Guard 2: Cache Immutability via Deep Copy
-            _CACHE[cache_key] = immutable_result
-    
-    # Overwrite dynamic fields
-    result = replace(
-        result, 
-        correlation_id=request.correlation_id,
-        run_id=str(uuid.uuid4())
-    )
-    return result
+    return _fresh_result(_execute_route(request), request)
+
+
+def _request_copy(result: CapabilityResult, request: AnalyticalRequest) -> CapabilityResult:
+    """Clone a cached payload and stamp request-local identifiers."""
+    return replace(copy.deepcopy(result), correlation_id=request.correlation_id, run_id=str(uuid.uuid4()))
+
+
+def _fresh_result(result: CapabilityResult, request: AnalyticalRequest) -> CapabilityResult:
+    return replace(result, correlation_id=request.correlation_id, run_id=str(uuid.uuid4()))
+
+
+def _store_cache(cache_key: str, result: CapabilityResult) -> None:
+    """Copy before locking so large payloads do not block cache readers."""
+    immutable_result = copy.deepcopy(result)
+    with _CACHE_LOCK:
+        if len(_CACHE) >= 128:
+            _CACHE.pop(next(iter(_CACHE)))
+        _CACHE[cache_key] = immutable_result
 
 def _execute_route(request: AnalyticalRequest) -> CapabilityResult:
     """Original routing logic without caching overhead."""

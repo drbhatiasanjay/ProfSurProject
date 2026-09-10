@@ -89,6 +89,9 @@ available.
 - Phase 16B baseline report: `docs/implementation-reports/PHASE_16B_LOCAL_CACHE_BASELINE.md`.
   Real 5,000-row summarize route: cold `0.014301s`, hot p95 `0.001032s`,
   concurrent 50-hit wall `0.030990s`; one-process evidence only.
+- Phase 16C resilience report: `docs/implementation-reports/PHASE_16C_CACHE_RESILIENCE.md`.
+  Per-key single-flight passed; 50 concurrent cold misses required one handler
+  execution. Focused suite: **24 passed, 8 warnings**. Local MVP cache accepted.
 - Wave 6 performance architecture decision: distributed Redis/disk-backed
   rollout and a big-bang AST rewrite are gated, not approved. The formal
   topology, lock, eviction, migration, outage, rollback, grammar, and

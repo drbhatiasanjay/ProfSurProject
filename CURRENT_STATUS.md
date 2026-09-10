@@ -300,6 +300,10 @@ the authentication/session issue non-blocking; no deployment, merge, or push.
   **0.001032s**, and 50 concurrent hot-hit wall **0.030990s**. This is local
   one-process evidence only; no Redis/Arrow/Plasma or end-to-end performance
   claim is approved.
+- Phase 16C resilience gate passed: `docs/implementation-reports/PHASE_16C_CACHE_RESILIENCE.md`.
+  Per-key single-flight coalesced 50 concurrent cold misses to one handler
+  execution; focused resilience suite **24 passed, 8 warnings**. The one-process
+  MVP cache is accepted; Redis/Plasma/Arrow remain deferred.
 
 1. Review the successor diff against immutable commit `88ab5c2`.
 2. Re-run bounded parser/runtime, covariance, scenario, HDFE, GMM-label, and UI gates.

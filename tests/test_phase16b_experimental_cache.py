@@ -71,6 +71,31 @@ def test_concurrent_hot_hits_are_error_free(monkeypatch):
     assert elapsed >= 0
 
 
+def test_concurrent_cold_misses_are_coalesced(monkeypatch):
+    router._CACHE.clear()
+    router._INFLIGHT.clear()
+    calls = []
+
+    def execute(request):
+        calls.append(1)
+        time.sleep(0.01)
+        return CapabilityResult(status="success", table=[{"value": 1}])
+
+    monkeypatch.setattr(router, "_execute_route", execute)
+    with ThreadPoolExecutor(max_workers=20) as pool:
+        results = list(pool.map(lambda _: router.route(_request("summarize")), range(50)))
+    assert len(calls) == 1
+    assert len(results) == 50
+    assert all(result.table == [{"value": 1}] for result in results)
+
+
+def test_restart_safe_empty_cache_state():
+    router._CACHE.clear()
+    router._INFLIGHT.clear()
+    assert router._CACHE == {}
+    assert router._INFLIGHT == {}
+
+
 def test_cache_eviction_is_bounded(monkeypatch):
     router._CACHE.clear()
     monkeypatch.setattr(

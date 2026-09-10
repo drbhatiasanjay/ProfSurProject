@@ -496,6 +496,9 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
   p95 `0.001032s`, 50 concurrent hot-hit wall `0.030990s`. Reported in
   `docs/implementation-reports/PHASE_16B_LOCAL_CACHE_BASELINE.md`; evidence
   is limited to one-process local cache behavior.
+- Phase 16C added per-key single-flight coordination and passed **24 tests with
+  8 warnings**; 50 concurrent cold misses coalesced to one handler execution.
+  The local one-process MVP cache is accepted; shared backends remain deferred.
 - Implemented the approved legacy-caller slice. Authenticated page callers now
   pass trusted shared-dataset scope; anonymous direct adapter calls bypass
   cache access, with role included for role-sensitive narratives. Focused
