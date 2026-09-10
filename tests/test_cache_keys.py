@@ -2,7 +2,7 @@
 
 import pytest
 
-from models.cache_keys import CacheAuthorizationError, authenticated_cache_scope, build_cache_key
+from models.cache_keys import CacheAuthorizationError, authorized_cache_scope, build_cache_key
 
 
 def test_same_identity_replays_and_ordered_filters_are_canonical():
@@ -42,9 +42,16 @@ def test_missing_identity_inputs_fail_closed():
 
 def test_anonymous_cache_scope_fails_closed():
     with pytest.raises(CacheAuthorizationError):
-        authenticated_cache_scope("")
+        authorized_cache_scope("")
 
 
 def test_authenticated_scope_is_stable_but_role_isolated():
-    assert authenticated_cache_scope("Alice", "viewer") == authenticated_cache_scope("alice", "viewer")
-    assert authenticated_cache_scope("alice", "viewer") != authenticated_cache_scope("alice", "researcher")
+    assert authorized_cache_scope("Alice", "viewer") == authorized_cache_scope("alice", "viewer")
+    assert authorized_cache_scope("alice", "viewer") != authorized_cache_scope("alice", "researcher")
+
+
+def test_cache_policy_denies_unknown_roles_and_empty_dataset_scope():
+    with pytest.raises(CacheAuthorizationError):
+        authorized_cache_scope("alice", "superuser")
+    with pytest.raises(CacheAuthorizationError):
+        authorized_cache_scope("alice", "viewer", dataset_scope="")

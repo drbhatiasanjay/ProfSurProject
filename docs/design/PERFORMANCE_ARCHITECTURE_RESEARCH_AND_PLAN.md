@@ -82,8 +82,11 @@ scope may require a different result even when the underlying data is
 identical.
 
 **Decision:** authorization is checked before cache lookup and before data
-materialization. The cache key includes the effective authorization scope for
-isolation and invalidation, but the key is never the authorization mechanism.
+materialization. The MVP policy permits authenticated users with approved
+application roles to access the shared analytical panel. Dataset entitlements
+are still required before tenant-private data is introduced. The cache key
+includes the effective authorization scope for isolation and invalidation, but
+the key is never the authorization mechanism.
 
 ## Target architecture
 
@@ -263,7 +266,8 @@ the narrative adapter. Integration work is limited to these boundaries:
 1. Introduce a small internal cache-context/identity adapter around the existing
    helper; do not alter response text or current TTL defaults.
 2. Derive dataset fingerprint and trusted authorization scope at the caller or
-   immediately before the cache operation.
+   immediately before the cache operation; deny anonymous callers, unknown
+   roles, and missing dataset scope.
 3. Preserve legacy reads only for explicitly public, versioned entries; never
    guess a tenant for an old unscoped entry.
 4. Add per-caller tests proving changes in fingerprint, tenant/scope, command,

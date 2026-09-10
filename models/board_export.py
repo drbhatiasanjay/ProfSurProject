@@ -1237,7 +1237,7 @@ def build_topic_ai_narrative(
     """
     import hashlib, json as _json
     import db
-    from models.cache_keys import authenticated_cache_scope, build_cache_key
+    from models.cache_keys import authorized_cache_scope, build_cache_key
     from models.llm_adapters import build_company_context, stream_anthropic
 
     # Build a compact text summary from the topic result
@@ -1265,7 +1265,7 @@ def build_topic_ai_narrative(
     ttl_hours = 168  # 7 days — company data is rarely refreshed intraday
     cache_key = None
     if username:
-        scope = authenticated_cache_scope(username, role)
+        scope = authorized_cache_scope(username, role)
         cache_key = build_cache_key(
             dataset_fingerprint=hashlib.sha256(ctx.encode()).hexdigest(),
             command="board_topic_ai_narrative",

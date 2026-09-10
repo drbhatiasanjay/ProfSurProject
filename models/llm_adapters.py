@@ -1592,7 +1592,7 @@ def generate_econometric_narrative(
         String chunks from the LLM.
     """
     import hashlib
-    from models.cache_keys import authenticated_cache_scope, build_cache_key
+    from models.cache_keys import authorized_cache_scope, build_cache_key
 
     ct = result.get("coef_table")
     if ct is None:
@@ -1649,7 +1649,7 @@ def generate_econometric_narrative(
         cache_key = build_cache_key(
             dataset_fingerprint=hashlib.sha256(prompt.encode()).hexdigest(),
             command="econometric_narrative",
-            tenant_id=authenticated_cache_scope(username, role),
+            tenant_id=authorized_cache_scope(username, role),
             model="claude-sonnet-4-6",
             filters={"model_type": model_type, "panel_mode": panel_mode, "citations": citations},
         )
@@ -1698,7 +1698,7 @@ def generate_page_insights(
     """
     import hashlib
     import json as _json
-    from models.cache_keys import authenticated_cache_scope, build_cache_key
+    from models.cache_keys import authorized_cache_scope, build_cache_key
 
     # Build prompt from data_summary
     summary_lines = "\n".join(f"- **{k}**: {v}" for k, v in data_summary.items() if v is not None)
@@ -1744,7 +1744,7 @@ def generate_page_insights(
                 _json.dumps(data_summary, default=str, sort_keys=True).encode()
             ).hexdigest(),
             command=f"page_insights:{page}",
-            tenant_id=authenticated_cache_scope(username, role),
+            tenant_id=authorized_cache_scope(username, role),
             model="claude-sonnet-4-6",
             filters=filters,
         )
