@@ -34,3 +34,11 @@ Every agent (Antigravity, Codex, Claude, Cline) MUST follow this deterministic b
 - **Knowledge Graph:** Community and caller maps are in `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.json` (regenerate locally when absent).
 - **Session Memory:** Record major session milestones in `SESSION_LOG.md` for clean multi-session context restoration.
 - **Full Token Rules:** Detailed token engineering specifications are in `.agents/rules/token_optimization.md`.
+
+## 4. Screen/Code Synchronization Contract
+- **Canonical entrypoint:** Run only `app.py` from the repository root. Never launch a file under `pages/` directly; that activates Streamlit's legacy auto-discovered navigation and is archived/deprecated.
+- **Canonical demo URL:** `http://localhost:8501/`. Authenticate at the root, then navigate by clicking the registered sidebar page. Do not use a stale tab or a second Streamlit process on the same port.
+- **Navigation registry:** Every visible page must have one `st.Page(...)` registration and one `st.navigation(...)` membership in `app.py`; page titles and routes must match the visible sidebar.
+- **Left-panel contract:** The global sidebar owns dataset, filters, theme, and navigation. Page-specific controls may extend it, but must not create a competing navigation list or replace the global shell.
+- **Right-panel contract:** Every submit, navigation, theme, chart, download, follow-up, and session action must survive the expected Streamlit rerun or be explicitly session-scoped. Persist user-visible chat actions that must survive reload.
+- **Evidence gate:** Any UI change requires a source-to-screen mapping and an authenticated browser check for all four configured profiles (`profsurkumar`, `skumar`, `drbhatia`, `sbhatia`). A healthy HTTP endpoint alone is not UI evidence.

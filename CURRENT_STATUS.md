@@ -141,3 +141,15 @@ benchmark contract are present, with 7 focused tests passing. No analytical capa
 References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,
 `docs/operations/WAVE6_VALIDATION_MATRIX.md`, and
 `docs/implementation-reports/WAVE6_VALIDATION_REPORT.md`.
+
+## Demo Shell Synchronization Checkpoint (2026-09-10)
+
+- Canonical demo process restarted from repository-root `app.py` on port 8501;
+  `/_stcore/health` returned `ok`.
+- The legacy direct-page launch is archived and invalid for demos or evidence.
+- Source-to-screen mapping is recorded in
+  `docs/operations/AI_CHAT_SCREEN_CODE_MAPPING.md`.
+- Direct Stata AI-chat follow-up actions now persist across Streamlit reruns.
+- Four-profile authenticated UI verification remains pending until the approved
+  `PROFSUR_VERIFY_PASSWORD` is available in the environment; no credential was
+  written to the repository.

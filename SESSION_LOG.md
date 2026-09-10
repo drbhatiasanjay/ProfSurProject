@@ -1,6 +1,16 @@
-# ProfSurProject — Session Log (2026-03-27)
+# ProfSurProject — Session Log
 
-## What We Did
+## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
+- **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
+- **Authentication Diagnostics & Resolution:**
+  - Resolved `profsurkumar` login lock: identified that `.streamlit/secrets.toml` had duplicate email mapping matching `skumar`, triggering SQLite `UNIQUE` constraint failure in `users` table during `auth.py:bootstrap_legacy_users()`.
+  - Discovered hash incompatibility: `streamlit-authenticator` salt scheme differs from native `bcrypt.checkpw()`. All test roles verified against `Pass@123` with native 12-round bcrypt hashes.
+- **UI Research (Apple HIG Liquid Glass):** Prepared comprehensive macOS/visionOS glassmorphic design proposal in `implementation_plan.md`. Marked strictly as **DESIGNED BUT NOT IMPLEMENTED**.
+- **Detailed Handoff Documentation:** Published [SESSION_HANDOFF.md](file:///c:/Users/hemas/Downloads/ProfSurProject/SESSION_HANDOFF.md) detailing decisions, lessons learned, repetitive automation tasks, credentials, and verification guidelines for Codex.
+
+---
+
+## What We Did (Earlier Sessions)
 
 ### 1. Studied the Thesis Document
 
@@ -287,4 +297,16 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - Verification: `tests/test_benchmark_contracts.py` + ledger — **7 passed**.
 - No estimator was promoted. Actual IV/HDFE execution remains blocked by the
   canonical branch's missing Wave 5 adapter modules.
+
+## 2026-09-10 — Canonical AI Chat Shell / Demo Handoff
+
+- Diagnosed the reported lowercase sidebar and missing header as a legacy
+  Streamlit direct-page entrypoint, not the current `app.py` shell.
+- Restarted the canonical root application on port 8501 and verified health.
+- Added `docs/operations/AI_CHAT_SCREEN_CODE_MAPPING.md`, archived the legacy
+  launch convention, and added mandatory screen/code synchronization rules to
+  `AGENTS.md`.
+- Fixed persistence of direct Stata AI-chat follow-up actions; commit `82d9afb`.
+- Four-user UI matrix is the next required acceptance gate; credentials remain
+  environment/secrets-only.
 
