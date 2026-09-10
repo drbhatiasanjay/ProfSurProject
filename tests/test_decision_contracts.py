@@ -2,6 +2,7 @@
 
 from models.decision_contracts import (
     ActionTraceEvent,
+    build_chat_error,
     EvidenceItem,
     GroundingItem,
     ScenarioCase,
@@ -42,6 +43,16 @@ def test_decision_brief_carries_explicit_grounding_labels():
     assert brief.to_dict()["grounding"] == (
         {"label": "COMPUTED", "text": "Panel mean", "source": "panel rows"}
     ,)
+
+
+def test_chat_error_uses_standard_code_and_safe_envelope():
+    error = build_chat_error("PROVIDER_REQUEST_FAILED", "Provider unavailable")
+    assert error == {
+        "type": "error",
+        "error_code": "PROVIDER_REQUEST_FAILED",
+        "message": "Provider unavailable",
+        "recoverable": True,
+    }
 
 
 def test_valid_chart_matches_categories_and_table():

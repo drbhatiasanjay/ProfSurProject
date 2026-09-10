@@ -15,6 +15,26 @@ EvidenceKind = Literal["observed", "derived", "modeled", "assumption", "interpre
 GroundingLabel = Literal["FACT", "COMPUTED", "INTERPRETATION", "HYPOTHESIS", "UNSUPPORTED"]
 AnalysisRunStatus = Literal["pending", "running", "completed", "failed"]
 TraceStatus = Literal["pending", "running", "completed", "failed", "skipped"]
+CHAT_ERROR_CODES = frozenset({
+    "PROVIDER_NOT_CONFIGURED",
+    "PROVIDER_UNAVAILABLE",
+    "PROVIDER_RESPONSE_INVALID",
+    "PROVIDER_REQUEST_FAILED",
+    "REQUEST_CANCELLED",
+    "INTERNAL_ERROR",
+})
+
+
+def build_chat_error(code: str, message: str, *, recoverable: bool = True) -> dict[str, Any]:
+    """Return a safe, stable chat error envelope for UI and logs."""
+    if code not in CHAT_ERROR_CODES:
+        raise ValueError(f"unsupported chat error code: {code}")
+    return {
+        "type": "error",
+        "error_code": code,
+        "message": str(message or "The chat request could not be completed."),
+        "recoverable": recoverable,
+    }
 
 
 @dataclass(frozen=True)

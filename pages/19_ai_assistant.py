@@ -1174,7 +1174,11 @@ if user_q:
         _stream = stream_with_fallback(_stream, _fallback_stream)
 
         _first_chunk = True
+        _chat_error = None
         for _chunk in _stream:
+            if isinstance(_chunk, dict) and _chunk.get("type") == "error":
+                _chat_error = _chunk
+                break
             _chunk_text, _chunk_chart = normalize_assistant_chunk(_chunk)
             if _chunk_chart and _chart_found is None:
                 _chart_found = _chunk_chart
@@ -1194,6 +1198,14 @@ if user_q:
                     _buf.append(_chunk_text)
                     _placeholder.markdown("".join(_buf) + " ▌")
         _working_pill.empty()
+        if _chat_error:
+            _placeholder.empty()
+            st.error(
+                f"Chat request failed ({_chat_error.get('error_code', 'INTERNAL_ERROR')}): "
+                f"{_chat_error.get('message', 'Please try again.') }"
+            )
+            _status_box.update(label="Chat stopped safely", state="error", expanded=False)
+            st.stop()
         full = "".join(_buf)
         _elapsed = round(time.time() - _t0, 1)
         _status_box.update(label=f"✓ Reasoning complete ({_elapsed}s)", state="complete", expanded=False)

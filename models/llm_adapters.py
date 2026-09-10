@@ -1039,6 +1039,8 @@ def normalize_assistant_chunk(chunk: Any) -> tuple[str, Optional[dict]]:
         return chunk, None
     if not isinstance(chunk, dict):
         return "", None
+    if chunk.get("type") == "error":
+        return str(chunk.get("message") or "The chat request could not be completed."), None
     chart = chunk.get("spec") if chunk.get("type") == "chart" else chunk.get("chart_spec")
     if not isinstance(chart, dict):
         chart = None
@@ -1050,6 +1052,12 @@ def stream_with_fallback(primary: Iterator[Any], fallback_factory) -> Iterator[A
     """Use one fallback provider when the primary fails before yielding content."""
     yielded_content = False
     for chunk in primary:
+        if isinstance(chunk, dict) and chunk.get("type") == "error":
+            if not yielded_content:
+                yield from fallback_factory()
+                return
+            yield chunk
+            return
         text, _chart = normalize_assistant_chunk(chunk)
         is_error = text.lstrip().startswith("[") and any(
             err_marker in text[:120].lower()
@@ -1469,7 +1477,9 @@ def stream_gemini_agent(
             yield "Here is the interactive visualization based on the requested panel dataset."
 
     except Exception as e:
-        yield f"[Gemini error: {type(e).__name__}: {e}]"
+        from models.decision_contracts import build_chat_error
+        logger.exception("Gemini provider request failed")
+        yield build_chat_error("PROVIDER_REQUEST_FAILED", "Gemini could not complete this request.")
 
 
 
