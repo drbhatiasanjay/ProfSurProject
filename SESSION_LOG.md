@@ -1,5 +1,16 @@
 # ProfSurProject — Session Log
 
+## Autonomous Checkpoint — serial collection diagnostic (2026-09-11)
+- Refined `scripts/diagnose_tracked_collection.py` with bounded serial controls,
+  worker/timeout metadata, and GitHub-ready reporting.
+- Serial control passed the first 10 of 53 tracked test files (20s per file);
+  the earlier four-worker probe timed out under local Windows contention and is
+  retained as diagnostic evidence, not a test-failure claim.
+- Evidence: `docs/review-evidence/TRACKED_COLLECTION_AUDIT_2026-09-11.md`.
+- Local commit: `e7e1ce4`; remote remains `ffe3620` pending checkpoint push.
+- `capital_structure.db` remains an intentional runtime-only modification and
+  is not staged.
+
 ## Autonomous Checkpoint — bounded collection probe (2026-09-11)
 - Added `scripts/diagnose_tracked_collection.py` to probe tracked test collection
   with bounded parallel workers and plugin autoload disabled.

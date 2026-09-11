@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `b65a816` (local; checkpoint push pending)
+**Latest baseline:** `e7e1ce4` (local; checkpoint push pending)
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
