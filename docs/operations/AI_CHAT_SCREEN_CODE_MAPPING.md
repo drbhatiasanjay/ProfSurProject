@@ -18,9 +18,10 @@ list—the exact symptom previously seen in the demo.
 |---|---|---|
 | Fixed header / dataset / signed-in identity | `app.py` (`lc-navbar`, global sidebar) | Must appear on every authenticated page |
 | Main navigation | `app.py` (`st.Page`, `st.navigation`) | One registered route per visible page |
+| Shared panel scope | `app.py` session filters → `db.filters_to_tuple` | Dataset, panel vintage, years, stages, industries, and events remain one scope |
 | AI page shell and session bootstrap | `pages/19_ai_assistant.py` | Loads the active chat session and history |
 | AI mode/backend/API controls | `pages/19_ai_assistant.py` page sidebar | Extends the global sidebar; never replaces navigation |
-| Chat input and submit | `pages/19_ai_assistant.py` chat input path | Adds user/assistant turns and reruns safely |
+| Chat input and submit | `pages/19_ai_assistant.py` chat input path | Adds user/assistant turns and reruns safely with active filters |
 | Stata command execution from AI | `models/stata_engine.py` via `execute_stata_command` | Renders terminal output, interpretation, and charts |
 | Chat persistence | `db.py` `append_chat_message` / `load_chat_messages` | Follow-up chips and chart specs survive reload |
 | Stata Studio | `pages/23_stata_studio.py` registered by `app.py` | Must be reached through the canonical sidebar |
@@ -35,6 +36,10 @@ list—the exact symptom previously seen in the demo.
 5. Confirm the response, follow-up actions, chart/metadata where applicable, and
    the same current sidebar remain visible after rerun.
 6. Repeat the authenticated path for all four configured profiles.
+
+The AI context builder uses the same normalized filter tuple as the analytical
+data accessor. This prevents a filtered Stata result from being paired with an
+unfiltered AI explanation or a prior panel vintage.
 
 ## Archived legacy behavior
 

@@ -977,13 +977,13 @@ if user_q:
     st.session_state.pop("_followup_suggestions", None)  # clear old chips on new message
     st.session_state.pop("_last_qa", None)
     panel_mode = st.session_state.get("panel_mode", "thesis")
+    # Feature E: Ingest active UI telemetry before building the bound context.
+    _filters = st.session_state.get("filters", {})
     if mode == "CFO" and company_code:
         ctx = build_company_context(int(company_code), panel_mode=panel_mode)
     else:
-        ctx = build_panel_context(panel_mode=panel_mode)
+        ctx = build_panel_context(panel_mode=panel_mode, filters=_filters)
 
-    # Feature E: Ingest active UI telemetry
-    _filters = st.session_state.get("filters", {})
     _telemetry_ctx = (
         f"## [SOURCE: Active UI Telemetry]\n"
         f"- Active Panel: {panel_mode}\n"

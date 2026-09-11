@@ -196,8 +196,19 @@ def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
         return f"Context unavailable: {type(e).__name__}: {e}{GROUNDING_FOOTER}"
 
 
-@functools.lru_cache(maxsize=16)
-def build_panel_context(panel_mode: str = "thesis") -> str:
+def build_panel_context(panel_mode: str = "thesis", filters: Optional[dict] = None) -> str:
+    """Return panel context bound to the active panel and UI filters.
+
+    The public wrapper normalizes filters into a hashable cache key so cached
+    context cannot bleed across panel vintages or filtered user sessions.
+    """
+    normalized = dict(filters or {})
+    normalized["panel_mode"] = panel_mode
+    return _build_panel_context_cached(panel_mode, db.filters_to_tuple(normalized))
+
+
+@functools.lru_cache(maxsize=32)
+def _build_panel_context_cached(panel_mode: str, filters_tuple: tuple) -> str:
     """Build a token-bounded (<= 900 tokens) panel-level context string.
 
     Includes: panel summary stats (firms, obs, year range), per-stage mean
@@ -206,6 +217,7 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
 
     Args:
         panel_mode: One of 'thesis', 'latest', 'run3'.
+        filters_tuple: Hashable serialization of the active UI filters.
 
     Returns:
         Markdown string <= 900 tokens with GROUNDING_FOOTER appended.
@@ -217,16 +229,18 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
             PREDICTORS,
         )
         conn = db.get_connection()
-        vintage_sql, vintage_params = db._vintage_predicate(panel_mode)
+        filters = db._deserialize_filters(filters_tuple)
+        panel_where, panel_params = db._build_where(filters)
         # Need predictor columns for OLS + life_stage + leverage for breakdown
         sql = f"""
             SELECT leverage, profitability, tangibility, tax, log_size,
                    tax_shield, dividend, life_stage, year, company_code
             FROM financials
-            WHERE {vintage_sql}
+            WHERE {panel_where}
         """
-        df = pd.read_sql_query(sql, conn, params=vintage_params)
+        df = pd.read_sql_query(sql, conn, params=panel_params)
         # Industry leverage + tangibility breakdown (FIX-2) — keep conn open
+        industry_where, industry_params = db._build_where(filters, "f")
         ind_sql = f"""
             SELECT c.industry_group,
                    AVG(f.leverage) AS avg_lev,
@@ -236,12 +250,12 @@ def build_panel_context(panel_mode: str = "thesis") -> str:
                    COUNT(DISTINCT f.company_code) AS n_firms
             FROM financials f
             JOIN companies c ON c.company_code = f.company_code
-            WHERE {vintage_sql}
+            WHERE {industry_where}
             GROUP BY c.industry_group
             HAVING n_firms >= 5
             ORDER BY avg_lev DESC
         """
-        ind_df = pd.read_sql_query(ind_sql, conn, params=vintage_params)
+        ind_df = pd.read_sql_query(ind_sql, conn, params=industry_params)
         conn.close()
         panel_label = _PANEL_DISPLAY_LABELS.get(panel_mode, panel_mode)
         footer = _grounding_footer(panel_label)
