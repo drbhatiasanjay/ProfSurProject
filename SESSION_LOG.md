@@ -33,6 +33,7 @@
 - Evidence: `docs/implementation-reports/WAVE_6_PR_03_AI_DESCRIPTIVE_TOOL_INTEGRATION_REPORT.md`.
 - Verification: provider/descriptive/AI routing/research contracts 42 passed;
   compilation and diff check passed.
+- Implementation commit: `7a8a8a7`; handoff checkpoint push is pending.
 
 ## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
 - **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
