@@ -15,10 +15,10 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 
 ## 2. Git Baseline & Tracking Qualification
 - **Active Branch:** `master`
-- **Head Commit:** `fa9f003` (`chore: clean wave8 evidence formatting`)
+- **Head Commit:** `f8673a2` (`docs: record unpublished wave8 baseline`)
 - **Release Tag:** `v2.0.0-ws2-complete`
 - **Previous Baseline:** `6075708` (auth fix)
-- **Remote Tracking State:** local `master` is at `fa9f003`; origin publishing is blocked by GitHub authentication and is not claimed synchronized. GCP deployment is not being claimed.
+- **Remote Tracking State:** local `master` and `origin/master` are synchronized at `f8673a2`; GCP deployment is not being claimed.
 
 ---
 

@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest local baseline:** `fa9f003` (origin publication pending GitHub authentication)
+**Latest published baseline:** `f8673a2` (origin/master synchronized)
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -186,10 +186,9 @@ are the only actions; every action remains `NOT_VALIDATED` and cannot promote
 an estimator or widen authorization. Focused Wave 6/7/8 verification is
 `22 passed, 1 warning`; changed modules compile and diff checks pass.
 
-The current committed code/documentation checkpoint is `fa9f003`. Browser and
-authenticated acceptance remain unclaimed because Chromium and the process-only
-verification credential are unavailable. Publishing is pending GitHub
-authentication; do not report origin/master as synchronized until push succeeds.
+The current committed code/documentation checkpoint is `f8673a2`, published on
+origin/master. Browser and authenticated acceptance remain unclaimed because
+Chromium and the process-only verification credential are unavailable.
 
 A fresh anonymous headless smoke check was attempted after this checkpoint;
 Playwright could not launch because its Chromium executable is not installed.
