@@ -393,3 +393,34 @@ Codex commit gate and currently reports unwritable metadata.
   `origin/codex/wave6-8-remediation-2026-09-12`. The only remaining gate is
   authenticated browser acceptance; browser control was unavailable in this
   session.
+
+## 2026-09-12 — Final handoff to Gemini
+
+The user subsequently completed the reduced manual browser verification across
+the configured profiles and confirmed the browser issue is resolved. Treat the
+remediation checkpoint as closed.
+
+Current synchronized branch:
+`codex/wave6-8-remediation-2026-09-12`
+
+Relevant commits:
+
+- `b3fce3d` — analytical, persistence, role, and UI remediation.
+- `bd0d294` — synchronization-status documentation.
+- `f9e6e1f` — shared dark sidebar-arrow and dropdown selectors.
+
+Verified evidence:
+
+- GitHub targeted hook: **121 passed, 1 warning**.
+- Streamlit health endpoint returned `ok`.
+- `capital_structure.db` remained excluded from commits.
+- Manual distinct-profile browser verification was completed by the user.
+
+Deferred intentionally:
+
+- Full dark-mode visual overhaul, including exact native arrow/dropdown styling.
+- Broader UI polish and chat visual refinements.
+
+Continue using `docs/operations/GEMINI_HANDOFF_PROMPT_2026-09-12.md`. Preserve
+the shared checkout, do not reset unrelated work, and do not stage
+`capital_structure.db`.

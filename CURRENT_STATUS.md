@@ -243,3 +243,14 @@ gates pass; the full suite remains blocked and the tests were preserved.
 - Commit `b3fce3d` was created and pushed to
   `origin/codex/wave6-8-remediation-2026-09-12`. The remote branch matches the
   local commit; only browser acceptance remains open.
+
+## 2026-09-12 — Final Codex handoff closure
+
+- User completed the reduced manual browser verification across the configured
+  profiles and confirmed the browser issue is resolved.
+- Remediation branch is synchronized to GitHub through follow-up commit
+  `f9e6e1f` plus documentation commit `bd0d294`.
+- The dark sidebar-arrow and dropdown defects remain known cosmetic follow-up
+  work; do not reopen the analytical/authentication remediation solely for them.
+- Continue from the Gemini handoff prompt at
+  `docs/operations/GEMINI_HANDOFF_PROMPT_2026-09-12.md`.

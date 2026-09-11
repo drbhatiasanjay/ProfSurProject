@@ -533,3 +533,13 @@ automated matrix evidence.
 - Commit `b3fce3d` was created and pushed to the remediation branch. Browser
   control remains unavailable, so no automated authenticated UI closure claim
   is made.
+
+## 2026-09-12 — Final handoff closure
+
+- User completed the reduced manual browser verification across configured
+  profiles and confirmed the browser issue is resolved.
+- Branch synchronization is complete through `f9e6e1f` and the subsequent
+  handoff documentation update.
+- Remaining dark-mode arrow/dropdown differences are explicitly deferred as
+  cosmetic UI follow-up work.
+- Gemini continuation prompt: `docs/operations/GEMINI_HANDOFF_PROMPT_2026-09-12.md`.
