@@ -177,3 +177,6 @@ References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,
   historical thesis/demo wording remain distinct.
 - Antigravity audit brief is committed as an evidence-only parallel task; no
   callable Antigravity bridge is listening in this session.
+- `scripts/project_ops.py verify` now fails closed without the approved
+  `PROFSUR_VERIFY_PASSWORD` environment variable; the plaintext CLI default was
+  removed. Evidence is in `PROJECT_OPS_SECRET_GATE_2026-09-11.md`.

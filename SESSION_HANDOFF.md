@@ -116,6 +116,10 @@ Today’s implementation checkpoint adds the duplicate-email bootstrap guard and
 explicitly labels the internal dynamic-panel routine as an unverified IV-GMM
 proxy. Evidence is in the two corresponding implementation reports.
 
+The operations verifier also requires process-only `PROFSUR_VERIFY_PASSWORD`;
+it has no plaintext CLI password fallback. See
+`docs/implementation-reports/PROJECT_OPS_SECRET_GATE_2026-09-11.md`.
+
 ## 7. Lessons learned
 
 - A healthy port is not proof of the correct application. Verify the launch

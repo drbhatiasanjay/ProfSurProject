@@ -119,7 +119,11 @@ def cmd_verify(args):
     url = "http://localhost:8501" if env == "local" else "https://lifecycle-leverage-779655496440.us-east1.run.app"
     out_img = f"scratch/verify_{env}_screen.png"
     print(f"=== VERIFYING {env.upper()} DEPLOYMENT ===")
-    asyncio.run(_run_verify_async(url, args.user, args.password, out_img))
+    password = os.environ.get("PROFSUR_VERIFY_PASSWORD")
+    if not password:
+        print("Error: PROFSUR_VERIFY_PASSWORD is required for authenticated verification.")
+        sys.exit(2)
+    asyncio.run(_run_verify_async(url, args.user, password, out_img))
 
 def main():
     parser = argparse.ArgumentParser(description="LifeCycle Leverage Project Ops CLI")
@@ -142,7 +146,6 @@ def main():
     p_verify = subparsers.add_parser("verify", help="Run Playwright verification on local or GCP")
     p_verify.add_argument("--env", choices=["local", "gcp"], default="gcp", help="Target environment")
     p_verify.add_argument("--user", default="profsurkumar", help="Login username")
-    p_verify.add_argument("--password", default="Pass@123", help="Login password")
     p_verify.set_defaults(func=cmd_verify)
 
     args = parser.parse_args()
