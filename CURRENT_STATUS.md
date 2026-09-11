@@ -157,5 +157,6 @@ References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,
   gaps (`ivregress`, `hdfe`, `gmm`, `didregress`, `test`, `predict`,
   `predict_ml`, `scenario`). The AI natural-language sweep remains externally
   authorized but not executed.
-- Panel mapping contract: **3 focused checks passed**; AI Chat now receives the
-  same normalized active filter scope used by Stata/data access.
+- Panel mapping contract added; source compilation and diff checks pass. Runtime
+  contract execution remains pending because the local Python runner was
+  resource-blocked by background processes.

@@ -39,8 +39,10 @@ at the root URL, then click the registered sidebar page.
 - `xtset companycode year` executes successfully in the Stata engine and is now
   routed directly by AI Chat.
 - 17 of the supplied 25 deterministic Stata inputs return successful results.
-- Panel mapping contract passes source/data-scope checks for dataset vintage,
-  year range, companies, life stages, industries, events, and all four roles.
+- Panel mapping contract is implemented for dataset vintage, year range,
+  companies, life stages, industries, events, and all four roles. Source
+  compilation passed; runtime execution remains pending after local resource
+  contention.
 
 ### Open product gaps
 
