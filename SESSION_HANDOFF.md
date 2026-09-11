@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `e2a2193` (local; not yet published)
+**Latest baseline:** `410b9cc` (local; not yet published)
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -170,6 +170,11 @@ fast gate passed with `6 passed, 1 warning`; changed modules compile cleanly.
 The root 8501 health endpoint returned `ok`. Fresh authenticated browser
 verification is still not claimed because no browser automation surface or
 process-only verification credential is available in this session.
+
+A fresh anonymous headless smoke check was attempted after this checkpoint;
+Playwright could not launch because its Chromium executable is not installed.
+This is an environment blocker, not an application failure. No browser binary
+was downloaded automatically.
 
 ## 7. Lessons learned
 
