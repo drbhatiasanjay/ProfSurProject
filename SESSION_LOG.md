@@ -1,5 +1,12 @@
 # ProfSurProject — Session Log
 
+## Autonomous Checkpoint — bounded collection probe (2026-09-11)
+- Added `scripts/diagnose_tracked_collection.py` to probe tracked test collection
+  with bounded parallel workers and plugin autoload disabled.
+- The probe recorded 53 timeouts under four-worker startup; a serial control
+  collected the descriptive file's 8 tests in 2.62s. This indicates local
+  parallel resource contention, not 53 independent test failures.
+
 ## Autonomous Checkpoint — Wave 6 PR-02 descriptive analyst (2026-09-11)
 - Implemented a read-only descriptive gateway, deterministic `AnalysisRun`, and
   metadata-only renderer; corrected the prepared fixture to expect one filtered
