@@ -37,3 +37,16 @@ repository decision—not to suppress collection errors.
 Default pytest plugin autoload caused an earlier no-output stall. Disabling
 plugin autoload isolates that contention, but does not resolve the independent
 collection errors above.
+
+## Follow-up
+
+The tracked `tests/_debug_auth.py` import-time Playwright runner was converted
+to an opt-in `main()` and now requires process-only
+`PROFSUR_VERIFY_PASSWORD`. It no longer starts a browser during collection or
+contains a plaintext credential.
+
+With that correction, a plugin-disabled collection reached **735 tests** and
+still reported only the three phase-test import mismatches listed above. A
+diagnostic run excluding those exact tests progressed to 68% without failures
+but then became silent for over 60 seconds and was stopped. This is evidence of
+another slow/hanging test section, not a passing full-suite result.

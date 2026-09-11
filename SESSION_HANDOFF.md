@@ -125,6 +125,10 @@ reaches three untracked phase-test import mismatches and stops. See
 `docs/implementation-reports/FULL_PYTEST_COLLECTION_AUDIT_2026-09-11.md`.
 Focused auth/routing/panel checks pass; do not report the full suite as green.
 
+The tracked debug-auth test is now collection-safe and secret-only. After that
+correction, the remainder reached 68% before becoming silent for over 60
+seconds; the full suite remains open.
+
 ## 7. Lessons learned
 
 - A healthy port is not proof of the correct application. Verify the launch

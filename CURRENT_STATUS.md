@@ -183,4 +183,7 @@ References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,
 - Full pytest was rerun with third-party plugin autoload disabled. Collection
   now reaches three untracked phase-test import mismatches; see
   `FULL_PYTEST_COLLECTION_AUDIT_2026-09-11.md`. Focused auth, routing, and panel
-  gates pass; the full suite remains blocked and the tests were preserved.
+gates pass; the full suite remains blocked and the tests were preserved.
+- The tracked debug-auth test was made collection-safe and secret-only. The
+  corrected collection reached 735 tests; three phase-test imports remain
+  unresolved and the remainder later became silent at 68%.

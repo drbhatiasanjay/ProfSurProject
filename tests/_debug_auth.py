@@ -1,5 +1,5 @@
 """Debug: print sidebar and authentication state for each navigation step."""
-import io, sys, time
+import io, os, sys, time
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", line_buffering=True)
 from playwright.sync_api import sync_playwright
 
@@ -37,35 +37,44 @@ def fill_login(page, username, password):
     return auth
 
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
+def main():
+    password = os.environ.get("PROFSUR_VERIFY_PASSWORD")
+    if not password:
+        raise RuntimeError("Set PROFSUR_VERIFY_PASSWORD for authenticated debug runs.")
 
-    print("=== sbhatia full flow debug ===")
-    ctx = browser.new_context(viewport={"width": 1480, "height": 900})
-    pg = ctx.new_page()
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
 
-    fill_login(pg, "sbhatia", "UzBGwQ0DuH_Wgo0S")
+        print("=== sbhatia full flow debug ===")
+        ctx = browser.new_context(viewport={"width": 1480, "height": 900})
+        pg = ctx.new_page()
 
-    print("\n  Warm-up goto BASE...")
-    goto_wait(pg, BASE)
-    auth = is_authenticated(pg)
-    print(f"  After warm-up: authenticated={auth}")
+        fill_login(pg, "sbhatia", password)
 
-    print("\n  Check Dashboard (goto BASE again)...")
-    goto_wait(pg, BASE)
-    body = pg.inner_text("body").lower()
-    auth = is_authenticated(pg)
-    print(f"  After Dashboard goto: authenticated={auth}")
-    print(f"  Login btn visible: {pg.locator('button:has-text(\"Login\")').first.is_visible(timeout=1000)}")
-    print(f"  Body snippet: {repr(body[:200])}")
-    pg.screenshot(path="debug_sbhatia_dashboard.png")
+        print("\n  Warm-up goto BASE...")
+        goto_wait(pg, BASE)
+        auth = is_authenticated(pg)
+        print(f"  After warm-up: authenticated={auth}")
 
-    print("\n  Check Peer Benchmarks...")
-    goto_wait(pg, BASE + "/peer_benchmarks")
-    auth = is_authenticated(pg)
-    print(f"  After peer_benchmarks goto: authenticated={auth}")
+        print("\n  Check Dashboard (goto BASE again)...")
+        goto_wait(pg, BASE)
+        body = pg.inner_text("body").lower()
+        auth = is_authenticated(pg)
+        print(f"  After Dashboard goto: authenticated={auth}")
+        print(f"  Login btn visible: {pg.locator('button:has-text(\"Login\")').first.is_visible(timeout=1000)}")
+        print(f"  Body snippet: {repr(body[:200])}")
+        pg.screenshot(path="debug_sbhatia_dashboard.png")
 
-    ctx.close()
-    browser.close()
+        print("\n  Check Peer Benchmarks...")
+        goto_wait(pg, BASE + "/peer_benchmarks")
+        auth = is_authenticated(pg)
+        print(f"  After peer_benchmarks goto: authenticated={auth}")
 
-print("\nDone. Screenshot: debug_sbhatia_dashboard.png")
+        ctx.close()
+        browser.close()
+
+    print("\nDone. Screenshot: debug_sbhatia_dashboard.png")
+
+
+if __name__ == "__main__":
+    main()
