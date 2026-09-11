@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `e99bf6c`
+**Latest baseline:** `d93e20a`
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -111,6 +111,10 @@ as PASS only when the application fails closed with a typed response.
 
 The complete non-development closure matrix is recorded in
 `docs/operations/NON_DEVELOPMENT_CHECKLIST_2026-09-11.md`.
+
+Today’s implementation checkpoint adds the duplicate-email bootstrap guard and
+explicitly labels the internal dynamic-panel routine as an unverified IV-GMM
+proxy. Evidence is in the two corresponding implementation reports.
 
 ## 7. Lessons learned
 
