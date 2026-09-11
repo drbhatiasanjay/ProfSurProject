@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `7a8a8a7` (local; checkpoint push pending)
+**Latest baseline:** `23b0a85` (published to `origin/master`)
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -170,6 +170,13 @@ fast gate passed with `6 passed, 1 warning`; changed modules compile cleanly.
 The root 8501 health endpoint returned `ok`. Fresh authenticated browser
 verification is still not claimed because no browser automation surface or
 process-only verification credential is available in this session.
+
+The current Wave 6/7/8 integration adds a deterministic descriptive Gemini
+tool, typed provenance stream events, canonical AI-page metadata rendering, and
+stable researcher-slice serialization. Focused verification is `42 passed, 1
+warning`; the latest GitHub workflow for this head passed. A repository-wide
+pytest attempt timed out at 120 seconds, including collection-only mode; this
+remains an unresolved broad-suite gate and is not reported as green.
 
 A fresh anonymous headless smoke check was attempted after this checkpoint;
 Playwright could not launch because its Chromium executable is not installed.

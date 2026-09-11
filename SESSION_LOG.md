@@ -35,6 +35,14 @@
   compilation and diff check passed.
 - Implementation commit: `7a8a8a7`; handoff checkpoint push is pending.
 
+## Autonomous Checkpoint — broad-suite and CI audit (2026-09-11)
+- Current published head is `23b0a85`; GitHub CI for it passed.
+- Full pytest and collection-only runs each timed out at 120 seconds; no Python
+  worker remained afterward. This is an open broad-suite gate, not a pass.
+- Focused provider/descriptive/researcher/artifact suite passed 42 tests with
+  one dependency warning. The next safe action is bounded isolation of the
+  broad-suite timeout; browser/auth acceptance remains externally blocked.
+
 ## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
 - **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
 - **Authentication Diagnostics & Resolution:**
