@@ -1,6 +1,6 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Operational Status
 
-**Last Updated:** 2026-09-10  
+**Last Updated:** 2026-09-11  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
 
 ---
@@ -15,7 +15,7 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 
 ## 2. Git Baseline & Tracking Qualification
 - **Active Branch:** `master`
-- **Head Commit:** `0437f2c` (`test(stata): record 25-command matrix gaps`)
+- **Head Commit:** `6c89335` (`fix(context): bind AI panel context to active filters`)
 - **Release Tag:** `v2.0.0-ws2-complete`
 - **Previous Baseline:** `6075708` (auth fix)
 - **Remote Tracking State:** Local `HEAD` is ahead of `origin/master` by 1 commit. GCP deployment pending.
@@ -157,3 +157,5 @@ References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,
   gaps (`ivregress`, `hdfe`, `gmm`, `didregress`, `test`, `predict`,
   `predict_ml`, `scenario`). The AI natural-language sweep remains externally
   authorized but not executed.
+- Panel mapping contract: **3 focused checks passed**; AI Chat now receives the
+  same normalized active filter scope used by Stata/data access.

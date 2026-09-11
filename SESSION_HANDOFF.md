@@ -1,9 +1,9 @@
 # ProfSurProject — Restart-Safe Operational Handoff
 
-**Updated:** 2026-09-10  
+**Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `0437f2c`  
+**Latest baseline:** `6c89335`  
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -24,6 +24,8 @@ at the root URL, then click the registered sidebar page.
   synchronization contract, and four-user QA report.
 - `8599dc6` — routed supported `xtset` and `lgraph` commands through AI Chat.
 - `0437f2c` — recorded the honest 25-command matrix and current gaps.
+- `6c89335` — bound AI panel context to the normalized active filter scope and
+  added the four-profile panel-mapping regression contract.
 
 ## 3. Verification status
 
@@ -37,6 +39,8 @@ at the root URL, then click the registered sidebar page.
 - `xtset companycode year` executes successfully in the Stata engine and is now
   routed directly by AI Chat.
 - 17 of the supplied 25 deterministic Stata inputs return successful results.
+- Panel mapping contract passes source/data-scope checks for dataset vintage,
+  year range, companies, life stages, industries, events, and all four roles.
 
 ### Open product gaps
 

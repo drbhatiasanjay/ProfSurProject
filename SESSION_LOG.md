@@ -312,4 +312,6 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - The deterministic 25-command sweep found 17 successes and 8 real dispatcher
   gaps. The external AI natural-language sweep remains a separately authorized
   gate because it transmits active panel context to an LLM.
+- Implemented `6c89335`: AI panel context is keyed by normalized active filters;
+  panel mapping contract passed for all four configured profiles.
 
