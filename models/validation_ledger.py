@@ -89,3 +89,20 @@ def write_manifest(directory: str | Path, record: ValidationRecord, *, command: 
     target = directory / "manifest.json"
     target.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return target
+
+
+def verify_manifest(path: str | Path) -> bool:
+    """Verify the integrity hash and derived status of a manifest."""
+    target = Path(path)
+    try:
+        payload = json.loads(target.read_text(encoding="utf-8"))
+        recorded_hash = payload.pop("manifest_sha256")
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise ValidationLedgerError("invalid manifest") from exc
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    if hashlib.sha256(encoded).hexdigest() != recorded_hash:
+        raise ValidationLedgerError("manifest integrity check failed")
+    record = ValidationRecord(**payload["record"])
+    if payload.get("derived_status") != derive_validation_status(record):
+        raise ValidationLedgerError("manifest integrity check failed")
+    return True

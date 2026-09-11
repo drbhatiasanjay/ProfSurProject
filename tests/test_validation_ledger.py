@@ -7,6 +7,7 @@ from models.validation_ledger import (
     ValidationLedgerError,
     ValidationRecord,
     derive_validation_status,
+    verify_manifest,
     write_manifest,
 )
 
@@ -57,3 +58,13 @@ def test_manifest_detects_duplicate_or_unsafe_evidence_references(tmp_path):
         write_manifest(tmp_path, _record(evidence_refs=("a.json", "a.json")))
     with pytest.raises(ValidationLedgerError):
         write_manifest(tmp_path, _record(evidence_refs=("../secrets.txt",)))
+
+
+def test_manifest_verifier_accepts_intact_manifest_and_rejects_tampering(tmp_path):
+    target = write_manifest(tmp_path, _record(), command="pytest benchmark")
+    assert verify_manifest(target) is True
+    payload = json.loads(target.read_text())
+    payload["command"] = "tampered"
+    target.write_text(json.dumps(payload))
+    with pytest.raises(ValidationLedgerError, match="manifest integrity"):
+        verify_manifest(target)
