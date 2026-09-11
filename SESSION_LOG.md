@@ -330,3 +330,20 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - Credential rotation remains deferred; no credential values or hashes were
   printed, stored, or committed.
 
+## 2026-09-11 — Autonomous Waves 6–8 Goal Started
+
+- Canonical Git state verified as `master` at `ffbd0b9`.
+- `CURRENT_STATUS.md` and `SESSION_HANDOFF.md` were reconciled from stale
+  baseline pointers to the verified local head.
+- Wave 6 remains the validation-workbench gate; no advanced capability is
+  promoted without independent numerical, assumption, methodology,
+  reproducibility, and review evidence.
+- Wave 7 is scoped to reproducible visualization/narrative artifacts and
+  bounded challenge/reproduce actions.
+- Wave 8 is scoped to one read-only researcher journey with immutable
+  provenance. Redis, multi-host tenancy, AST rewrite, credential rotation,
+  deployment, and broad estimator promotion remain out of scope.
+- Execution plan: `docs/operations/WAVE_6_8_AUTONOMOUS_EXECUTION_PLAN.md`.
+- External blockers remain fresh authenticated browser credentials and any
+  future publish/deployment authorization. No credential values are recorded.
+

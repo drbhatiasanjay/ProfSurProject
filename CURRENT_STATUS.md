@@ -15,7 +15,7 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 
 ## 2. Git Baseline & Tracking Qualification
 - **Active Branch:** `master`
-- **Head Commit:** `e4d7398` (`docs-refresh-ml-baseline-pointer`)
+- **Head Commit:** `ffbd0b9` (`test-ui-extend-matrix-navigation`)
 - **Release Tag:** `v2.0.0-ws2-complete`
 - **Previous Baseline:** `6075708` (auth fix)
 - **Remote Tracking State:** Local `HEAD` contains unpushed implementation/evidence commits after remote `1854875`; GCP deployment is not being claimed.
@@ -130,6 +130,27 @@ All future feature work is restricted to exactly two isolated, TDD-governed work
 > **Both canonical workstreams are COMPLETE. No further feature branches are authorized without a new PRD entry.**
 
 ---
+
+## 14. Autonomous Waves 6–8 Execution Scope (2026-09-11)
+
+The user authorized autonomous execution across Waves 6, 7, and 8 while
+remaining within the MVP boundary. The reconciled sequence is:
+
+1. **Wave 6 — Validation and language boundary:** finish the validation ledger,
+   independent benchmark/evidence packets, capability-status enforcement, and
+   the shared normalized analytical-request seam. Advanced methods remain
+   `IMPLEMENTED_UNVERIFIED` until all five validation gates pass.
+2. **Wave 7 — Reproducible visualization and narrative:** add the minimum
+   artifact contracts needed to connect verified results to deterministic facts,
+   bounded insight candidates, limitations, and reproduce/challenge actions.
+3. **Wave 8 — Controlled FDI researcher slice:** migrate one validated,
+   read-only researcher journey behind immutable run/provenance boundaries.
+
+Redis, multi-host tenancy, AST rewrite, credential rotation, GCP deployment,
+and broad estimator promotion remain out of scope unless separately authorized.
+The current validation-workbench design is operative; older Wave 6 language-
+engine wording is treated as a compatible later slice, not permission to bypass
+validation gates. See `docs/operations/WAVE_6_8_AUTONOMOUS_EXECUTION_PLAN.md`.
 
 ## 12. Evidence & Provenance References
 - Historical Recovery Source: `C:\Users\hemas\.gemini\antigravity-ide\brain\dfad8734-d349-4cab-bff4-d88cf51c2925`
