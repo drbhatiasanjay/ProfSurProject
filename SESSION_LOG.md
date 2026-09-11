@@ -18,6 +18,7 @@
 - Evidence: `docs/implementation-reports/WAVE_7_PR_04_DESCRIPTIVE_RENDERER_INTEGRATION_REPORT.md`.
 - Verification: focused renderer/descriptive/researcher/artifact/status contracts
   20 passed; page compilation and diff check passed.
+- Implementation commit: `8113bef`; handoff checkpoint push is pending.
 
 ## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
 - **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
