@@ -1,5 +1,11 @@
 # ProfSurProject — Session Log
 
+## Autonomous Checkpoint — Wave 6 benchmark documentation synchronized (2026-09-11)
+- Synchronized canonical status, handoff, plan, and session log to the
+  published evidence checkpoint `d59f681`.
+- The implementation remains `2208734`; focused fixture evidence is `7 passed,
+  1 warning`; no production estimator promotion or UI acceptance is claimed.
+
 ## Autonomous Checkpoint — Wave 6 independent benchmark fixtures (2026-09-11)
 - Added deterministic production-independent IV/2SLS and entity-demeaned HDFE
   known-answer fixtures with fingerprints, rank checks, and sample accounting.
