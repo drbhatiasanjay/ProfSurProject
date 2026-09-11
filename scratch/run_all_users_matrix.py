@@ -21,10 +21,10 @@ def run_matrix():
         raise RuntimeError("Set PROFSUR_VERIFY_PASSWORD for authenticated UI regression.")
     out_dir = "scratch/matrix_evidence"
     os.makedirs(out_dir, exist_ok=True)
-    
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        
+
         for user, role in USERS:
             print(f"\n==========================================")
             print(f"Testing User: {user} ({role})")
@@ -34,13 +34,13 @@ def run_matrix():
 
             print(f"Navigating to {BASE_URL}...")
             page.goto(BASE_URL, wait_until="networkidle", timeout=35000)
-            
+
             print(f"Logging in as {user}...")
             page.wait_for_selector('[data-testid="stTextInput"] input', timeout=30000, state="visible")
             page.locator('[data-testid="stTextInput"] input').first.fill(user)
             page.locator('input[type="password"]').first.fill(PASSWORD)
             page.locator('button:has-text("Sign In")').first.click()
-            
+
             print("Waiting for sidebar...")
             page.wait_for_selector("section[data-testid='stSidebar']", timeout=25000, state="visible")
 
@@ -68,7 +68,7 @@ def run_matrix():
 
             print("Clicking Run Command...")
             page.get_by_role("button", name="Run Command").first.click()
-            
+
             print("Waiting for estimation calculation to complete by checking for terminal card output...")
             term_card = page.locator(".stata-rich-terminal-card").first
             # Wait until it is visible, indicating command finished
@@ -77,11 +77,11 @@ def run_matrix():
             # Determine initial mode from toggle button
             toggle_btn = page.locator('button[data-testid="stBaseButton-secondary"]').filter(has_text=re.compile(r"dark|light", re.IGNORECASE)).first
             btn_text = toggle_btn.text_content() if toggle_btn.count() > 0 else ""
-            
+
             is_dark = "light" in btn_text.lower()
             theme1 = "dark" if is_dark else "light"
             theme2 = "light" if is_dark else "dark"
-            
+
             print(f"Theme 1 is: {theme1} (button label: '{btn_text}')")
             term_card.scroll_into_view_if_needed()
             term_card.screenshot(path=f"{out_dir}/{user}_{theme1}_card.png")
@@ -92,7 +92,7 @@ def run_matrix():
             print(f"Toggling to Theme 2: {theme2}...")
             page.evaluate("window.scrollTo(0, 0)")
             toggle_btn.click()
-            
+
             # Wait for theme to change (look for a style attribute change or just wait for network idle)
             page.wait_for_load_state("networkidle", timeout=10000)
 
