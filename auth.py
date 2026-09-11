@@ -74,6 +74,21 @@ def _row(row):
     return dict(row) if row else None
 
 
+def _validate_legacy_credentials(credentials: dict) -> None:
+    """Reject ambiguous secret configuration before touching the auth database."""
+    seen_emails = set()
+    for username, record in (credentials or {}).items():
+        if not isinstance(record, dict) or not record.get("email"):
+            continue
+        email = normalize_email(record["email"])
+        if email in seen_emails:
+            raise AuthValidationError(
+                "Authentication configuration contains duplicate email addresses; "
+                "each account must have a unique email."
+            )
+        seen_emails.add(email)
+
+
 def ensure_auth_tables() -> None:
     conn = db.get_connection()
     try:
@@ -113,6 +128,7 @@ def ensure_auth_tables() -> None:
 
 def bootstrap_legacy_users(credentials: dict) -> None:
     """Import existing bcrypt-hashed secrets users; synchronizes password hashes and roles."""
+    _validate_legacy_credentials(credentials)
     for username, record in (credentials or {}).items():
         password_hash = str(record.get("password", ""))
         if not password_hash.startswith(("$2a$", "$2b$", "$2y$")):

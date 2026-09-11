@@ -35,6 +35,22 @@ def test_invalid_identifiers_and_weak_password_are_rejected(auth_db):
         auth_db.validate_password("short")
 
 
+def test_legacy_bootstrap_rejects_duplicate_emails_before_database_mutation(auth_db):
+    credentials = {
+        "first_user": {"email": "Shared@Example.com", "password": ""},
+        "second_user": {"email": " shared@example.com ", "password": ""},
+    }
+
+    with pytest.raises(auth_db.AuthValidationError, match="duplicate email"):
+        auth_db.bootstrap_legacy_users(credentials)
+
+    conn = sqlite3.connect(auth_db.db.DB_PATH)
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM auth_users").fetchone()[0] == 0
+    finally:
+        conn.close()
+
+
 def test_email_code_is_single_use_and_enables_password_setup(auth_db, monkeypatch):
     monkeypatch.setenv("AUTH_TEST_MODE", "1")
     user = auth_db.enroll_user("new_user", "new@example.com", "+919876543211")
