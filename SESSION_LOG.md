@@ -1,5 +1,13 @@
 # ProfSurProject — Session Log
 
+## Autonomous Checkpoint — published collection audit (2026-09-11)
+- Consolidated serial collection evidence for tracked test files 1–20 of 53;
+  all 20 collected successfully with one worker and a 20-second bound.
+- Evidence: `docs/review-evidence/TRACKED_COLLECTION_AUDIT_2026-09-11.md`.
+- Published baseline: `c932c93` on `origin/master`.
+- Full-suite execution remains unresolved; authenticated browser acceptance and
+  external AI validation remain separately gated.
+
 ## Autonomous Checkpoint — serial collection diagnostic (2026-09-11)
 - Refined `scripts/diagnose_tracked_collection.py` with bounded serial controls,
   worker/timeout metadata, and GitHub-ready reporting.
