@@ -188,5 +188,5 @@ gates pass; the full suite remains blocked and the tests were preserved.
   corrected collection reached 735 tests; three phase-test imports remain
   unresolved. A tracked-only run reached 70% without failures, then stalled at
   XGBoost cross-validation and was stopped after 60 seconds.
-- The debug verifier correction is included in local baseline `a936b4b`; fresh UI evidence
+- The debug verifier correction is included in local baseline `97d0ad8`; fresh UI evidence
   remains gated because the approved process-only password variable is absent.
