@@ -430,6 +430,14 @@ class TestMLModels:
         from models.ml_predict import MODEL_CONFIGS
         assert MODEL_CONFIGS["Random Forest"]["params"]["n_jobs"] == 1
 
+    def test_xgboost_uses_single_process_by_default(self):
+        from models.ml_predict import MODEL_CONFIGS
+        assert MODEL_CONFIGS["XGBoost"]["params"]["n_jobs"] == 1
+
+    def test_lightgbm_uses_single_process_by_default(self):
+        from models.ml_predict import MODEL_CONFIGS
+        assert MODEL_CONFIGS["LightGBM"]["params"]["n_jobs"] == 1
+
     def test_cross_validate_rf(self, small_panel):
         from models.ml_predict import cross_validate_model
         result = cross_validate_model("Random Forest", small_panel, n_splits=3)

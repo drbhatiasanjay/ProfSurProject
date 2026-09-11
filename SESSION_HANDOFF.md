@@ -120,6 +120,11 @@ The operations verifier also requires process-only `PROFSUR_VERIFY_PASSWORD`;
 it has no plaintext CLI password fallback. See
 `docs/implementation-reports/PROJECT_OPS_SECRET_GATE_2026-09-11.md`.
 
+The XGBoost full-suite stall was isolated and bounded. XGBoost and LightGBM
+now use `n_jobs=1`, consistent with Random Forest, to contain Windows thread
+resource contention. Focused cross-validation checks passed for both models;
+no performance improvement is claimed.
+
 The full pytest collection audit is now concrete: plugin-disabled collection
 reaches three untracked phase-test import mismatches and stops. See
 `docs/implementation-reports/FULL_PYTEST_COLLECTION_AUDIT_2026-09-11.md`.

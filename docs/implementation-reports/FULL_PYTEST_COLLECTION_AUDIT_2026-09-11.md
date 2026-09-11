@@ -53,3 +53,16 @@ failure, then became silent while executing
 test process was stopped after an additional 60 seconds. This is evidence of a
 slow or hanging XGBoost section, not a passing full-suite result. The three
 phase-test import mismatches and the XGBoost hang remain open gates.
+
+## Bounded ML follow-up
+
+The stall was isolated to the XGBoost ML test path. XGBoost and LightGBM are
+now explicitly configured with `n_jobs=1`, matching the existing Random Forest
+resource policy. This is a Windows/resource-containment change; no speedup is
+claimed.
+
+- XGBoost configuration contract + cross-validation: **2 passed in 37.34s**
+- LightGBM configuration contract + cross-validation: **2 passed in 34.67s**
+
+The broad suite remains open: the three phase-test imports and remaining
+full-run coverage require separate closure.

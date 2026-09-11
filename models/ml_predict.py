@@ -25,13 +25,15 @@ MODEL_CONFIGS = {
         "class": XGBRegressor,
         "params": {"n_estimators": 200, "max_depth": 5, "learning_rate": 0.05,
                    "reg_alpha": 1.0, "reg_lambda": 2.0, "random_state": 42,
-                   "verbosity": 0},
+                   # Keep hosted/Windows validation bounded; callers can still
+                   # parallelize independent model requests at the process level.
+                   "verbosity": 0, "n_jobs": 1},
     },
     "LightGBM": {
         "class": LGBMRegressor,
         "params": {"n_estimators": 200, "num_leaves": 31, "min_child_samples": 30,
                    "learning_rate": 0.05, "reg_alpha": 1.0, "reg_lambda": 2.0,
-                   "random_state": 42, "verbosity": -1},
+                   "random_state": 42, "verbosity": -1, "n_jobs": 1},
     },
 }
 
