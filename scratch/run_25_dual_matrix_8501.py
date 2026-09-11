@@ -44,7 +44,6 @@ COMMANDS = [
     ("scenario", "scenario leverage prof interventions(prof = prof * 1.1) prof = prof * 1.2", "Simulate a scenario where both inline and intervention options conflict."),
 ]
 
-
 def safe_status(text: str) -> tuple[str, str]:
     lowered = text.lower()
     fatal = any(token in lowered for token in ("traceback", "modulenotfounderror", "importerror", "connectionerror"))
@@ -55,6 +54,17 @@ def safe_status(text: str) -> tuple[str, str]:
         return "PASS_FAIL_CLOSED", "typed/user-visible rejection"
     return "PASS", "result rendered"
 
+def atomic_save(results: list[dict]):
+    tmp = OUT / "results.json.tmp"
+    tmp.write_text(json.dumps(results, indent=2), encoding="utf-8")
+    tmp.replace(OUT / "results.json")
+
+def wait_for_rerun(page, timeout=20000):
+    try:
+        page.wait_for_selector('[data-testid="stStatusWidget"]', state="attached", timeout=1000)
+    except Exception:
+        pass
+    page.wait_for_selector('[data-testid="stStatusWidget"]', state="detached", timeout=timeout)
 
 def login(page, user: str) -> None:
     page.goto(BASE_URL, wait_until="networkidle", timeout=45000)
@@ -62,67 +72,74 @@ def login(page, user: str) -> None:
     page.locator('input[type="text"]').first.fill(user)
     page.locator('input[type="password"]').first.fill(PASSWORD)
     page.locator('button:has-text("Sign In"), button:has-text("Login")').first.click()
-    page.wait_for_selector("section[data-testid='stSidebar']", timeout=30000)
-    time.sleep(2)
+    wait_for_rerun(page)
+    page.wait_for_selector("section[data-testid='stSidebar']", state="visible", timeout=30000)
+    
+    # Reacquire elements after rerun
     more = page.locator("section[data-testid='stSidebar']").get_by_text(re.compile(r"more", re.I)).first
     try:
-        if more.is_visible(timeout=3000):
+        if more.is_visible(timeout=2000):
             more.click()
-            time.sleep(1)
+            wait_for_rerun(page)
     except Exception:
         pass
-
 
 def open_page(page, label: str) -> None:
     link = page.locator("section[data-testid='stSidebar'] a").filter(has_text=re.compile(label, re.I)).first
     link.wait_for(state="visible", timeout=15000)
     link.click()
-    time.sleep(3)
-
+    wait_for_rerun(page)
 
 def ensure_theme(page, target_theme: str) -> None:
-    time.sleep(1) # wait for render
     if target_theme.lower() == "dark":
         btn_moon = page.locator("button").filter(has_text="🌙").first
         if btn_moon.is_visible(timeout=3000):
             btn_moon.click()
+            wait_for_rerun(page)
             page.locator("button").filter(has_text="☀️").first.wait_for(state="visible", timeout=10000)
-            time.sleep(1)
     else:
         btn_sun = page.locator("button").filter(has_text="☀️").first
         if btn_sun.is_visible(timeout=3000):
             btn_sun.click()
+            wait_for_rerun(page)
             page.locator("button").filter(has_text="🌙").first.wait_for(state="visible", timeout=10000)
-            time.sleep(1)
 
-def run_user(browser, user: str, role: str, theme: str) -> list[dict]:
+def run_user(browser, user: str, role: str, theme: str, results: list[dict]) -> None:
     ctx = browser.new_context(viewport={"width": 1440, "height": 1100})
     page = ctx.new_page()
-    rows = []
     try:
         login(page, user)
         ensure_theme(page, theme)
         open_page(page, "Stata Studio")
+        
         for name, stata, _ in COMMANDS:
             started = time.time()
             text = ""
+            status = "FAIL"
+            detail = "Unknown error"
             try:
                 inp = page.locator("input[aria-label='Stata Command Prompt:']").first
                 inp.wait_for(state="visible", timeout=20000)
                 inp.fill(stata)
                 
-                # Prevent stale result cards
                 before_cards = page.locator(".stata-rich-terminal-card").count()
                 page.get_by_role("button", name="Run Command").first.click()
+                wait_for_rerun(page, timeout=30000)
                 
-                page.wait_for_function("(n) => document.querySelectorAll('.stata-rich-terminal-card').length > n", arg=before_cards, timeout=20000)
-                card = page.locator(".stata-rich-terminal-card").last
-                card.wait_for(state="visible", timeout=20000)
+                # Check what was rendered
+                new_cards = page.locator(".stata-rich-terminal-card").count()
+                if new_cards > before_cards:
+                    card = page.locator(".stata-rich-terminal-card").last
+                elif page.locator('[data-testid="stException"]').count() > 0:
+                    card = page.locator('[data-testid="stException"]').last
+                elif page.locator('[data-testid="stAlert"]').count() > 0:
+                    card = page.locator('[data-testid="stAlert"]').last
+                else:
+                    card = page.locator(".stata-rich-terminal-card").last
                 
-                # Retry for detached elements
+                # Retry loop by reacquiring element inner text
                 for attempt in range(3):
                     try:
-                        time.sleep(1)
                         text = card.inner_text()
                         status, detail = safe_status(text)
                         page.screenshot(path=str(OUT / f"{user}_{theme.lower()}_stata_{name}.png"), full_page=True)
@@ -130,26 +147,40 @@ def run_user(browser, user: str, role: str, theme: str) -> list[dict]:
                     except Exception as e:
                         if attempt == 2:
                             raise e
-                        time.sleep(1)
+                        page.wait_for_timeout(1000)  # Reacquire delay
             except Exception as exc:
                 status, detail, text = "FAIL", f"UI exception: {type(exc).__name__}: {exc}", ""
-            rows.append({"user": user, "role": role, "theme": theme, "interface": "Stata Studio", "command": name, "input": stata, "status": status, "detail": detail, "elapsed_s": round(time.time() - started, 2), "output_excerpt": text[:500]})
+            
+            results.append({"user": user, "role": role, "theme": theme, "interface": "Stata Studio", "command": name, "input": stata, "status": status, "detail": detail, "elapsed_s": round(time.time() - started, 2), "output_excerpt": text[:500]})
+            atomic_save(results)
 
         if "--stata-only" in sys.argv:
-            return rows
+            return
 
         open_page(page, "AI Assistant")
         chat = page.locator('textarea[aria-label="Ask ProfSur AI..."], textarea').first
         chat.wait_for(state="visible", timeout=20000)
+        
         for name, _, prompt in COMMANDS:
             started = time.time()
             text = ""
+            status = "FAIL"
+            detail = "Unknown error"
             try:
                 before = page.locator("[data-testid='stChatMessage']").count()
                 chat.fill(prompt)
                 page.keyboard.press("Enter")
-                page.wait_for_function("(n) => document.querySelectorAll('[data-testid=stChatMessage]').length > n", arg=before, timeout=45000)
-                time.sleep(3)
+                wait_for_rerun(page, timeout=45000)
+                
+                # Double check wait condition with correct keyword format
+                try:
+                    page.wait_for_function(
+                        "([n]) => document.querySelectorAll('[data-testid=\"stChatMessage\"]').length > n",
+                        arg=[before],
+                        timeout=5000
+                    )
+                except Exception:
+                    pass
                 
                 messages = page.locator("[data-testid='stChatMessage']")
                 for attempt in range(3):
@@ -161,14 +192,14 @@ def run_user(browser, user: str, role: str, theme: str) -> list[dict]:
                     except Exception as e:
                         if attempt == 2:
                             raise e
-                        time.sleep(1)
+                        page.wait_for_timeout(1000)
             except Exception as exc:
                 status, detail, text = "FAIL", f"UI exception: {type(exc).__name__}: {exc}", ""
-            rows.append({"user": user, "role": role, "theme": theme, "interface": "AI Chatbot", "command": name, "input": prompt, "status": status, "detail": detail, "elapsed_s": round(time.time() - started, 2), "output_excerpt": text[:500]})
+            
+            results.append({"user": user, "role": role, "theme": theme, "interface": "AI Chatbot", "command": name, "input": prompt, "status": status, "detail": detail, "elapsed_s": round(time.time() - started, 2), "output_excerpt": text[:500]})
+            atomic_save(results)
     finally:
         ctx.close()
-    return rows
-
 
 def main() -> None:
     if not PASSWORD:
@@ -179,15 +210,14 @@ def main() -> None:
         for theme in ["Light", "Dark"]:
             for user, role in USERS:
                 print(f"START {user} ({theme})", flush=True)
-                results.extend(run_user(browser, user, role, theme))
+                run_user(browser, user, role, theme, results)
                 print(f"DONE {user} ({theme})", flush=True)
         browser.close()
-    (OUT / "results.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
+    
     counts = {}
     for row in results:
         counts[row["status"]] = counts.get(row["status"], 0) + 1
     print(json.dumps({"total": len(results), "counts": counts}, indent=2), flush=True)
-
 
 if __name__ == "__main__":
     main()
