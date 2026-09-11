@@ -9,6 +9,8 @@
   check passed. Browser/auth acceptance remains blocked by missing safe password
   environment variable and unavailable Chromium.
 - Commit: `db27ca9`.
+- Checkpoint `9d68d68` is published; local and `origin/master` match. The GitHub
+  workflow for this head is in progress.
 
 ## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
 - **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
