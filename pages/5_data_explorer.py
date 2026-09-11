@@ -42,13 +42,6 @@ selected_cols = st.multiselect(
 if not selected_cols:
     selected_cols = DEFAULT_COLUMNS
 
-# ── Inline filters ──
-fc1, fc2 = st.columns(2)
-with fc1:
-    search_text = st.text_input("Search company name", placeholder="e.g. Reliance")
-with fc2:
-    lev_range = st.slider("Leverage range (%)", 0.0, 200.0, (0.0, 200.0), 1.0)
-
 # ── Load data ──
 try:
     with st.spinner("Loading data..."):
@@ -68,9 +61,17 @@ if df.empty:
     st.warning("No data matches the current filters.")
     st.stop()
 
+# ── Inline filters ──
+fc1, fc2 = st.columns(2)
+with fc1:
+    company_options = ["All Companies"] + sorted(df["company_name"].dropna().unique().tolist())
+    selected_company = st.selectbox("Select company", options=company_options, index=0)
+with fc2:
+    lev_range = st.slider("Leverage range (%)", 0.0, 200.0, (0.0, 200.0), 1.0)
+
 # Apply inline filters
-if search_text:
-    df = df[df["company_name"].str.contains(search_text, case=False, na=False)]
+if selected_company and selected_company != "All Companies":
+    df = df[df["company_name"] == selected_company]
 
 if "leverage" in df.columns:
     df = df[((df["leverage"] >= lev_range[0]) & (df["leverage"] <= lev_range[1])) | df["leverage"].isna()]
