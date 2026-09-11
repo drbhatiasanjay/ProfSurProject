@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import argparse
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -52,18 +53,29 @@ def probe(path: str) -> dict[str, object]:
 
 
 def main() -> int:
-    paths = tracked_tests()
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        results = [future.result() for future in as_completed([pool.submit(probe, p) for p in paths])]
+    global TIMEOUT_SECONDS
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--offset", type=int, default=0)
+    parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument("--timeout", type=int, default=TIMEOUT_SECONDS)
+    args = parser.parse_args()
+    TIMEOUT_SECONDS = max(1, args.timeout)
+    all_paths = tracked_tests()
+    paths = all_paths[args.offset:args.offset + args.limit if args.limit else None]
+    if args.workers == 1:
+        results = [probe(path) for path in paths]
+    else:
+        with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+            results = [future.result() for future in as_completed([pool.submit(probe, p) for p in paths])]
     results.sort(key=lambda item: str(item["path"]))
     counts = {status: sum(item["status"] == status for item in results) for status in ("PASS", "FAIL", "TIMEOUT")}
     lines = [
         "# Tracked Pytest Collection Audit — 2026-09-11",
         "",
         f"Generated: {datetime.now(timezone.utc).isoformat()}",
-        f"Parallel probe: 4 workers; collection timeout per file: {TIMEOUT_SECONDS}s; plugin autoload disabled.",
-        "These timeouts indicate contention under parallel startup, not 53 independent test failures.",
-        "Serial control: tests/test_descriptive_analyst.py collected 8 tests in 2.62s.",
+        f"Probe workers: {args.workers}; collection timeout per file: {TIMEOUT_SECONDS}s; plugin autoload disabled.",
+        f"Coverage: files {args.offset + 1}-{args.offset + len(paths)} of {len(all_paths)} tracked test files.",
         "",
         f"Summary: PASS={counts['PASS']}, FAIL={counts['FAIL']}, TIMEOUT={counts['TIMEOUT']}",
         "",

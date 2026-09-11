@@ -8,6 +8,10 @@
   parallel resource contention, not 53 independent test failures.
 - Implementation commit: `b65a816`; handoff checkpoint push is pending.
 
+The first serial bounded collection batch (10/53 tracked files, 20s per file)
+passed all 10. The earlier four-worker/8s result is retained as contention
+diagnostic evidence, not a code-failure classification.
+
 ## Autonomous Checkpoint — Wave 6 PR-02 descriptive analyst (2026-09-11)
 - Implemented a read-only descriptive gateway, deterministic `AnalysisRun`, and
   metadata-only renderer; corrected the prepared fixture to expect one filtered
