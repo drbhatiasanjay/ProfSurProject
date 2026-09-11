@@ -15,10 +15,10 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 
 ## 2. Git Baseline & Tracking Qualification
 - **Active Branch:** `master`
-- **Head Commit:** `6c89335` (`fix(context): bind AI panel context to active filters`)
+- **Head Commit:** `e99bf6c` (`docs(ops): correct panel contract evidence status`)
 - **Release Tag:** `v2.0.0-ws2-complete`
 - **Previous Baseline:** `6075708` (auth fix)
-- **Remote Tracking State:** Local `HEAD` is ahead of `origin/master` by 1 commit. GCP deployment pending.
+- **Remote Tracking State:** Local `HEAD` is ahead of `origin/master` by 8 commits. Remote push remains pending; GCP deployment is not being claimed.
 
 ---
 
@@ -60,7 +60,10 @@ Comprehensive end-to-end verification executed across 109 checkpoints demonstrat
 ---
 
 ## 6. Remaining Feature Gaps
-All canonical workstream feature gaps are **RESOLVED**. No outstanding gaps remain within the approved scope.
+The canonical 25-command matrix remains **PARTIAL**. Eight dispatcher capabilities
+are typed unsupported responses and are not promoted as implemented:
+`ivregress`, `hdfe`, `gmm`, `didregress`, `test`, `predict`, `predict_ml`,
+`scenario`. See the command matrix report and the non-development closure matrix.
 
 | Gap | Resolution | Commit |
 |-----|-----------|--------|
@@ -106,7 +109,9 @@ All future feature work is restricted to exactly two isolated, TDD-governed work
 - **Last Locally Verified Generation:**
    - Graphify version: v0.9.42
    - Graph metrics: 2,470 nodes, 4,865 edges, 171 communities
-   - Timestamp: 2026-09-07
+   - Timestamp: 2026-09-11
+   - Latest refresh warning: 7 extraction issues and 12 retained nodes were
+     reported by Graphify; this is diagnostic metadata, not acceptance proof.
 - **Tracking & Bootstrap Policy:** Generated `graphify-out/` artifacts are intentionally untracked in Git and may be absent after a fresh clone. When absent or stale relative to `HEAD`, regenerate locally from the repository root using the tracked `.graphifyignore` configuration:
    ```bash
    graphify extract .
@@ -116,9 +121,11 @@ All future feature work is restricted to exactly two isolated, TDD-governed work
 ---
 
 ## 11. Next Authorized Action
-1. **GCP Deployment:** Push `master` (`168b043`) to GCP Cloud Run (`profsurkumar.app`) for live production verification.
-2. **Credential Rotation:** Complete formal administrative rotation of any previously exposed secrets.
-3. **Post-Merge Graphify Refresh:** Regenerate `graphify-out/` from new `master` HEAD to keep knowledge graph current.
+1. Review and push the intentional local commits to `origin/master`.
+2. Rerun the panel mapping runtime contract in a clean process.
+3. Implement or formally defer the eight unsupported commands; do not claim
+   the 25-command gate is verified while open.
+4. Keep credential rotation deferred unless the user separately authorizes it.
 
 > **Both canonical workstreams are COMPLETE. No further feature branches are authorized without a new PRD entry.**
 

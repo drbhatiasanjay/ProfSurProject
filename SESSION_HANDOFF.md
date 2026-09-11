@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `6c89335`  
+**Latest baseline:** `e99bf6c`
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -26,6 +26,10 @@ at the root URL, then click the registered sidebar page.
 - `0437f2c` — recorded the honest 25-command matrix and current gaps.
 - `6c89335` — bound AI panel context to the normalized active filter scope and
   added the four-profile panel-mapping regression contract.
+- `5706617` — checkpointed panel-scope synchronization in the operational
+  records.
+- `e99bf6c` — corrected the panel-contract evidence status; runtime execution
+  remains open rather than being reported as passed.
 
 ## 3. Verification status
 
@@ -104,6 +108,9 @@ supporting artifacts but never the sole acceptance record.
 The reusable harness is `scratch/run_25_dual_matrix_8501.py`; its external AI
 phase is opt-in and must not be silently run. Intentional invalid inputs count
 as PASS only when the application fails closed with a typed response.
+
+The complete non-development closure matrix is recorded in
+`docs/operations/NON_DEVELOPMENT_CHECKLIST_2026-09-11.md`.
 
 ## 7. Lessons learned
 
