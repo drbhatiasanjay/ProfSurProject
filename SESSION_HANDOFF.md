@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `b04a66c` (local; checkpoint push pending)
+**Latest baseline:** `5b40cef` (published on origin/master)
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -185,7 +185,7 @@ was downloaded automatically.
 
 The independent Wave 6 benchmark fixture slice is published at `2208734`, with
 manifest emission added in `b04a66c`; the synchronized documentation checkpoint
-will follow its push.
+is published in `5b40cef`.
 It provides seeded known-answer IV/2SLS and entity-demeaned HDFE references
 with dataset/sample fingerprints and rank/sample checks. Focused fixture and
 benchmark-contract tests passed `7 passed, 1 warning`; two manifest tests hit

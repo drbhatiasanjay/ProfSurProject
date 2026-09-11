@@ -1,5 +1,11 @@
 # ProfSurProject — Session Log
 
+## Autonomous Checkpoint — Wave 6 manifest checkpoint published (2026-09-11)
+- Published implementation plus synchronized operational records at
+  `5b40cef`; repaired local `origin/master` tracking ref after push.
+- Manifest emission retains reviewer `NOT_RUN` and derived `NOT_VALIDATED`.
+- No production estimator, authenticated UI, or full-suite acceptance claim.
+
 ## Autonomous Checkpoint — Wave 6 manifest emission (2026-09-11)
 - Added credential-free `outcome.json` plus integrity-checked validation
   manifests for the independent IV/HDFE fixtures.
