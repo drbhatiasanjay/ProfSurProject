@@ -146,6 +146,13 @@ The canonical 8501 health endpoint remains `ok`, but browser automation was
 unavailable in this session. No fresh authenticated four-profile UI claim is
 made.
 
+Antigravity evidence was independently reviewed. Screenshot artifacts exist,
+but the submitted matrix script contained a hardcoded test password and a
+fixed retry sleep; both were corrected in the tracked-safe harness. The report
+was tied to an older commit and its background task handle is unavailable, so
+the UI claim remains not freshly reproduced. See
+`docs/implementation-reports/AGY_EVIDENCE_REVIEW_2026-09-11.md`.
+
 The consolidated deterministic regression gate passed in one clean process:
 auth, AI/Stata routing, panel mapping, and the complete ML test class yielded
 `19 passed in 74.05s` with plugin autoload disabled. This does not promote the

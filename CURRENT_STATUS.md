@@ -197,3 +197,6 @@ gates pass; the full suite remains blocked and the tests were preserved.
 - Browser automation selection was attempted for the canonical 8501 URL but no
   browser surface was available in this session; authenticated UI evidence is
   therefore not reclassified.
+- Antigravity evidence was reviewed and accepted only with corrections: its
+  matrix harness had a hardcoded test password and fixed retry sleep; both are
+  removed. Its older-commit/task-handle evidence is not fresh acceptance proof.
