@@ -146,6 +146,11 @@ The canonical 8501 health endpoint remains `ok`, but browser automation was
 unavailable in this session. No fresh authenticated four-profile UI claim is
 made.
 
+The consolidated deterministic regression gate passed in one clean process:
+auth, AI/Stata routing, panel mapping, and the complete ML test class yielded
+`19 passed in 74.05s` with plugin autoload disabled. This does not promote the
+repository-wide suite to green.
+
 ## 7. Lessons learned
 
 - A healthy port is not proof of the correct application. Verify the launch

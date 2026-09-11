@@ -66,3 +66,19 @@ claimed.
 
 The broad suite remains open: the three phase-test imports and remaining
 full-run coverage require separate closure.
+
+## Consolidated regression gate
+
+The post-mitigation deterministic gate passed in one clean process with
+third-party plugin autoload disabled:
+
+```text
+tests/test_auth.py
+tests/test_ai_stata_routing.py
+tests/test_panel_mapping_contract.py
+tests/test_models.py::TestMLModels
+```
+
+**19 passed in 74.05s.** This closes the focused regression gate while leaving
+the repository-wide collection mismatches and fresh authenticated UI gate
+explicitly open.
