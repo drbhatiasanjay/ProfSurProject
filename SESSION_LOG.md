@@ -1,5 +1,15 @@
 # ProfSurProject — Session Log
 
+## Autonomous Checkpoint — Wave 6 manifest emission (2026-09-11)
+- Added credential-free `outcome.json` plus integrity-checked validation
+  manifests for the independent IV/HDFE fixtures.
+- Manifests explicitly keep reviewer status `NOT_RUN`, deriving
+  `NOT_VALIDATED`; no production capability was promoted.
+- Focused numerical tests remain **7 passed, 1 warning**; local pytest temp
+  ACL contention prevents the new `tmp_path` test from running locally.
+- Implementation commit: `b04a66c`; push and documentation synchronization are
+  pending this checkpoint.
+
 ## Autonomous Checkpoint — Wave 6 benchmark documentation synchronized (2026-09-11)
 - Synchronized canonical status, handoff, plan, and session log to the
   published evidence checkpoint `d59f681`.
