@@ -240,3 +240,6 @@ gates pass; the full suite remains blocked and the tests were preserved.
 - Authenticated browser closure remains open. Manual screenshots are partial
   smoke evidence; AGY's 26 PASS / 30 FAIL run is not acceptance evidence.
 - Next validation is a reduced distinct-role matrix, not a 400-by-4 sweep.
+- Commit `b3fce3d` was created and pushed to
+  `origin/codex/wave6-8-remediation-2026-09-12`. The remote branch matches the
+  local commit; only browser acceptance remains open.

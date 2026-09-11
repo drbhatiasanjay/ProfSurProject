@@ -379,7 +379,7 @@ Codex commit gate and currently reports unwritable metadata.
 - The shared checkout is intentionally untouched. Exclude
   `capital_structure.db` from all staging/reset operations.
 - Windows Git metadata repair is complete. The governance guard reports
-  `READY: writable Git metadata`; commit/push can proceed after review.
+  `READY: writable Git metadata`.
 - Automated checkpoint: 7 defect tests, 84 affected analytical/cache/AI/Stata
   tests, 103 numerical/page tests, and 142 latest page/defect/chat tests pass;
   compilation and diff checks pass.
@@ -389,3 +389,7 @@ Codex commit gate and currently reports unwritable metadata.
   researcher, second researcher/session isolation, and viewer. Do not run 400
   companies across four profiles.
 - Full UI overhaul remains deferred.
+- Commit `b3fce3d` is pushed to
+  `origin/codex/wave6-8-remediation-2026-09-12`. The only remaining gate is
+  authenticated browser acceptance; browser control was unavailable in this
+  session.

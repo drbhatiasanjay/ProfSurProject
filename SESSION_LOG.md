@@ -530,3 +530,6 @@ automated matrix evidence.
   failed validation evidence, not acceptance.
 - Next run is a reduced distinct-role matrix, not a 400-by-4 sweep. Full UI
   overhaul remains deferred.
+- Commit `b3fce3d` was created and pushed to the remediation branch. Browser
+  control remains unavailable, so no automated authenticated UI closure claim
+  is made.
