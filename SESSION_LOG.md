@@ -1,5 +1,12 @@
 # ProfSurProject — Session Log
 
+## Autonomous Checkpoint — Wave 7 narrative evidence gate (2026-09-11)
+- Added deny-by-default rejection of causal language when narrative provenance
+  is not `VALIDATED`; descriptive association language remains permitted.
+- Focused Wave 6–8 contract gate: **16 passed, 1 warning** with the machine-
+  blocked pytest manifest-temp case excluded.
+- Published implementation: `500e7b9`; handoff synchronization follows.
+
 ## Autonomous Checkpoint — Wave 6 manifest checkpoint published (2026-09-11)
 - Published implementation plus synchronized operational records at
   `5b40cef`; repaired local `origin/master` tracking ref after push.
