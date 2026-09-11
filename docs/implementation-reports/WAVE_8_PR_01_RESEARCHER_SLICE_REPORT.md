@@ -1,7 +1,7 @@
 # Wave 8 PR-01 — Controlled Researcher Slice
 
 **Date:** 2026-09-11  
-**Status:** IMPLEMENTED — READY_FOR_REVIEW  
+**Status:** IMPLEMENTED — READY_FOR_REVIEW
 **Predecessor:** Wave 7 PR-01 artifact contracts
 
 ## Goal

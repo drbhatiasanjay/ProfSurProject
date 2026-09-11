@@ -1,7 +1,7 @@
 # Wave 8 PR-02 — Researcher Slice Overview Mount
 
-**Date:** 2026-09-11  
-**Status:** IMPLEMENTED — READY_FOR_REVIEW  
+**Date:** 2026-09-11
+**Status:** IMPLEMENTED — READY_FOR_REVIEW
 **Commit:** `3be735d`
 
 ## Change
