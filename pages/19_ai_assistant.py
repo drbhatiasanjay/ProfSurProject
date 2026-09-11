@@ -17,6 +17,7 @@ import plotly.graph_objects as go
 from helpers import require_role, plotly_layout
 import db
 from components.citation_inspector import show_citation_dialog, render_citation_selector
+from components.research_artifact_renderer import render_artifact_provenance
 
 require_role("admin", "researcher", "viewer", "cfo", "guest")
 db.log_page_visit("ai_assistant_page")
@@ -494,6 +495,8 @@ def _render_stata_terminal_in_chat(stata_cmd: str, ascii_output: str) -> None:
 
 def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) -> None:
     """Render the common answer hierarchy: prose, chart, observations, data."""
+    if isinstance(turn.get("artifact_provenance"), dict):
+        render_artifact_provenance(turn["artifact_provenance"], key_prefix=key_prefix)
     current_theme = st.session_state.get("theme", "light")
     # Fast path for explicit Stata execution turns
     if turn.get("stata_command") and turn.get("stata_output"):
