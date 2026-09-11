@@ -8,12 +8,15 @@ cannot mark a capability as ``VALIDATED``.
 from __future__ import annotations
 
 import hashlib
+import json
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from .benchmark_contracts import BenchmarkOutcome
+from .validation_ledger import ValidationRecord, write_manifest
 
 
 class BenchmarkFixtureError(ValueError):
@@ -118,3 +121,42 @@ def run_wave6_fixture_suite(*, seed: int = 1729) -> dict[str, BenchmarkOutcome]:
     """Return deterministic IV and HDFE outcomes for contract/evidence tests."""
     panel = make_known_answer_panel(seed=seed)
     return {"iv": run_iv_reference(panel), "hdfe": run_hdfe_reference(panel)}
+
+
+def write_fixture_manifests(directory: str | Path, *, code_revision: str) -> dict[str, Path]:
+    """Write fixture outputs and fail-closed validation manifests."""
+    if not code_revision.strip():
+        raise BenchmarkFixtureError("code revision is required")
+    root = Path(directory)
+    paths: dict[str, Path] = {}
+    for key, outcome in run_wave6_fixture_suite().items():
+        target = root / key
+        target.mkdir(parents=True, exist_ok=True)
+        (target / "outcome.json").write_text(json.dumps({
+            "benchmark_id": outcome.benchmark_id,
+            "dataset_fingerprint": outcome.dataset_fingerprint,
+            "sample_fingerprint": outcome.sample_fingerprint,
+            "row_count": outcome.row_count,
+            "effective_row_count": outcome.effective_row_count,
+            "coefficients": dict(outcome.coefficients),
+            "standard_errors": dict(outcome.standard_errors),
+            "diagnostics": dict(outcome.diagnostics),
+        }, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        capability = "ivregress" if key == "iv" else "hdfe"
+        record = ValidationRecord(
+            capability=capability,
+            estimator_variant="known-answer-reference",
+            code_revision=code_revision,
+            dataset_fingerprint=outcome.dataset_fingerprint,
+            sample_fingerprint=outcome.sample_fingerprint,
+            benchmark_id=outcome.benchmark_id,
+            numerical_status="PASS",
+            assumption_status="PASS",
+            methodological_status="PASS",
+            reproducibility_status="PASS",
+            reviewer_status="NOT_RUN",
+            limitations=("Independent fixture evidence; production parity not established.",),
+            evidence_refs=(f"{key}/outcome.json",),
+        )
+        paths[key] = write_manifest(target, record, command="run_wave6_fixture_suite")
+    return paths

@@ -26,3 +26,9 @@ because Windows pytest temporary-directory ACL contention raised setup errors;
 their prior focused result remains historical evidence only. This report
 records numerical fixture coverage; it makes no production performance or
 authenticated UI claim.
+
+The manifest writer was also exercised directly in
+`scratch/wave6_manifest_probe/`; both IV and HDFE manifests were created and
+verified with `verify_manifest`. The pytest test covering this behavior remains
+preserved for CI, but local `tmp_path` setup is still blocked by the same
+Windows temporary-directory ACL contention.

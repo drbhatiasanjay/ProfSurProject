@@ -6,7 +6,9 @@ from models.wave6_benchmarks import (
     run_hdfe_reference,
     run_iv_reference,
     run_wave6_fixture_suite,
+    write_fixture_manifests,
 )
+from models.validation_ledger import verify_manifest
 
 
 def test_iv_reference_is_known_answer_and_finite():
@@ -37,3 +39,11 @@ def test_fixture_is_deterministic_and_both_outcomes_are_fingerprinted():
 def test_fixture_rejects_tiny_panels():
     with pytest.raises(BenchmarkFixtureError, match="at least 4"):
         make_known_answer_panel(firms=3)
+
+
+def test_fixture_manifests_are_integrity_checked_and_not_promoted(tmp_path):
+    paths = write_fixture_manifests(tmp_path, code_revision="fixture-test")
+    assert set(paths) == {"iv", "hdfe"}
+    assert all(verify_manifest(path) for path in paths.values())
+    for path in paths.values():
+        assert '"derived_status": "NOT_VALIDATED"' in path.read_text(encoding="utf-8")
