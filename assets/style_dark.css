@@ -406,24 +406,33 @@ div[data-testid="stChatInput"] button svg {
 }
 
 div[data-baseweb="select"] span,
-div[data-baseweb="select"] div {
+div[data-baseweb="select"] div,
+[data-baseweb="popover"] span,
+[data-baseweb="popover"] div,
+[data-baseweb="menu"] span,
+[data-baseweb="menu"] div {
     color: #F8FAFC !important;
 }
 
 div[data-baseweb="popover"],
+div[data-baseweb="popover"] > div,
 div[data-baseweb="menu"],
+div[data-baseweb="menu"] > div,
 ul[role="listbox"] {
     background: #141824 !important;
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
 }
 
-li[role="option"] {
+li[role="option"],
+[role="option"] {
     color: #F8FAFC !important;
     background: #141824 !important;
 }
 
 li[role="option"]:hover,
-li[aria-selected="true"] {
+li[aria-selected="true"],
+[role="option"]:hover,
+[role="option"][aria-selected="true"] {
     background: rgba(56, 189, 248, 0.2) !important;
     color: #38BDF8 !important;
 }

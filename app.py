@@ -673,6 +673,19 @@ button[data-testid="stSidebarCollapseButton"],
 [data-testid="stSidebarCollapseButton"] button {{
     top: calc(112px + 0.5rem) !important;
     z-index: 1000002 !important;
+    background: #0B0E14 !important;
+    border: 1px solid #38BDF8 !important;
+    border-radius: 0.6rem !important;
+    color: #38BDF8 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+}}
+[data-testid="stSidebarCollapseButton"] button:hover {{
+    background: {_accent_grad} !important;
+    color: #ffffff !important;
+}}
+[data-testid="stSidebarCollapseButton"] svg {{
+    color: #38BDF8 !important;
+    fill: #38BDF8 !important;
 }}
 /* Sidebar expand arrow (>>) — positioned below both rows, above everything */
 [data-testid="collapsedControl"],
