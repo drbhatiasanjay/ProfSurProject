@@ -67,6 +67,20 @@ claimed.
 The broad suite remains open: the three phase-test imports and remaining
 full-run coverage require separate closure.
 
+## Canonical tracked-suite rerun
+
+After the single-process ML configuration, the complete tracked test set was
+run in one clean process with third-party plugin autoload disabled:
+
+```text
+$tracked = git ls-files 'tests/test_*.py'
+py -3.12 -m pytest $tracked -q --tb=line
+```
+
+**733 passed, 1 skipped, 38 warnings in 279.18s.** The canonical tracked
+baseline is therefore green. The three import mismatches belong to preserved
+untracked phase-test files and are not part of this canonical result.
+
 ## Consolidated regression gate
 
 The post-mitigation deterministic gate passed in one clean process with

@@ -151,6 +151,11 @@ auth, AI/Stata routing, panel mapping, and the complete ML test class yielded
 `19 passed in 74.05s` with plugin autoload disabled. This does not promote the
 repository-wide suite to green.
 
+The complete canonical tracked test set subsequently passed with
+`733 passed, 1 skipped, 38 warnings in 279.18s`. This closes the prior tracked
+XGBoost stall. Repository-wide collection still remains distinct because three
+preserved untracked phase-test files import non-canonical modules/classes.
+
 ## 7. Lessons learned
 
 - A healthy port is not proof of the correct application. Verify the launch

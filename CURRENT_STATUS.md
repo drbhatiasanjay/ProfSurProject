@@ -188,6 +188,10 @@ gates pass; the full suite remains blocked and the tests were preserved.
   corrected collection reached 735 tests; three phase-test imports remain
   unresolved. A tracked-only run reached 70% without failures, then stalled at
   XGBoost cross-validation and was stopped after 60 seconds.
+- After single-process ML containment, the complete canonical tracked suite
+  passed: 733 passed, 1 skipped, 38 warnings in 279.18s. The repository-wide
+  collection remains separate because three preserved untracked phase-test
+  files import non-canonical modules/classes.
 - The debug verifier correction is included in local baseline `97d0ad8`; fresh UI evidence
   remains gated because the approved process-only password variable is absent.
 - Browser automation selection was attempted for the canonical 8501 URL but no
