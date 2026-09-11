@@ -1,7 +1,7 @@
 # Waves 6–8 Autonomous Execution Plan
 
 **Date:** 2026-09-11  
-**Baseline:** `master` / `b5853fc`
+**Baseline:** `master` / `c7de34e`
 **Status:** ACTIVE — MVP-bounded
 
 ## Reconciled scope

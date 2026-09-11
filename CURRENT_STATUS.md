@@ -15,7 +15,7 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 
 ## 2. Git Baseline & Tracking Qualification
 - **Active Branch:** `master`
-- **Head Commit:** `b5853fc` (`wave7-gate-renderer-provenance`)
+- **Head Commit:** `c7de34e` (`docs-record-wave6-8-verification`)
 - **Release Tag:** `v2.0.0-ws2-complete`
 - **Previous Baseline:** `6075708` (auth fix)
 - **Remote Tracking State:** Local `HEAD` contains unpushed implementation/evidence commits after remote `1854875`; GCP deployment is not being claimed.
