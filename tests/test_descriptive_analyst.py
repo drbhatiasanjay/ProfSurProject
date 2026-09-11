@@ -68,6 +68,17 @@ def test_gemini_result_renderer_exposes_scope_without_private_reasoning():
     assert "reasoning" not in text.lower()
 
 
+def test_llm_descriptive_tool_wrapper_returns_json_contract():
+    from models.llm_adapters import describe_financial_database
+
+    payload = json.loads(
+        describe_financial_database("leverage", panel_mode="thesis")
+    )
+    assert payload["status"] in {"success", "error"}
+    if payload["status"] == "success":
+        assert payload["analysis_run"]["capability_id"] == "descriptive_summary"
+
+
 def test_database_tool_fails_closed_before_database_access_for_unknown_variable():
     from models.agent_tools import describe_financial_database
 

@@ -1109,6 +1109,7 @@ if user_q:
         _placeholder = st.empty()
         _buf = []
         _chart_found = None
+        _descriptive_run = None
         _chart_requested = should_generate_chart(user_q)
         if backend == "gemini":
             _stream = stream_gemini_agent(
@@ -1163,6 +1164,9 @@ if user_q:
 
         _first_chunk = True
         for _chunk in _stream:
+            if isinstance(_chunk, dict) and _chunk.get("type") == "descriptive":
+                _descriptive_run = _chunk.get("analysis_run")
+                continue
             _chunk_text, _chunk_chart = normalize_assistant_chunk(_chunk)
             if _chunk_chart and _chart_found is None:
                 _chart_found = _chunk_chart
@@ -1207,7 +1211,12 @@ if user_q:
             ][:3]
         _placeholder.empty()
         _render_assistant_content(
-            {"content": full_display, "chart_spec": _chart_found},
+            {
+                "content": full_display,
+                "chart_spec": _chart_found,
+                "capability_id": "descriptive_summary" if _descriptive_run else None,
+                "analysis_run": _descriptive_run,
+            },
             f"live_{len(st.session_state['chat_history'])}",
         )
 
@@ -1229,6 +1238,9 @@ if user_q:
     }
     if _chart_found:
         turn_data["chart_spec"] = _chart_found
+    if _descriptive_run:
+        turn_data["capability_id"] = "descriptive_summary"
+        turn_data["analysis_run"] = _descriptive_run
 
     st.session_state["chat_history"].append(turn_data)
     db.append_chat_message(

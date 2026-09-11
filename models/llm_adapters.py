@@ -709,6 +709,25 @@ def query_financial_database(
     return json.dumps(res, default=str)
 
 
+def describe_financial_database(
+    variables_csv: str,
+    group_by: str = "",
+    panel_mode: str = "thesis",
+    filters_json: str = "{}",
+) -> str:
+    """Return deterministic descriptive statistics with explicit provenance."""
+    from models.agent_tools import describe_financial_database as _describe
+    try:
+        filters = json.loads(filters_json or "{}")
+    except (TypeError, json.JSONDecodeError):
+        filters = {}
+    variables = [value.strip() for value in str(variables_csv).split(",") if value.strip()]
+    return json.dumps(
+        _describe(variables, group_by=group_by.strip() or None, panel_mode=panel_mode, filters=filters),
+        default=str,
+    )
+
+
 def generate_chat_chart(
     chart_type: str,
     title: str,
@@ -843,6 +862,7 @@ def run_cfo_stress_simulation(
 
 
 query_financial_database.__annotations__ = typing.get_type_hints(query_financial_database)
+describe_financial_database.__annotations__ = typing.get_type_hints(describe_financial_database)
 generate_chat_chart.__annotations__ = typing.get_type_hints(generate_chat_chart)
 query_semantic_ontology.__annotations__ = typing.get_type_hints(query_semantic_ontology)
 run_live_econometric_model.__annotations__ = typing.get_type_hints(run_live_econometric_model)
@@ -1344,6 +1364,7 @@ def stream_gemini_agent(
             max_output_tokens=max_tokens,
             tools=[
                 query_financial_database,
+                describe_financial_database,
                 generate_chat_chart,
                 query_semantic_ontology,
                 run_live_econometric_model,
@@ -1408,6 +1429,18 @@ def stream_gemini_agent(
                             yield {"type": "chart", "spec": spec}
                             has_yielded_chart = True
                 fn_resp = getattr(part, "function_response", None)
+                if fn_resp and "describe_financial_database" in getattr(fn_resp, "name", ""):
+                    payload = getattr(fn_resp, "response", None)
+                    if isinstance(payload, str):
+                        try:
+                            payload = json.loads(payload)
+                        except (TypeError, json.JSONDecodeError):
+                            payload = None
+                    if isinstance(payload, dict) and isinstance(payload.get("analysis_run"), dict):
+                        yield {
+                            "type": "descriptive",
+                            "analysis_run": payload["analysis_run"],
+                        }
                 if fn_resp and "query_financial_database" in getattr(fn_resp, "name", ""):
                     query_payload = extract_chart_tool_spec(getattr(fn_resp, "response", None))
                     if isinstance(query_payload, dict) and isinstance(query_payload.get("rows"), list):

@@ -26,6 +26,14 @@
 - Evidence: `docs/implementation-reports/WAVE_8_PR_02_RESEARCHER_SLICE_SERIALIZATION_REPORT.md`.
 - Implementation commit: `3e58977`; handoff checkpoint push is pending.
 
+## Autonomous Checkpoint — Wave 6 PR-03 AI descriptive tool (2026-09-11)
+- Exposed deterministic descriptive analysis through the Gemini tool boundary,
+  emitted typed provenance events, and wired the canonical AI page to render and
+  retain `descriptive_summary` metadata.
+- Evidence: `docs/implementation-reports/WAVE_6_PR_03_AI_DESCRIPTIVE_TOOL_INTEGRATION_REPORT.md`.
+- Verification: provider/descriptive/AI routing/research contracts 42 passed;
+  compilation and diff check passed.
+
 ## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
 - **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
 - **Authentication Diagnostics & Resolution:**
