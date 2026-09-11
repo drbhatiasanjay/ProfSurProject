@@ -358,3 +358,12 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - No fresh authenticated browser acceptance claim is made; browser surface and
   process-only verification credential remain unavailable.
 
+## 2026-09-11 — Wave 8 Boundary Hardening Checkpoint
+
+- Rejected blank artifact IDs in the read-only researcher slice.
+- Focused Wave 6/7/8 gate: **21 passed, 1 warning**.
+- Project fast gate: **6 passed, 1 warning**; changed modules compile cleanly.
+- Canonical root health: `ok` on port 8501.
+- Latest implementation commit: `e2a2193`; documentation head update follows
+  this checkpoint.
+
