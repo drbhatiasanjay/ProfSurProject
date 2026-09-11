@@ -1,6 +1,6 @@
 """
 Tier 1 Econometric Models — Thesis replication.
-OLS, Fixed Effects, Random Effects, System GMM, Hausman Test, ANOVA.
+OLS, Fixed Effects, Random Effects, IV-GMM proxy, Hausman Test, ANOVA.
 """
 
 import numpy as np
@@ -767,11 +767,13 @@ def run_iv_regression(df, y_col=DEFAULT_Y_COL, x_endog="profitability", x_exog=N
     }
 
 
-# ── System GMM (Dynamic Panel) ──
+# ── IV-GMM proxy (Dynamic Panel) ──
 
 def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", time="year"):
     """
-    System GMM estimation with lagged dependent variable (Arellano-Bond instrument approach).
+    IV-GMM proxy with lagged dependent variable instruments.
+    This is not a validated System-GMM implementation: it uses ``linearmodels.iv.IVGMM``
+    with a fixed lag-2/lag-3 instrument set and remains outside the canonical dispatcher.
     Uses linearmodels.iv.IVGMM with lag2 and lag3 of DV as excluded instruments.
     Matches thesis Table 5.12.
     Phase 2 requirement: GMM-01, GMM-02, GMM-03, GMM-04.
@@ -838,7 +840,7 @@ def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", 
     j = result.j_stat  # WaldTestStatistic with .stat, .pval, .df
 
     return {
-        "type": "System GMM",
+        "type": "IV-GMM proxy (unverified)",
         "coef_table": coef_table,
         "r_squared": float(result.rsquared),
         "adj_r_squared": float(getattr(result, "rsquared_adj", result.rsquared)),
