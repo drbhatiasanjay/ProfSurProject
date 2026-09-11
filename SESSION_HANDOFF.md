@@ -120,6 +120,11 @@ The operations verifier also requires process-only `PROFSUR_VERIFY_PASSWORD`;
 it has no plaintext CLI password fallback. See
 `docs/implementation-reports/PROJECT_OPS_SECRET_GATE_2026-09-11.md`.
 
+The full pytest collection audit is now concrete: plugin-disabled collection
+reaches three untracked phase-test import mismatches and stops. See
+`docs/implementation-reports/FULL_PYTEST_COLLECTION_AUDIT_2026-09-11.md`.
+Focused auth/routing/panel checks pass; do not report the full suite as green.
+
 ## 7. Lessons learned
 
 - A healthy port is not proof of the correct application. Verify the launch

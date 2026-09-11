@@ -180,3 +180,7 @@ References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,
 - `scripts/project_ops.py verify` now fails closed without the approved
   `PROFSUR_VERIFY_PASSWORD` environment variable; the plaintext CLI default was
   removed. Evidence is in `PROJECT_OPS_SECRET_GATE_2026-09-11.md`.
+- Full pytest was rerun with third-party plugin autoload disabled. Collection
+  now reaches three untracked phase-test import mismatches; see
+  `FULL_PYTEST_COLLECTION_AUDIT_2026-09-11.md`. Focused auth, routing, and panel
+  gates pass; the full suite remains blocked and the tests were preserved.
