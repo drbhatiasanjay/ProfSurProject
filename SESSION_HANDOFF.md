@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `97d0ad8` (local; not yet published)
+**Latest baseline:** `e4d7398` (local; not yet published)
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -141,6 +141,10 @@ remaining gates are: reconcile the three untracked phase-test import
 mismatches, diagnose the XGBoost stall in a bounded run, obtain the
 process-only verification password for fresh four-profile browser evidence,
 and receive explicit authorization before publishing the eight local commits.
+
+The canonical 8501 health endpoint remains `ok`, but browser automation was
+unavailable in this session. No fresh authenticated four-profile UI claim is
+made.
 
 ## 7. Lessons learned
 

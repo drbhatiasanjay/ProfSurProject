@@ -15,7 +15,7 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 
 ## 2. Git Baseline & Tracking Qualification
 - **Active Branch:** `master`
-- **Head Commit:** `a793822` (`test(auth): make debug verifier collection-safe`)
+- **Head Commit:** `e4d7398` (`docs-refresh-ml-baseline-pointer`)
 - **Release Tag:** `v2.0.0-ws2-complete`
 - **Previous Baseline:** `6075708` (auth fix)
 - **Remote Tracking State:** Local `HEAD` contains unpushed implementation/evidence commits after remote `1854875`; GCP deployment is not being claimed.
@@ -190,3 +190,6 @@ gates pass; the full suite remains blocked and the tests were preserved.
   XGBoost cross-validation and was stopped after 60 seconds.
 - The debug verifier correction is included in local baseline `97d0ad8`; fresh UI evidence
   remains gated because the approved process-only password variable is absent.
+- Browser automation selection was attempted for the canonical 8501 URL but no
+  browser surface was available in this session; authenticated UI evidence is
+  therefore not reclassified.
