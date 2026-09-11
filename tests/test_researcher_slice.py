@@ -36,6 +36,7 @@ def test_researcher_slice_allows_challenge_without_promoting_status():
     challenged = apply_research_action(journey, "challenge")
     assert challenged.action == "challenge"
     assert challenged.release_status == "NOT_VALIDATED"
+    assert challenged.to_dict()["analysis_run_id"] == "run-1"
 
 
 def test_researcher_slice_rejects_unauthorized_roles_and_mutations():

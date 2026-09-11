@@ -20,6 +20,11 @@
   20 passed; page compilation and diff check passed.
 - Implementation commit: `8113bef`; handoff checkpoint push is pending.
 
+## Autonomous Checkpoint — Wave 8 PR-02 researcher serialization (2026-09-11)
+- Removed external-project wording from the Wave 8 module and added stable,
+  immutable researcher-slice serialization for UI/evidence consumers.
+- Evidence: `docs/implementation-reports/WAVE_8_PR_02_RESEARCHER_SLICE_SERIALIZATION_REPORT.md`.
+
 ## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
 - **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
 - **Authentication Diagnostics & Resolution:**

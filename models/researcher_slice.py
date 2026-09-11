@@ -1,8 +1,9 @@
-"""Bounded read-only researcher journey for the Wave 8 FDI boundary."""
+"""Bounded read-only researcher journey for the Wave 8 research boundary."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Any
 
 
 class ResearcherSliceError(ValueError):
@@ -18,6 +19,10 @@ class ResearcherSlice:
     limitations: tuple[str, ...]
     action: str = "view"
     release_status: str = "NOT_VALIDATED"
+
+    def to_dict(self) -> dict[str, Any]:
+        """Return a stable, UI-safe record without mutable internal state."""
+        return asdict(self)
 
 
 def create_researcher_slice(
