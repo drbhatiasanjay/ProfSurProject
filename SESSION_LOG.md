@@ -347,3 +347,14 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - External blockers remain fresh authenticated browser credentials and any
   future publish/deployment authorization. No credential values are recorded.
 
+## 2026-09-11 — Waves 6–8 Contract Checkpoint
+
+- Wave 6 manifest verification committed in `c8e3a9d`.
+- Wave 7 provenance-bound artifacts and renderer gate committed in `b5853fc`.
+- Wave 8 read-only researcher slice committed in `0ed15bd`.
+- Focused Wave 6/7/8 gate: **20 passed, 1 warning**.
+- Project fast gate: **6 passed, 1 warning**.
+- Changed modules compile cleanly; root `/_stcore/health` returned `ok`.
+- No fresh authenticated browser acceptance claim is made; browser surface and
+  process-only verification credential remain unavailable.
+

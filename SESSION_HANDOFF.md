@@ -163,6 +163,14 @@ The complete canonical tracked test set subsequently passed with
 XGBoost stall. Repository-wide collection still remains distinct because three
 preserved untracked phase-test files import non-canonical modules/classes.
 
+The Wave 7 provenance renderer and Wave 8 researcher-slice contracts are now
+implemented through commit `b5853fc`, with documentation checkpoint `e3f6e2a`.
+The focused Wave 6/7/8 gate passed with `20 passed, 1 warning`; the project
+fast gate passed with `6 passed, 1 warning`; changed modules compile cleanly.
+The root 8501 health endpoint returned `ok`. Fresh authenticated browser
+verification is still not claimed because no browser automation surface or
+process-only verification credential is available in this session.
+
 ## 7. Lessons learned
 
 - A healthy port is not proof of the correct application. Verify the launch
