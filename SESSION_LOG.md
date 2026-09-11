@@ -8,6 +8,7 @@
 - Verification: focused Wave 6/7/8 contracts 30 passed; fast gate 6 passed; diff
   check passed. Browser/auth acceptance remains blocked by missing safe password
   environment variable and unavailable Chromium.
+- Commit: `db27ca9`.
 
 ## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
 - **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
