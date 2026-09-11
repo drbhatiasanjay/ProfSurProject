@@ -186,6 +186,7 @@ References: `docs/design/WAVE6_VALIDATION_AND_RESEARCH_WORKBENCH_DESIGN.md`,
 gates pass; the full suite remains blocked and the tests were preserved.
 - The tracked debug-auth test was made collection-safe and secret-only. The
   corrected collection reached 735 tests; three phase-test imports remain
-  unresolved and the remainder later became silent at 68%.
-- The debug verifier correction is committed at `a793822`; fresh UI evidence
+  unresolved. A tracked-only run reached 70% without failures, then stalled at
+  XGBoost cross-validation and was stopped after 60 seconds.
+- The debug verifier correction is included in local baseline `363cd8e`; fresh UI evidence
   remains gated because the approved process-only password variable is absent.

@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `a793822`
+**Latest baseline:** `363cd8e` (local; not yet published)
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -125,9 +125,17 @@ reaches three untracked phase-test import mismatches and stops. See
 `docs/implementation-reports/FULL_PYTEST_COLLECTION_AUDIT_2026-09-11.md`.
 Focused auth/routing/panel checks pass; do not report the full suite as green.
 
-The tracked debug-auth test is now collection-safe and secret-only. After that
-correction, the remainder reached 68% before becoming silent for over 60
-seconds; the full suite remains open.
+The tracked debug-auth test is now collection-safe and secret-only. The latest
+tracked-only collection reached 70% with no failures, then stalled at
+`test_cross_validate_xgboost` and was stopped after 60 seconds. The full suite
+remains open; this is recorded in the full-suite audit rather than treated as
+green.
+
+The active autonomous goal is to close today’s baseline safely. Its current
+remaining gates are: reconcile the three untracked phase-test import
+mismatches, diagnose the XGBoost stall in a bounded run, obtain the
+process-only verification password for fresh four-profile browser evidence,
+and receive explicit authorization before publishing the eight local commits.
 
 ## 7. Lessons learned
 

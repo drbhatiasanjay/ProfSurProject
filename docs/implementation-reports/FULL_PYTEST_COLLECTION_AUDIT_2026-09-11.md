@@ -47,6 +47,9 @@ contains a plaintext credential.
 
 With that correction, a plugin-disabled collection reached **735 tests** and
 still reported only the three phase-test import mismatches listed above. A
-diagnostic run excluding those exact tests progressed to 68% without failures
-but then became silent for over 60 seconds and was stopped. This is evidence of
-another slow/hanging test section, not a passing full-suite result.
+tracked-only run collected **732 tests** and passed through **70%** without a
+failure, then became silent while executing
+`tests/test_models.py::TestMLModels::test_cross_validate_xgboost`; that known
+test process was stopped after an additional 60 seconds. This is evidence of a
+slow or hanging XGBoost section, not a passing full-suite result. The three
+phase-test import mismatches and the XGBoost hang remain open gates.
