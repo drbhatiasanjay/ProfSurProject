@@ -178,6 +178,19 @@ warning`; the latest GitHub workflow for this head passed. A repository-wide
 pytest attempt timed out at 120 seconds, including collection-only mode; this
 remains an unresolved broad-suite gate and is not reported as green.
 
+Wave 8 PR-02 is now mounted on the canonical Overview page in commit `3be735d`.
+The existing root navigation is unchanged. For `admin` and `researcher` roles,
+the page exposes a read-only Researcher Evidence Slice bound to
+`public-panel` and the active panel run. `view`, `reproduce`, and `challenge`
+are the only actions; every action remains `NOT_VALIDATED` and cannot promote
+an estimator or widen authorization. Focused Wave 6/7/8 verification is
+`22 passed, 1 warning`; changed modules compile and diff checks pass.
+
+The current committed code checkpoint is `3be735d`; documentation changes
+following this checkpoint must be synchronized before the next release
+decision. Browser/authenticated acceptance remains unclaimed because Chromium
+and the process-only verification credential are unavailable.
+
 A fresh anonymous headless smoke check was attempted after this checkpoint;
 Playwright could not launch because its Chromium executable is not installed.
 This is an environment blocker, not an application failure. No browser binary

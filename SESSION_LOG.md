@@ -485,3 +485,16 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - Latest implementation commit: `e2a2193`; documentation head update follows
   this checkpoint.
 
+## 2026-09-11 — Wave 8 Overview Mount Checkpoint
+
+- Mounted the immutable read-only `ResearcherSlice` on the existing canonical
+  Overview page for `admin` and `researcher` roles.
+- Reproduce/Challenge actions are session-scoped and preserve the active public
+  panel binding; release status remains `NOT_VALIDATED`.
+- Focused Wave 6/7/8 gate: **22 passed, 1 warning**; changed modules compile
+  and `git diff --check` passes.
+- Evidence: `docs/implementation-reports/WAVE_8_PR_02_OVERVIEW_MOUNT_REPORT.md`.
+- Implementation commit: `3be735d`; documentation synchronization is this
+  checkpoint. Runtime database mutation and historical untracked artifacts
+  remain unstaged.
+
