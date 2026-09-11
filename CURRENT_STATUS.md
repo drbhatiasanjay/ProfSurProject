@@ -221,3 +221,22 @@ gates pass; the full suite remains blocked and the tests were preserved.
 - Antigravity evidence was reviewed and accepted only with corrections: its
   matrix harness had a hardcoded test password and fixed retry sleep; both are
   removed. Its older-commit/task-handle evidence is not fresh acceptance proof.
+
+## 2026-09-12 — Remediation checkpoint
+
+- Work continues only in the isolated remediation worktree on branch
+  `codex/wave6-8-remediation-2026-09-12`, based on `6fc56e9`.
+- The shared checkout remains untouched. `capital_structure.db` is runtime/test
+  state and remains excluded from staging, reset, and commit operations.
+- Git metadata permissions are repaired; the governance guard reports
+  `READY: writable Git metadata`.
+- Automated evidence: 7 defect regressions, 84 affected analytical/cache/AI/
+  Stata tests, 103 numerical/page-integration tests, and 142 latest
+  page-integration/defect/chat-persistence tests passed. Compilation and
+  `git diff --check` also pass.
+- Role-aware navigation, evidence-slice placement, analytical/cache persistence,
+  and minimum dark-mode/sidebar/chat fixes are implemented. Full UI overhaul is
+  deferred.
+- Authenticated browser closure remains open. Manual screenshots are partial
+  smoke evidence; AGY's 26 PASS / 30 FAIL run is not acceptance evidence.
+- Next validation is a reduced distinct-role matrix, not a 400-by-4 sweep.

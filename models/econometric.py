@@ -222,6 +222,15 @@ def run_hausman_test(fe_result, re_result):
     H0: RE is consistent and efficient (prefer RE).
     H1: RE is inconsistent (prefer FE).
     """
+    if not isinstance(fe_result, dict) or not isinstance(re_result, dict):
+        raise ValueError("Hausman requires named FE and RE result dictionaries")
+    for result, label in ((fe_result, "FE"), (re_result, "RE")):
+        if "result_obj" not in result:
+            raise ValueError(f"Hausman requires an explicit {label} result")
+    if fe_result.get("sample_fingerprint") and re_result.get("sample_fingerprint"):
+        if fe_result["sample_fingerprint"] != re_result["sample_fingerprint"]:
+            raise ValueError("Hausman requires FE and RE estimates from the same sample")
+
     fe_obj = fe_result["result_obj"]
     re_obj = re_result["result_obj"]
 
@@ -229,21 +238,26 @@ def run_hausman_test(fe_result, re_result):
     fe_coefs = fe_obj.params.drop("const", errors="ignore")
     re_coefs = re_obj.params.drop("const", errors="ignore")
     common = fe_coefs.index.intersection(re_coefs.index)
+    if len(common) == 0:
+        raise ValueError("Hausman requires at least one common coefficient")
 
     b_fe = fe_coefs[common].values
     b_re = re_coefs[common].values
     diff = b_fe - b_re
 
-    # Variance of difference
-    v_fe = np.diag(fe_obj.cov.loc[common, common].values)
-    v_re = np.diag(re_obj.cov.loc[common, common].values)
-    v_diff = v_fe - v_re
+    # Hausman uses the full covariance difference, not only its diagonal.
+    v_fe = np.asarray(fe_obj.cov.loc[common, common].values, dtype=float)
+    v_re = np.asarray(re_obj.cov.loc[common, common].values, dtype=float)
+    v_diff = (v_fe - v_re + (v_fe - v_re).T) / 2.0
+    if not np.isfinite(v_diff).all():
+        raise ValueError("Hausman covariance difference is not finite")
 
-    # Guard against negative variances
-    v_diff = np.maximum(v_diff, 1e-10)
-
-    chi2 = float(np.sum(diff ** 2 / v_diff))
-    df = len(common)
+    # Pseudoinverse handles rank-deficient but estimable covariance differences
+    # while preserving the quadratic-form definition.
+    chi2 = float(diff @ np.linalg.pinv(v_diff) @ diff)
+    df = int(np.linalg.matrix_rank(v_diff, tol=1e-10))
+    if df <= 0:
+        raise ValueError("Hausman covariance difference has zero rank")
     p_value = float(1 - stats.chi2.cdf(chi2, df))
 
     if p_value < 0.05:

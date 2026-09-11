@@ -49,7 +49,7 @@ if _panel != "thesis":
 
 with st.expander("About these models"):
     st.markdown("""
-**Dynamic Panel GMM (System GMM)** estimates leverage with a lagged dependent variable, capturing the "stickiness" of capital structure.
+**Legacy IV-GMM proxy (not validated System GMM)** estimates leverage with lagged dependent-variable instruments. It must not be interpreted as Blundell–Bond System GMM.
 The thesis (Table 5.12) shows leverage at time *t* depends on leverage at *t-1* — firms don't adjust instantly.
 - **AR(1) test**: Should be significant (first-order autocorrelation expected)
 - **AR(2) test**: Should NOT be significant (validates instrument choice)
@@ -79,7 +79,7 @@ audit_trail_download_button(
     page="Advanced Econometrics",
     filters=filters,
     model_spec={
-        "active_tab": "System GMM / Delta-Leverage / Stage Comparisons / IV-2SLS",
+        "active_tab": "Legacy IV-GMM proxy / Delta-Leverage / Stage Comparisons / IV-2SLS",
         "estimator": "GMM / OLS delta / Stage OLS / IV",
         "dep_var": "leverage",
         "indep_vars": DEFAULT_X_COLS,
@@ -90,7 +90,7 @@ audit_trail_download_button(
 )
 
 tab_gmm, tab_delta, tab_compare, tab_iv = st.tabs([
-    "System GMM",
+    "Legacy IV-GMM proxy (unverified)",
     "Delta-Leverage",
     "Stage Comparisons",
     "IV / 2SLS",
@@ -98,13 +98,13 @@ tab_gmm, tab_delta, tab_compare, tab_iv = st.tabs([
 
 
 # ══════════════════════════════════════════════
-# TAB 1: System GMM
+# TAB 1: Legacy IV-GMM proxy (unverified)
 # ══════════════════════════════════════════════
 with tab_gmm:
-    st.subheader("Dynamic Panel GMM")
+    st.subheader("Legacy IV-GMM proxy (unverified)")
     st.caption("Leverage with lagged dependent variable — captures capital structure persistence")
 
-    if st.button("Run System GMM", type="primary", key="run_gmm"):
+    if st.button("Run IV-GMM proxy", type="primary", key="run_gmm"):
         with st.spinner("Estimating GMM model..."):
             gmm = run_system_gmm(panel_df)
 
@@ -167,12 +167,12 @@ with tab_gmm:
             _apa_text = (
                 f"Kumar, S. (2024). Capital structure determinants across corporate life stages "
                 f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
-                f"(Estimated via System GMM; panel: {_cite_panel}, "
+                f"(Estimated via legacy IV-GMM proxy; panel: {_cite_panel}, "
                 f"{_cite_yr[0]}–{_cite_yr[1]}, N={gmm.get('n_firms', 'N'):,} firms, "
                 f"{gmm.get('n_obs', 0):,} obs, R²={gmm.get('r_squared', 0):.3f})"
             )
             _latex_text = (
-                r"\cite{kumar2024lifecycle} estimated via System GMM, "
+                r"\cite{kumar2024lifecycle} estimated via legacy IV-GMM proxy, "
                 f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
                 f"$N={gmm.get('n_firms', 'N')}$ firms, $R^2={gmm.get('r_squared', 0):.3f}$."
             )
@@ -191,7 +191,7 @@ with tab_gmm:
             sargan = gmm["sargan"]
             with dc1:
                 st.markdown(render_bento_kpi(
-                    title="Arellano-Bond AR(1)",
+                    title="Proxy residual diagnostic (not Arellano-Bond AR(1))",
                     value=f"{ar1['correlation']:.3f}",
                     delta=f"p = {ar1['p_value']:.4f} (Sig ✓)",
                     percentile=100.0 if ar1['p_value'] < 0.05 else 0.0,
@@ -200,7 +200,7 @@ with tab_gmm:
                 ), unsafe_allow_html=True)
             with dc2:
                 st.markdown(render_bento_kpi(
-                    title="Arellano-Bond AR(2)",
+                    title="Proxy residual diagnostic (not Arellano-Bond AR(2))",
                     value=f"{ar2['correlation']:.3f}",
                     delta=f"p = {ar2['p_value']:.4f} (Valid ✓)" if ar2['p_value'] > 0.05 else "p < 0.05 (Warning)",
                     percentile=100.0 if ar2['p_value'] > 0.05 else 0.0,
@@ -249,7 +249,7 @@ with tab_gmm:
                 hovertemplate="<b>%{y}</b><br>β = %{x:.4f}<br>p = %{customdata:.4f}<extra></extra>",
                 customdata=non_const["p-value"],
             ))
-            fig_gmm_forest.update_layout(**plotly_layout("System GMM Coefficients (β ± 1.96·SE)", height=380))
+            fig_gmm_forest.update_layout(**plotly_layout("Legacy IV-GMM Proxy Coefficients (β ± 1.96·SE)", height=380))
 
             # 2. Speed of Adjustment Decay Curve: Gap_t = (1 - λ)^t
             t_years = np.linspace(0, 10, 100)
@@ -285,7 +285,7 @@ with tab_gmm:
             fig_gmm_bar.update_layout(**plotly_layout("GMM Factor Direction & Magnitude", height=380))
 
             # 4. Diagnostic Confidence Map
-            diag_names = ["Arellano-Bond AR(1) (Expected Sig)", "Arellano-Bond AR(2) (Valid Ins)", "Hansen J (Overident Valid)"]
+            diag_names = ["Proxy residual diagnostic 1 (not Arellano-Bond)", "Proxy residual diagnostic 2 (not Arellano-Bond)", "IVGMM J test (proxy only)"]
             diag_p = [ar1["p_value"], ar2["p_value"], sargan["p_value"]]
             diag_colors = [
                 "#10B981" if ar1["p_value"] < 0.05 else "#F43F5E",
@@ -356,8 +356,8 @@ with tab_gmm:
                 </div>
                 <div style="font-size: 13px; color: {text_c}; line-height: 1.6; margin-bottom: 10px;">
                     <b style="color: #10B981;">• Unobserved Firm Heterogeneity & Endogeneity Control:</b> 
-                    <span style="color: #10B981; font-weight: 600;">[Blundell & Bond (1998) System GMM]</span> 
-                    Instrumenting differenced equations with lagged levels and level equations with lagged differences purges dynamic panel bias (Nickell 1981).
+                    <span style="color: #F59E0B; font-weight: 600;">[System GMM unavailable]</span>
+                    This screen exposes only a legacy IV-GMM proxy; no Blundell–Bond estimator or Arellano–Bond validity claim is made.
                 </div>
             </div>
             """
@@ -369,7 +369,7 @@ with tab_gmm:
                 vault_html = render_academic_vault_html(
                     vault_citations,
                     theme=_theme,
-                    title="📚 Peer-Reviewed Literature Benchmark Knowledge Vault (Dynamic System GMM)"
+                    title="📚 Peer-Reviewed Literature Benchmark Knowledge Vault (context only; proxy is not System GMM)"
                 )
                 st.markdown(vault_html, unsafe_allow_html=True)
 
@@ -380,7 +380,7 @@ with tab_gmm:
                     with st.spinner("Analysing GMM results..."):
                         st.session_state["p13_gmm_ai"] = "".join(
                             generate_econometric_narrative(
-                                gmm, model_type="System GMM",
+                                gmm, model_type="Legacy IV-GMM proxy (unverified)",
                                 panel_mode=_panel, role=_user_role, citations=_citations,
                             )
                         )

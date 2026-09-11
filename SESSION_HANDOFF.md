@@ -371,3 +371,21 @@ No phase is promoted. The next validation must first reconcile the live
 capability registry and improve AI completion synchronization, then rerun the
 affected cases with a fresh run ID. The Git governance guard remains the
 Codex commit gate and currently reports unwritable metadata.
+
+## 2026-09-12 — Current remediation checkpoint
+
+- Continue in the isolated remediation worktree on branch
+  `codex/wave6-8-remediation-2026-09-12` (base `6fc56e9`).
+- The shared checkout is intentionally untouched. Exclude
+  `capital_structure.db` from all staging/reset operations.
+- Windows Git metadata repair is complete. The governance guard reports
+  `READY: writable Git metadata`; commit/push can proceed after review.
+- Automated checkpoint: 7 defect tests, 84 affected analytical/cache/AI/Stata
+  tests, 103 numerical/page tests, and 142 latest page/defect/chat tests pass;
+  compilation and diff checks pass.
+- No authenticated four-profile browser closure claim exists. AGY's 26 PASS /
+  30 FAIL run remains failed validation evidence.
+- Resume with the canonical root `/` and a reduced distinct-role matrix: admin,
+  researcher, second researcher/session isolation, and viewer. Do not run 400
+  companies across four profiles.
+- Full UI overhaul remains deferred.

@@ -34,6 +34,7 @@ def full_panel(db_conn):
                f.ncfo, f.ncfi, f.ncff,
                f.gfc, f.ibc_2016, f.covid_dummy
         FROM financials f
+        WHERE f.vintage = 'thesis'
         ORDER BY f.company_code, f.year
     """, db_conn)
 
@@ -108,6 +109,7 @@ def temp_chat_db(tmp_path, monkeypatch):
             elapsed_s        REAL,
             followups        TEXT,
             chart_spec       TEXT,
+            result_envelope  TEXT,
             feedback         TEXT
         );
         CREATE INDEX idx_chat_sessions_user

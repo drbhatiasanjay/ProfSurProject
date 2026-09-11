@@ -4,7 +4,6 @@ Overview — Research context and paradigm introduction for the LifeCycle Levera
 import streamlit as st
 import db
 from helpers import ensure_session_state, PLOTLY_CONFIG, render_bento_kpi
-from models.researcher_slice import create_researcher_slice, apply_research_action
 
 ensure_session_state()
 db.log_page_visit("Overview")
@@ -25,42 +24,6 @@ _n_firms = int(_meta.get("total_firms", 0))
 _yr_min  = int(_meta.get("year_min",    2001))
 _yr_max  = int(_meta.get("year_max",    2024))
 _n_years = _yr_max - _yr_min + 1
-
-# Wave 8: bounded, read-only researcher journey.  It is deliberately derived
-# from the active public panel context and never promotes validation status.
-_user = st.session_state.get("user", {})
-if _user.get("role") in {"admin", "researcher"}:
-    _slice = create_researcher_slice(
-        workspace_id="public-panel",
-        role=_user["role"],
-        analysis_run_id=f"overview:{_panel_mode}",
-        artifact_ids=("panel-context",),
-        limitations=("This read-only slice is not an estimator validation release.",),
-    )
-    _slice_action = st.session_state.get("researcher_slice_action", "view")
-    if _slice_action in {"challenge", "reproduce"}:
-        _slice = apply_research_action(_slice, _slice_action)
-    st.session_state["researcher_slice"] = _slice
-    st.markdown("### 🔎 Researcher Evidence Slice")
-    st.caption(
-        "Read-only panel context. Reproduce and challenge actions preserve the "
-        "same workspace/run binding and cannot release an unvalidated result."
-    )
-    _slice_c1, _slice_c2, _slice_c3 = st.columns([3, 2, 2])
-    with _slice_c1:
-        st.metric("Release status", _slice.release_status)
-    with _slice_c2:
-        if st.button("Reproduce", key="researcher_slice_reproduce"):
-            st.session_state["researcher_slice_action"] = "reproduce"
-            st.rerun()
-    with _slice_c3:
-        if st.button("Challenge", key="researcher_slice_challenge"):
-            st.session_state["researcher_slice_action"] = "challenge"
-            st.rerun()
-    st.caption(
-        f"Workspace: `{_slice.workspace_id}` · Run: `{_slice.analysis_run_id}` · "
-        f"Action: `{_slice.action}`"
-    )
 
 # ── Hero ──────────────────────────────────────────────────────────────────────
 st.markdown("""

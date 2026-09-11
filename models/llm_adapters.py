@@ -120,8 +120,15 @@ CONTEXT_BUDGET_TOKENS = 1500
 AI_CACHE_REVISION = "wave6-8-context-v2"
 
 
-@functools.lru_cache(maxsize=64)
 def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
+    """Build company context against the current database revision."""
+    return _build_company_context_cached(company_code, panel_mode, db.db_cache_revision())
+
+
+@functools.lru_cache(maxsize=64)
+def _build_company_context_cached(
+    company_code: int, panel_mode: str, db_revision: int
+) -> str:
     """Build a token-bounded (<= 900 tokens) context string for a single company.
 
     Includes: latest 5-year KPIs, peer group benchmarks (same industry_group +
@@ -225,11 +232,15 @@ def build_panel_context(panel_mode: str = "thesis", filters: Optional[dict] = No
     """
     normalized = dict(filters or {})
     normalized["panel_mode"] = panel_mode
-    return _build_panel_context_cached(panel_mode, db.filters_to_tuple(normalized))
+    return _build_panel_context_cached(
+        panel_mode, db.filters_to_tuple(normalized), db.db_cache_revision()
+    )
 
 
 @functools.lru_cache(maxsize=32)
-def _build_panel_context_cached(panel_mode: str, filters_tuple: tuple) -> str:
+def _build_panel_context_cached(
+    panel_mode: str, filters_tuple: tuple, db_revision: int
+) -> str:
     """Build a token-bounded (<= 900 tokens) panel-level context string.
 
     Includes: panel summary stats (firms, obs, year range), per-stage mean

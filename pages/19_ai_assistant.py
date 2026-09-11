@@ -1045,6 +1045,17 @@ if user_q:
             "elapsed_s": 0.05,
             "followups": ["esttab, se r2 star", "coefplot, drop(_cons) xline(0)", "summarize leverage roa, detail"],
         }
+        # Persist the analytical identity envelope separately from display prose.
+        # This keeps model/sample provenance available after reruns without
+        # serializing backend estimator objects or figures.
+        _envelope_keys = (
+            "status", "error_code", "command", "model_id", "estimator",
+            "depvar", "dependent_variable", "indepvars", "regressors",
+            "n_obs", "dataset_fingerprint", "sample_fingerprint",
+        )
+        st_turn["result_envelope"] = {
+            key: stata_res[key] for key in _envelope_keys if key in stata_res
+        }
         if stata_res.get("chart_spec"):
             st_turn["chart_spec"] = stata_res["chart_spec"]
         if stata_res.get("fig"):
@@ -1066,6 +1077,7 @@ if user_q:
             elapsed_s=0.05,
             followups=st_turn.get("followups"),
             chart_spec=st_turn.get("chart_spec"),
+            result_envelope=st_turn.get("result_envelope"),
         )
         st.rerun()
     # echo old headings/tables and repeat earlier topics.

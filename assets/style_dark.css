@@ -78,10 +78,8 @@ div[data-testid="stMarkdown"] h6 {
 }
 
 div[data-testid="stMarkdown"] p,
-div[data-testid="stMarkdown"] span,
 div[data-testid="stMarkdown"] li,
 div[data-testid="stMarkdownContainer"] p,
-div[data-testid="stMarkdownContainer"] span,
 div[data-testid="stMarkdownContainer"] li {
     color: var(--text-secondary) !important;
 }
@@ -376,6 +374,37 @@ input, textarea {
     border-radius: 8px !important;
 }
 
+/* Chat input: theme Streamlit's bottom shell as well as its textarea. */
+[data-testid="stBottom"] {
+    background: var(--bg-canvas) !important;
+    border-top: 1px solid var(--border-subtle) !important;
+}
+div[data-testid="stBottomBlockContainer"],
+div[data-testid="stBottom"] > div {
+    background: var(--bg-canvas) !important;
+}
+div[data-testid="stChatInput"],
+div[data-testid="stChatInput"] > div {
+    background: #0B0E14 !important;
+    border: 1px solid rgba(148, 163, 184, 0.28) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+}
+div[data-testid="stChatInput"] textarea {
+    background: #0B0E14 !important;
+    color: #F8FAFC !important;
+}
+[data-testid="stChatInput"] textarea::placeholder {
+    color: #94A3B8 !important;
+    opacity: 1 !important;
+}
+div[data-testid="stChatInput"] button,
+div[data-testid="stChatInput"] button svg {
+    background: transparent !important;
+    color: #38BDF8 !important;
+    fill: #38BDF8 !important;
+}
+
 div[data-baseweb="select"] span,
 div[data-baseweb="select"] div {
     color: #F8FAFC !important;
@@ -433,21 +462,20 @@ div[data-testid="stAlert"] span {
 
 /* Dataframe and Tables */
 div[data-testid="stDataFrame"],
-div[data-testid="stTable"],
-table {
+div[data-testid="stTable"] {
     background: var(--bg-surface) !important;
     color: var(--text-primary) !important;
     border-radius: 8px !important;
 }
 
-table th {
+div[data-testid="stTable"] table th {
     background: #1C2234 !important;
     color: #F8FAFC !important;
     font-weight: 700 !important;
     border-bottom: 2px solid rgba(255, 255, 255, 0.15) !important;
 }
 
-table td {
+div[data-testid="stTable"] table td {
     background: #141824 !important;
     color: #CBD5E1 !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;

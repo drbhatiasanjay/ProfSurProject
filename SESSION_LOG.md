@@ -514,3 +514,19 @@ password remain deferred by decision.
 User-observed smoke evidence: `drbhatia` opened Stata Studio and AI Assistant;
 chat-specific issues were deferred for later discussion. This does not replace
 automated matrix evidence.
+
+## 2026-09-12 — Remediation checkpoint recorded
+
+- Git ACL/read-only repair completed; the governance guard reports writable Git
+  metadata.
+- Isolated remediation worktree remains active; shared checkout remains
+  untouched and `capital_structure.db` remains excluded.
+- Automated evidence: 7 focused defect tests, 84 affected analytical tests,
+  103 numerical/page tests, and 142 latest page/defect/chat tests passed;
+  compile and diff checks passed.
+- Role navigation, evidence-slice placement, analytical/cache persistence, and
+  minimum dark-mode/sidebar/chat fixes are implemented.
+- Authenticated browser closure remains open; AGY's 26 PASS / 30 FAIL run is
+  failed validation evidence, not acceptance.
+- Next run is a reduced distinct-role matrix, not a 400-by-4 sweep. Full UI
+  overhaul remains deferred.

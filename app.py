@@ -548,6 +548,12 @@ ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assist
 stata_studio        = st.Page("pages/23_stata_studio.py",       title="Stata Studio",        icon=":material/terminal:")
 ai_chat_guide       = st.Page("pages/24_ai_chat_guide.py",      title="AI Chat Guide",       icon=":material/menu_book:")
 # knowledge_graph2  = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")  # temporarily hidden
+_admin_tools = [settings, ai_chat_guide]
+if _role in {"admin", "researcher"}:
+    _admin_tools.append(bulk_upload)
+if _role == "admin":
+    _admin_tools.extend([admin_activity, workbench])
+
 nav = st.navigation({
     "": [
         overview, dashboard, data_explorer, benchmarks,
@@ -557,11 +563,7 @@ nav = st.navigation({
         ml_models, forecasting, clustering,
         ai_assistant, board_deck,
     ],
-    "Admin & Tools": [
-        admin_activity, settings,
-        workbench, bulk_upload,
-        ai_chat_guide,
-    ],
+    "Admin & Tools": _admin_tools,
 })
 
 # ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
@@ -577,6 +579,7 @@ _role_display = _user_obj.get("role", "viewer").title()
 _now_str      = datetime.now(_tz.utc).strftime("%a %d %b %Y · %H:%M UTC")
 
 _header_bg   = "rgba(255, 255, 255, 0.9)" if _theme == "light" else "rgba(16, 20, 30, 0.9)"
+_native_header_bg = "#FFFFFF" if _theme == "light" else "#0B0E14"
 _header_text = "#0F172A" if _theme == "light" else "#F8FAFC"
 _header_sub  = "#64748B" if _theme == "light" else "#94A3B8"
 _accent_grad = "linear-gradient(135deg, #4F46E5, #0891B2)" if _theme == "light" else "linear-gradient(135deg, #6366F1, #06B6D4)"
@@ -650,8 +653,8 @@ header[data-testid="stHeader"] {{
     left: 0 !important;
     right: 0 !important;
     z-index: 1000000 !important;
-    background: {_header_bg} !important;
-    border-bottom: 1px solid #E5E7EB !important;
+    background: {_native_header_bg} !important;
+    border-bottom: 1px solid {_nav_border} !important;
     padding: 0 !important;
     overflow: visible !important;
 }}
@@ -680,6 +683,19 @@ button[data-testid="collapsedControl"],
     left: 0.5rem !important;
     visibility: visible !important;
     opacity: 1 !important;
+    background: #0B0E14 !important;
+    border: 1px solid #38BDF8 !important;
+    border-radius: 0.6rem !important;
+    color: #38BDF8 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
+}}
+[data-testid="collapsedControl"] button:hover {{
+    background: {_accent_grad} !important;
+    color: #ffffff !important;
+}}
+[data-testid="collapsedControl"] svg {{
+    color: #38BDF8 !important;
+    fill: #38BDF8 !important;
 }}
 /* Ensure any popover/dropdown appears above the fixed navbar */
 [data-baseweb="popover"] {{

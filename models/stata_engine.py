@@ -12,6 +12,7 @@ Provides open-source mathematical and visual parity with Stata 17/18:
 import os
 import re
 import math
+import hashlib
 from contextvars import ContextVar
 from dataclasses import dataclass, asdict
 import numpy as np
@@ -21,6 +22,7 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from models.model_context import fingerprint_frame
 
 try:
     import docx
@@ -62,6 +64,19 @@ def _analysis_stored():
 
 def _analysis_last():
     return _analysis_state().last
+
+
+def _result_identity(command: str, estimation_frame: pd.DataFrame, estimator: str) -> dict:
+    """Create stable identity metadata for post-estimation consumers."""
+    sample_fingerprint = fingerprint_frame(estimation_frame)
+    command_digest = hashlib.sha256(command.encode("utf-8")).hexdigest()[:16]
+    model_id = f"{estimator}:{sample_fingerprint[:16]}:{command_digest}"
+    return {
+        "model_id": model_id,
+        "estimator": estimator,
+        "dataset_fingerprint": fingerprint_frame(estimation_frame),
+        "sample_fingerprint": sample_fingerprint,
+    }
 
 COMMON_VAR_ALIASES = {
     "prof": "profitability",
@@ -1075,6 +1090,7 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
         "coefficients": coefs,
         "ascii_output": "\n".join(lines),
         "result_obj": result,
+        **_result_identity(parsed["raw"], sub[[depvar] + indepvars], "OLS"),
     }
     estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
     _analysis_state().last = estimate_obj
@@ -1360,6 +1376,7 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         "coefficients": coefs,
         "ascii_output": "\n".join(l for l in lines if l),
         "result_obj": res,
+        **_result_identity(parsed["raw"], est_df.reset_index(), m_type),
     }
     estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
 
@@ -1443,6 +1460,8 @@ def _handle_hausman(parsed: dict, df: pd.DataFrame) -> dict:
     return {
         "status": "success",
         "command": parsed["raw"],
+        "fe_model_id": fe_est.get("model_id"),
+        "re_model_id": re_est.get("model_id"),
         "chi2": chi2,
         "p_value": pval,
         "verdict": verdict,
@@ -1486,6 +1505,8 @@ def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
     return {
         "status": "success",
         "command": parsed["raw"],
+        "model_id": _analysis_last().get("model_id") if _analysis_last() else None,
+        "sample_fingerprint": _analysis_last().get("sample_fingerprint") if _analysis_last() else None,
         "vif_data": vifs,
         "mean_vif": mean_vif,
         "ascii_output": "\n".join(lines),
@@ -1495,7 +1516,18 @@ def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
 def _handle_coefplot(parsed: dict, df: pd.DataFrame) -> dict:
     requested_terms = parsed.get("indepvars", [])
     requested_name = requested_terms[0] if requested_terms else None
-    est = _analysis_stored().get(requested_name) if requested_name else _analysis_last()
+    stored = _analysis_stored()
+    if requested_name:
+        est = stored.get(requested_name)
+    elif len(stored) > 1:
+        return {
+            "status": "error",
+            "error_code": "MODEL_ID_REQUIRED",
+            "message": "coefplot is ambiguous; specify a stored model name.",
+            "ascii_output": "r(198); explicit model identifier required",
+        }
+    else:
+        est = _analysis_last()
     if not est:
         return {
             "status": "error",
@@ -1511,6 +1543,8 @@ def _handle_coefplot(parsed: dict, df: pd.DataFrame) -> dict:
     return {
         "status": "success",
         "command": parsed["raw"],
+        "model_id": est.get("model_id"),
+        "sample_fingerprint": est.get("sample_fingerprint"),
         "chart_spec": chart_spec,
         "ascii_output": f"Generated coefplot for {cat_len} determinants.",
     }
@@ -2027,10 +2061,11 @@ def _handle_margins(parsed: dict, df: pd.DataFrame) -> dict:
     ci_highs = []
     for _, row in stage_means.iterrows():
         grp = str(row[grp_col])
+        # Preserve the dataset's declared leverage units.  Do not infer a
+        # percentage-to-ratio conversion from the sample mean: filtering can
+        # change that mean and silently change the estimand's scale.
         m = float(row['mean'])
-        if m > 1.0:
-            m = m / 100.0
-        se = float((row['std'] / (100.0 if row['std'] > 1.0 else 1.0)) / np.sqrt(row['count']))
+        se = float(row['std'] / np.sqrt(row['count']))
         z = float(m / max(se, 1e-6))
         ci_l = max(0.0, m - 1.96 * se)
         ci_h = m + 1.96 * se

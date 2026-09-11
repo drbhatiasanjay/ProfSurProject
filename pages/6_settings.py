@@ -6,6 +6,7 @@ import os
 import streamlit as st
 import db
 from helpers import ensure_session_state
+from models.researcher_slice import create_researcher_slice, apply_research_action
 
 _APP_VERSION = open("VERSION").read().strip() if os.path.exists("VERSION") else "dev"
 
@@ -13,6 +14,40 @@ ensure_session_state()
 db.log_page_visit("Settings")
 
 st.markdown("### Settings")
+
+_settings_user = st.session_state.get("user", {})
+if _settings_user.get("role") in {"admin", "researcher"}:
+    with st.expander("Research evidence controls"):
+        st.caption(
+            "Read-only audit context for reproducing or challenging a panel run. "
+            "These actions cannot release an unvalidated result."
+        )
+        _settings_panel = st.session_state.get("panel_mode", "latest")
+        _settings_slice = create_researcher_slice(
+            workspace_id="public-panel",
+            role=_settings_user["role"],
+            analysis_run_id=f"overview:{_settings_panel}",
+            artifact_ids=("panel-context",),
+            limitations=("This read-only slice is not an estimator validation release.",),
+        )
+        _settings_action = st.session_state.get("researcher_slice_action", "view")
+        if _settings_action in {"challenge", "reproduce"}:
+            _settings_slice = apply_research_action(_settings_slice, _settings_action)
+        st.session_state["researcher_slice"] = _settings_slice
+        st.metric("Release status", _settings_slice.release_status)
+        _settings_c1, _settings_c2 = st.columns(2)
+        with _settings_c1:
+            if st.button("Reproduce", key="settings_researcher_slice_reproduce"):
+                st.session_state["researcher_slice_action"] = "reproduce"
+                st.rerun()
+        with _settings_c2:
+            if st.button("Challenge", key="settings_researcher_slice_challenge"):
+                st.session_state["researcher_slice_action"] = "challenge"
+                st.rerun()
+        st.caption(
+            f"Workspace: `{_settings_slice.workspace_id}` · Run: `{_settings_slice.analysis_run_id}` · "
+            f"Action: `{_settings_slice.action}`"
+        )
 
 # ── Appearance ──
 st.markdown("#### Appearance")
