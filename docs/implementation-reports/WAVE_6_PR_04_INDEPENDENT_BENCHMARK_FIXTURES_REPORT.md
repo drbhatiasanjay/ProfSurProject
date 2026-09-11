@@ -20,8 +20,10 @@ five validation-ledger gates and independent review.
 
 `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -q tests/test_wave6_benchmarks.py tests/test_benchmark_contracts.py tests/test_validation_ledger.py --tb=line`
 
-Observed: `7 passed, 1 warning in 3.46s` for the fixture and benchmark-contract
-tests. The validation-ledger tests were not included in the accepted result
+Observed: `16 passed, 1 warning` across the Wave 6 fixture, Wave 7 artifact,
+renderer, and Wave 8 researcher-slice tests, excluding the manifest test whose
+pytest temp fixture is ACL-blocked locally. The validation-ledger tests were
+not included in the accepted result
 because Windows pytest temporary-directory ACL contention raised setup errors;
 their prior focused result remains historical evidence only. This report
 records numerical fixture coverage; it makes no production performance or

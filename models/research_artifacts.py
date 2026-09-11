@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any, Mapping
 
 
 class ArtifactContractError(ValueError):
     """Raised when a visualization or narrative cannot be trusted."""
+
+
+_CAUSAL_LANGUAGE = re.compile(
+    r"\b(cause|causes|causal|causally|impact|impacts|effect|effects|proves|leads? to)\b",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -85,6 +92,14 @@ def build_narrative_artifact(
 ) -> NarrativeArtifact:
     if not title.strip() or not text.strip() or not claims:
         raise ArtifactContractError("title, text, and at least one claim are required")
+    if provenance.capability_status != "VALIDATED":
+        combined = " ".join((text, *claims))
+        if _CAUSAL_LANGUAGE.search(combined):
+            raise ArtifactContractError(
+                "causal language requires a VALIDATED capability and independent evidence"
+            )
+        if not limitations:
+            raise ArtifactContractError("limitations are required for unvalidated narratives")
     return NarrativeArtifact(
         title=title.strip(),
         text=text.strip(),

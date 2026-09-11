@@ -15,6 +15,8 @@ capability status that produced them.
 - Added `ArtifactProvenance`.
 - Added immutable `VisualizationArtifact` and `NarrativeArtifact` contracts.
 - Added builders with category/series alignment and required-claim validation.
+- Added deny-by-default causal-language and limitation checks for narratives
+  whose capability status is not `VALIDATED`.
 - Added tests for provenance binding, immutability, malformed series, and empty
   claims.
 
@@ -35,6 +37,6 @@ Result: **15 passed, 1 warning in 4.21s**. `git diff --check` passed.
 
 ## Limitations
 
-The contracts are not yet mounted in the Streamlit renderers. Wave 7’s next
-slice must add a deterministic fact sheet and renderer integration while
-preserving the current left/right panel mapping.
+The contracts are mounted only through the provenance/descriptive renderer
+gates; full authenticated browser acceptance remains required. Production
+capability promotion still requires the Wave 6 validation ledger.

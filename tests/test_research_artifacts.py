@@ -65,3 +65,14 @@ def test_narrative_rejects_unbound_or_empty_claims():
             limitations=[],
             provenance=_provenance(),
         )
+
+
+def test_unvalidated_narrative_rejects_causal_language():
+    with pytest.raises(ArtifactContractError, match="causal language"):
+        build_narrative_artifact(
+            title="Unsafe claim",
+            text="Profitability causes lower leverage.",
+            claims=["causal effect"],
+            limitations=["Independent review remains open."],
+            provenance=_provenance(),
+        )
