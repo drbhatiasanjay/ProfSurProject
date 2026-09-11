@@ -56,3 +56,14 @@ def test_researcher_slice_rejects_unauthorized_roles_and_mutations():
     )
     with pytest.raises(ResearcherSliceError, match="action"):
         apply_research_action(journey, "edit_source")
+
+
+def test_researcher_slice_rejects_blank_artifact_ids():
+    with pytest.raises(ResearcherSliceError, match="artifacts"):
+        create_researcher_slice(
+            workspace_id="public-panel",
+            role="researcher",
+            analysis_run_id="run-1",
+            artifact_ids=["", "  "],
+            limitations=[],
+        )

@@ -30,13 +30,14 @@ def create_researcher_slice(
 ) -> ResearcherSlice:
     if role not in {"admin", "researcher"}:
         raise ResearcherSliceError("role is not authorized for researcher slice")
-    if not workspace_id.strip() or not analysis_run_id.strip() or not artifact_ids:
+    normalized_artifacts = tuple(str(item).strip() for item in artifact_ids if str(item).strip())
+    if not workspace_id.strip() or not analysis_run_id.strip() or not normalized_artifacts:
         raise ResearcherSliceError("workspace, analysis run, and artifacts are required")
     return ResearcherSlice(
         workspace_id=workspace_id.strip(),
         role=role,
         analysis_run_id=analysis_run_id.strip(),
-        artifact_ids=tuple(str(item).strip() for item in artifact_ids if str(item).strip()),
+        artifact_ids=normalized_artifacts,
         limitations=tuple(str(item).strip() for item in limitations if str(item).strip()),
     )
 

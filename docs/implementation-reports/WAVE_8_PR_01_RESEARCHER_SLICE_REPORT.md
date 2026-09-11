@@ -17,7 +17,7 @@ that cannot widen role permissions or promote an unvalidated capability.
 - Allowed only `challenge` and `reproduce` actions after creation.
 - Forced the release status to remain `NOT_VALIDATED`.
 - Added tests for immutability, authorization, action restrictions, and
-  workspace/run preservation.
+  workspace/run preservation, including blank artifact-ID rejection.
 
 ## Non-goals
 
@@ -33,7 +33,8 @@ Command:
 python -m pytest -q tests/test_researcher_slice.py tests/test_research_artifacts.py tests/test_validation_ledger.py tests/test_benchmark_contracts.py tests/test_panel_mapping_contract.py --tb=line
 ```
 
-Result: **18 passed, 1 warning in 3.30s**. `git diff --check` passed.
+Result: **21 passed, 1 warning in 3.76s** after the boundary hardening.
+`git diff --check` passed.
 
 ## Limitation
 
