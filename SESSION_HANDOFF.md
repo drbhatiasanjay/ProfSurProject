@@ -3,7 +3,7 @@
 **Updated:** 2026-09-11  
 **Workspace:** `C:\Users\hemas\Downloads\ProfSurProject`  
 **Canonical branch:** `master`  
-**Latest baseline:** `269fb78` (published on origin/master)
+**Latest baseline:** `2208734` (published on origin/master)
 **Canonical demo:** `http://localhost:8501/`
 
 ## 1. Current truth
@@ -182,6 +182,13 @@ A fresh anonymous headless smoke check was attempted after this checkpoint;
 Playwright could not launch because its Chromium executable is not installed.
 This is an environment blocker, not an application failure. No browser binary
 was downloaded automatically.
+
+The independent Wave 6 benchmark fixture slice is published at `2208734`.
+It provides seeded known-answer IV/2SLS and entity-demeaned HDFE references
+with dataset/sample fingerprints and rank/sample checks. Focused fixture and
+benchmark-contract tests passed `7 passed, 1 warning`; two manifest tests hit
+Windows pytest temporary-directory ACL contention and are not counted as a
+pass. Production capabilities remain unpromoted.
 
 ## 7. Lessons learned
 

@@ -1,5 +1,13 @@
 # ProfSurProject — Session Log
 
+## Autonomous Checkpoint — Wave 6 independent benchmark fixtures (2026-09-11)
+- Added deterministic production-independent IV/2SLS and entity-demeaned HDFE
+  known-answer fixtures with fingerprints, rank checks, and sample accounting.
+- Focused gate: **7 passed, 1 warning**; manifest tests separately encountered
+  Windows pytest temporary-directory ACL contention.
+- Evidence: `docs/implementation-reports/WAVE_6_PR_04_INDEPENDENT_BENCHMARK_FIXTURES_REPORT.md`.
+- Published commit: `2208734`; no production capability promoted.
+
 ## Autonomous Checkpoint — restart pointer synchronized (2026-09-11)
 - Reconciled canonical status, handoff, plan, and session log to published
   baseline `269fb78` on `origin/master`.
