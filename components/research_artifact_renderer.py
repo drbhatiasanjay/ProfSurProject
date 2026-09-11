@@ -23,3 +23,21 @@ def render_artifact_provenance(provenance: Mapping[str, object], *, key_prefix: 
         st.write(f"Analysis run: `{provenance['analysis_run_id']}`")
         st.write(f"Capability status: `{provenance['capability_status']}`")
         st.caption("Dataset, sample, and result fingerprints are bound to this artifact.")
+
+
+def render_descriptive_metadata(provenance: Mapping[str, object], *, key_prefix: str) -> None:
+    """Render explicit deterministic descriptive metadata for an AnalysisRun."""
+    if not isinstance(provenance, Mapping):
+        return
+    source = str(provenance.get("source_fingerprint", "")).strip()
+    if not source:
+        return
+    st.caption("✅ COMPUTED · deterministic descriptive analysis")
+    details = [f"Source fingerprint: `{source}`"]
+    if provenance.get("n_obs") is not None:
+        details.append(f"Observations: `{provenance['n_obs']}`")
+    if provenance.get("n_firms") is not None:
+        details.append(f"Firms: `{provenance['n_firms']}`")
+    if provenance.get("panel_mode"):
+        details.append(f"Panel: `{provenance['panel_mode']}`")
+    st.caption(" · ".join(details))

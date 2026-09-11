@@ -12,6 +12,13 @@
 - Checkpoint `9d68d68` is published; local and `origin/master` match. The GitHub
   workflow for this head is in progress.
 
+## Autonomous Checkpoint — Wave 7 PR-04 renderer integration (2026-09-11)
+- Wired `descriptive_summary` `AnalysisRun` provenance into the canonical AI
+  Assistant renderer with an explicit, no-inference metadata gate.
+- Evidence: `docs/implementation-reports/WAVE_7_PR_04_DESCRIPTIVE_RENDERER_INTEGRATION_REPORT.md`.
+- Verification: focused renderer/descriptive/researcher/artifact/status contracts
+  20 passed; page compilation and diff check passed.
+
 ## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
 - **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
 - **Authentication Diagnostics & Resolution:**
