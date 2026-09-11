@@ -1,5 +1,14 @@
 # ProfSurProject — Session Log
 
+## Autonomous Checkpoint — Wave 6 PR-02 descriptive analyst (2026-09-11)
+- Implemented a read-only descriptive gateway, deterministic `AnalysisRun`, and
+  metadata-only renderer; corrected the prepared fixture to expect one filtered
+  2024 observation.
+- Evidence: `docs/implementation-reports/WAVE_6_PR_02_DESCRIPTIVE_ANALYST_REPORT.md`.
+- Verification: focused Wave 6/7/8 contracts 30 passed; fast gate 6 passed; diff
+  check passed. Browser/auth acceptance remains blocked by missing safe password
+  environment variable and unavailable Chromium.
+
 ## Session Milestone (2026-09-10) — Auth Integrity, Design Research & Codex Handoff
 - **GitHub Baseline Enforcement:** Confirmed GitHub baseline (`origin/master` / `6075708`) as the authoritative source of truth.
 - **Authentication Diagnostics & Resolution:**

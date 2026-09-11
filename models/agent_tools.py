@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import re
 import sqlite3
+import hashlib
+import json
 from typing import Any, Dict, List, Optional
 import pandas as pd
 
@@ -228,6 +230,64 @@ def query_financial_database(
             "error": error_message,
             "schema_hint": get_database_schema_summary(),
         }
+
+
+def describe_financial_database(
+    variables: list[str],
+    *,
+    group_by: str | None = None,
+    panel_mode: str = "thesis",
+    filters: dict | None = None,
+) -> dict:
+    """Return deterministic, read-only descriptive statistics for AI Chat."""
+    aliases = {**_COLUMN_ALIASES, "prof": "profitability", "tang": "tangibility"}
+    requested = [aliases.get(str(value).strip().lower(), str(value).strip()) for value in variables]
+    supported = {"leverage", "profitability", "tangibility", "tax", "log_size", "tax_shield", "dividend"}
+    missing = [value for value in requested if value not in supported]
+    if missing:
+        return {"status": "error", "error_code": "VARIABLE_NOT_FOUND", "error": missing[0]}
+
+    filters = dict(filters or {})
+    group_column = {"life_stage": "life_stage", "year": "year"}.get(str(group_by or ""))
+    if group_by and not group_column:
+        return {"status": "error", "error_code": "GROUP_NOT_FOUND", "error": str(group_by)}
+
+    conn = db.get_connection()
+    try:
+        columns = ["company_code", "year", *requested]
+        if group_column and group_column not in columns:
+            columns.append(group_column)
+        frame = pd.read_sql_query(
+            f"SELECT {', '.join(dict.fromkeys(columns))} FROM financials", conn
+        )
+    finally:
+        conn.close()
+
+    year_range = filters.get("year_range")
+    if isinstance(year_range, (list, tuple)) and len(year_range) == 2:
+        try:
+            frame = frame[frame["year"].between(int(year_range[0]), int(year_range[1]))]
+        except (TypeError, ValueError):
+            pass
+    run_id = hashlib.sha256(json.dumps(
+        {"variables": requested, "group_by": group_column, "panel_mode": panel_mode, "filters": filters},
+        sort_keys=True, default=str,
+    ).encode()).hexdigest()[:16]
+    from models.descriptive_analyst import describe_panel
+    try:
+        run = describe_panel(
+            frame,
+            variables=requested,
+            group_by=group_column,
+            run_id=run_id,
+            panel_mode=panel_mode,
+            year_range=(int(year_range[0]), int(year_range[1])) if isinstance(year_range, (list, tuple)) and len(year_range) == 2 else (None, None),
+            filters=filters,
+        )
+    except Exception as exc:
+        code = str(exc).split(":", 1)[0]
+        return {"status": "error", "error_code": code, "error": str(exc)}
+    return {"status": "success", "analysis_run": json.loads(run.to_json())}
 
 
 def run_stata_command(command: str) -> dict:

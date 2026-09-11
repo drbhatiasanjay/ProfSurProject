@@ -68,6 +68,24 @@ def _grounding_footer(panel_label: str) -> str:
 
 GROUNDING_FOOTER = _grounding_footer("DATA")
 
+
+def _descriptive_result_text(payload: dict[str, Any]) -> str:
+    """Render deterministic descriptive metadata without exposing private reasoning."""
+    run = payload.get("analysis_run") if isinstance(payload, dict) else None
+    run = run if isinstance(run, dict) else {}
+    provenance = run.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+    lines = ["**COMPUTED**", ""]
+    if provenance.get("n_obs") is not None:
+        lines.append(f"- observations: `{provenance['n_obs']}`")
+    if provenance.get("n_firms") is not None:
+        lines.append(f"- firms: `{provenance['n_firms']}`")
+    if provenance.get("panel_mode"):
+        lines.append(f"- panel: `{provenance['panel_mode']}`")
+    if provenance.get("source_fingerprint"):
+        lines.append(f"- source fingerprint: `{provenance['source_fingerprint']}`")
+    return "\n".join(lines)
+
 # ── Static thesis knowledge block (A) — injected into every context ───────────
 # Covers: Dickinson life-stage classification, core theories, thesis scope,
 # directional hypotheses, and peer-reviewed Literature Vault benchmarks.
