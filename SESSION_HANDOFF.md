@@ -248,3 +248,126 @@ git log -3 --oneline
 Resume from the eight-command implementation/defer decision and the separately
 authorized AI natural-language test gate. Do not restart old worktrees or old
 page-file entrypoints for demo evidence.
+
+## 10. Codex restart checkpoint — 2026-09-12
+
+### Active repair worktree
+
+- Path: `C:\Users\hemas\Downloads\ProfSurProject\.worktrees\codex-wave6-8-remediation-2026-09-12`
+- Branch: `codex/wave6-8-remediation-2026-09-12`
+- Base HEAD: `ab7aeb2`
+- Shared/master worktree: not modified by Codex.
+- Deployment `secrets.toml` hardening and the common MVP test-password policy remain explicitly deferred.
+
+### Implemented in the isolated worktree
+
+- Session-scoped analytical model and panel state with AI Assistant/Stata Studio wiring.
+- Fail-closed FE/RE estimation; removed hidden leverage rescaling and positional panel inference.
+- Explicit model binding for Hausman, VIF, `coefplot`, `esttab`, and stored estimates.
+- Legacy proxy GMM naming and truthful output labeling.
+- Exact calendar-aware GMM lags; missing periods no longer become row-position lags.
+- AI cache revision `wave6-8-context-v2`.
+- Normalized unsupported/engine error codes.
+- `scripts/repo_governance_guard.py` fail-fast Git metadata preflight.
+
+### Verification before restart
+
+- Focused model-context/panel tests: `10 passed`.
+- Fast project gate: `6 passed`.
+- Changed Python modules compile successfully.
+- Governance guard reproduces the environment failure with exit code `2`:
+  `.git\worktrees`, `.git\objects`, and `.git\refs` are not writable.
+- No commit was created because Git cannot write its index/object database.
+
+### Confirmed environment root cause
+
+This is not an application defect or stale `index.lock`. The shared repository
+Git metadata is protected by Windows ACL/read-only state, and concurrent agent/
+IDE Git activity has repeatedly amplified the contention. Rebooting alone is
+not a fix.
+
+### Required post-restart sequence
+
+1. Close Antigravity and VS Code Git/Source Control operations.
+2. Do not launch the Streamlit app or validation harness yet.
+3. From an elevated PowerShell, grant Modify only to the current Windows user
+   on this repository's `.git` directory and clear read-only attributes:
+
+```powershell
+$repo = "C:\Users\hemas\Downloads\ProfSurProject"
+$git = "$repo\.git"
+$user = "$(whoami)"
+icacls $git /inheritance:e /grant:r "${user}:(OI)(CI)M" /T
+attrib -R "$git\*" /S /D
+python "$repo\.worktrees\codex-wave6-8-remediation-2026-09-12\scripts\repo_governance_guard.py"
+```
+
+4. Expected guard result: `READY: writable Git metadata ...`.
+5. Return to the isolated worktree, run `git diff --check`, stage only the
+   intentional remediation/test/evidence files, and commit.
+6. Run focused tests, the fast gate, then the optimized authenticated UI gate.
+7. Update this handoff with the actual commit SHA, test results, evidence paths,
+   and unresolved items. Do not claim completion before those checks pass.
+
+### Governance rule for future agents
+
+Run `python scripts/repo_governance_guard.py` before any long test or commit.
+Use one canonical worktree plus one validation worktree. Never run concurrent
+Git writers against the shared repository metadata. AGY remains validation-only
+and must publish GitHub-ready Markdown evidence without modifying master.
+
+### User-observed UI smoke note — 2026-09-12
+
+The user manually verified that `drbhatia` can open both Stata Studio and AI
+Assistant in the current demo. Chat-specific issues were observed and are
+intentionally deferred for a later discussion. This is useful smoke evidence,
+but it is not a substitute for the authenticated automated matrix or a clean
+commit/evidence reconciliation.
+
+### AGY validation status — 2026-09-12
+
+AGY reports a replacement MVP harness, `run_mvp_validation.py`, replacing the
+older `run_final_validation_loop.py`. Its reported run `task-3930` is still
+initializing and has not produced acceptance evidence. The prior 22-case run
+remains invalid because of the obsolete `section.main` selector. AGY must
+finish the smoke test, publish the six GitHub-ready Markdown artifacts, and
+report exact PASS/FAIL/BLOCKED totals before any phase promotion. AGY must not
+close its task until the handoff, selector contract, defect status, and run
+SHA are synchronized.
+
+The Codex integration gate remains the repository governance guard:
+`scripts/repo_governance_guard.py` must return `READY` after the ACL repair.
+Only then may Codex commit the isolated remediation and reconcile AGY's report.
+
+### AGY final MVP matrix review — 2026-09-12
+
+AGY's isolated run `AGY-W6-8-2UFJDIUM` on branch `agy-validation-w6-8-2`,
+HEAD `4a96d765e1a461dfe38c721273c13c1c9f233c4b`, port `8503`, completed with
+`PASS 26 / FAIL 30 / BLOCKED 0` out of 56. The report is a **FAILED validation
+run**, not acceptance evidence.
+
+Evidence paths in the AGY worktree:
+
+- `docs/review-evidence/AGY_W6_8_ORTHOGONAL_VALIDATION_AGY-W6-8-2UFJDIUM.md`
+- `docs/review-evidence/AGY_W6_8_DEFECT_REGISTER_AGY-W6-8-2UFJDIUM.md`
+- `docs/review-evidence/AGY_W6_8_HANDOFF_TO_CODEX_AGY-W6-8-2UFJDIUM.md`
+
+Classification of the observed failures:
+
+- Eighteen AI rows captured the transient `Working...` state and did not
+  prove a final dispatch marker. This is insufficient to distinguish an AI
+  backend failure from harness synchronization failure; no product fix is
+  authorized from these rows.
+- `xttest0`, `xtserial`, `coefplot`, and `margins` were expected as typed
+  rejections but Stata Studio returned results. This is a capability-registry/
+  harness expectation mismatch requiring reconciliation before rerun, not an
+  automatic product regression.
+- The `drbhatia` summarize failure is an alias/identity assertion mismatch and
+  requires normalized command/result matching.
+- The prior 22-row `section.main` run remains `HARNESS_INVALID` and is not
+  reused.
+
+No phase is promoted. The next validation must first reconcile the live
+capability registry and improve AI completion synchronization, then rerun the
+affected cases with a fresh run ID. The Git governance guard remains the
+Codex commit gate and currently reports unwritable metadata.

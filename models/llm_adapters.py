@@ -115,6 +115,9 @@ _THESIS_BLOCK = (
 )
 
 CONTEXT_BUDGET_TOKENS = 1500
+# Bump whenever result/context semantics change so stale narrative responses
+# cannot survive a model or panel-context contract change.
+AI_CACHE_REVISION = "wave6-8-context-v2"
 
 
 @functools.lru_cache(maxsize=64)
@@ -1571,7 +1574,7 @@ def generate_econometric_narrative(
 
     # Cache key
     cache_key = hashlib.sha256(prompt.encode()).hexdigest()
-    ctx_key = hashlib.sha256(f"{model_type}:{panel_mode}".encode()).hexdigest()
+    ctx_key = hashlib.sha256(f"{AI_CACHE_REVISION}:{model_type}:{panel_mode}".encode()).hexdigest()
     cached = db.ai_cache_get(cache_key, ctx_key, "claude-sonnet-4-6", ttl_hours=168)
     if cached:
         yield cached
@@ -1655,7 +1658,9 @@ def generate_page_insights(
     )
 
     cache_key = hashlib.sha256(prompt.encode()).hexdigest()
-    ctx_key = hashlib.sha256(_json.dumps(data_summary, default=str, sort_keys=True).encode()).hexdigest()
+    ctx_key = hashlib.sha256(
+        (f"{AI_CACHE_REVISION}:" + _json.dumps(data_summary, default=str, sort_keys=True)).encode()
+    ).hexdigest()
     cached = db.ai_cache_get(cache_key, ctx_key, "claude-sonnet-4-6", ttl_hours=24)
     if cached:
         yield cached

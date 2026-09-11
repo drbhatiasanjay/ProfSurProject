@@ -36,8 +36,12 @@ from models.stata_engine import (
     prepare_df_for_stata,
     _STORED_ESTIMATES,
 )
+from models.model_context import AnalysisSession
 
 ensure_session_state()
+if "analysis_session" not in st.session_state:
+    st.session_state["analysis_session"] = AnalysisSession()
+_analysis_session = st.session_state["analysis_session"]
 db.log_page_visit("Stata Studio")
 
 st.set_page_config(
@@ -457,7 +461,7 @@ with tab_cli:
         with output_placeholder.container():
             with st.spinner(f"⏳ Processing Stata command `.{active_cmd}`… Estimating econometric parameters & compiling results"):
                 t0 = time.time()
-                res = execute_stata_command(active_cmd, df=panel_df)
+                res = execute_stata_command(active_cmd, df=panel_df, session=_analysis_session)
                 elapsed = time.time() - t0
                 if elapsed < 0.6:
                     time.sleep(0.6 - elapsed)
@@ -732,20 +736,20 @@ with tab_esttab:
     st.markdown("### 📑 Multi-Model Comparison Table (`esttab` / `outreg2`)")
     st.caption("Publication-grade table comparing Pooled OLS, Firm Fixed Effects, and Random Effects side-by-side with cluster-adjusted standard errors in parentheses.")
 
-    df_stored = get_stored_models_table()
+    df_stored = get_stored_models_table(session=_analysis_session)
     if df_stored.empty:
         # Pre-populate with standard specifications
-        execute_stata_command("regress leverage profitability tangibility log_size", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=panel_df)
-        df_stored = get_stored_models_table()
+        execute_stata_command("regress leverage profitability tangibility log_size", df=panel_df, session=_analysis_session)
+        execute_stata_command("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=panel_df, session=_analysis_session)
+        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=panel_df, session=_analysis_session)
+        df_stored = get_stored_models_table(session=_analysis_session)
 
     st.dataframe(df_stored, use_container_width=True, hide_index=True)
 
     c_dl1, c_dl2, c_dl3 = st.columns(3)
     with c_dl1:
         # LaTeX Code Generation
-        latex_str = generate_esttab_latex()
+        latex_str = generate_esttab_latex(session=_analysis_session)
         st.download_button(
             "📥 Download LaTeX (.tex)",
             data=latex_str,
@@ -757,7 +761,7 @@ with tab_esttab:
         # Microsoft Word Export
         tmp_docx = os.path.join(os.getcwd(), "scratch", "stata_publication_table.docx")
         os.makedirs(os.path.dirname(tmp_docx), exist_ok=True)
-        docx_res = generate_esttab_docx(tmp_docx)
+        docx_res = generate_esttab_docx(tmp_docx, session=_analysis_session)
         if docx_res and os.path.exists(tmp_docx):
             with open(tmp_docx, "rb") as f_docx:
                 st.download_button(
@@ -792,7 +796,7 @@ with tab_coefplot:
     st.markdown("### 📈 Visual Determinants (`coefplot`)")
     st.caption("Point estimates with 95% confidence interval whiskers. Determinants with confidence intervals that do not cross zero (dashed line) are statistically significant.")
 
-    coef_res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=panel_df)
+    coef_res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=panel_df, session=_analysis_session)
     spec = coef_res.get("chart_spec", {})
 
     if spec and spec.get("categories"):

@@ -21,9 +21,13 @@ from components.research_artifact_renderer import (
     render_artifact_provenance,
     render_descriptive_metadata,
 )
+from models.model_context import AnalysisSession
 
 require_role("admin", "researcher", "viewer", "cfo", "guest")
 db.log_page_visit("ai_assistant_page")
+if "analysis_session" not in st.session_state:
+    st.session_state["analysis_session"] = AnalysisSession()
+_analysis_session = st.session_state["analysis_session"]
 
 # ── Session persistence lifecycle ─────────────────────────────────────────────
 _u = st.session_state.get("user") or {}
@@ -1024,7 +1028,7 @@ if user_q:
     if is_stata_cmd:
         from models.stata_engine import execute_stata_command
         exec_cmd = _q_clean if _q_clean.startswith(".") else f". {_q_clean}"
-        stata_res = execute_stata_command(exec_cmd)
+        stata_res = execute_stata_command(exec_cmd, session=_analysis_session)
         ascii_text = stata_res.get("ascii_output", "")
         interpretation = stata_res.get("interpretation", "")
         reply_content = f"```stata\n{exec_cmd}\n\n{ascii_text}\n```"

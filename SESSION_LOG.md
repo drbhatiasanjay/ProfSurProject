@@ -498,3 +498,19 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
   checkpoint. Runtime database mutation and historical untracked artifacts
   remain unstaged.
 
+## 2026-09-12 — Git governance repair checkpoint
+
+Codex preserved the Wave 6–8 remediation changes in the isolated worktree
+`codex/wave6-8-remediation-2026-09-12`. Ten focused tests, the fast gate, and
+changed-module compilation passed. Commit integration is blocked because
+Windows denies writes to the shared `.git\objects`, `.git\refs`, and worktree
+metadata; no stale index lock was present. The durable guard is
+`scripts/repo_governance_guard.py`. After the user restarts and repairs the
+repository ACL/read-only state, run the guard, commit only intentional files,
+rerun the focused/fast/optimized UI gates, and update this log with the actual
+commit and evidence. Deployment secrets hardening and the common MVP test
+password remain deferred by decision.
+
+User-observed smoke evidence: `drbhatia` opened Stata Studio and AI Assistant;
+chat-specific issues were deferred for later discussion. This does not replace
+automated matrix evidence.
