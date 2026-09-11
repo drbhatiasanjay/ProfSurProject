@@ -6,12 +6,18 @@ Includes forced contrast styles to prevent dark-on-dark terminal overrides.
 
 from typing import List, Dict, Any, Optional
 import html
+import re
 import textwrap
 
 
 def clean_html(raw_html: str) -> str:
     """Removes leading whitespace so markdown parsers never treat HTML as pre/code."""
     return textwrap.dedent(raw_html).strip()
+
+
+def _is_validated_status(status: object) -> bool:
+    """Match a standalone VALIDATED token; never treat NOT_VALIDATED as valid."""
+    return bool(re.search(r"(?<![A-Z_])VALIDATED(?![A-Z_])", str(status).upper()))
 
 
 def render_question_card_html(question_text: str, stata_cmd: Optional[str] = None, theme: str = "light") -> str:
@@ -117,7 +123,7 @@ def render_detailed_economic_commentary_html(
         theory = item.get("theory", "")
         status = item.get("status", "")
 
-        is_validated = "VALIDATED" in status
+        is_validated = _is_validated_status(status)
         if is_dark:
             badge_color = "#10B981" if is_validated else "#F59E0B"
             badge_bg = "rgba(16, 185, 129, 0.15)" if is_validated else "rgba(245, 158, 11, 0.15)"
@@ -205,8 +211,8 @@ def render_theory_scorecard_html(scorecard_data: List[Dict[str, Any]], theme: st
 
     rows_html = []
     for item in scorecard_data:
-        status_text = item.get("status", "VALIDATED")
-        is_val = "VALIDATED" in status_text
+        status_text = item.get("status", "")
+        is_val = _is_validated_status(status_text)
         if is_dark:
             badge_bg = "rgba(16, 185, 129, 0.15)" if is_val else "rgba(245, 158, 11, 0.15)"
             badge_text_color = "#10B981" if is_val else "#F59E0B"
