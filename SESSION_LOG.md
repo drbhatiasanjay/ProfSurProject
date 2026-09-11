@@ -543,3 +543,12 @@ automated matrix evidence.
 - Remaining dark-mode arrow/dropdown differences are explicitly deferred as
   cosmetic UI follow-up work.
 - Gemini continuation prompt: `docs/operations/GEMINI_HANDOFF_PROMPT_2026-09-12.md`.
+
+## 2026-09-12 — Gemini cosmetic polish & smoke closure
+
+- Dynamic theme styling applied for native sidebar collapse/expand controls (`<<` / `>>`) in `app.py`.
+- BaseWeb select containers and multiselect tag chips (`div[data-baseweb="tag"]`) styled with explicit dark-theme contrast in `assets/style_dark.css`.
+- AI Assistant chat input (`st.chat_input`) focus-within border glow and contrast polished.
+- Automated verification: 107 regression/token/page tests passed (100%), targeted smoke tests passed, `git diff --check` clean, Streamlit `/_stcore/health` returns `ok`.
+- Database exclusion preserved: `capital_structure.db` remains untracked/unstaged.
+

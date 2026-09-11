@@ -390,6 +390,11 @@ div[data-testid="stChatInput"] > div {
     border-radius: 18px !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
 }
+div[data-testid="stChatInput"]:focus-within,
+div[data-testid="stChatInput"] > div:focus-within {
+    border-color: #38BDF8 !important;
+    box-shadow: 0 0 0 1px #38BDF8, 0 8px 24px rgba(56, 189, 248, 0.15) !important;
+}
 div[data-testid="stChatInput"] textarea {
     background: #0B0E14 !important;
     color: #F8FAFC !important;
@@ -405,6 +410,11 @@ div[data-testid="stChatInput"] button svg {
     fill: #38BDF8 !important;
 }
 
+div[data-baseweb="select"] > div {
+    background-color: #141824 !important;
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
 div[data-baseweb="select"] span,
 div[data-baseweb="select"] div,
 [data-baseweb="popover"] span,
@@ -412,6 +422,19 @@ div[data-baseweb="select"] div,
 [data-baseweb="menu"] span,
 [data-baseweb="menu"] div {
     color: #F8FAFC !important;
+}
+
+div[data-baseweb="tag"] {
+    background-color: #1e293b !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+}
+div[data-baseweb="tag"] span {
+    color: #f1f5f9 !important;
+}
+div[data-baseweb="tag"] [role="presentation"],
+div[data-baseweb="tag"] svg {
+    color: #94a3b8 !important;
+    fill: #94a3b8 !important;
 }
 
 div[data-baseweb="popover"],

@@ -575,6 +575,7 @@ if _user_obj.get("role") == "viewer":
     _guest_name = st.session_state.get("guest_display_name", "")
     if _guest_name:
         _display_name = _guest_name
+
 _role_display = _user_obj.get("role", "viewer").title()
 _now_str      = datetime.now(_tz.utc).strftime("%a %d %b %Y · %H:%M UTC")
 
@@ -593,6 +594,9 @@ _tag_border = "rgba(79, 70, 229, 0.3)" if _theme == "light" else "rgba(99, 102, 
 _signout_bg = "rgba(244, 63, 94, 0.08)" if _theme == "light" else "rgba(244, 63, 94, 0.12)"
 _signout_color = "#E11D48" if _theme == "light" else "#FB7185"
 _signout_border = "rgba(225, 29, 72, 0.25)" if _theme == "light" else "rgba(244, 63, 94, 0.3)"
+_arrow_bg = "#FFFFFF" if _theme == "light" else "#0B0E14"
+_arrow_border = "rgba(79, 70, 229, 0.3)" if _theme == "light" else "#38BDF8"
+_arrow_color = "#4F46E5" if _theme == "light" else "#38BDF8"
 _panel_title = _panel_labels_map.get(_qp_panel, _qp_panel)
 
 st.markdown(f"""
@@ -673,10 +677,10 @@ button[data-testid="stSidebarCollapseButton"],
 [data-testid="stSidebarCollapseButton"] button {{
     top: calc(112px + 0.5rem) !important;
     z-index: 1000002 !important;
-    background: #0B0E14 !important;
-    border: 1px solid #38BDF8 !important;
+    background: {_arrow_bg} !important;
+    border: 1px solid {_arrow_border} !important;
     border-radius: 0.6rem !important;
-    color: #38BDF8 !important;
+    color: {_arrow_color} !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
 }}
 [data-testid="stSidebarCollapseButton"] button:hover {{
@@ -684,8 +688,8 @@ button[data-testid="stSidebarCollapseButton"],
     color: #ffffff !important;
 }}
 [data-testid="stSidebarCollapseButton"] svg {{
-    color: #38BDF8 !important;
-    fill: #38BDF8 !important;
+    color: {_arrow_color} !important;
+    fill: {_arrow_color} !important;
 }}
 /* Sidebar expand arrow (>>) — positioned below both rows, above everything */
 [data-testid="collapsedControl"],
@@ -696,10 +700,10 @@ button[data-testid="collapsedControl"],
     left: 0.5rem !important;
     visibility: visible !important;
     opacity: 1 !important;
-    background: #0B0E14 !important;
-    border: 1px solid #38BDF8 !important;
+    background: {_arrow_bg} !important;
+    border: 1px solid {_arrow_border} !important;
     border-radius: 0.6rem !important;
-    color: #38BDF8 !important;
+    color: {_arrow_color} !important;
     box-shadow: 0 2px 8px rgba(0,0,0,0.25) !important;
 }}
 [data-testid="collapsedControl"] button:hover {{
@@ -707,8 +711,8 @@ button[data-testid="collapsedControl"],
     color: #ffffff !important;
 }}
 [data-testid="collapsedControl"] svg {{
-    color: #38BDF8 !important;
-    fill: #38BDF8 !important;
+    color: {_arrow_color} !important;
+    fill: {_arrow_color} !important;
 }}
 /* Ensure any popover/dropdown appears above the fixed navbar */
 [data-baseweb="popover"] {{
