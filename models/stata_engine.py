@@ -12,6 +12,8 @@ Provides open-source mathematical and visual parity with Stata 17/18:
 import os
 import re
 import math
+import hashlib
+from contextvars import ContextVar
 from dataclasses import dataclass, asdict
 import numpy as np
 import pandas as pd
@@ -19,7 +21,16 @@ from scipy import stats
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+def fingerprint_frame(df: pd.DataFrame) -> str:
+    """Compute deterministic sha256 fingerprint for a DataFrame."""
+    if df is None or df.empty:
+        return "sha256:empty"
+    try:
+        cols = sorted([str(c) for c in df.columns])
+        val_bytes = pd.util.hash_pandas_object(df[cols], index=True).values.tobytes()
+        return f"sha256:{hashlib.sha256(val_bytes).hexdigest()[:16]}"
+    except Exception:
+        return f"sha256:{hashlib.sha256(str(df.shape).encode('utf-8')).hexdigest()[:16]}"
 
 try:
     import docx
@@ -42,10 +53,38 @@ class PanelContext:
     has_duplicates: bool = False
     gaps: bool = False
 
-# Global session panel context & stored estimates
+# Compatibility state is used only by legacy callers. Explicit AnalysisSession
+# requests receive an isolated state through the ContextVar below.
 _ACTIVE_PANEL_CONTEXT: PanelContext | None = None
 _STORED_ESTIMATES = {}
 _LAST_ESTIMATE = None
+_DEFAULT_ANALYSIS_STATE = type("_AnalysisState", (), {"stored": _STORED_ESTIMATES, "last": None})()
+_CURRENT_ANALYSIS_STATE = ContextVar("prof_sur_analysis_state", default=_DEFAULT_ANALYSIS_STATE)
+
+
+def _analysis_state():
+    return _CURRENT_ANALYSIS_STATE.get()
+
+
+def _analysis_stored():
+    return _analysis_state().stored
+
+
+def _analysis_last():
+    return _analysis_state().last
+
+
+def _result_identity(command: str, estimation_frame: pd.DataFrame, estimator: str) -> dict:
+    """Create stable identity metadata for post-estimation consumers."""
+    sample_fingerprint = fingerprint_frame(estimation_frame)
+    command_digest = hashlib.sha256(command.encode("utf-8")).hexdigest()[:16]
+    model_id = f"{estimator}:{sample_fingerprint[:16]}:{command_digest}"
+    return {
+        "model_id": model_id,
+        "estimator": estimator,
+        "dataset_fingerprint": fingerprint_frame(estimation_frame),
+        "sample_fingerprint": sample_fingerprint,
+    }
 
 COMMON_VAR_ALIASES = {
     "prof": "profitability",
@@ -317,10 +356,28 @@ def parse_stata_command(cmd_str: str) -> dict:
     }
 
 
-def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
-    """Execute a Stata command against the provided or active panel dataset."""
-    global _STORED_ESTIMATES, _LAST_ESTIMATE
+def execute_stata_command(cmd_str: str, df: pd.DataFrame = None, session=None) -> dict:
+    """Execute a command with optional request/session-scoped estimation state."""
+    if session is None:
+        return _execute_stata_command(cmd_str, df=df)
+    state = type("_AnalysisState", (), {
+        "stored": session.runtime_estimates,
+        "last": session.last_estimate,
+        "panel": session.panel_context,
+        "session": session,
+    })()
+    token = _CURRENT_ANALYSIS_STATE.set(state)
+    try:
+        result = _execute_stata_command(cmd_str, df=df)
+        session.last_estimate = state.last
+        session.panel_context = state.panel
+        return result
+    finally:
+        _CURRENT_ANALYSIS_STATE.reset(token)
 
+
+def _execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
+    """Execute a Stata command against the provided or active panel dataset."""
     if df is None:
         try:
             import db
@@ -340,7 +397,9 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
     cmd = parsed["cmd"]
 
     try:
-        if cmd in ("summarize", "sum"):
+        if cmd in ("describe", "des", "d", "codebook"):
+            res = _handle_describe(parsed, df)
+        elif cmd in ("summarize", "sum"):
             res = _handle_summarize(parsed, df)
         elif cmd == "tabstat":
             res = _handle_tabstat(parsed, df)
@@ -364,11 +423,11 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
         elif cmd in ("estimates", "estimate"):
             if parsed["indepvars"] and parsed["indepvars"][0] == "store":
                 name = parsed["indepvars"][1] if len(parsed["indepvars"]) > 1 else "m1"
-                if _LAST_ESTIMATE:
-                    _STORED_ESTIMATES[name] = _LAST_ESTIMATE
+                if _analysis_last():
+                    _analysis_stored()[name] = _analysis_last()
                     return {"status": "success", "message": f"Saved current model as '{name}'", "ascii_output": f"(estimates stored as {name})"}
                 return {"status": "error", "message": "No estimation results found to store.", "ascii_output": "r(301); last estimates not found"}
-            return {"status": "success", "ascii_output": f"Stored estimates: {list(_STORED_ESTIMATES.keys())}"}
+            return {"status": "success", "ascii_output": f"Stored estimates: {list(_analysis_stored().keys())}"}
         elif cmd == "esttab":
             res = _handle_esttab(parsed, df)
         elif cmd == "coefplot":
@@ -403,6 +462,7 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
             supported_list_str = ", ".join(supported_cmds[:10]) + ", etc."
             return {
                 "status": "unsupported",
+                "error_code": "UNSUPPORTED_COMMAND",
                 "command": cmd,
                 "message": f"Command '{cmd}' is not currently supported in Stata Studio.",
                 "admin_contact": "admin@lifecycle-leverage.internal",
@@ -417,6 +477,8 @@ def execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
     except Exception as exec_err:
         return {
             "status": "error",
+            "error_code": "ENGINE_FAILURE",
+            "command": parsed.get("raw", cmd_str),
             "message": str(exec_err),
             "ascii_output": f"r(459); model estimation error: {exec_err}",
         }
@@ -668,6 +730,48 @@ def generate_stata_inference(parsed: dict, result: dict, df: pd.DataFrame) -> st
 
 
 # ── Stata Command Handlers ──
+
+def _handle_describe(parsed: dict, df: pd.DataFrame) -> dict:
+    n_obs, n_vars = df.shape
+    lines = [
+        f". {parsed.get('raw', 'describe')}",
+        "",
+        "Contains data",
+        f" Observations:        {n_obs:>10,}",
+        f"    Variables:        {n_vars:>10,}",
+        "-" * 78,
+        f"{'Variable':<16}{'Storage':<10}{'Display':<10}{'Value':<10}{'Variable label':<30}",
+        f"{'    name':<16}{'   type':<10}{' format':<10}{'label':<10}",
+        "-" * 78,
+    ]
+    for col in df.columns:
+        dtype = str(df[col].dtype)
+        if "int" in dtype:
+            st_type = "int"
+            fmt = "%8.0g"
+        elif "float" in dtype:
+            st_type = "float"
+            fmt = "%9.4f"
+        elif "object" in dtype or "str" in dtype:
+            st_type = f"str{min(max(df[col].astype(str).str.len().max() if len(df) else 12, 4), 32)}"
+            fmt = f"%{st_type[3:]}s"
+        else:
+            st_type = dtype
+            fmt = "%9s"
+
+        lbl = COMMON_VAR_ALIASES.get(col, col.replace("_", " ").title())
+        lines.append(f"{col:<16}{st_type:<10}{fmt:<10}{'':<10}{lbl:<30}")
+
+    lines.append("-" * 78)
+    ascii_out = "\n".join(lines)
+    return {
+        "status": "success",
+        "command": parsed.get("raw", "describe"),
+        "ascii_output": ascii_out,
+        "n_obs": n_obs,
+        "n_vars": n_vars,
+    }
+
 
 def _handle_summarize(parsed: dict, df: pd.DataFrame) -> dict:
     raw_vars = parsed.get("indepvars", [])
@@ -964,7 +1068,6 @@ def format_stata_panel_header(
 
 
 def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
-    global _LAST_ESTIMATE
     depvar = resolve_panel_variable(parsed.get("depvar"), df.columns) or "leverage"
     raw_vars = parsed.get("indepvars", [])
     indepvars = []
@@ -1039,10 +1142,11 @@ def _handle_regress(parsed: dict, df: pd.DataFrame) -> dict:
         "coefficients": coefs,
         "ascii_output": "\n".join(lines),
         "result_obj": result,
+        **_result_identity(parsed["raw"], sub[[depvar] + indepvars], "OLS"),
     }
     estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
-    _LAST_ESTIMATE = estimate_obj
-    _STORED_ESTIMATES["ols"] = estimate_obj
+    _analysis_state().last = estimate_obj
+    _analysis_stored()["ols"] = estimate_obj
 
     return {
         "status": "success",
@@ -1142,7 +1246,6 @@ def expand_stata_terms(raw_terms: list, df: pd.DataFrame):
 
 
 def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
-    global _LAST_ESTIMATE
     from linearmodels.panel import PanelOLS, RandomEffects
 
     depvar_resolved = resolve_panel_variable(parsed.get("depvar"), df.columns, df=df) or "leverage"
@@ -1151,8 +1254,16 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         raw_vars = ["profitability", "tangibility", "log_size"]
 
     is_fe = "re" not in parsed["options"]
-    entity_col = "company_code" if "company_code" in df.columns else ("companycode" if "companycode" in df.columns else df.columns[0])
-    time_col = "year" if "year" in df.columns else df.columns[1]
+    panel = getattr(_analysis_state(), "panel", None)
+    entity_col = panel.panel_var if panel is not None and panel.panel_var in df.columns else ("company_code" if "company_code" in df.columns else ("companycode" if "companycode" in df.columns else None))
+    time_col = panel.time_var if panel is not None and panel.time_var in df.columns else ("year" if "year" in df.columns else None)
+    if entity_col is None or time_col is None:
+        return {
+            "status": "error",
+            "error_code": "PANEL_NOT_SET",
+            "message": "Panel is not set. Run xtset <panelvar> <timevar> before xtreg.",
+            "ascii_output": "r(459); panel variables are not set",
+        }
 
     # Expand Stata interaction / factor terms
     X_matrix, term_labels, collinear_notes = expand_stata_terms(raw_vars, df)
@@ -1183,11 +1294,6 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
     est_df = est_df.set_index([entity_col, time_col])
 
     y = est_df[depvar_resolved]
-    # Stata parity: leverage is stored as percentage (avg ~20) but Stata models use ratio (0–1).
-    # Automatically normalise if mean > 1.0 and the variable name maps to a leverage concept.
-    _LEVERAGE_ALIASES = {"leverage", "lev", "lev_pct", "debt_ratio", "td_ta", "de", "debt_equity"}
-    if depvar_resolved in _LEVERAGE_ALIASES and float(y.mean()) > 1.0:
-        y = y / 100.0
     X = est_df[X_matrix.columns]
 
     # 1. Drop zero variance / constant columns before model estimation
@@ -1229,27 +1335,13 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
             res = mod.fit(cov_type="clustered" if clustered else "unadjusted", cluster_entity=True if clustered else False)
             m_label = "Fixed-effects (within) regression"
             m_type = "Fixed Effects"
-        except Exception:
-            mean_y = y.groupby(level=0).transform("mean")
-            y_dm = y - mean_y
-            mean_X = X.groupby(level=0).transform("mean")
-            X_dm = X - mean_X
-            valid_cols = [c for c in X_dm.columns if X_dm[c].std() > 1e-8]
-            for c in [col for col in X_dm.columns if col not in valid_cols]:
-                col_note = f"note: {c} omitted because of collinearity."
-                if col_note not in collinear_notes:
-                    collinear_notes.append(col_note)
-            if len(valid_cols) == 0:
-                return {
-                    "status": "error",
-                    "message": "Within-entity variation is zero across all regressors (r(459)).",
-                    "ascii_output": "r(459); no within-group variation in regressors",
-                }
-            X_dm = X_dm[valid_cols]
-            ols_mod = sm.OLS(y_dm, X_dm)
-            res = ols_mod.fit(cov_type="HC1" if clustered else "nonrobust")
-            m_label = "Fixed-effects (within) regression"
-            m_type = "Fixed Effects"
+        except Exception as exc:
+            return {
+                "status": "error",
+                "error_code": "ESTIMATION_FAILURE",
+                "message": f"Fixed-effects estimation failed: {exc}",
+                "ascii_output": "r(430); fixed-effects estimator failed",
+            }
     else:
         # Random Effects
         try:
@@ -1258,11 +1350,13 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
             res = mod.fit()
             m_label = "Random-effects GLS regression"
             m_type = "Random Effects"
-        except Exception:
-            ols_mod = sm.OLS(y, sm.add_constant(X))
-            res = ols_mod.fit()
-            m_label = "Random-effects GLS regression"
-            m_type = "Random Effects"
+        except Exception as exc:
+            return {
+                "status": "error",
+                "error_code": "ESTIMATION_FAILURE",
+                "message": f"Random-effects estimation failed: {exc}",
+                "ascii_output": "r(430); random-effects estimator failed",
+            }
 
     # Capture any columns absorbed or dropped due to collinearity
     dropped_cols = [c for c in X.columns if c not in res.params.index]
@@ -1334,6 +1428,7 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         "coefficients": coefs,
         "ascii_output": "\n".join(l for l in lines if l),
         "result_obj": res,
+        **_result_identity(parsed["raw"], est_df.reset_index(), m_type),
     }
     estimate_obj["chart_spec"] = _build_coefplot_chart_spec(estimate_obj)
 
@@ -1377,9 +1472,9 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
         estimate_obj["theory_scorecard"] = []
         estimate_obj["compatible_charts"] = [{"id": "forest_plot", "label": "Forest Plot (95% CI)"}]
 
-    _LAST_ESTIMATE = estimate_obj
+    _analysis_state().last = estimate_obj
     store_key = "fe" if is_fe else "re"
-    _STORED_ESTIMATES[store_key] = estimate_obj
+    _analysis_stored()[store_key] = estimate_obj
 
     return {
         "status": "success",
@@ -1390,13 +1485,15 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
 
 def _handle_hausman(parsed: dict, df: pd.DataFrame) -> dict:
     from models.econometric import run_hausman_test
-    global _STORED_ESTIMATES
-    fe_est = _STORED_ESTIMATES.get("fe")
-    re_est = _STORED_ESTIMATES.get("re")
-    if not fe_est:
-        fe_est = execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
-    if not re_est:
-        re_est = execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=df)
+    fe_est = _analysis_stored().get("fe")
+    re_est = _analysis_stored().get("re")
+    if not fe_est or not re_est:
+        return {
+            "status": "error",
+            "error_code": "MODEL_STORE_INCOMPLETE",
+            "message": "Hausman requires stored FE and RE estimates from the same dataset and sample.",
+            "ascii_output": "r(301); FE and RE estimates required",
+        }
 
     res = run_hausman_test(fe_est, re_est)
     chi2 = float(res.get("chi2", 24.5))
@@ -1415,6 +1512,8 @@ def _handle_hausman(parsed: dict, df: pd.DataFrame) -> dict:
     return {
         "status": "success",
         "command": parsed["raw"],
+        "fe_model_id": fe_est.get("model_id"),
+        "re_model_id": re_est.get("model_id"),
         "chi2": chi2,
         "p_value": pval,
         "verdict": verdict,
@@ -1423,8 +1522,18 @@ def _handle_hausman(parsed: dict, df: pd.DataFrame) -> dict:
 
 
 def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
-    vars_to_check = ["profitability", "tangibility", "log_size", "tax", "dividend", "tax_shield"]
-    avail_vars = [v for v in vars_to_check if v in df.columns]
+    requested = [resolve_panel_variable(v, df.columns, df=df) for v in parsed.get("indepvars", [])]
+    avail_vars = [v for v in requested if v in df.columns]
+    if not avail_vars and _analysis_last():
+        model_vars = _analysis_last().get("indepvars", [])
+        avail_vars = [v for v in model_vars if v in df.columns]
+    if not avail_vars:
+        return {
+            "status": "error",
+            "error_code": "VARIABLES_REQUIRED",
+            "message": "estat vif requires the regressors to be provided or bound to an active model.",
+            "ascii_output": "r(102); variables required",
+        }
     sub = df[avail_vars].apply(pd.to_numeric, errors="coerce").dropna()
     X = sm.add_constant(sub)
 
@@ -1448,6 +1557,8 @@ def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
     return {
         "status": "success",
         "command": parsed["raw"],
+        "model_id": _analysis_last().get("model_id") if _analysis_last() else None,
+        "sample_fingerprint": _analysis_last().get("sample_fingerprint") if _analysis_last() else None,
         "vif_data": vifs,
         "mean_vif": mean_vif,
         "ascii_output": "\n".join(lines),
@@ -1455,12 +1566,27 @@ def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
 
 
 def _handle_coefplot(parsed: dict, df: pd.DataFrame) -> dict:
-    global _LAST_ESTIMATE
-    est = _LAST_ESTIMATE
+    requested_terms = parsed.get("indepvars", [])
+    requested_name = requested_terms[0] if requested_terms else None
+    stored = _analysis_stored()
+    if requested_name:
+        est = stored.get(requested_name)
+    elif len(stored) > 1:
+        return {
+            "status": "error",
+            "error_code": "MODEL_ID_REQUIRED",
+            "message": "coefplot is ambiguous; specify a stored model name.",
+            "ascii_output": "r(198); explicit model identifier required",
+        }
+    else:
+        est = _analysis_last()
     if not est:
-        # Run default FE model
-        execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
-        est = _LAST_ESTIMATE
+        return {
+            "status": "error",
+            "error_code": "MODEL_STORE_EMPTY",
+            "message": "coefplot requires an existing estimation result; run an estimator first.",
+            "ascii_output": "r(301); last estimates not found",
+        }
 
     drop_cons = "drop(_cons)" in parsed["raw"] or parsed["options"].get("drop") == "_cons"
     chart_spec = _build_coefplot_chart_spec(est, drop_cons=drop_cons)
@@ -1469,6 +1595,8 @@ def _handle_coefplot(parsed: dict, df: pd.DataFrame) -> dict:
     return {
         "status": "success",
         "command": parsed["raw"],
+        "model_id": est.get("model_id"),
+        "sample_fingerprint": est.get("sample_fingerprint"),
         "chart_spec": chart_spec,
         "ascii_output": f"Generated coefplot for {cat_len} determinants.",
     }
@@ -1646,11 +1774,24 @@ def _handle_twoway(parsed: dict, df: pd.DataFrame) -> dict:
 
 
 def _handle_esttab(parsed: dict, df: pd.DataFrame) -> dict:
-    global _STORED_ESTIMATES
-    if not _STORED_ESTIMATES:
-        execute_stata_command("regress leverage profitability tangibility log_size", df=df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=df)
+    requested = [v for v in parsed.get("indepvars", []) if v not in {"esttab", "using"}]
+    stored = _analysis_stored()
+    if requested:
+        missing = [name for name in requested if name not in stored]
+        if missing:
+            return {
+                "status": "error",
+                "error_code": "MODEL_NOT_FOUND",
+                "message": f"Stored model(s) not found: {', '.join(missing)}",
+                "ascii_output": "r(111); stored estimates not found",
+            }
+    elif not stored:
+        return {
+            "status": "error",
+            "error_code": "MODEL_STORE_EMPTY",
+            "message": "esttab requires explicitly stored estimation results.",
+            "ascii_output": "r(301); no stored estimates",
+        }
 
     table_data = get_stored_models_table()
     latex = generate_esttab_latex()
@@ -1972,10 +2113,11 @@ def _handle_margins(parsed: dict, df: pd.DataFrame) -> dict:
     ci_highs = []
     for _, row in stage_means.iterrows():
         grp = str(row[grp_col])
+        # Preserve the dataset's declared leverage units.  Do not infer a
+        # percentage-to-ratio conversion from the sample mean: filtering can
+        # change that mean and silently change the estimand's scale.
         m = float(row['mean'])
-        if m > 1.0:
-            m = m / 100.0
-        se = float((row['std'] / (100.0 if row['std'] > 1.0 else 1.0)) / np.sqrt(row['count']))
+        se = float(row['std'] / np.sqrt(row['count']))
         z = float(m / max(se, 1e-6))
         ci_l = max(0.0, m - 1.96 * se)
         ci_h = m + 1.96 * se
@@ -2126,14 +2268,14 @@ def _handle_thesis(parsed: dict, df: pd.DataFrame) -> dict:
 
 def _handle_xtset(parsed: dict, df: pd.DataFrame) -> dict:
     """Declare or query longitudinal panel dimensions (panel_var, time_var)."""
-    global _ACTIVE_PANEL_CONTEXT
     indepvars = parsed.get("indepvars", [])
     valid_cols = list(df.columns)
 
     if not indepvars:
         # Query current panel setting
-        if _ACTIVE_PANEL_CONTEXT is not None:
-            ctx = _ACTIVE_PANEL_CONTEXT
+        current_panel = getattr(_analysis_state(), "panel", None)
+        if current_panel is not None:
+            ctx = current_panel
             bal_str = "strongly balanced" if ctx.is_balanced else "unbalanced"
             ascii_out = (
                 f"       panel variable:  {ctx.panel_var} ({bal_str})\n"
@@ -2149,10 +2291,12 @@ def _handle_xtset(parsed: dict, df: pd.DataFrame) -> dict:
                 "ascii_output": ascii_out,
                 "message": f"Active panel setting: {ctx.panel_var} {ctx.time_var}",
             }
-        else:
-            p_var = "company_code" if "company_code" in df.columns else df.columns[0]
-            t_var = "year" if "year" in df.columns else (df.columns[1] if len(df.columns) > 1 else None)
-            indepvars = [p_var, t_var] if t_var else [p_var]
+        return {
+            "status": "error",
+            "error_code": "PANEL_NOT_SET",
+            "message": "Panel is not set. Specify xtset <panelvar> <timevar> first.",
+            "ascii_output": "r(459); panel variables are not set",
+        }
 
     p_raw = indepvars[0]
     p_var = resolve_panel_variable(p_raw, valid_cols, df)
@@ -2225,7 +2369,9 @@ def _handle_xtset(parsed: dict, df: pd.DataFrame) -> dict:
         has_duplicates=has_dups,
         gaps=not is_strongly_balanced,
     )
-    _ACTIVE_PANEL_CONTEXT = ctx
+    _analysis_state().panel = ctx
+    if hasattr(_analysis_state(), "session"):
+        _analysis_state().session.panel_context = ctx
 
     try:
         import streamlit as st
@@ -2392,14 +2538,14 @@ def _handle_lgraph(parsed: dict, df: pd.DataFrame) -> dict:
     }
 
 
-def get_stored_models_table() -> pd.DataFrame:
+def get_stored_models_table(session=None) -> pd.DataFrame:
     """Format stored models into a standard side-by-side comparison DataFrame."""
-    global _STORED_ESTIMATES
-    if not _STORED_ESTIMATES:
+    stored = session.runtime_estimates if session is not None else _analysis_stored()
+    if not stored:
         return pd.DataFrame()
 
     all_vars = []
-    for m in _STORED_ESTIMATES.values():
+    for m in stored.values():
         for v in m.get("coefficients", {}).keys():
             if v not in all_vars and v != "_cons":
                 all_vars.append(v)
@@ -2410,7 +2556,7 @@ def get_stored_models_table() -> pd.DataFrame:
     for var in all_vars:
         coef_row = {"Variable": var}
         se_row = {"Variable": ""}
-        for m_name, m in _STORED_ESTIMATES.items():
+        for m_name, m in stored.items():
             coef_data = m.get("coefficients", {}).get(var)
             if coef_data:
                 c = coef_data["coef"]
@@ -2429,7 +2575,7 @@ def get_stored_models_table() -> pd.DataFrame:
     n_row = {"Variable": "Observations"}
     r2_row = {"Variable": "R-squared"}
     fe_row = {"Variable": "Firm Fixed Effects"}
-    for m_name, m in _STORED_ESTIMATES.items():
+    for m_name, m in stored.items():
         n_row[m_name] = f"{m.get('n_obs', 0):,}"
         r2_row[m_name] = f"{m.get('r2', 0.0):.4f}"
         fe_row[m_name] = "Yes" if "Fixed" in m.get("model_type", "") else "No"
@@ -2438,9 +2584,9 @@ def get_stored_models_table() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def generate_esttab_latex() -> str:
+def generate_esttab_latex(session=None) -> str:
     """Generate publication-ready LaTeX code matching Stata esttab / outreg2."""
-    df_table = get_stored_models_table()
+    df_table = get_stored_models_table(session=session)
     if df_table.empty:
         return "% No models estimated yet"
 
@@ -2475,7 +2621,7 @@ def generate_esttab_latex() -> str:
     return "\n".join(lines)
 
 
-def generate_esttab_docx(output_path: str) -> str | None:
+def generate_esttab_docx(output_path: str, session=None) -> str | None:
     """Export the esttab multi-model comparison table to Microsoft Word (.docx)."""
     if not DOCX_AVAILABLE:
         return None
@@ -2486,7 +2632,7 @@ def generate_esttab_docx(output_path: str) -> str | None:
         doc.add_heading("LifeCycle Leverage — Stata Econometric Replication", level=1)
         doc.add_paragraph("Table: Panel Regression Models with Cluster-Robust Standard Errors")
 
-        df_table = get_stored_models_table()
+        df_table = get_stored_models_table(session=session)
         if df_table.empty:
             doc.add_paragraph("No regression models estimated yet.")
             doc.save(output_path)

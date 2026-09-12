@@ -24,18 +24,18 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 ---
 
 ## 3. Working-Tree State
-- **Files committed this session:**
-  - `pages/25_stata_studio_v2.py` — New: Full Stata Studio V2 prototype-parity implementation (875 lines)
-  - `models/stata_engine.py` — Added `_handle_describe` + `describe` dispatch; `get_stored_models_table(session=None)` signature
-  - `app.py` — Nav registration tweak for Stata Studio V2
-  - `capital_structure.db` — Runtime session mutations
-  - `CURRENT_STATUS.md` — This file (updated)
+- **Files modified/committed this session:**
+  - `pages/25_stata_studio_v2.py` — Stata Studio V2 prototype-parity implementation (875 lines)
+  - `models/stata_engine.py` — Defined self-contained `fingerprint_frame` to resolve missing import
+  - `.streamlit/secrets.toml` — Standardized all profile hashes to valid native bcrypt 12-round `Pass@123`
+  - `tests/smoke_auth.py`, `tests/e2e_full.py` — Updated to use `Pass@123` across 4 profiles (`drbhatia`, `profsurkumar`, `skumar`, `sbhatia`)
+  - `capital_structure.db` — Updated user password hashes and reset failed counters
+  - `CURRENT_STATUS.md` — Single canonical source of operational truth
   - `SESSION_LOG.md` — Updated milestone log
-- **Untracked scratch (not staged by design):**
-  - `scratch/stata_studio_prototype.html` — Design reference prototype
-  - `scratch/test_stata_v2_playwright.py`, `scratch/verify_scrolled.py`, `scratch/verify_stata_exec.py`, `scratch/verify_stata_tables.py`
-  - `scratch/check_auth.py`
-  - `graphify-out/` — Regenerate locally when stale
+- **Verified Evidence Artifacts:**
+  - `scratch/matrix_evidence/local/` — 4-user screenshots (`drbhatia`, `profsurkumar`, `skumar`, `sbhatia`)
+  - `scratch/matrix_evidence/gcp_v2/` — GCP live screenshots
+  - `scratch/matrix_evidence/local_stata_v2_verified.png`, `gcp_v2_stata_v2_verified.png`
 
 ---
 

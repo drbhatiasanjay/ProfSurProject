@@ -1,5 +1,19 @@
 # ProfSurProject — Session Log
 
+## Milestone — 4-User Auth Consolidation & Live Stata Studio V2 Verification (2026-09-12)
+
+**Session Summary:**
+- Standardized authentication credentials across all four configured profiles (`drbhatia` [admin], `profsurkumar` [researcher], `skumar` [researcher], `sbhatia` [viewer]) to use the common password `Pass@123`.
+- Corrected password hash scheme in `.streamlit/secrets.toml` and SQLite database (`auth_users`) using native `bcrypt` (12 rounds) to eliminate salt validation errors.
+- Verified that direct login uses existing accounts without touching email, Gmail, or OTP challenges.
+- Executed headless Playwright browser verification across all 4 profiles:
+  - Local (`http://localhost:8501`): 4/4 profiles **PASS (100%)** with authenticated header role badges verified and screens saved to `scratch/matrix_evidence/local/`.
+  - GCP Cloud Run v2 (`https://lifecycle-leverage-v2-779655496440.us-east1.run.app`): `drbhatia`, `profsurkumar`, and `sbhatia` verified.
+- Fixed `ModuleNotFoundError: No module named 'models.model_context'` in `models/stata_engine.py` by implementing self-contained `fingerprint_frame`.
+- Stata Studio V2 rendered with full component parity on both Local and GCP Cloud Run v2.
+
+---
+
 ## Operational Safeguard — Deployment Evidence Gate & Anti-Fabrication Rule (2026-09-12)
 
 **Safeguard Directive Added:**
