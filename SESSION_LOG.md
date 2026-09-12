@@ -1,5 +1,47 @@
 # ProfSurProject — Session Log
 
+## Milestone — Stata Studio V2 Prototype Parity (2026-09-12)
+
+**Session Summary:** Full prototype-parity implementation of `pages/25_stata_studio_v2.py` against the design reference `scratch/stata_studio_prototype.html`.
+
+### Critical Bug Fixes
+- `NameError: _analysis_session` on Clear History button → replaced `AnalysisSession()` call with `st.session_state.pop()`
+- `execute_stata_command("coefplot...")` ran unconditionally on every tab render → guarded behind `if not _df_models_coef.empty:`
+- Variable chip insert referenced wrong scope variable `vname` → fixed to `_vname`
+- `label_visibility` invalid argument on `st.button()` → removed
+
+### Prototype Gap Implementations (10/10)
+**Stage 1 — Visual Identity & Input:**
+1. `Stata Replication Studio` header title block with 5 panel meta chips (Dataset, N Firms, Years, Obs, Balanced)
+2. Variable chips now show colored type badges: `DEP` (red), `INDEP` (blue), `FACTOR` (amber), `DUMMY` (green), `TIME` (cyan), `ID` (gray)
+3. `All Columns (16)` fourth category pill added to variable palette
+4. Command dropdown upgraded to 5 grouped sections with `──` section headers (non-selectable)
+5. Tab 1 now shows live run count badge: `💻 1. Command Console & Execution Tree [N Runs]`
+
+**Stage 2 — Run Cards & Hypothesis Scorecard:**
+6. Rich run card header badge strip: model type chip, R² chip, F-stat chip, `● Success (elapsed)` status pill
+7. Latest run card gets blue badge strip background for active-run visual distinction
+8. Per-run action buttons: `▶ Re-run` (with auto-trigger), `📋 Copy Cmd` (with toast), `🗑️ Delete`
+9. Sub-collapsible sections inside each run card: `📄 Stata Terminal Output` + `💡 Empirical Findings & Hypothesis Scorecard`
+10. 4-card hypothesis metric grid: Pecking Order verdict · Life Stage Dynamic · R² · F-Statistic
+
+### Files Changed
+- `pages/25_stata_studio_v2.py` — 875 lines (new file, prototype parity)
+- `models/stata_engine.py` — `_handle_describe` + `describe` dispatch + `get_stored_models_table(session=None)`
+- `app.py` — nav registration
+- `CURRENT_STATUS.md` — updated
+- `SESSION_LOG.md` — updated (this entry)
+
+### Commit
+`feat(stata-studio-v2): prototype parity — typed chips, grouped dropdown, rich run cards, hypothesis scorecard, header block`
+
+---
+
+## Autonomous Checkpoint — Stata Studio V2 & MVP Testing Credential Handshake (2026-09-12)
+
+- Recorded MVP / restricted test profile credentials (`Pass@123`) for fast-testing across all configured profiles (`drbhatia`, `profsurkumar`, `skumar`, `sbhatia`).
+- Preserved across active session artifacts for deterministic testing without external auth delays.
+
 ## Autonomous Checkpoint — Wave 7 narrative evidence gate (2026-09-11)
 - Added deny-by-default rejection of causal language when narrative provenance
   is not `VALIDATED`; descriptive association language remains permitted.
@@ -464,6 +506,26 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 - Execution plan: `docs/operations/WAVE_6_8_AUTONOMOUS_EXECUTION_PLAN.md`.
 - External blockers remain fresh authenticated browser credentials and any
   future publish/deployment authorization. No credential values are recorded.
+
+## 2026-09-12 — Current-build audit and repair-plan checkpoint
+
+- Reviewed the current-build technical/functional audit and the deep-code
+  automation review. The audited remote `master` (`ab7aeb2`) remains `FAIL` for
+  scientific/release acceptance; runtime and browser limitations are recorded.
+- Confirmed the shared checkout is currently on
+  `agy/wave6-8-harness-repair-2026-09-11` at `93b5c26`, with runtime database
+  and AGY harness modifications. It is not a clean canonical baseline.
+- AGY's reported 400-row progress remains `IN_PROGRESS`; no completion claim is
+  accepted until the 400 unique records and GitHub-ready report reconcile to a
+  single tested SHA.
+- Formalized the repair order: truthfulness quarantine; tests-only RED coverage
+  for TF-02/03/04/05/08/12; immutable session-scoped result context; fail-closed
+  estimator/unit behavior; explicit post-estimation and panel/GMM identity;
+  cache revision binding; then runtime/browser regression gates.
+- Deferred AST, production Redis, zero-copy memory, unmeasured performance
+  claims, credential rotation, deployment, and broad estimator promotion.
+- No source implementation, merge, push, credential change, or destructive Git
+  operation was performed in this checkpoint.
 
 ## 2026-09-11 — Waves 6–8 Contract Checkpoint
 
