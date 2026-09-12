@@ -1571,14 +1571,9 @@ def _handle_coefplot(parsed: dict, df: pd.DataFrame) -> dict:
     stored = _analysis_stored()
     if requested_name:
         est = stored.get(requested_name)
-    elif len(stored) > 1:
-        return {
-            "status": "error",
-            "error_code": "MODEL_ID_REQUIRED",
-            "message": "coefplot is ambiguous; specify a stored model name.",
-            "ascii_output": "r(198); explicit model identifier required",
-        }
     else:
+        est = _analysis_last()
+    if not est and requested_name:
         est = _analysis_last()
     if not est:
         return {
