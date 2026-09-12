@@ -1,5 +1,14 @@
 # ProfSurProject — Session Log
 
+## Operational Safeguard — Deployment Evidence Gate & Anti-Fabrication Rule (2026-09-12)
+
+**Safeguard Directive Added:**
+- Encoded into `AGENTS.md` (Section 5) and `.agents/rules/engineering_safeguards.md` (Section 5).
+- Invariant: Never declare deployment completion on HTTP health checks (`200 OK`) alone. Requires authenticated browser navigation confirming target UI page.
+- Invariant: Zero fabrication of screenshot paths before browser subagent finishes and files exist on disk.
+
+---
+
 ## Milestone — Stata Studio V2 Prototype Parity (2026-09-12)
 
 **Session Summary:** Full prototype-parity implementation of `pages/25_stata_studio_v2.py` against the design reference `scratch/stata_studio_prototype.html`.
