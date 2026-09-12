@@ -389,7 +389,9 @@ def _execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
     cmd = parsed["cmd"]
 
     try:
-        if cmd in ("summarize", "sum"):
+        if cmd in ("describe", "des", "d", "codebook"):
+            res = _handle_describe(parsed, df)
+        elif cmd in ("summarize", "sum"):
             res = _handle_summarize(parsed, df)
         elif cmd == "tabstat":
             res = _handle_tabstat(parsed, df)
@@ -720,6 +722,48 @@ def generate_stata_inference(parsed: dict, result: dict, df: pd.DataFrame) -> st
 
 
 # ── Stata Command Handlers ──
+
+def _handle_describe(parsed: dict, df: pd.DataFrame) -> dict:
+    n_obs, n_vars = df.shape
+    lines = [
+        f". {parsed.get('raw', 'describe')}",
+        "",
+        "Contains data",
+        f" Observations:        {n_obs:>10,}",
+        f"    Variables:        {n_vars:>10,}",
+        "-" * 78,
+        f"{'Variable':<16}{'Storage':<10}{'Display':<10}{'Value':<10}{'Variable label':<30}",
+        f"{'    name':<16}{'   type':<10}{' format':<10}{'label':<10}",
+        "-" * 78,
+    ]
+    for col in df.columns:
+        dtype = str(df[col].dtype)
+        if "int" in dtype:
+            st_type = "int"
+            fmt = "%8.0g"
+        elif "float" in dtype:
+            st_type = "float"
+            fmt = "%9.4f"
+        elif "object" in dtype or "str" in dtype:
+            st_type = f"str{min(max(df[col].astype(str).str.len().max() if len(df) else 12, 4), 32)}"
+            fmt = f"%{st_type[3:]}s"
+        else:
+            st_type = dtype
+            fmt = "%9s"
+
+        lbl = COMMON_VAR_ALIASES.get(col, col.replace("_", " ").title())
+        lines.append(f"{col:<16}{st_type:<10}{fmt:<10}{'':<10}{lbl:<30}")
+
+    lines.append("-" * 78)
+    ascii_out = "\n".join(lines)
+    return {
+        "status": "success",
+        "command": parsed.get("raw", "describe"),
+        "ascii_output": ascii_out,
+        "n_obs": n_obs,
+        "n_vars": n_vars,
+    }
+
 
 def _handle_summarize(parsed: dict, df: pd.DataFrame) -> dict:
     raw_vars = parsed.get("indepvars", [])
