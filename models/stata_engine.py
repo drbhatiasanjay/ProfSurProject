@@ -21,6 +21,9 @@ from scipy import stats
 import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+
+
 def fingerprint_frame(df: pd.DataFrame) -> str:
     """Compute deterministic sha256 fingerprint for a DataFrame."""
     if df is None or df.empty:
