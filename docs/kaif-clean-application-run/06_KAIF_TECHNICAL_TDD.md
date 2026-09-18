@@ -377,7 +377,6 @@ Do not rely on color alone. Move focus to the first error/question, preserve ent
 | Plane | Content | Store | Retention |
 |---|---|---|---|
 | Knowledge/config | Variable catalog, capability matrix, schemas, explanation policy | Git-tracked configuration/code | Version history |
-| Working state | Draft, questions, validation, approval state | Session plus durable request record | Request/session policy |
 | Episodic LTM | Not required | None | None |
 | Procedural | Prompt packs and deterministic rules | Git-tracked/versioned | Release history |
 | Audit | Linked contracts/events/hashes | Additive existing DB extension or approved store | `UNKNOWN`; privacy approval required |

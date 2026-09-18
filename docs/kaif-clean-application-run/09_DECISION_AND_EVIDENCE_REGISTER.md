@@ -133,7 +133,7 @@
 - **Business reason:** The use case does not justify a platform migration and the repository already contains this path.
 - **Alternatives considered:** current Cloud Run container; conventional VM/application host; other managed services; standalone containers; Kubernetes.
 - **Selected option:** Current Cloud Run approach, with measured concurrency/timeout/resource tuning.
-- **Evidence:** `Dockerfile`, `cloudbuild.yaml`, `deploy.ps1`; [Cloud Run autoscaling documentation](https://cloud.google.com/run/docs/about-instance-autoscaling) and [concurrency documentation](https://cloud.google.com/run/docs/about-concurrency).
+- **Evidence:** `Dockerfile`, `cloudbuild.yaml`, `.github/workflows/deploy.yml`; [Cloud Run autoscaling documentation](https://cloud.google.com/run/docs/about-instance-autoscaling) and [concurrency documentation](https://cloud.google.com/run/docs/about-concurrency).
 - **Assumption - planning default:** Existing deployment remains supported pending operational-owner confirmation and load testing.
 - **Owner:** Platform/operations owner.
 - **Revisit trigger:** Measured scale, isolation, networking, availability, or organizational platform requirements exceed Cloud Run capabilities.

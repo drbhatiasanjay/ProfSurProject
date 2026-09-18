@@ -2,6 +2,8 @@
 
 The backlog uses tracer-bullet vertical slices. Every slice has acceptance criteria, required tests, rollback, owner role, priority, and blockers. Story identifiers are design identifiers, not claims about exact file changes.
 
+Stage-gate wording follows `03_QUESTION_ASSUMPTION_REGISTER.md`: **before implementation starts**, **before the relevant S1 slice exits**, **before pilot release**, or **before production release**. An open decision may appear at more than one gate when a pilot approval and a final production approval are distinct.
+
 ## Epic E0 — Governance and contracts
 
 ### Slice S0 — Contract and policy foundation
@@ -17,7 +19,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Retain prior schema version; no runtime activation.
 - **Owner role:** Backend/statistical engineer + statistical method owner.
 - **Priority:** P0.
-- **Unresolved blocker:** Exact method/threshold policy approval.
+- **Unresolved blocker:** Q-05, Q-07, and Q-11 are required before implementation starts; Q-06 and Q-08–Q-10 are required before their dependent S1 slices exit.
 
 #### E0-S0-02 — Define request, approval, authorization, result, error, and trace contracts
 
@@ -30,7 +32,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Use prior contract version; additive storage only.
 - **Owner role:** Backend engineer + security + method owner.
 - **Priority:** P0.
-- **Unresolved blocker:** Q-12, Q-13, Q-19, Q-28.
+- **Unresolved blocker:** Q-12, Q-13, Q-19, and Q-28 are required before their dependent S1 slices exit; contract drafting may proceed in S0 using labeled planning defaults.
 
 #### E0-S0-03 — Establish capability matrix and statistical policy
 
@@ -43,7 +45,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Pin prior policy; disable affected capability.
 - **Owner role:** Statistical method owner + statistical engineer.
 - **Priority:** P0.
-- **Unresolved blocker:** Q-02, Q-06–Q-11, Q-20, Q-26.
+- **Unresolved blocker:** Q-02, Q-07, and Q-11 are required before implementation starts; Q-06 and Q-08–Q-10 and Q-26 are required before their dependent S1 slices exit; Q-20 is required before pilot release.
 
 #### E0-S0-04 — Curate active variable catalog contract
 
@@ -56,7 +58,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Pin previous catalog; require manual exact names.
 - **Owner role:** Data steward + backend engineer.
 - **Priority:** P0.
-- **Unresolved blocker:** Q-03, Q-04.
+- **Unresolved blocker:** Q-03 is required before implementation starts; Q-04 is required before E1-S1-01 exits.
 
 ## Epic E1 — Deterministic validation and execution
 
@@ -73,7 +75,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Disable affected capability; retain direct current workflow.
 - **Owner role:** Statistical/backend engineer.
 - **Priority:** P0.
-- **Unresolved blocker:** Approved thresholds and catalog.
+- **Unresolved blocker:** Q-04 and Q-08–Q-10 are required before E1-S1-01 exits; Q-08 final production thresholds remain required before production release.
 
 #### E1-S1-02 — Build authorized executor adapter
 
@@ -86,7 +88,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Feature flag off; disable capability ID.
 - **Owner role:** Statistical engineer.
 - **Priority:** P0.
-- **Unresolved blocker:** Q-06–Q-08 and method-owner parity references.
+- **Unresolved blocker:** Q-06–Q-08 and method-owner parity references are required before E1-S1-02 exits; Q-08 final production thresholds remain required before production release.
 
 #### E1-S1-03 — Build result validator and validation-ledger integration
 
@@ -99,7 +101,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Mark capability not validated; disable guided execution.
 - **Owner role:** Statistical engineer + method owner.
 - **Priority:** P0.
-- **Unresolved blocker:** Reviewer gate policy and numerical tolerances.
+- **Unresolved blocker:** Q-10 and approved numerical tolerances are required before E1-S1-03 exits; Q-20 is required before pilot release.
 
 ## Epic E2 — Guided user journey
 
@@ -116,20 +118,20 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Hide guided form; current journeys remain.
 - **Owner role:** Streamlit/frontend engineer + product/accessibility.
 - **Priority:** P0.
-- **Unresolved blocker:** Q-21 and approved UX wording.
+- **Unresolved blocker:** Q-21 and approved UX wording are required before E2-S1-01 exits.
 
 #### E2-S1-02 — Add schema-constrained parser adapter
 
 - **Story:** As a researcher, natural language prefills the deterministic specification without gaining execution authority.
 - **Business rationale:** Reduces manual translation while retaining control.
 - **Technical scope:** Bounded context, structured output, one repair retry, prompt/version hashes, uncertainty/ambiguity output, manual fallback.
-- **Dependencies:** E2-S1-01; provider/data approval for pilot; prompt pack.
+- **Dependencies:** E2-S1-01 and prompt pack; Q-14 and Q-16 approval is required before any parser-enabled pilot release, while mock/offline adapter implementation may proceed.
 - **Acceptance criteria:** Model receives no raw rows; extra/invalid fields rejected; no direct tool execution; failure opens populated manual form; explicit/ambiguous golden thresholds met.
 - **Required tests:** Mock provider contract tests; parser golden/adversarial set; schema-repair/fallback tests; redaction tests; token cap tests.
 - **Rollback:** Disable parser; deterministic form remains.
 - **Owner role:** AI engineer + method owner + security.
 - **Priority:** P0 for pilot, production blocked.
-- **Unresolved blocker:** Q-14–Q-17.
+- **Unresolved blocker:** Q-14 and Q-16 are required before parser-enabled pilot release; Q-15 and Q-17 are required before production release.
 
 #### E2-S1-03 — Build specification preview, diff, approval, and authorization UX
 
@@ -142,7 +144,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Disable approval path and guided execution.
 - **Owner role:** Frontend/backend engineer + product/security.
 - **Priority:** P0.
-- **Unresolved blocker:** Q-12, Q-13, Q-24.
+- **Unresolved blocker:** Q-12, Q-13, and Q-24 are required before E2-S1-03 exits.
 
 #### E2-S1-04 — Present validated result, warnings, and recovery
 
@@ -155,7 +157,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Fall back to raw bounded existing result rendering for internal reviewer only; disable feature for users.
 - **Owner role:** Frontend engineer + method owner/product.
 - **Priority:** P0.
-- **Unresolved blocker:** Approved wording/severity policy.
+- **Unresolved blocker:** Approved warning/severity policy is required before E2-S1-04 exits; Q-20 is required before pilot release.
 
 ## Epic E3 — Responsible explanation and traceability
 
@@ -172,7 +174,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Display validated structured result without narrative.
 - **Owner role:** Statistical engineer + method owner.
 - **Priority:** P0.
-- **Unresolved blocker:** Q-26.
+- **Unresolved blocker:** Q-26 is required before E3-S1-01 exits.
 
 #### E3-S1-02 — Add optional bounded explanation refinement
 
@@ -185,20 +187,20 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Disable optional refinement.
 - **Owner role:** AI engineer + method owner.
 - **Priority:** P1.
-- **Unresolved blocker:** Q-14–Q-17, Q-26.
+- **Unresolved blocker:** Q-26 is required before E3-S1-02 exits; Q-14 and Q-16 are required before model-assisted pilot release; Q-15 and Q-17 are required before production release.
 
 #### E3-S1-03 — Persist and export trace bundle
 
 - **Story:** As a reviewer, I can reconstruct request, revisions, approval, execution, validation, and explanation.
 - **Business rationale:** Enables reproducibility and accountability.
 - **Technical scope:** Additive records/events, hash links, access control, redaction, JSON/human export.
-- **Dependencies:** E0-S0-02; retention policy.
+- **Dependencies:** E0-S0-02; Q-19 retention/export decision before this S1 story exits; Q-15 production data-retention posture before production release.
 - **Acceptance criteria:** Required trace completeness 100%; tamper detected; role access enforced; export validates; secrets absent.
 - **Required tests:** Persistence/transaction/failure tests; trace completeness; tamper; authorization; redaction; export parse.
 - **Rollback:** Stop new guided execution if trace write unavailable; do not delete existing records.
 - **Owner role:** Backend engineer + security/data owner.
 - **Priority:** P0.
-- **Unresolved blocker:** Q-15, Q-19.
+- **Unresolved blocker:** Q-19 is required before E3-S1-03 exits; Q-15 remains required before production release.
 
 ## Epic E4 — Evaluation, observability, and operations
 
@@ -215,7 +217,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Block promotion; pin previous accepted capability/prompt/policy.
 - **Owner role:** Evaluation engineer + method owner.
 - **Priority:** P0.
-- **Unresolved blocker:** Named method owner and approved thresholds/tolerances.
+- **Unresolved blocker:** Q-02 must be resolved before implementation starts; Q-08 pilot thresholds, Q-20 risk policy, and approved numerical tolerances are required before pilot release.
 
 #### E4-S2-02 — Add correlated telemetry and dashboards
 
@@ -228,7 +230,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Disable optional telemetry export; retain safe minimal audit events.
 - **Owner role:** Operations engineer + security.
 - **Priority:** P1.
-- **Unresolved blocker:** Q-15, Q-18, Q-25.
+- **Unresolved blocker:** Q-15, Q-18, and Q-25 are required before production release; pilot telemetry must use the approved redaction defaults.
 
 #### E4-S2-03 — Accessibility, failure drills, and runbook
 
@@ -241,7 +243,7 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Rollback:** Disable guided feature; current workflows remain.
 - **Owner role:** Product/accessibility + operations + engineering.
 - **Priority:** P0 for release.
-- **Unresolved blocker:** Q-18, Q-21, Q-25, Q-29, Q-30.
+- **Unresolved blocker:** Q-21 must be resolved before E2-S1-01 exits; Q-29 and the pilot posture in Q-30 are required before pilot release; Q-18, Q-25, and final Q-30 production posture are required before production release.
 
 ## Epic E5 — Controlled production pilot
 
@@ -252,13 +254,13 @@ The backlog uses tracer-bullet vertical slices. Every slice has acceptance crite
 - **Story:** As Product and the method owner, evaluate real workflow value and risk with a bounded cohort.
 - **Business rationale:** Establishes baseline and validates adoption without broad exposure.
 - **Technical scope:** Approved cohort, canary, dashboards, reviewer sampling, feedback taxonomy, incident/rollback readiness.
-- **Dependencies:** S2 exit; all production blockers resolved.
+- **Dependencies:** S2 exit; all pilot-release blockers resolved before the pilot starts; production-release blockers resolved before production promotion.
 - **Acceptance criteria:** Two approved evaluation windows with no critical failure; KPI baselines established; correction/escalation burden reviewed; owners sign release/defer decision.
 - **Required tests:** Preflight smoke through authenticated UI, acceptance regression, load/capacity, rollback drill, trace sampling.
 - **Rollback:** Feature flag off and prior Cloud Run revision; preserve evidence.
 - **Owner role:** Product + method owner + operations/security.
 - **Priority:** P1 after S2.
-- **Unresolved blocker:** All production-release items in the question register.
+- **Unresolved blocker:** Q-14, Q-16, Q-20, Q-22, Q-27, Q-29, and pilot posture for Q-30 block pilot release; Q-08 final thresholds, Q-14–Q-18 as applicable, Q-23, Q-25, and final Q-30 posture block production release.
 
 ## Backlog Definition of Ready
 

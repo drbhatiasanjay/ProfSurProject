@@ -307,8 +307,16 @@ approvals:
 unresolved_questions:
   register: "03_QUESTION_ASSUMPTION_REGISTER.md"
   design_blockers: []
-  implementation_blockers: ["Q-02", "Q-03", "Q-04", "Q-05", "Q-06", "Q-07", "Q-09", "Q-10", "Q-20", "Q-26", "Q-28"]
-  production_release_blockers: ["Q-01", "Q-08", "Q-12", "Q-13", "Q-14", "Q-15", "Q-16", "Q-18", "Q-19", "Q-21", "Q-24", "Q-25", "Q-29", "Q-30"]
+  stage_gate_blockers:
+    required_before_implementation_starts: ["Q-01", "Q-02", "Q-03", "Q-05", "Q-07", "Q-11"]
+    required_before_relevant_s1_slice_exits: ["Q-04", "Q-06", "Q-08", "Q-09", "Q-10", "Q-12", "Q-13", "Q-19", "Q-21", "Q-24", "Q-26", "Q-28"]
+    required_before_pilot_release: ["Q-14", "Q-16", "Q-20", "Q-22", "Q-27", "Q-29", "Q-30"]
+    required_before_production_release: ["Q-08", "Q-14", "Q-15", "Q-16", "Q-17", "Q-18", "Q-23", "Q-25", "Q-30"]
+  multi_stage_notes:
+    Q-08: "Pilot thresholds must be approved before E1-S1-02 exits; final production thresholds must be approved before production release."
+    Q-14: "Permitted fields must be approved before parser-enabled pilot calls and reassessed for production policy."
+    Q-16: "Provider/model use must be approved for the pilot before pilot release and separately accepted for production."
+    Q-30: "Pilot deployment posture must be approved before pilot release and reassessed for production promotion."
 
 delivery_scope:
   first_slice:

@@ -99,10 +99,29 @@
 
 ## Final quality-control record
 
-This section is completed after artifact, YAML, and frozen-source checks:
+This section records only checks supported by the independent design-package verification; it does not claim application runtime validation:
 
-- Required-file check: `PENDING`.
-- YAML parse check: `PENDING`.
-- Source baseline recheck: `PENDING`.
-- Scope/assumption/backlog checks: `PENDING`.
-- Completion time: `PENDING`.
+- Required-file check: `PASS` — all 11 expected documentation files were present in PR #7.
+- YAML parse check: `PASS` — both YAML documents parsed with strict duplicate-key detection.
+- Source baseline recheck: `PASS WITH CONDITION` — the source moved after the original baseline as described in the addendum; the materiality review found no design-invalidating change.
+- Scope/assumption/backlog checks: `PASS WITH CONDITIONS` — identifiers and references were structurally checked; open approvals remain governed by the explicit stage gates in the question register and backlog.
+- Independent verification completion time: `2026-09-18T22:38:20+05:30`.
+- Runtime validation: `NOT PERFORMED`.
+
+## Independent Verification Addendum
+
+- PR #7 head was independently verified as commit `6da68c098adeb4667ef592645cda82716ca55c9c` before the corrections recorded by this addendum.
+- PR #7 target was verified as `master`.
+- All 11 expected documentation files were present.
+- The PR contained documentation changes only under `docs/kaif-clean-application-run/`.
+- Both YAML files parsed successfully using duplicate-key detection.
+- Requirement, metric, scenario, and gate references were checked for missing and duplicate identifiers.
+- The source baseline moved from `fa97df7` to `bf6b736` after the original baseline was recorded.
+- The observed source difference was limited to adding the Plotly `make_subplots` import and whitespace changes in `models/stata_engine.py`.
+- **Source-materiality note:** the added plotting import and whitespace-only changes do not alter the product journeys, statistical contracts, data interfaces, execution boundary, or deployment evidence used by this design; therefore the source movement does not materially invalidate the design.
+- No application tests, running services, or browser journeys were executed.
+- Verification covers the design package, repository evidence, and structural consistency only.
+- Verification verdict: **PASS WITH CONDITIONS**.
+- PR readiness before these corrections: **READY AFTER CHANGES**.
+- Implementation readiness: **READY FOR S0 CONTRACT AND POLICY WORKSHOP**.
+- S1 development readiness: **NOT READY**.
