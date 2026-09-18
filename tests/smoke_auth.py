@@ -34,9 +34,10 @@ TIMEOUT = 90_000
 RENDER_WAIT = 10  # seconds after networkidle / click for Streamlit to finish rendering
 
 USERS = {
-    "sbhatia": {"password": "UzBGwQ0DuH_Wgo0S", "role": "admin"},
-    "skumar":  {"password": "tPUATkh5y1R9LdjK", "role": "researcher"},
-    "guest":   {"password": "whFSeXFGDGq-s8xa",  "role": "viewer"},
+    "drbhatia":     {"password": "Pass@123", "role": "admin"},
+    "profsurkumar": {"password": "Pass@123", "role": "researcher"},
+    "skumar":       {"password": "Pass@123", "role": "researcher"},
+    "sbhatia":      {"password": "Pass@123", "role": "viewer"},
 }
 
 ROLE_BLOCKED = {

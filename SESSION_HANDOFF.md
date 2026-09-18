@@ -248,3 +248,104 @@ git log -3 --oneline
 Resume from the eight-command implementation/defer decision and the separately
 authorized AI natural-language test gate. Do not restart old worktrees or old
 page-file entrypoints for demo evidence.
+
+## 10. Day-end reconciliation checkpoint — 2026-09-12
+
+### Current observed state
+
+- Observed branch: `agy/wave6-8-harness-repair-2026-09-11`.
+- Observed HEAD: `93b5c26260866418654dd1542a050c3ec1877abb`.
+- `.git/index.lock`: absent.
+- Tracked modifications: `capital_structure.db` and
+  `scratch/run_25_dual_matrix_8501.py`.
+- The shared checkout is not a clean canonical `master` checkout. Do not
+  describe it as the published baseline or integrate from it without an
+  explicit reconciliation step.
+
+### Current-build audit disposition
+
+`CODEX_TECHNICAL_FUNCTIONAL_CURRENT_BUILD_AUDIT_2026-09-11.md` reports
+`FAIL` against remote `master` `ab7aeb2`. It identifies current or strongly
+supported risks in global model state, silent estimator substitution,
+undocumented outcome scaling, post-estimation binding, Hausman algebra, GMM
+time-lag semantics, and stale AI context caching. Runtime dependencies and
+authenticated browser checks were unavailable to that audit; those limitations
+remain material.
+
+`ProfSurProject_Deep_Code_Automation_Review_2026-09-11.md` additionally
+identified deployment secret-injection and non-blocking CI risks. These are
+release blockers if deployment is reactivated, but no deployment is being
+claimed in this checkpoint.
+
+### AGY validation disposition
+
+AGY reported progress on the 400-row matrix and repaired role-specific sidebar
+expansion in `scratch/run_25_dual_matrix_8501.py`. The progress claim is not
+accepted as completion. Required terminal evidence is still missing or not
+independently reconciled: exactly 400 unique records, current tested SHA,
+per-user/theme/interface/command counts, secret scan, and a GitHub-ready final
+report. “Background run started” remains `IN_PROGRESS`.
+
+AGY must use an isolated worktree or branch, must not modify `master`, must not
+write Git refs or delete lock files, and must not expose credentials. Codex
+must independently verify branch, SHA, diff, result ledger, and evidence before
+any promotion.
+
+### Approved repair plan
+
+1. Freeze and reconcile a clean isolated branch from audited `master`.
+2. Quarantine false System GMM and non-ledger VALIDATED claims.
+3. Add RED tests for TF-02, TF-03, TF-04, TF-05, TF-08, and TF-12.
+4. Replace process-global/implicit model state with a session-scoped immutable
+   result context.
+5. Remove silent estimator fallback and mean-based unit transformation.
+6. Bind VIF, Hausman, coefplot, esttab, prediction, and residuals to explicit
+   model/sample identity.
+7. Enforce explicit panel/time keys and calendar-aware GMM lags.
+8. Add dataset revision to AI cache keys and preserve complete AI result
+   envelopes.
+9. Run deterministic, numerical, integration, and browser gates only after
+   the focused repairs pass.
+
+AST rewrite, production Redis, zero-copy memory, unmeasured performance claims,
+credential rotation, deployment, and broad estimator promotion remain deferred.
+
+### Resume procedure
+
+1. Do not continue from the shared AGY checkout.
+2. Verify remote `master` and create a clean isolated repair worktree.
+3. Run tests-only RED coverage for the six priority defects.
+4. Record evidence in GitHub-ready Markdown and update this handoff.
+5. Implement only after the RED tests fail for the intended semantic reasons.
+
+### Acceptance rule
+
+The current build remains `FAIL`; the 400-row AGY matrix remains
+`IN_PROGRESS/NOT_ACCEPTED`; no merge, promotion, release, or scientific-validity
+claim is authorized from this checkpoint.
+
+## 11. Milestone Transition & Clean Session Handoff — 2026-09-12
+
+### Completed Milestone Deliverables
+1. **Stata Studio V2 (`pages/25_stata_studio_v2.py`):**
+   - Implemented 10/10 prototype parity features from `scratch/stata_studio_prototype.html` (875 lines).
+   - Typed colored badges (DEP, INDEP, FACTOR, DUMMY, TIME, ID), 5 grouped command dropdown sections, live run count tabs, rich run card header badges, collapsible terminal outputs, and 4-card hypothesis metric scorecard.
+   - Fixed `NameError: _analysis_session`, `coefplot` unconditional rerun, variable chip insertion scope, and button label visibility errors.
+   - Committed at `62c5596` on branch `codex/wave6-8-remediation-2026-09-12`.
+2. **GCP Cloud Run v2 Deployment:**
+   - Deployed dedicated service `lifecycle-leverage-v2` at `https://lifecycle-leverage-v2-779655496440.us-east1.run.app/stata_studio_v2`.
+   - Built fresh container image `us-east1-docker.pkg.dev/tempproject-462219/cloud-run-source-deploy/lifecycle-leverage-v2:latest` via `gcloud builds submit`.
+   - Verified live in browser with Stata Studio V2 visible and accessible across profiles.
+3. **Operational Directives & Anti-Fabrication Safeguards:**
+   - Codified in `AGENTS.md` (Section 5) and `.agents/rules/engineering_safeguards.md` (Section 5).
+   - Invariant: Never declare deployment "done" based solely on HTTP health check (`200 OK`). Requires authenticated browser navigation confirming target UI page.
+   - Invariant: Zero fabrication of screenshot paths before browser subagent finishes and files exist on disk.
+
+### Clean Session Bootstrap Instructions
+When starting a new session:
+1. Workspace: `c:\Users\hemas\Downloads\ProfSurProject`
+2. Follow bootstrap sequence: Read `CURRENT_STATUS.md` first, check `AGENTS.md` rules.
+3. Local Dev Server: `http://localhost:8501` (managed via `py -3.12 -m streamlit run app.py`).
+4. Live GCP URL: `https://lifecycle-leverage-v2-779655496440.us-east1.run.app`.
+5. Auth profiles: `drbhatia` (admin), `profsurkumar` (researcher), `skumar` (researcher), `sbhatia` (viewer), `guest` (viewer) — MVP test password `Pass@123`.
+
