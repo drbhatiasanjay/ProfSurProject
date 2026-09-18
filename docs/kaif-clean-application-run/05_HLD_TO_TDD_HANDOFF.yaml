@@ -1,0 +1,334 @@
+schema_version: "1.0"
+handoff_id: "profsur-guided-statistical-analysis-20260918"
+generated_at: "2026-09-18T11:06:20+05:30"
+status: "approval-ready-with-pending-decisions"
+source_baselines:
+  profsur:
+    branch: "agy/wave6-8-harness-repair-2026-09-11"
+    commit: "fa97df7e1e6b43726c63590a47906d8ae8e5797d"
+  kaif:
+    branch: "main"
+    commit: "6da1d29ec11ee6c30e1c347e45eb4b58ca153f7b"
+
+business_objectives:
+  - id: BO-01
+    objective: "Convert a natural-language statistical request into an explicit, reviewable specification."
+    measure: "method, variable-role, and option accuracy on the approved golden set"
+  - id: BO-02
+    objective: "Prevent unsupported, ambiguous, unapproved, or stale specifications from executing."
+    measure: "zero critical authorization bypasses or unsupported substitutions"
+  - id: BO-03
+    objective: "Produce validated, responsibly explained OLS and fixed-effects results."
+    measure: "statistical parity, warning completeness, and explanation-policy compliance"
+  - id: BO-04
+    objective: "Preserve traceability from original request to final output."
+    measure: "100 percent required trace-field completeness"
+
+actors:
+  - id: researcher
+    type: human
+    responsibilities: ["state intent", "answer clarification", "approve specification", "review result"]
+  - id: statistical_method_owner
+    type: human
+    responsibilities: ["approve method policy", "approve thresholds", "review escalations"]
+  - id: product_owner
+    type: human
+    responsibilities: ["approve scope", "own KPIs", "approve release"]
+  - id: data_owner
+    type: human
+    responsibilities: ["own variable catalog", "approve data use"]
+  - id: security_privacy_owner
+    type: human
+    responsibilities: ["approve provider", "approve retention and logging"]
+  - id: profsur_application
+    type: system
+    responsibilities: ["workflow UI", "session context", "trace presentation"]
+  - id: intent_parser
+    type: llm_assisted_component
+    responsibilities: ["draft typed specification", "report uncertainty"]
+    prohibited: ["authorize", "execute", "silently substitute methods"]
+  - id: deterministic_policy_gate
+    type: system
+    responsibilities: ["clarify", "validate", "authorize approved immutable specifications"]
+  - id: statistical_executor
+    type: system
+    responsibilities: ["execute bounded OLS and fixed-effects contracts"]
+  - id: result_validator
+    type: system
+    responsibilities: ["verify fidelity", "verify result integrity", "derive release status"]
+
+requirements:
+  functional:
+    - id: FR-001
+      statement: "Preserve original request and active dataset/filter context immutably."
+    - id: FR-002
+      statement: "Produce a schema-constrained statistical specification draft with unresolved fields."
+    - id: FR-003
+      statement: "Ask targeted clarification for incomplete or ambiguous required fields."
+    - id: FR-004
+      statement: "Validate method, dependent variable, predictors, controls, fixed effects, panel variables, clustering, filters, and missingness."
+    - id: FR-005
+      statement: "Display exact normalized specification and reproducible representation before execution."
+    - id: FR-006
+      statement: "Require authenticated explicit approval bound to specification and dataset/filter hashes."
+    - id: FR-007
+      statement: "Execute only allowlisted OLS or fixed-effects specifications."
+    - id: FR-008
+      statement: "Validate result and requested-versus-executed equivalence before explanation."
+    - id: FR-009
+      statement: "Display user-visible warnings, errors, recovery actions, and statistically responsible explanation."
+    - id: FR-010
+      statement: "Export a trace linking request, revisions, approval, execution, result, validation, and explanation."
+  statistical:
+    - id: SR-001
+      statement: "Support OLS and fixed-effects regression only in the initial slice."
+    - id: SR-002
+      statement: "Represent company effects, year effects, and clustering as independent explicit fields."
+    - id: SR-003
+      statement: "Disclose complete-case exclusions and sample counts."
+    - id: SR-004
+      statement: "Detect invalid/unknown variables, duplicates in panel keys, insufficient sample/groups/clusters, constant terms, rank failure, collinearity, and absorbed terms."
+    - id: SR-005
+      statement: "Never substitute an unsupported method or covariance estimator."
+    - id: SR-006
+      statement: "Distinguish association from causation and prohibit unsupported causal interpretation."
+  non_functional:
+    - id: NFR-001
+      statement: "Fail closed at schema, validation, authorization, execution, and result-validation boundaries."
+    - id: NFR-002
+      statement: "Use least privilege and do not expose arbitrary code or SQL to the language model."
+    - id: NFR-003
+      statement: "Provide keyboard-operable, non-color-only warning/error states with accessible labels."
+    - id: NFR-004
+      statement: "Correlate all stages with stable identifiers and redact sensitive telemetry."
+    - id: NFR-005
+      statement: "Provide feature-flag rollback to current direct workflows."
+
+scenarios:
+  sunny_day:
+    - id: SD-01
+      name: "Explicit OLS"
+      expected: "validate, approve, execute, explain, trace"
+    - id: SD-02
+      name: "Two-way fixed effects clustered by company"
+      expected: "validate panel/effects/cluster, approve, execute, disclose omissions and diagnostics"
+    - id: SD-03
+      name: "Incomplete method/options"
+      expected: "ask focused clarification then continue"
+    - id: SD-04
+      name: "Reproducibility review"
+      expected: "show and export full request-to-output chain"
+  rainy_day:
+    - id: RD-01
+      name: "Ambiguous variable"
+      expected: "no guess; candidate selection required"
+    - id: RD-02
+      name: "Unsupported method"
+      expected: "refuse without substitution"
+    - id: RD-03
+      name: "Invalid panel or cluster"
+      expected: "block with correction guidance"
+    - id: RD-04
+      name: "Material missingness"
+      expected: "disclose and require approval of resulting sample"
+    - id: RD-05
+      name: "Insufficient observations or clusters"
+      expected: "block under approved policy"
+    - id: RD-06
+      name: "Collinear or absorbed requested term"
+      expected: "warning or block and reapproval according to policy"
+    - id: RD-07
+      name: "Malformed or unavailable model"
+      expected: "reject draft and offer deterministic form"
+    - id: RD-08
+      name: "Execution failure"
+      expected: "no partial interpretation; safe idempotent retry"
+    - id: RD-09
+      name: "Unsupported causal request"
+      expected: "state associational boundary"
+    - id: RD-10
+      name: "Control-bypass prompt"
+      expected: "refuse arbitrary execution and record policy event"
+
+constraints:
+  source_reuse:
+    - "existing Streamlit application shell"
+    - "existing authenticated session and chat persistence"
+    - "active panel dataset and filters"
+    - "existing bounded Stata/econometric engine"
+    - "provider-neutral validation-ledger vocabulary"
+  initial_scope:
+    methods: ["ols", "fixed_effects"]
+    fixed_effects: ["company", "year"]
+    covariance: ["conventional_for_ols_if_explicitly_approved", "hc1_robust_ols", "company_clustered"]
+    languages: ["English"]
+  exclusions:
+    - "IV"
+    - "GMM"
+    - "difference-in-differences"
+    - "automatic model selection"
+    - "causal inference automation"
+    - "arbitrary code or SQL"
+    - "MCP"
+    - "long-term memory"
+    - "RAG or GraphRAG"
+    - "multi-agent system"
+    - "Kubernetes migration"
+    - "platform rewrite"
+  deployment: "retain current Streamlit container on Cloud Run"
+  data_minimization: "send schema metadata and bounded result summaries to the model; raw rows excluded by default"
+
+selected_architecture:
+  style: "typed deterministic workflow with bounded LLM assistance"
+  agency_level: "LLM-assisted workflow"
+  components:
+    - "request capture"
+    - "schema-constrained draft parser"
+    - "clarification state machine"
+    - "deterministic specification validator"
+    - "user review and approval"
+    - "deterministic authorization gate"
+    - "bounded statistical executor adapter"
+    - "deterministic result validator"
+    - "deterministic summary plus bounded explanation"
+    - "trace store and export"
+  model:
+    pilot_default: "gemini-2.5-flash"
+    approval_status: "pending"
+    fallback: "deterministic manual specification form"
+  tools: "typed in-process APIs; no MCP"
+  memory: "request/session state plus immutable audit trace; no long-term model memory"
+
+risks:
+  - id: R-01
+    risk: "wrong intent mapping"
+    mitigation: "typed schema, clarification, diff, approval, golden tests"
+    owner_role: "product and statistical method owner"
+  - id: R-02
+    risk: "unsupported or changed execution"
+    mitigation: "capability allowlist, hashes, deterministic authorization, fidelity validator"
+    owner_role: "engineering and statistical method owner"
+  - id: R-03
+    risk: "statistically invalid result"
+    mitigation: "preflight and result gates with approved thresholds"
+    owner_role: "statistical method owner"
+  - id: R-04
+    risk: "unsupported interpretation"
+    mitigation: "deterministic facts, causal-language policy, explanation evaluation"
+    owner_role: "statistical method owner"
+  - id: R-05
+    risk: "sensitive data exposure"
+    mitigation: "data minimization, redaction, provider approval, retention policy"
+    owner_role: "security/privacy and data owner"
+  - id: R-06
+    risk: "architecture complexity creep"
+    mitigation: "explicit evolve triggers and architecture decision gates"
+    owner_role: "product and architecture"
+
+kpis:
+  business:
+    - id: KPI-B-01
+      name: "time to approved specification"
+      target: "UNKNOWN; baseline in pilot"
+    - id: KPI-B-02
+      name: "approved-result completion rate"
+      target: "UNKNOWN; baseline in pilot"
+    - id: KPI-B-03
+      name: "avoidable rerun rate"
+      target: "UNKNOWN; baseline in pilot"
+    - id: KPI-B-04
+      name: "reviewer acceptance rate"
+      target: "UNKNOWN; set after baseline"
+  quality:
+    - id: KPI-Q-01
+      name: "method-selection accuracy"
+      target: ">= 98%; explicit method names 100%"
+    - id: KPI-Q-02
+      name: "variable-role exact accuracy"
+      target: ">= 98%; critical dependent-variable errors 0"
+    - id: KPI-Q-03
+      name: "clarification recall"
+      target: ">= 98%; critical unsafe misses 0"
+    - id: KPI-Q-04
+      name: "approved-to-executed fidelity"
+      target: "100%"
+    - id: KPI-Q-05
+      name: "warning accuracy"
+      target: ">= 98%; critical omissions 0"
+    - id: KPI-Q-06
+      name: "explanation policy compliance"
+      target: "100% critical rules"
+    - id: KPI-Q-07
+      name: "trace completeness"
+      target: "100%"
+
+assumptions:
+  - id: A-01
+    default: "two-way fixed effects means company and year effects"
+    approver: "statistical method owner"
+  - id: A-02
+    default: "first slice supports one-way company clustering only"
+    approver: "statistical method owner"
+  - id: A-03
+    default: "complete-case analysis; no automatic imputation or winsorization"
+    approver: "statistical method owner and data owner"
+  - id: A-04
+    default: "raw panel rows are not sent to the model"
+    approver: "data owner and security/privacy owner"
+  - id: A-05
+    default: "current Cloud Run deployment remains"
+    approver: "operations and architecture"
+  - id: A-06
+    default: "feature flag disables guided execution for rollback"
+    approver: "engineering and product"
+
+approvals:
+  - id: AP-01
+    topic: "business scope and KPIs"
+    owner_role: "product owner"
+    status: "pending"
+  - id: AP-02
+    topic: "statistical contract, thresholds, and explanation policy"
+    owner_role: "statistical method owner"
+    status: "pending"
+  - id: AP-03
+    topic: "dataset catalog and permissible fields"
+    owner_role: "data owner"
+    status: "pending"
+  - id: AP-04
+    topic: "model provider, privacy, retention, and security"
+    owner_role: "security/privacy/procurement"
+    status: "pending"
+  - id: AP-05
+    topic: "production SLO, deployment, and rollback"
+    owner_role: "operations and engineering"
+    status: "pending"
+
+unresolved_questions:
+  register: "03_QUESTION_ASSUMPTION_REGISTER.md"
+  design_blockers: []
+  implementation_blockers: ["Q-02", "Q-03", "Q-04", "Q-05", "Q-06", "Q-07", "Q-09", "Q-10", "Q-20", "Q-26", "Q-28"]
+  production_release_blockers: ["Q-01", "Q-08", "Q-12", "Q-13", "Q-14", "Q-15", "Q-16", "Q-18", "Q-19", "Q-21", "Q-24", "Q-25", "Q-29", "Q-30"]
+
+delivery_scope:
+  first_slice:
+    id: "SLICE-1"
+    name: "approved OLS and two-way fixed-effects vertical path"
+    includes:
+      - "natural-language draft"
+      - "clarification and variable validation"
+      - "specification preview and approval"
+      - "OLS or company/year FE"
+      - "company-clustered standard errors"
+      - "execution/result validation"
+      - "responsible explanation"
+      - "visible errors, warnings, and trace export"
+    exit_criteria_reference: "07_EVALUATION_AND_ACCEPTANCE_SPEC.yaml"
+  later_slices:
+    - "hardening, accessibility, observability, and operational recovery"
+    - "optional convergence with direct Stata path"
+  explicitly_out_of_scope:
+    - "new statistical methods"
+    - "new deployment platform"
+    - "multi-agent architecture"
+    - "autonomous specification optimization"
