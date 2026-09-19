@@ -12,5 +12,8 @@ KAIF struggled where instructions need to become enforcement. The available repo
 
 We will share the frozen clean design, the two-pilot comparison, a consolidated gap register, an applicability matrix, separate quality and evidence rubrics, an S0 decision pack, and a conclusion-level evidence index. The pack deliberately does not claim ROI, production readiness, or proof that ProfSur's proposed feature works.
 
-The next step has two tracks. The KAIF team should decide which gaps belong in the framework roadmap, starting with machine-checkable contracts and evidence validation. The ProfSur team should run the S0 contract and policy workshop before any S1 development. A later controlled implementation and evaluation can supply the runtime evidence that neither pilot was designed to provide.
+## What a KAIF reviewer can verify from PR #8
 
+The [evidence index](07_EVIDENCE_INDEX.md) routes Pilot 1 claims to the merged PR #7 snapshot and Pilot 2 claims to reviewable extracts in this PR: [scope/verdict](evidence/PILOT2_SCOPE_AND_VERDICT.md), [test evidence](evidence/PILOT2_TEST_EVIDENCE.md), [statistical/UI probes](evidence/PILOT2_STATISTICAL_PROBES.md), [module assessment](evidence/PILOT2_KAIF_MODULES.md), [feedback/gaps](evidence/PILOT2_FEEDBACK_AND_GAPS.md), and [quality/integrity](evidence/PILOT2_QUALITY_AND_INTEGRITY.md). These extracts identify their source artifact, recorded commit, method, result, and limitation. They do not require access to Sanjay's Windows filesystem and do not claim runtime validation.
+
+The next step has two tracks. The KAIF team should decide which gaps belong in the framework roadmap, starting with machine-checkable contracts and evidence validation. The ProfSur team should run the S0 contract and policy workshop before any S1 development. A later controlled implementation and evaluation can supply the runtime evidence that neither pilot was designed to provide.

@@ -32,6 +32,10 @@ These are demonstrated strengths, not disguised gaps:
 
 Applicability uses the same vocabulary as the coverage matrix: **Covered and evidenced**, **Covered in design only**, **Partly covered**, **Applicable but missing**, **Requires runtime validation**, **Not testable in this pilot**, **Not applicable to ProfSur**, and **Not implemented in KAIF**.
 
+## PR-reviewable Pilot 2 evidence routing
+
+The local Pilot 2 filenames retained in the detailed evidence column are provenance identifiers. Reviewable copies for the material Pilot 2 findings are available in this PR: G-01/G-02/G-12 in [bounded test evidence](evidence/PILOT2_TEST_EVIDENCE.md) and [statistical/UI probes](evidence/PILOT2_STATISTICAL_PROBES.md); G-03/G-04/G-05/G-06/G-07/G-08/G-09/G-10 in [feedback and gaps](evidence/PILOT2_FEEDBACK_AND_GAPS.md); and G-11 plus the integrity boundary in [quality and integrity](evidence/PILOT2_QUALITY_AND_INTEGRITY.md). These extracts identify source, method, result, and limitation; they do not claim runtime or causal efficacy.
+
 | ID | Severity | Evidence | KAIF module affected | ProfSur impact | Applicability | Suggested owner | Acceptance evidence | Dependency | Recommended timing |
 |---|---|---|---|---|---|---|---|---|---|
 | G-01 | P0 | Pilot 2 `14_KAIF_FEEDBACK_PACK_FOR_NAVNEET.md`, KF01; `06_TARGETED_TEST_EVIDENCE.md` states probes were auditor-run; Pilot 1 required separate strict YAML/reference validation. | kaif-design, kaif-eval | ProfSur cannot rely on KAIF alone to reject incomplete contracts or unsupported evidence claims. | Not implemented in KAIF | KAIF evaluation/tooling lead | CLI fails fixtures with duplicate IDs, missing references, missing approvals, unsupported claims, and absent gate evidence; passes both frozen pilot packs. | Canonical schemas and evidence vocabulary | First framework increment |
@@ -48,6 +52,8 @@ Applicability uses the same vocabulary as the coverage matrix: **Covered and evi
 | G-12 | P1 | Pilot 1 journal says runtime validation not performed; Pilot 2 `06_TARGETED_TEST_EVIDENCE.md` separates isolated probes, service integration, and browser status. | kaif-eval, kaif-guard, kaif-deploy | Design completion can otherwise be mistaken for working software or production safety. | Applicable but missing | KAIF evaluation and release-governance owners | Claim-to-evidence schema rejects runtime, deployment, UAT, and production verdicts without profile-specific artifacts and source version. | G-01 | Before any production-readiness claim |
 
 ## Severity summary
+
+These severities describe KAIF/framework roadmap priority within the feedback package. They are not incident severities for the current ProfSur application. In particular, a P0 KAIF gap does not automatically make a ProfSur defect P0; ProfSur repair priority is tracked separately in the Pilot 2 developer action plan.
 
 | Severity | Count | Meaning in this register |
 |---|---:|---|

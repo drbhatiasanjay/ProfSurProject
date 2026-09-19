@@ -30,12 +30,14 @@ Pilot 2 is classified **COMPLETE WITH LIMITATIONS**. Its evidence supports conso
 6. [S0 decision workshop pack](06_S0_DECISION_WORKSHOP_PACK.md)
 7. [Evidence index](07_EVIDENCE_INDEX.md)
 
+Pilot 2 review files: [scope and verdict](evidence/PILOT2_SCOPE_AND_VERDICT.md), [bounded tests](evidence/PILOT2_TEST_EVIDENCE.md), [statistical/UI probes](evidence/PILOT2_STATISTICAL_PROBES.md), [KAIF modules](evidence/PILOT2_KAIF_MODULES.md), [feedback and gaps](evidence/PILOT2_FEEDBACK_AND_GAPS.md), and [quality/integrity](evidence/PILOT2_QUALITY_AND_INTEGRITY.md).
+
 The frozen Pilot 1 package is available in [docs/kaif-clean-application-run](../kaif-clean-application-run/11_CLEAN_APPLICATION_SUMMARY.md).
 
 ## Evidence boundary
 
 - Pilot 1 evidence consists of the 11 merged design artifacts and the tracked ProfSur and KAIF sources cited by them.
-- Pilot 2 evidence remains in the local independent archive at `C:\Users\hemas\Downloads\kaif-pilot-output`. This pack cites precise files, sections, and identifiers from that archive but does not copy raw audit output.
+- Pilot 2 evidence was produced in the local independent archive at `C:\Users\hemas\Downloads\kaif-pilot-output`; material support is now available through the focused, attributed extracts linked above. The local path remains provenance and is not required for a reviewer to verify the cited claims.
 - Pilot 2 source probes were auditor-authored and must not be credited as KAIF executable tooling.
 - GitHub CI for the documentation PR is repository evidence, not evidence that the proposed guided-analysis feature exists.
 - Planning defaults are recommendations, not approvals.
@@ -44,4 +46,3 @@ The frozen Pilot 1 package is available in [docs/kaif-clean-application-run](../
 ## Runtime statement
 
 Design evidence is not runtime proof. Neither pilot implemented the proposed ProfSur workflow. Pilot 2 executed bounded isolated probes, but it did not run an authenticated end-to-end service or browser journey. This pack therefore makes no claim that the proposed ProfSur functionality has been implemented, deployed, or validated in production.
-

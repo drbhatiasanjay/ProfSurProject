@@ -2,9 +2,23 @@
 
 ## How to read this index
 
-Each material conclusion in the consolidated pack is mapped to a precise source. Pilot 1 sources are merged under `docs/kaif-clean-application-run/`. Pilot 2 sources remain in the local independent archive at `C:\Users\hemas\Downloads\kaif-pilot-output`. `Inference` means the conclusion combines evidence but is not directly asserted as a tested fact.
+Each material conclusion in the consolidated pack is mapped to a precise source. Pilot 1 sources are merged under `docs/kaif-clean-application-run/`. Pilot 2 local-only sources are represented by attributed, focused extracts in this PR's `evidence/` directory; the local path remains provenance only. `Inference` means the conclusion combines evidence but is not directly asserted as a tested fact.
 
 Confidence levels describe support within the pilot boundaries, not production certainty.
+
+## PR-reviewable routing for Pilot 2 claims
+
+The following links make every material Pilot 2 claim independently reviewable from this PR without access to the auditor's Windows filesystem:
+
+| Claims | Reviewable evidence in this PR | Review boundary |
+|---|---|---|
+| C-06, C-20, C-21, C-32, C-33 | [scope and verdict extract](evidence/PILOT2_SCOPE_AND_VERDICT.md); [quality and integrity extract](evidence/PILOT2_QUALITY_AND_INTEGRITY.md) | Supports the adjudication and limitations, not runtime proof or a clean-worktree attestation. |
+| C-08 | [KAIF module assessment extract](evidence/PILOT2_KAIF_MODULES.md) | Limited to the authorized KAIF repository. |
+| C-09, C-10, C-11, C-12 | [bounded test evidence extract](evidence/PILOT2_TEST_EVIDENCE.md) | Inventory/scenario counts are attributed to the audit; scenarios were not run end to end. |
+| C-13 | [statistical and UI probe extract](evidence/PILOT2_STATISTICAL_PROBES.md) | AST/source probes and synthetic data only; no browser or service claim. |
+| C-15 through C-19, C-24, C-28 through C-31 | [feedback and gap extract](evidence/PILOT2_FEEDBACK_AND_GAPS.md); [quality and integrity extract](evidence/PILOT2_QUALITY_AND_INTEGRITY.md) | Supports documented feedback, priorities, and limitations; not causal efficacy or production evidence. |
+
+Pilot 1 claims are reviewable in the merged PR #7 snapshot at commit `ae8d7e868c49a1b9d8405413bdee21868c15f59f`, for example [the clean application summary](https://github.com/drbhatiasanjay/ProfSurProject/blob/ae8d7e868c49a1b9d8405413bdee21868c15f59f/docs/kaif-clean-application-run/11_CLEAN_APPLICATION_SUMMARY.md). Claims whose required source cannot be safely published would be marked not independently reviewable; the focused extracts above preserve the material support while excluding raw audit-directory contents.
 
 | Conclusion ID | Material conclusion | Source pilot | Source file | Section or identifier | Evidence type | Confidence | Limitation |
 |---|---|---|---|---|---|---|---|
@@ -35,7 +49,7 @@ Confidence levels describe support within the pilot boundaries, not production c
 | C-25 | Three technology choices are classified not applicable to ProfSur in this bounded slice. | Consolidated pack | `04_COVERAGE_AND_APPLICABILITY_MATRIX.md` | M-40 through M-42 | Applicability decision | High | These can be revisited under a new approved requirement. |
 | C-26 | Provider/data posture, statistical policy, ownership, trace retention, accessibility, SLOs, and release controls require stakeholder approval. | Pilot 1 | `03_QUESTION_ASSUMPTION_REGISTER.md` | Q-01 through Q-30 and Approval register | Open decision register | High | This pack cannot approve accountable decisions. |
 | C-27 | The consolidated feedback package is ready to share with KAIF after merge. | Consolidated pack | All eight files; validation record in PR | Package-quality rubric and structural validation | Consolidation verdict | High | Sharing does not imply acceptance of recommendations or evidence of implementation. |
-| C-28 | The feedback package reaches 10/10 document quality while the underlying evidence remains lower. | Consolidated pack | `05_RUBRIC_AND_FINAL_ASSESSMENT.md` | Score sets A and B | Rubric conclusion | High within stated scope | Package quality does not upgrade pilot evidence strength. |
+| C-28 | The feedback package's revised self-assessed quality is 8.0/10 while the underlying pilot evidence remains lower. | Consolidated pack | `05_RUBRIC_AND_FINAL_ASSESSMENT.md` | Revised package-quality result and evidence score set B | Rubric conclusion | Medium-high within stated scope | Self-assessment is not an independent KAIF review; package quality does not upgrade pilot evidence strength. |
 | C-29 | Framework and model recommendations need an explicit existing-code option and workload evidence. | Pilot 2 | `14_KAIF_FEEDBACK_REGISTER.json`; `14_KAIF_FEEDBACK_PACK_FOR_NAVNEET.md` | KF06 | Static instruction assessment | High | No migration was attempted, so operational impact is inferred. |
 | C-30 | Knowledge and license provenance is incomplete in the available KAIF repository. | Pilot 2 | `14_KAIF_FEEDBACK_REGISTER.json`; `14_KAIF_FEEDBACK_PACK_FOR_NAVNEET.md` | KF07 | Governance evidence | Medium | The audit did not establish infringement; rights review remains necessary. |
 | C-31 | Checkpoint and journal completeness depend on orchestrator behavior rather than shipped enforcement. | Pilot 2 | `07_08_HARNESS_JOURNAL.yaml`; `14_KAIF_FEEDBACK_REGISTER.json` | KF10 | Process evidence | High | Pilot authority allowed routine checkpoints to be delegated. |
