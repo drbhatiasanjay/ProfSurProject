@@ -37,7 +37,7 @@ The frozen Pilot 1 package is available in [docs/kaif-clean-application-run](../
 ## Evidence boundary
 
 - Pilot 1 evidence consists of the 11 merged design artifacts and the tracked ProfSur and KAIF sources cited by them.
-- Pilot 2 evidence was produced in the local independent archive at `C:\Users\hemas\Downloads\kaif-pilot-output`; material support is now available through the focused, attributed extracts linked above. The local path remains provenance and is not required for a reviewer to verify the cited claims.
+- Pilot 2 evidence was produced in the local independent archive at `C:\Users\hemas\Downloads\kaif-pilot-output`; material support is now available through the focused, attributed extracts linked above. The local path remains provenance and is not required for a reviewer to examine the cited support and limitations. The extracts are auditor-authored summaries and do not provide independent replication of the underlying audit.
 - Pilot 2 source probes were auditor-authored and must not be credited as KAIF executable tooling.
 - GitHub CI for the documentation PR is repository evidence, not evidence that the proposed guided-analysis feature exists.
 - Planning defaults are recommendations, not approvals.
