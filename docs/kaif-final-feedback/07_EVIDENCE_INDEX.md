@@ -8,7 +8,7 @@ Confidence levels describe support within the pilot boundaries, not production c
 
 ## PR-reviewable routing for Pilot 2 claims
 
-The following links make every material Pilot 2 claim independently reviewable from this PR without access to the auditor's Windows filesystem:
+The following links make the material Pilot 2 findings reviewable from this PR through attributed extracts, without access to the auditor's Windows filesystem. These extracts expose the audit's source, method, result, and limitation; they do not independently replicate the underlying audit:
 
 | Claims | Reviewable evidence in this PR | Review boundary |
 |---|---|---|
@@ -18,7 +18,7 @@ The following links make every material Pilot 2 claim independently reviewable f
 | C-13 | [statistical and UI probe extract](evidence/PILOT2_STATISTICAL_PROBES.md) | AST/source probes and synthetic data only; no browser or service claim. |
 | C-15 through C-19, C-24, C-28 through C-31 | [feedback and gap extract](evidence/PILOT2_FEEDBACK_AND_GAPS.md); [quality and integrity extract](evidence/PILOT2_QUALITY_AND_INTEGRITY.md) | Supports documented feedback, priorities, and limitations; not causal efficacy or production evidence. |
 
-Pilot 1 claims are reviewable in the merged PR #7 snapshot at commit `ae8d7e868c49a1b9d8405413bdee21868c15f59f`, for example [the clean application summary](https://github.com/drbhatiasanjay/ProfSurProject/blob/ae8d7e868c49a1b9d8405413bdee21868c15f59f/docs/kaif-clean-application-run/11_CLEAN_APPLICATION_SUMMARY.md). Claims whose required source cannot be safely published would be marked not independently reviewable; the focused extracts above preserve the material support while excluding raw audit-directory contents.
+Pilot 1 claims are reviewable in the merged PR #7 snapshot at commit `ae8d7e868c49a1b9d8405413bdee21868c15f59f`, for example [the clean application summary](https://github.com/drbhatiasanjay/ProfSurProject/blob/ae8d7e868c49a1b9d8405413bdee21868c15f59f/docs/kaif-clean-application-run/11_CLEAN_APPLICATION_SUMMARY.md). Claims whose required source cannot be safely published would be marked not reviewable from this PR; the focused extracts above preserve the audit's material support and limitations while excluding raw audit-directory contents.
 
 | Conclusion ID | Material conclusion | Source pilot | Source file | Section or identifier | Evidence type | Confidence | Limitation |
 |---|---|---|---|---|---|---|---|
