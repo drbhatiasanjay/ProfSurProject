@@ -646,9 +646,9 @@ def concatenate_and_burn_captions(scene_files: list[Path], srt_file: Path):
     print("=== Step 3: Concatenating Master MP4 & Burning Styled Captions ===")
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     
-    ts_clean_mp4 = OUT / f"ai_chatbot_walkthrough_recordly_{timestamp}_clean.mp4"
-    ts_sub_mp4   = OUT / f"ai_chatbot_walkthrough_recordly_{timestamp}_subtitled.mp4"
-    ts_srt       = OUT / f"ai_chatbot_walkthrough_recordly_{timestamp}.srt"
+    ts_clean_mp4 = OUT / f"ai_chatbot_walkthrough_recordly_v3_{timestamp}_clean.mp4"
+    ts_sub_mp4   = OUT / f"ai_chatbot_walkthrough_recordly_v3_{timestamp}_subtitled.mp4"
+    ts_srt       = OUT / f"ai_chatbot_walkthrough_recordly_v3_{timestamp}.srt"
     
     final_clean = OUT / "ai_chatbot_master_walkthrough_v2.mp4"
     final_sub   = OUT / "ai_chatbot_master_walkthrough_v2_subtitled.mp4"
