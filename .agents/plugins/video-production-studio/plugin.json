@@ -1,0 +1,9 @@
+{
+  "name": "video-production-studio",
+  "version": "1.0.0",
+  "description": "Enterprise automated video production, screen-recording, word-aligned subtitle burning, and visual verification suite.",
+  "author": "Dr. Sanjay Bhatia & Dr. Surender Kumar (EOLABS.IN)",
+  "skills": [
+    "video-production-studio"
+  ]
+}

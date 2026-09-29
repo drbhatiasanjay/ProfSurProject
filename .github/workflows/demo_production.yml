@@ -1,0 +1,55 @@
+name: Demo Video Production & Visual QA Gate
+
+on:
+  push:
+    branches:
+      - master
+      - 'agy/**'
+      - 'codex/**'
+    paths:
+      - 'scripts/produce_ai_chatbot_demo_recordly.py'
+      - 'pages/19_ai_assistant.py'
+      - 'docs/operations/ai_chatbot_recordly_master_prompt.md'
+  workflow_dispatch:
+
+jobs:
+  produce-and-verify-demo:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install playwright edge-tts
+          playwright install chromium
+
+      - name: Start Local Streamlit Server
+        run: |
+          Start-Process -NoNewWindow python -ArgumentList "-m streamlit run app.py --server.port 8501 --server.headless true"
+          Start-Sleep -Seconds 8
+
+      - name: Produce Recordly Master Walkthrough
+        run: |
+          python scripts/produce_ai_chatbot_demo_recordly.py
+
+      - name: Run Red Team 10/10 Visual Certification
+        run: |
+          python scratch/redteam_review_recordly.py
+
+      - name: Upload Video Deliverables & Scorecard
+        uses: actions/upload-artifact@v4
+        with:
+          name: recordly-master-walkthrough-artifacts
+          path: |
+            scratch/demo_production/*.mp4
+            scratch/demo_production/*.srt
+            scratch/demo_production/redteam_review_recordly/
+            docs/review-evidence/RED_TEAM_DEMO_RECORDLY_SCORECARD.md

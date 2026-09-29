@@ -1,11 +1,33 @@
 # ProfSurProject — Session Log
 
-## CHECKPOINT — AI Chatbot Demo V2: Component Breakdown & Paced Synchronization (2026-09-29 22:25 IST)
+## CHECKPOINT — Recordly Master Walkthrough: Dynamic Screen Run-Up & Verification Suite (2026-09-29 23:15 IST)
 
 **Branch:** `agy/wave6-8-harness-repair-2026-09-11` · **HEAD:** `3f8811c`  
 **Conversation:** `441a895b-590c-4664-bb91-715e86dff507`
 
 ### State at Checkpoint
+- **Streamlit Server:** Active and healthy on `http://localhost:8501` (`/_stcore/health` 200).
+- **Recordly Master Production Pipeline (`scripts/produce_ai_chatbot_demo_recordly.py`):**
+  - **Dynamic Screen Run-Up:** Character-by-character live typing (`delay=15ms`) into `stChatInputTextArea`, submit event (`Enter`), real-time response generation, and automatic immediate scroll-up to `y=0`.
+  - **8-Scene Dynamic Choreography:**
+    - Scene 1: Opening Title Card & Authorship Attribution (Dr. Sanjay Bhatia & Dr. Surender Kumar, Powered by EOLABS.IN).
+    - Scene 2: 6-Layer Anatomy Breakdown (Live prompt submission $\to$ Telemetry $\to$ Badges $\to$ Theory Narrative $\to$ C-Suite Playbook $\to$ Plotly/Stata $\to$ Literature Vault).
+    - Scene 3: Infosys Tech (4.2% leverage, 33.4% ROA, Dickinson Mature stage diagnosis, zero-debt cash flexibility).
+    - Scene 4: Tata Steel Macro Stress Test (+150 bps rate shock + 20% margin drop, 🔴 Covenant Breach Warning ICR 1.72x vs 2.0x floor).
+    - Scene 5: Multi-Sector Diversity (Bharti Airtel InvIT deleveraging, IndiGo fuel burn hedge, Sun Pharma Euro notes).
+    - Scene 6: Researcher Mode (Stata 18 SE `. xtreg leverage roa tang size, fe cluster(ind_code)`, ASCII terminal table, Plotly forest plot).
+    - Scene 7: Academic Literature Vault (Dickinson, Myers, Rajan-Zingales citation modal & `➕ Add to Board Deck` action).
+    - Scene 8: Symmetrical Closing Epilogue.
+- **Verification & CI/CD Infrastructure Implemented:**
+  - **Pre-Push Hook:** `.git/hooks/pre-push` enforces automated 10/10 Red Team evaluation before git push.
+  - **GitHub Actions Pipeline:** `.github/workflows/demo_production.yml` for automated CI screen-recording, neural TTS, subtitle burning, and visual QA artifact publishing.
+  - **Video Production Studio Plugin:** `.agents/plugins/video-production-studio/` with skill manifest and execution tooling.
+- **Red Team Rubric Certification:** **10.0 / 10.0 (CERTIFIED BROADCAST GRADE)** in `docs/review-evidence/RED_TEAM_DEMO_RECORDLY_SCORECARD.md`.
+- **Master Deliverables on Disk:**
+  - `scratch/demo_production/ai_chatbot_walkthrough_recordly_2026-09-29_231400_subtitled.mp4` (22.7 MB)
+  - `scratch/demo_production/ai_chatbot_walkthrough_recordly_2026-09-29_231400_clean.mp4` (19.4 MB)
+  - `scratch/demo_production/ai_chatbot_walkthrough_recordly_2026-09-29_231400.srt`
+  - `scratch/demo_production/ai_chatbot_master_walkthrough_v2_subtitled.mp4` (22.7 MB)
 - **Streamlit Server:** Active and healthy on `http://localhost:8501` (`/_stcore/health` 200).
 - **Red Team Audit Remediation Complete:**
   - Resolved main container scroll targeting to `[data-testid="stMain"]`.
