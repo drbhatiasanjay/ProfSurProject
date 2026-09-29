@@ -181,7 +181,31 @@ def _build_company_context_cached(
             params=[latest["industry_group"], latest["life_stage"],
                     int(latest["year"]), int(company_code)] + vintage_params,
         )
+        # 2b. Named Direct Competitors in same industry (top 4 by firm_size)
+        competitor_sql = f"""
+            SELECT c.company_name, AVG(f.leverage) as leverage, AVG(f.profitability) as profitability,
+                   AVG(f.tangibility) as tangibility, f.life_stage
+            FROM financials f
+            JOIN companies c ON c.company_code = f.company_code
+            WHERE c.industry_group = ? AND f.year = ?
+              AND f.company_code != ? AND {vintage_sql}
+            GROUP BY c.company_code
+            ORDER BY MAX(f.firm_size) DESC LIMIT 4
+        """
+        competitor_df = pd.read_sql_query(
+            competitor_sql, conn,
+            params=[latest["industry_group"], int(latest["year"]), int(company_code)] + vintage_params,
+        )
         conn.close()
+
+        comp_lines = []
+        for row in competitor_df.itertuples():
+            comp_lines.append(
+                f"- {row.company_name} ({row.life_stage}): Leverage={float(row.leverage):.3f}, "
+                f"ROA={float(row.profitability):.3f}, Tangibility={float(row.tangibility):.3f}"
+            )
+        comp_md = "\n".join(comp_lines) if comp_lines else "No other direct competitors recorded in same industry year."
+
         # 3. Build markdown
         trend_csv = ", ".join(
             f"{int(r.year)}={float(r.leverage):.3f}"
@@ -210,7 +234,9 @@ def _build_company_context_cached(
             f"## [SOURCE: {panel_label}] Peer Group ({peer_n} firms, same industry + life_stage, {int(latest['year'])})\n"
             f"- Peer Mean Leverage: {peer_mean_lev:.3f} | Peer Median: {peer_med_lev:.3f}\n"
             f"- Peer Mean Profitability: {peer_mean_roa:.3f} | Peer Median: {peer_med_roa:.3f}\n"
-            f"- Company vs Peer Median (leverage delta): {delta_lev:+.3f}\n"
+            f"- Company vs Peer Median (leverage delta): {delta_lev:+.3f}\n\n"
+            f"## [SOURCE: {panel_label}] Direct Industry Competitors ({latest['industry_group']}):\n"
+            f"{comp_md}\n"
         )
         text = md + footer
         # Token-budget guard — drop trend line, then peer detail, if over budget

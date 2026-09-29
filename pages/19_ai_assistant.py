@@ -780,13 +780,41 @@ with st.sidebar:
     citations_on = st.session_state.get("p19_citations", False)
     st.caption(f"Academic citations: **{'on' if citations_on else 'off'}** — toggle in sidebar under AI Settings.")
     if mode == "CFO":
-        company_code = st.number_input(
-            "Company code (int)",
-            value=int(st.session_state.get("active_company_cin") or 22859),
-            step=1,
-            key="p19_company_code",
-            help="Enter the numeric company_code from the panel (e.g. 22859 = Asian Paints).",
+        _qp_panel = st.session_state.get("panel_mode", "thesis")
+        _companies_df = db.get_companies(_qp_panel)
+        # Curated list of premier corporate archetypes across sectors:
+        _featured_codes = [
+            100632, # Infosys (IT Services / Cash Rich / Low Debt)
+            34162,  # Bharti Airtel (Telecom / High Leverage / Capex)
+            395047, # InterGlobe Aviation - IndiGo (Aviation / Lease Debt / Margin Volatility)
+            196667, # Reliance Industries (Conglomerate / Energy Transition)
+            136444, # Mahindra & Mahindra (Automotive / EV Transition)
+            97066,  # ITC Ltd. (FMCG / High Operating Cash Flow)
+            248136, # Tata Steel (Steel / Cyclical Capex & Deleveraging)
+            125123, # UltraTech Cement (Cement / High Tangibility)
+        ]
+        _feat_df = _companies_df[_companies_df["company_code"].isin(_featured_codes)]
+        _other_df = _companies_df[~_companies_df["company_code"].isin(_featured_codes)]
+        _ordered_df = pd.concat([_feat_df, _other_df])
+        
+        _company_options = _ordered_df["company_code"].tolist()
+        _code_to_name = dict(zip(_ordered_df["company_code"], _ordered_df["company_name"]))
+        _code_to_ind = dict(zip(_ordered_df["company_code"], _ordered_df.get("industry_group", [""] * len(_ordered_df))))
+        
+        _cur_code = int(st.session_state.get("p19_company_code") or 100632)
+        if _cur_code not in _company_options and _company_options:
+            _cur_code = _company_options[0]
+            
+        _sel_idx = _company_options.index(_cur_code) if _cur_code in _company_options else 0
+        company_code = st.selectbox(
+            "Select Company for CFO Analysis:",
+            options=_company_options,
+            index=_sel_idx,
+            format_func=lambda c: f"{_code_to_name.get(c, c)} ({_code_to_ind.get(c, '')})",
+            key="p19_company_code_select",
+            help="Select any firm from the panel (preset with diverse sector leaders across IT, Telecom, Aviation, Steel, FMCG, Auto).",
         )
+        st.session_state["p19_company_code"] = company_code
     else:
         company_code = None
 
@@ -921,22 +949,60 @@ _STARTER_QUESTIONS = {
 
 # ── Zero-State Bento Starter Cards ────────────────────────────────────────────
 if not st.session_state["chat_history"]:
-    st.markdown("##### 💡 Suggested Econometric Inquiries")
-    _starters_meta = [
-        {"icon": "📊", "title": "Industry Distributions", "query": "Which 10 industries carry the highest leverage across the panel and why?"},
-        {"icon": "🔬", "title": "Theory Validation", "query": "Explain how profitability tests Pecking Order vs Trade-Off theory in this panel."},
-        {"icon": "📉", "title": "Crisis Comparison", "query": "Compare leverage patterns during GFC 2008 and COVID-19 2020 across life stages."},
-    ]
-    _scols = st.columns(3)
-    for _idx, _sm in enumerate(_starters_meta):
-        with _scols[_idx]:
-            if st.button(
-                f"{_sm['icon']} **{_sm['title']}**\n\n{_sm['query']}",
-                use_container_width=True,
-                key=f"bento_starter_{_idx}",
-            ):
-                st.session_state["_pending_followup"] = _sm["query"]
-                st.rerun()
+    if mode == "CFO":
+        _cname = _code_to_name.get(company_code, "our company") if 'company_code' in locals() and company_code else "our company"
+        _cind = _code_to_ind.get(company_code, "the industry") if 'company_code' in locals() and company_code else "the industry"
+        st.markdown(f"##### 👔 CFO Strategic Decision Scenarios for **{_cname}** ({_cind})")
+        _starters_meta = [
+            {
+                "icon": "⚖️",
+                "title": "Capital Structure & WACC",
+                "query": f"As CFO of {_cname}, evaluate our debt ratio and WACC relative to our {_cind} peers. Are we under-leveraged (missing interest tax shields) or facing excessive distress costs?",
+            },
+            {
+                "icon": "🏢",
+                "title": "Competitive Benchmarking",
+                "query": f"Benchmark {_cname}'s leverage, operating profitability (ROA), and asset tangibility against our top direct competitors in {_cind}. Who has greater balance-sheet headroom for expansion?",
+            },
+            {
+                "icon": "🛡️",
+                "title": "Rate Shock & Covenant Resilience",
+                "query": f"Conduct a financial stress test for {_cname}: if benchmark borrowing rates increase by 150 bps or operating cash flows drop by 20%, what happens to our interest coverage ratio (ICR) and debt covenant headroom?",
+            },
+            {
+                "icon": "🚀",
+                "title": "Capex Financing Strategy",
+                "query": f"For upcoming growth capex at {_cname}, evaluate financing options (internal cash flow vs debt vs equity) through Pecking Order and Trade-Off theories given our life stage.",
+            },
+        ]
+        _scols = st.columns(4)
+        for _idx, _sm in enumerate(_starters_meta):
+            with _scols[_idx]:
+                if st.button(
+                    f"{_sm['icon']} **{_sm['title']}**\n\n{_sm['query'][:90]}...",
+                    use_container_width=True,
+                    key=f"bento_cfo_{_idx}",
+                    help=_sm["query"],
+                ):
+                    st.session_state["_pending_followup"] = _sm["query"]
+                    st.rerun()
+    else:
+        st.markdown("##### 💡 Suggested Econometric Inquiries")
+        _starters_meta = [
+            {"icon": "📊", "title": "Industry Distributions", "query": "Which 10 industries carry the highest leverage across the panel and why?"},
+            {"icon": "🔬", "title": "Theory Validation", "query": "Explain how profitability tests Pecking Order vs Trade-Off theory in this panel."},
+            {"icon": "📉", "title": "Crisis Comparison", "query": "Compare leverage patterns during GFC 2008 and COVID-19 2020 across life stages."},
+        ]
+        _scols = st.columns(3)
+        for _idx, _sm in enumerate(_starters_meta):
+            with _scols[_idx]:
+                if st.button(
+                    f"{_sm['icon']} **{_sm['title']}**\n\n{_sm['query']}",
+                    use_container_width=True,
+                    key=f"bento_starter_{_idx}",
+                ):
+                    st.session_state["_pending_followup"] = _sm["query"]
+                    st.rerun()
 
 _previous_user_question = ""
 for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
