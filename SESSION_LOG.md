@@ -583,3 +583,57 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
   checkpoint. Runtime database mutation and historical untracked artifacts
   remain unstaged.
 
+## 2026-09-12 — Git governance repair checkpoint
+
+Codex preserved the Wave 6–8 remediation changes in the isolated worktree
+`codex/wave6-8-remediation-2026-09-12`. Ten focused tests, the fast gate, and
+changed-module compilation passed. Commit integration is blocked because
+Windows denies writes to the shared `.git\objects`, `.git\refs`, and worktree
+metadata; no stale index lock was present. The durable guard is
+`scripts/repo_governance_guard.py`. After the user restarts and repairs the
+repository ACL/read-only state, run the guard, commit only intentional files,
+rerun the focused/fast/optimized UI gates, and update this log with the actual
+commit and evidence. Deployment secrets hardening and the common MVP test
+password remain deferred by decision.
+
+User-observed smoke evidence: `drbhatia` opened Stata Studio and AI Assistant;
+chat-specific issues were deferred for later discussion. This does not replace
+automated matrix evidence.
+
+## 2026-09-12 — Remediation checkpoint recorded
+
+- Git ACL/read-only repair completed; the governance guard reports writable Git
+  metadata.
+- Isolated remediation worktree remains active; shared checkout remains
+  untouched and `capital_structure.db` remains excluded.
+- Automated evidence: 7 focused defect tests, 84 affected analytical tests,
+  103 numerical/page tests, and 142 latest page/defect/chat tests passed;
+  compile and diff checks passed.
+- Role navigation, evidence-slice placement, analytical/cache persistence, and
+  minimum dark-mode/sidebar/chat fixes are implemented.
+- Authenticated browser closure remains open; AGY's 26 PASS / 30 FAIL run is
+  failed validation evidence, not acceptance.
+- Next run is a reduced distinct-role matrix, not a 400-by-4 sweep. Full UI
+  overhaul remains deferred.
+- Commit `b3fce3d` was created and pushed to the remediation branch. Browser
+  control remains unavailable, so no automated authenticated UI closure claim
+  is made.
+
+## 2026-09-12 — Final handoff closure
+
+- User completed the reduced manual browser verification across configured
+  profiles and confirmed the browser issue is resolved.
+- Branch synchronization is complete through `f9e6e1f` and the subsequent
+  handoff documentation update.
+- Remaining dark-mode arrow/dropdown differences are explicitly deferred as
+  cosmetic UI follow-up work.
+- Gemini continuation prompt: `docs/operations/GEMINI_HANDOFF_PROMPT_2026-09-12.md`.
+
+## 2026-09-12 — Gemini cosmetic polish & smoke closure
+
+- Dynamic theme styling applied for native sidebar collapse/expand controls (`<<` / `>>`) in `app.py`.
+- BaseWeb select containers and multiselect tag chips (`div[data-baseweb="tag"]`) styled with explicit dark-theme contrast in `assets/style_dark.css`.
+- AI Assistant chat input (`st.chat_input`) focus-within border glow and contrast polished.
+- Automated verification: 107 regression/token/page tests passed (100%), targeted smoke tests passed, `git diff --check` clean, Streamlit `/_stcore/health` returns `ok`.
+- Database exclusion preserved: `capital_structure.db` remains untracked/unstaged.
+

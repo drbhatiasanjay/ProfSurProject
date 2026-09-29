@@ -27,8 +27,12 @@ def get_safe_button_key(citation_key: str, scope: str = "default", idx: int = 0)
 @st.dialog("📖 Academic Citation Inspector")
 def show_citation_dialog(citation_query: str):
     """Render a modal dialog with structured scholarly metadata for the citation."""
+    is_dark = st.session_state.get("theme", "light") == "dark"
+    title_color = "#F8FAFC" if is_dark else "#0F172A"
+    body_color = "#CBD5E1" if is_dark else "#334155"
+    muted_color = "#94A3B8" if is_dark else "#475569"
     st.markdown(
-        """
+        f"""
         <style>
         div[data-testid="stDialog"] div[role="dialog"] {
             background-color: #0b1120 !important;
@@ -38,10 +42,10 @@ def show_citation_dialog(citation_query: str):
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8) !important;
         }
         div[data-testid="stDialog"] h4 {
-            color: #f8fafc !important;
+            color: {title_color} !important;
         }
         div[data-testid="stDialog"] .stCaption, div[data-testid="stDialog"] p {
-            color: #cbd5e1 !important;
+            color: {body_color} !important;
         }
         </style>
         """,
@@ -70,15 +74,15 @@ def show_citation_dialog(citation_query: str):
             <span style="background: {bg_col}; color: {fg_col}; border: 1px solid {fg_col}50; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;">
                 {category}
             </span>
-            <span style="font-size: 12.5px; color: #475569; font-weight: 600;">
+            <span style="font-size: 12.5px; color: {muted_color}; font-weight: 600;">
                 {journal} ({year})
             </span>
         </div>
-        <h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; line-height: 1.35; color: #0f172a !important;">
+        <h3 style="margin: 0 0 6px 0; font-size: 18px; font-weight: 800; line-height: 1.35; color: {title_color} !important;">
             {meta.get('title', '')}
         </h3>
-        <div style="font-size: 13.5px; color: #334155 !important; margin-bottom: 12px;">
-            <b style="color: #0f172a !important;">Authors:</b> {meta.get('authors', '')}
+        <div style="font-size: 13.5px; color: {body_color} !important; margin-bottom: 12px;">
+            <b style="color: {title_color} !important;">Authors:</b> {meta.get('authors', '')}
         </div>
         """,
         unsafe_allow_html=True,
@@ -159,7 +163,8 @@ def show_citation_dialog(citation_query: str):
 def render_citation_badge_button(citation_key: str, scope: str = "default", idx: int = 0) -> bool:
     """Render an inline citation inspection button with collision-free keying."""
     btn_id = get_safe_button_key(citation_key, scope=scope, idx=idx)
-    label = f"📖 {str(citation_key)[:24]}"
+    raw_label = str(citation_key).strip()
+    label = f"📖 {raw_label}" if len(raw_label) <= 24 else f"📖 {raw_label[:21].rstrip()}…"
     if st.button(label, key=btn_id, help=f"Inspect scholarly citation details for {citation_key}", use_container_width=True):
         show_citation_dialog(citation_key)
         return True

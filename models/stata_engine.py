@@ -22,6 +22,7 @@ import statsmodels.api as sm
 from statsmodels.stats.outliers_influence import variance_inflation_factor
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from models.model_context import fingerprint_frame
 
 
 def fingerprint_frame(df: pd.DataFrame) -> str:

@@ -154,7 +154,7 @@ def test_execute_estat_vif(sample_panel_df):
 def test_execute_coefplot(sample_panel_df):
     from models.stata_engine import execute_stata_command
     execute_stata_command("xtreg leverage profitability tangibility log_size, fe", df=sample_panel_df)
-    res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=sample_panel_df)
+    res = execute_stata_command("coefplot fe, drop(_cons) xline(0)", df=sample_panel_df)
     assert res["status"] == "success"
     assert "chart_spec" in res
     chart = res["chart_spec"]

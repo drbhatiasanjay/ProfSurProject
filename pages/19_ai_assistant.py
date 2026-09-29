@@ -21,9 +21,13 @@ from components.research_artifact_renderer import (
     render_artifact_provenance,
     render_descriptive_metadata,
 )
+from models.model_context import AnalysisSession
 
 require_role("admin", "researcher", "viewer", "cfo", "guest")
 db.log_page_visit("ai_assistant_page")
+if "analysis_session" not in st.session_state:
+    st.session_state["analysis_session"] = AnalysisSession()
+_analysis_session = st.session_state["analysis_session"]
 
 # ── Session persistence lifecycle ─────────────────────────────────────────────
 _u = st.session_state.get("user") or {}
@@ -1024,7 +1028,7 @@ if user_q:
     if is_stata_cmd:
         from models.stata_engine import execute_stata_command
         exec_cmd = _q_clean if _q_clean.startswith(".") else f". {_q_clean}"
-        stata_res = execute_stata_command(exec_cmd)
+        stata_res = execute_stata_command(exec_cmd, session=_analysis_session)
         ascii_text = stata_res.get("ascii_output", "")
         interpretation = stata_res.get("interpretation", "")
         reply_content = f"```stata\n{exec_cmd}\n\n{ascii_text}\n```"
@@ -1040,6 +1044,17 @@ if user_q:
             "model_used": "Stata-Engine (Econometric Inference)",
             "elapsed_s": 0.05,
             "followups": ["esttab, se r2 star", "coefplot, drop(_cons) xline(0)", "summarize leverage roa, detail"],
+        }
+        # Persist the analytical identity envelope separately from display prose.
+        # This keeps model/sample provenance available after reruns without
+        # serializing backend estimator objects or figures.
+        _envelope_keys = (
+            "status", "error_code", "command", "model_id", "estimator",
+            "depvar", "dependent_variable", "indepvars", "regressors",
+            "n_obs", "dataset_fingerprint", "sample_fingerprint",
+        )
+        st_turn["result_envelope"] = {
+            key: stata_res[key] for key in _envelope_keys if key in stata_res
         }
         if stata_res.get("chart_spec"):
             st_turn["chart_spec"] = stata_res["chart_spec"]
@@ -1062,6 +1077,7 @@ if user_q:
             elapsed_s=0.05,
             followups=st_turn.get("followups"),
             chart_spec=st_turn.get("chart_spec"),
+            result_envelope=st_turn.get("result_envelope"),
         )
         st.rerun()
     # echo old headings/tables and repeat earlier topics.

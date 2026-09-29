@@ -222,6 +222,15 @@ def run_hausman_test(fe_result, re_result):
     H0: RE is consistent and efficient (prefer RE).
     H1: RE is inconsistent (prefer FE).
     """
+    if not isinstance(fe_result, dict) or not isinstance(re_result, dict):
+        raise ValueError("Hausman requires named FE and RE result dictionaries")
+    for result, label in ((fe_result, "FE"), (re_result, "RE")):
+        if "result_obj" not in result:
+            raise ValueError(f"Hausman requires an explicit {label} result")
+    if fe_result.get("sample_fingerprint") and re_result.get("sample_fingerprint"):
+        if fe_result["sample_fingerprint"] != re_result["sample_fingerprint"]:
+            raise ValueError("Hausman requires FE and RE estimates from the same sample")
+
     fe_obj = fe_result["result_obj"]
     re_obj = re_result["result_obj"]
 
@@ -229,21 +238,26 @@ def run_hausman_test(fe_result, re_result):
     fe_coefs = fe_obj.params.drop("const", errors="ignore")
     re_coefs = re_obj.params.drop("const", errors="ignore")
     common = fe_coefs.index.intersection(re_coefs.index)
+    if len(common) == 0:
+        raise ValueError("Hausman requires at least one common coefficient")
 
     b_fe = fe_coefs[common].values
     b_re = re_coefs[common].values
     diff = b_fe - b_re
 
-    # Variance of difference
-    v_fe = np.diag(fe_obj.cov.loc[common, common].values)
-    v_re = np.diag(re_obj.cov.loc[common, common].values)
-    v_diff = v_fe - v_re
+    # Hausman uses the full covariance difference, not only its diagonal.
+    v_fe = np.asarray(fe_obj.cov.loc[common, common].values, dtype=float)
+    v_re = np.asarray(re_obj.cov.loc[common, common].values, dtype=float)
+    v_diff = (v_fe - v_re + (v_fe - v_re).T) / 2.0
+    if not np.isfinite(v_diff).all():
+        raise ValueError("Hausman covariance difference is not finite")
 
-    # Guard against negative variances
-    v_diff = np.maximum(v_diff, 1e-10)
-
-    chi2 = float(np.sum(diff ** 2 / v_diff))
-    df = len(common)
+    # Pseudoinverse handles rank-deficient but estimable covariance differences
+    # while preserving the quadratic-form definition.
+    chi2 = float(diff @ np.linalg.pinv(v_diff) @ diff)
+    df = int(np.linalg.matrix_rank(v_diff, tol=1e-10))
+    if df <= 0:
+        raise ValueError("Hausman covariance difference has zero rank")
     p_value = float(1 - stats.chi2.cdf(chi2, df))
 
     if p_value < 0.05:
@@ -769,9 +783,41 @@ def run_iv_regression(df, y_col=DEFAULT_Y_COL, x_endog="profitability", x_exog=N
 
 # ── IV-GMM proxy (Dynamic Panel) ──
 
-def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", time="year"):
+
+def _calendar_lag(df, value, entity, time, lag):
+    """Return an exact calendar lag, never a row-position shift.
+
+    Missing periods therefore produce NA rather than silently borrowing the
+    previous observed row. Duplicate entity/time keys are rejected because a
+    calendar lookup would otherwise be ambiguous.
     """
-    IV-GMM proxy with lagged dependent variable instruments.
+    required = {value, entity, time}
+    missing = required.difference(df.columns)
+    if missing:
+        raise ValueError(f"Missing lag columns: {', '.join(sorted(missing))}")
+    if df.duplicated([entity, time]).any():
+        raise ValueError("Duplicate entity/time observations prevent calendar lags")
+
+    keys = list(zip(df[entity], df[time]))
+    values = dict(zip(keys, df[value]))
+    if pd.api.types.is_numeric_dtype(df[time]):
+        target_times = df[time] - lag
+    else:
+        parsed_time = pd.to_datetime(df[time], errors="coerce")
+        if parsed_time.isna().any():
+            raise ValueError("Time variable must be numeric or parseable as dates")
+        target_times = parsed_time.map(lambda value: value - pd.DateOffset(years=lag))
+    return pd.Series(
+        [values.get((entity_value, time_value), np.nan)
+         for entity_value, time_value in zip(df[entity], target_times)],
+        index=df.index,
+        name=f"{value}_lag{lag}",
+    )
+
+
+def run_legacy_proxy_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", time="year"):
+    """
+    Legacy IV-GMM proxy with lagged dependent variable instruments.
     This is not a validated System-GMM implementation: it uses ``linearmodels.iv.IVGMM``
     with a fixed lag-2/lag-3 instrument set and remains outside the canonical dispatcher.
     Uses linearmodels.iv.IVGMM with lag2 and lag3 of DV as excluded instruments.
@@ -787,9 +833,14 @@ def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", 
     if x_cols is None:
         x_cols = DEFAULT_X_COLS
 
+    if entity not in df.columns or time not in df.columns or y_col not in df.columns:
+        return {"error_code": "PANEL_COLUMNS_REQUIRED", "error": "GMM proxy requires entity, time, and dependent-variable columns."}
     work = df.sort_values([entity, time]).copy()
     for lag in (1, 2, 3):
-        work[f"{y_col}_lag{lag}"] = work.groupby(entity)[y_col].shift(lag)
+        try:
+            work[f"{y_col}_lag{lag}"] = _calendar_lag(work, y_col, entity, time, lag)
+        except ValueError as exc:
+            return {"error_code": "INVALID_PANEL_INDEX", "error": str(exc)}
 
     low, high = work[y_col].quantile(0.01), work[y_col].quantile(0.99)
     work[y_col] = work[y_col].clip(lower=low, upper=high)
@@ -840,7 +891,7 @@ def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", 
     j = result.j_stat  # WaldTestStatistic with .stat, .pval, .df
 
     return {
-        "type": "IV-GMM proxy (unverified)",
+        "type": "Legacy IV-GMM proxy (not System GMM)",
         "coef_table": coef_table,
         "r_squared": float(result.rsquared),
         "adj_r_squared": float(getattr(result, "rsquared_adj", result.rsquared)),
@@ -870,3 +921,8 @@ def run_system_gmm(df, y_col=DEFAULT_Y_COL, x_cols=None, entity="company_code", 
         },
         "result_obj": result,
     }
+
+
+# Compatibility import for older callers; this name is intentionally marked
+# legacy and must not be presented as a verified System-GMM implementation.
+run_system_gmm = run_legacy_proxy_gmm

@@ -115,10 +115,20 @@ _THESIS_BLOCK = (
 )
 
 CONTEXT_BUDGET_TOKENS = 1500
+# Bump whenever result/context semantics change so stale narrative responses
+# cannot survive a model or panel-context contract change.
+AI_CACHE_REVISION = "wave6-8-context-v2"
+
+
+def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
+    """Build company context against the current database revision."""
+    return _build_company_context_cached(company_code, panel_mode, db.db_cache_revision())
 
 
 @functools.lru_cache(maxsize=64)
-def build_company_context(company_code: int, panel_mode: str = "thesis") -> str:
+def _build_company_context_cached(
+    company_code: int, panel_mode: str, db_revision: int
+) -> str:
     """Build a token-bounded (<= 900 tokens) context string for a single company.
 
     Includes: latest 5-year KPIs, peer group benchmarks (same industry_group +
@@ -222,11 +232,15 @@ def build_panel_context(panel_mode: str = "thesis", filters: Optional[dict] = No
     """
     normalized = dict(filters or {})
     normalized["panel_mode"] = panel_mode
-    return _build_panel_context_cached(panel_mode, db.filters_to_tuple(normalized))
+    return _build_panel_context_cached(
+        panel_mode, db.filters_to_tuple(normalized), db.db_cache_revision()
+    )
 
 
 @functools.lru_cache(maxsize=32)
-def _build_panel_context_cached(panel_mode: str, filters_tuple: tuple) -> str:
+def _build_panel_context_cached(
+    panel_mode: str, filters_tuple: tuple, db_revision: int
+) -> str:
     """Build a token-bounded (<= 900 tokens) panel-level context string.
 
     Includes: panel summary stats (firms, obs, year range), per-stage mean
@@ -1571,7 +1585,7 @@ def generate_econometric_narrative(
 
     # Cache key
     cache_key = hashlib.sha256(prompt.encode()).hexdigest()
-    ctx_key = hashlib.sha256(f"{model_type}:{panel_mode}".encode()).hexdigest()
+    ctx_key = hashlib.sha256(f"{AI_CACHE_REVISION}:{model_type}:{panel_mode}".encode()).hexdigest()
     cached = db.ai_cache_get(cache_key, ctx_key, "claude-sonnet-4-6", ttl_hours=168)
     if cached:
         yield cached
@@ -1655,7 +1669,9 @@ def generate_page_insights(
     )
 
     cache_key = hashlib.sha256(prompt.encode()).hexdigest()
-    ctx_key = hashlib.sha256(_json.dumps(data_summary, default=str, sort_keys=True).encode()).hexdigest()
+    ctx_key = hashlib.sha256(
+        (f"{AI_CACHE_REVISION}:" + _json.dumps(data_summary, default=str, sort_keys=True)).encode()
+    ).hexdigest()
     cached = db.ai_cache_get(cache_key, ctx_key, "claude-sonnet-4-6", ttl_hours=24)
     if cached:
         yield cached

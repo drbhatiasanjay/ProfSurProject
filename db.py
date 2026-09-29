@@ -104,7 +104,7 @@ def get_connection():
 def db_cache_revision() -> int:
     """Integer that changes when the SQLite file on disk changes (for Streamlit cache keys)."""
     try:
-        return int(os.path.getmtime(DB_PATH))
+        return int(os.stat(DB_PATH).st_mtime_ns)
     except OSError:
         return 0
 
@@ -266,6 +266,7 @@ def ensure_app_tables():
                 elapsed_s        REAL,
                 followups        TEXT,
                 chart_spec       TEXT,
+                result_envelope  TEXT,
                 feedback         TEXT
             );
             CREATE INDEX IF NOT EXISTS idx_chat_sessions_user
@@ -294,6 +295,11 @@ def ensure_app_tables():
             pass  # column already exists
         try:
             conn.execute("ALTER TABLE chat_messages ADD COLUMN feedback TEXT")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+        try:
+            conn.execute("ALTER TABLE chat_messages ADD COLUMN result_envelope TEXT")
             conn.commit()
         except Exception:
             pass  # column already exists
@@ -1293,6 +1299,7 @@ def append_chat_message(
     elapsed_s: float | None = None,
     followups: list[str] | None = None,
     chart_spec: dict | None = None,
+    result_envelope: dict | None = None,
 ) -> None:
     """Append a message and update session last_active + message_count. Silent no-op on error.
 
@@ -1302,14 +1309,15 @@ def append_chat_message(
     import json as _json_db
     followups_json = _json_db.dumps(followups) if followups else None
     chart_spec_json = _json_db.dumps(chart_spec) if chart_spec else None
+    result_envelope_json = _json_db.dumps(result_envelope, default=str) if result_envelope else None
     try:
         with get_connection() as con:
             con.execute("PRAGMA foreign_keys=ON")
             con.execute(
                 """INSERT INTO chat_messages
-                   (chat_session_id, role, content, model_used, elapsed_s, followups, chart_spec)
-                   VALUES (?,?,?,?,?,?,?)""",
-                (chat_session_id, role, content, model_used, elapsed_s, followups_json, chart_spec_json),
+                   (chat_session_id, role, content, model_used, elapsed_s, followups, chart_spec, result_envelope)
+                   VALUES (?,?,?,?,?,?,?,?)""",
+                (chat_session_id, role, content, model_used, elapsed_s, followups_json, chart_spec_json, result_envelope_json),
             )
             con.execute(
                 """UPDATE chat_sessions
@@ -1339,7 +1347,7 @@ def load_chat_messages(chat_session_id: str) -> list[dict]:
         conn = get_connection()
         try:
             cur = conn.execute(
-                """SELECT id, role, content, model_used, elapsed_s, followups, chart_spec, feedback
+                """SELECT id, role, content, model_used, elapsed_s, followups, chart_spec, result_envelope, feedback
                    FROM chat_messages
                    WHERE chat_session_id = ?
                    ORDER BY ts ASC""",
@@ -1362,10 +1370,16 @@ def load_chat_messages(chat_session_id: str) -> list[dict]:
                     chart = None
             except Exception:
                 chart = None
+            try:
+                envelope = _json_db.loads(r[7]) if r[7] else None
+                if not isinstance(envelope, dict):
+                    envelope = None
+            except Exception:
+                envelope = None
             out.append({
                 "id": r[0], "role": r[1], "content": r[2], "model_used": r[3],
                 "elapsed_s": r[4], "followups": fups, "chart_spec": chart,
-                "feedback": r[7],
+                "result_envelope": envelope, "feedback": r[8],
             })
         return out
     except Exception:

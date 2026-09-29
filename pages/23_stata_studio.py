@@ -36,8 +36,12 @@ from models.stata_engine import (
     prepare_df_for_stata,
     _STORED_ESTIMATES,
 )
+from models.model_context import AnalysisSession
 
 ensure_session_state()
+if "analysis_session" not in st.session_state:
+    st.session_state["analysis_session"] = AnalysisSession()
+_analysis_session = st.session_state["analysis_session"]
 db.log_page_visit("Stata Studio")
 
 st.set_page_config(
@@ -223,6 +227,10 @@ n_industries = panel_df["industry_group"].nunique() if "industry_group" in panel
 
 col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
 is_dark = st.session_state.get("theme", "light") == "dark"
+accent_blue = "#38BDF8" if is_dark else "#0284C7"
+accent_indigo = "#818CF8" if is_dark else "#6366F1"
+accent_green = "#34D399" if is_dark else "#059669"
+muted_text = "#94A3B8" if is_dark else "#64748B"
 card_bg = "rgba(30, 41, 59, 0.55)" if is_dark else "#FFFFFF"
 card_border = "#334155" if is_dark else "#E2E8F0"
 lbl_col = "#94A3B8" if is_dark else "#64748B"
@@ -245,7 +253,7 @@ with col_m1:
     st.markdown(f"""
     <div style="{m_card_style}">
         <div style="font-size:0.67rem; font-weight:700; text-transform:uppercase; color:{lbl_col}; letter-spacing:0.04em;">PANEL SETTING</div>
-        <div style="font-family:'Consolas','Courier New',monospace; font-size:0.82rem; font-weight:700; color:#0284C7; background:rgba(2,132,199,0.09); padding:3px 6px; border-radius:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="xtset company_code year">xtset company_code year</div>
+        <div style="font-family:'Consolas','Courier New',monospace; font-size:0.82rem; font-weight:700; color:{accent_blue}; background:rgba(2,132,199,0.09); padding:3px 6px; border-radius:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="xtset company_code year">xtset company_code year</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -266,7 +274,7 @@ with col_m3:
         <div style="font-size:0.67rem; font-weight:700; text-transform:uppercase; color:{lbl_col}; letter-spacing:0.04em;">CROSS-SECTION (i)</div>
         <div style="display:flex; align-items:baseline; gap:5px;">
             <span style="font-size:1.3rem; font-weight:800; color:{txt_col}; font-family:'JetBrains Mono',monospace;">{n_firms:,}</span>
-            <span style="font-size:0.75rem; color:#6366F1; font-weight:600;">Firms</span>
+            <span style="font-size:0.75rem; color:{accent_indigo}; font-weight:600;">Firms</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -278,7 +286,7 @@ with col_m4:
         <div style="font-size:0.67rem; font-weight:700; text-transform:uppercase; color:{lbl_col}; letter-spacing:0.04em;">TIME HORIZON (T)</div>
         <div style="display:flex; align-items:baseline; gap:4px; flex-wrap:nowrap;">
             <span style="font-size:1.12rem; font-weight:800; color:{txt_col}; font-family:'JetBrains Mono',monospace; white-space:nowrap;">{years[0]}–{years[1]}</span>
-            <span style="font-size:0.68rem; color:#059669; font-weight:600; white-space:nowrap;">({n_yrs}Y)</span>
+            <span style="font-size:0.68rem; color:{accent_green}; font-weight:600; white-space:nowrap;">({n_yrs}Y)</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -415,7 +423,7 @@ with tab_cli:
     /* Executive Processing Card with Spinner */
     div[data-testid="stSpinner"] {
         background: rgba(2, 132, 199, 0.06) !important;
-        border: 1px solid #0284C7 !important;
+        border: 1px solid {accent_blue} !important;
         border-radius: 8px !important;
         padding: 14px 18px !important;
         margin: 12px 0 18px 0 !important;
@@ -424,7 +432,7 @@ with tab_cli:
     div[data-testid="stSpinner"] > div {
         font-size: 0.95rem !important;
         font-weight: 600 !important;
-        color: #0284C7 !important;
+        color: {accent_blue} !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -457,7 +465,7 @@ with tab_cli:
         with output_placeholder.container():
             with st.spinner(f"⏳ Processing Stata command `.{active_cmd}`… Estimating econometric parameters & compiling results"):
                 t0 = time.time()
-                res = execute_stata_command(active_cmd, df=panel_df)
+                res = execute_stata_command(active_cmd, df=panel_df, session=_analysis_session)
                 elapsed = time.time() - t0
                 if elapsed < 0.6:
                     time.sleep(0.6 - elapsed)
@@ -533,9 +541,9 @@ with tab_cli:
                 c_sw1, c_sw2 = st.columns([3, 2])
                 with c_sw1:
                     st.markdown(
-                        "<div style='font-size:13px;font-weight:700;color:#0284C7;margin-top:6px;'>"
+                        f"<div style='font-size:13px;font-weight:700;color:{accent_blue};margin-top:6px;'>"
                         "Data-Gated Chart Switcher</div>"
-                        "<div style='font-size:11.5px;color:#64748B;'>"
+                        f"<div style='font-size:11.5px;color:{muted_text};'>"
                         "Only mathematically permissible representations shown</div>",
                         unsafe_allow_html=True,
                     )
@@ -699,7 +707,7 @@ with tab_cli:
                         border-radius:8px;padding:16px 20px;margin-bottom:14px;">
                 <div style="font-size:12.5px;font-weight:700;color:{cite_title};margin-bottom:10px;">
                     📚 Part 3: Peer-Reviewed Literature & Citations
-                    <span style="font-weight:400;font-size:11px;margin-left:8px;color:#64748B;">
+                    <span style="font-weight:400;font-size:11px;margin-left:8px;color:{muted_text};">
                         Showing 2 of {len(citations)}
                     </span>
                 </div>
@@ -732,20 +740,20 @@ with tab_esttab:
     st.markdown("### 📑 Multi-Model Comparison Table (`esttab` / `outreg2`)")
     st.caption("Publication-grade table comparing Pooled OLS, Firm Fixed Effects, and Random Effects side-by-side with cluster-adjusted standard errors in parentheses.")
 
-    df_stored = get_stored_models_table()
+    df_stored = get_stored_models_table(session=_analysis_session)
     if df_stored.empty:
         # Pre-populate with standard specifications
-        execute_stata_command("regress leverage profitability tangibility log_size", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=panel_df)
-        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=panel_df)
-        df_stored = get_stored_models_table()
+        execute_stata_command("regress leverage profitability tangibility log_size", df=panel_df, session=_analysis_session)
+        execute_stata_command("xtreg leverage profitability tangibility log_size, fe cluster(company_code)", df=panel_df, session=_analysis_session)
+        execute_stata_command("xtreg leverage profitability tangibility log_size, re", df=panel_df, session=_analysis_session)
+        df_stored = get_stored_models_table(session=_analysis_session)
 
     st.dataframe(df_stored, use_container_width=True, hide_index=True)
 
     c_dl1, c_dl2, c_dl3 = st.columns(3)
     with c_dl1:
         # LaTeX Code Generation
-        latex_str = generate_esttab_latex()
+        latex_str = generate_esttab_latex(session=_analysis_session)
         st.download_button(
             "📥 Download LaTeX (.tex)",
             data=latex_str,
@@ -757,7 +765,7 @@ with tab_esttab:
         # Microsoft Word Export
         tmp_docx = os.path.join(os.getcwd(), "scratch", "stata_publication_table.docx")
         os.makedirs(os.path.dirname(tmp_docx), exist_ok=True)
-        docx_res = generate_esttab_docx(tmp_docx)
+        docx_res = generate_esttab_docx(tmp_docx, session=_analysis_session)
         if docx_res and os.path.exists(tmp_docx):
             with open(tmp_docx, "rb") as f_docx:
                 st.download_button(
@@ -792,7 +800,7 @@ with tab_coefplot:
     st.markdown("### 📈 Visual Determinants (`coefplot`)")
     st.caption("Point estimates with 95% confidence interval whiskers. Determinants with confidence intervals that do not cross zero (dashed line) are statistically significant.")
 
-    coef_res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=panel_df)
+    coef_res = execute_stata_command("coefplot, drop(_cons) xline(0)", df=panel_df, session=_analysis_session)
     spec = coef_res.get("chart_spec", {})
 
     if spec and spec.get("categories"):
