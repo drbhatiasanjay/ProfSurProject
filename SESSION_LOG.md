@@ -1,6 +1,37 @@
 # ProfSurProject — Session Log
 
+## CHECKPOINT — Recordly Master Walkthrough V4: 10-Scene Dynamic Run-Up & 5 Dedicated Company Archetypes (2026-09-30 01:25 IST)
+
+**Branch:** `agy/wave6-8-harness-repair-2026-09-11` · **HEAD:** `6844305`  
+**Conversation:** `441a895b-590c-4664-bb91-715e86dff507`
+
+### State at Checkpoint
+- **Streamlit Server:** Active and healthy on `http://localhost:8501` (`/_stcore/health` 200).
+- **Master Production Script:** `scripts/produce_ai_chatbot_demo_recordly.py`
+- **10-Scene Dynamic Architecture:**
+  - Scene 1: Title Card & Institutional Authorship Attribution (Dr. Sanjay Bhatia & Dr. Surender Kumar, EOLABS.IN).
+  - Scene 2: Anatomy of an AI Response (6-Layer breakdown).
+  - Scene 3: **Infosys Ltd. (Tech)** (Mature Stage, 4.2% leverage, internal cash self-financing).
+  - Scene 4: **Tata Steel Ltd. (Metals)** (Macro rate shock +150 bps, ICR 1.72x vs 2.0x floor covenant defense).
+  - Scene 5: **Bharti Airtel (Telecom)** (5G spectrum commitments, InvIT monetization, balance sheet repair).
+  - Scene 6: **InterGlobe Aviation / IndiGo (Aviation)** (Jet fuel shocks, cash burn runway, Leaseback debt capacity).
+  - Scene 7: **Sun Pharma (Pharma)** (Cross-border M&A, Euro Notes natural currency FX hedge).
+  - Scene 8: **Econometric Lab** (Panel fixed-effects `. xtreg fe`, ASCII table, Plotly visualizations).
+  - Scene 9: **Literature Benchmark Vault** (Dickinson / Myers citations, Board Deck export).
+  - Scene 10: **Closing Epilogue** (Executive credits, verified production seal).
+- **Audio-Visual Invariant Enforced:**
+  - Phase 1: Live query typing with Sentence 0 intro audio.
+  - Phase 2: Authentic reasoning / working state captured with **total silence** (~5–10s).
+  - Phase 3: Immediate instant scroll-up to $y=0$ upon generation completion.
+  - Phase 4: Commentary (Sentences 1..N) and upper white-space subtitles (`MarginV=90`) narrate results with smooth focal scroll.
+- **Master Deliverables on Disk:**
+  - `scratch/demo_production/ai_chatbot_master_walkthrough_v2_subtitled.mp4` (31.5 MB)
+  - `scratch/demo_production/ai_chatbot_master_walkthrough_v2.mp4` (26.8 MB)
+  - `scratch/demo_production/ai_chatbot_master_walkthrough_v2.srt` (41 cues)
+- **Directives Updated:** `AGENTS.md` (Section 6), `CURRENT_STATUS.md`, and `AI_ASSISTANT_MASTER_DEMO_STRATEGY.md`.
+
 ## CHECKPOINT — Recordly Master Walkthrough: Dynamic Screen Run-Up & Verification Suite (2026-09-29 23:15 IST)
+
 
 **Branch:** `agy/wave6-8-harness-repair-2026-09-11` · **HEAD:** `3f8811c`  
 **Conversation:** `441a895b-590c-4664-bb91-715e86dff507`

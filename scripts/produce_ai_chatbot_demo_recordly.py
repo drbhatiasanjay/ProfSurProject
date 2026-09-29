@@ -2,14 +2,25 @@
 produce_ai_chatbot_demo_recordly.py
 
 Recordly Master Production Pipeline for the AI Financial Assistant Master Walkthrough.
-Implements 100% Dynamic Screen Run-Up:
-  1. Live character-by-character typing into chat input on camera (Screen 1).
-  2. Live triggering of the submit event (Enter) and 2.0s capture of 'Working...' reasoning trace (Screen 2).
-  3. Automatic immediate scroll-up to y=0 upon generation so user prompt, telemetry, and Dickinson Lifecycle Stage are visible (Screen 3).
-  4. Paced focal scrolling tracking every spoken sentence down to CFO Actionable Recommendations and Literature Vault (Screen 4).
-  5. Live dynamic execution across all archetypes (Infosys, Tata Steel, Airtel, IndiGo, Sun Pharma, Stata xtreg).
-  6. Non-obstructive broadcast lower-third subtitles with MarginV=90 floating in clean white space.
-  7. Exact zero-drift lockstep across all scenes with isolated clean database sessions.
+Implements 100% Dynamic Screen Run-Up across all 5 featured Corporate Archetypes & Tiers:
+  1. Scene 1: Title Card & Institutional Attribution.
+  2. Scene 2: Anatomy of an AI Response (6-layer decision architecture).
+  3. Scene 3: Infosys Ltd. (Tech / Mature Stage / 4.2% Near-Zero Debt & CFO Playbook).
+  4. Scene 4: Tata Steel Ltd. (Metals / Macro Stress Test / Covenant Breach & ICR Defense).
+  5. Scene 5: Bharti Airtel Ltd. (Telecom / InvIT Monetization & 5G Spectrum Deleveraging).
+  6. Scene 6: InterGlobe Aviation / IndiGo (Aviation / Jet Fuel Shock & Leaseback Capacity).
+  7. Scene 7: Sun Pharma (Pharma / Cross-Border M&A & Euro Notes Natural FX Hedge).
+  8. Scene 8: Econometric Lab & Stata 18 SE Replication (. xtreg fe).
+  9. Scene 9: Peer-Reviewed Benchmark Vault & Board Deck Integration.
+  10. Scene 10: Executive Epilogue & Institutional Credentials.
+
+Dynamic Audio-Visual Lockstep:
+  - Live typing on camera with Sentence 0 audio narration.
+  - Live 'Working... Reasoning Trace' captured on video.
+  - Script pauses until generation completes, then instantly snaps up to y=0.
+  - Sentences 1..N audio & captions start speaking ONLY AFTER the answer is rendered on screen.
+  - Paced focal scroll down through the CFO Strategic Recommendations Table and charts.
+  - Floating white-space subtitles (MarginV=90) with zero chat-bar occlusion.
 
 Authors:
   Dr. Sanjay Bhatia (CoFounder, EOLABS.IN)
@@ -46,7 +57,7 @@ SCENE_DIR.mkdir(parents=True, exist_ok=True)
 (OUT / "redteam_review_recordly").mkdir(parents=True, exist_ok=True)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Scene Definitions with Fine-Grained Sentence Cues & Live Action Metadata
+# Scene Definitions: 5 Individual Company Scenes + Econometrics & Governance
 # ─────────────────────────────────────────────────────────────────────────────
 SCENES = [
     {
@@ -78,9 +89,9 @@ SCENES = [
     },
     {
         "id": "scene3_infosys_tech",
-        "tag": "CORPORATE ARCHETYPE 1: TECH",
+        "tag": "ARCHETYPE 1: TECH (INFOSYS)",
         "title": "Infosys Ltd. (100632): Near-Zero Debt & Financial Flexibility",
-        "hud_desc": "Leverage 4.2%, ROA 33.4%, Dickinson Mature Stage | Pecking Order vs Tax Shields",
+        "hud_desc": "Leverage 4.2%, ROA 33.4%, Dickinson Mature Stage | Internal Cash Flow Self-Financing",
         "prompt": "As CFO of Infosys Ltd., analyze our baseline capital structure and cash-flow profile in Computer software. What Dickinson lifecycle stage are we currently in, and how does our 4.2% leverage compare to the IT software industry median?",
         "sentences": [
             "We begin with Infosys in the technology sector, submitting our baseline capital structure and cash-flow query.",
@@ -92,7 +103,7 @@ SCENES = [
     },
     {
         "id": "scene4_tata_steel_stress",
-        "tag": "CORPORATE ARCHETYPE 2: METALS",
+        "tag": "ARCHETYPE 2: METALS (TATA STEEL)",
         "title": "Tata Steel Ltd. (248136): Macro Rate Shock (+150 bps) & Covenant Defense",
         "hud_desc": "+150 bps rate surge + 20% margin drop: ICR 1.72x vs 2.00x floor (BREACH RISK)",
         "prompt": "Conduct a macro stress test for Tata Steel: if borrowing costs rise by 150 bps and steel spreads contract by 20%, what happens to our Interest Coverage Ratio against the 2.0x floor?",
@@ -104,19 +115,46 @@ SCENES = [
         ],
     },
     {
-        "id": "scene5_airtel_indigo_pharma",
-        "tag": "DIVERSE SECTORS: TELECOM, AVIATION & PHARMA",
-        "title": "Bharti Airtel (34162), IndiGo (395047) & Sun Pharma (239726)",
-        "hud_desc": "Telecom InvIT monetization | Aviation fuel shocks | Pharma FX hedge",
+        "id": "scene5_airtel_telecom",
+        "tag": "ARCHETYPE 3: TELECOM (BHARTI AIRTEL)",
+        "title": "Bharti Airtel (34162): 5G Spectrum Debt & InvIT Monetization",
+        "hud_desc": "Deleveraging via Infrastructure Investment Trusts | Asset-Light Tower Carve-Out",
+        "prompt": "As CFO of Bharti Airtel, evaluate our 5G spectrum debt and InvIT carve-out options to optimize capital structure.",
         "sentences": [
-            "Across other sector archetypes, the AI Assistant dynamically tailors executive solutions:",
-            "For Bharti Airtel, it evaluates infrastructure InvIT carve-outs to deleverage massive five-G spectrum debt.",
-            "For IndiGo in aviation, it models monthly cash burn under jet fuel shocks and sizes Sale-and-Leaseback debt capacity.",
-            "For Sun Pharma, it structures Euro-denominated notes as a natural currency hedge for cross-border acquisitions."
+            "Next, we examine Bharti Airtel facing heavy five-G spectrum capital commitments.",
+            "The assistant evaluates infrastructure InvIT carve-outs to monetize passive tower and fiber assets.",
+            "The executive decision matrix highlights a path to deleverage core balance sheet obligations without diluting equity.",
+            "The actionable CFO playbook advises pacing spectrum installments while channeling external debt through investment trust vehicles."
         ],
     },
     {
-        "id": "scene6_researcher_stata",
+        "id": "scene6_indigo_aviation",
+        "tag": "ARCHETYPE 4: AVIATION (INDIGO)",
+        "title": "InterGlobe Aviation / IndiGo (395047): Jet Fuel Shocks & Leaseback Debt",
+        "hud_desc": "ATF Price Volatility | Cash Burn Runway | Sale-and-Leaseback Capacity",
+        "prompt": "As CFO of InterGlobe Aviation (IndiGo), model cash burn under jet fuel shocks and size Sale-and-Leaseback debt capacity.",
+        "sentences": [
+            "For InterGlobe Aviation, operating in high-volatility passenger transport, we simulate aviation turbine fuel shocks.",
+            "The model computes monthly operational cash burn under sharp aviation fuel price spikes.",
+            "The assistant sizes Sale-and-Leaseback debt capacity to preserve unrestricted cash liquidity.",
+            "The C-Suite recommendations outline structured aircraft financing to minimize foreign currency interest exposure."
+        ],
+    },
+    {
+        "id": "scene7_sunpharma_pharma",
+        "tag": "ARCHETYPE 5: PHARMA (SUN PHARMA)",
+        "title": "Sun Pharma Industries (239726): Cross-Border M&A & Euro Natural Hedge",
+        "hud_desc": "Euro-Denominated Notes | Natural Currency Hedging | Global Specialty Pipeline",
+        "prompt": "As CFO of Sun Pharma, structure Euro-denominated notes as a natural currency hedge for cross-border acquisitions.",
+        "sentences": [
+            "Finally, for Sun Pharma in specialty pharmaceuticals, we structure global acquisition financing.",
+            "The assistant designs Euro-denominated notes that create a natural currency hedge against European export revenues.",
+            "The empirical framework confirms that high research-and-development firms benefit from conservative leverage with natural FX alignment.",
+            "The CFO playbook recommends multi-currency debt tranches to fund strategic specialty pipeline acquisitions."
+        ],
+    },
+    {
+        "id": "scene8_researcher_stata",
         "tag": "ECONOMETRIC LAB & STATA REPLICATION",
         "title": "Panel Fixed-Effects xtreg & Interactive Visualizations",
         "hud_desc": "xtreg lev size tang roa mtb i.year, fe cluster(ind_code) | Multi-series Plotly chart",
@@ -129,7 +167,7 @@ SCENES = [
         ],
     },
     {
-        "id": "scene7_literature_vault",
+        "id": "scene9_literature_vault",
         "tag": "BENCHMARK VAULT & GOVERNANCE",
         "title": "Academic Citation Inspector & Governance Deck",
         "hud_desc": "Dickinson (2011), Myers & Majluf (1984), Rajan & Zingales (1995)",
@@ -140,7 +178,7 @@ SCENES = [
         ],
     },
     {
-        "id": "scene8_closing_card",
+        "id": "scene10_closing_card",
         "tag": "EXECUTIVE EPILOGUE",
         "title": "LifeCycle Leverage Intelligence Platform",
         "hud_desc": "Dr. Sanjay Bhatia & Dr. Surender Kumar | Powered by EOLABS.IN",
@@ -156,7 +194,7 @@ SCENES = [
 # Database Isolation Helper (Zero Residual Session Bleed)
 # ─────────────────────────────────────────────────────────────────────────────
 def clean_database_chat_sessions():
-    """Wipe prior chat sessions so every run is 100% clean."""
+    """Wipe prior chat sessions so every scene is 100% clean."""
     try:
         conn = sqlite3.connect("capital_structure.db")
         conn.execute("DELETE FROM chat_messages")
@@ -202,6 +240,10 @@ def focal_scroll(page, target_y: int):
             }} catch(e) {{}}
         }}
     }}""")
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Audio Generation & Sentence-Level Timing
+# ─────────────────────────────────────────────────────────────────────────────
 async def gen_audio_segment(text: str, out_path: Path):
     communicate = edge_tts.Communicate(text, VOICE, rate="+3%", pitch="+0Hz")
     await communicate.save(str(out_path))
@@ -219,7 +261,7 @@ def get_audio_duration(mp3_path: Path) -> float:
 def make_silence_mp3(dur: float, out_path: Path):
     cmd = [
         "ffmpeg", "-y",
-        "-f", "lavfi", "-i", f"anullsrc=r=24000:cl=mono",
+        "-f", "lavfi", "-i", "anullsrc=r=24000:cl=mono",
         "-t", f"{dur:.3f}",
         "-q:a", "9",
         "-acodec", "libmp3lame",
@@ -245,57 +287,33 @@ def concat_mp3s(mp3_list: list[Path], out_mp3: Path):
         list_txt.unlink()
 
 def prepare_all_audio() -> list[dict]:
-    print("=== Step 1: Generating Neural Voice & Sentence Cues (edge-tts) ===")
+    print("=== Step 1: Generating Neural Voice & Sentence Segments (edge-tts) ===")
     scene_manifest = []
-    total_dur = 0.0
     
     for sc in SCENES:
         sid = sc["id"]
-        is_query_scene = sid in ("scene2_assistant_overview", "scene3_infosys_tech", "scene4_tata_steel_stress", "scene6_researcher_stata")
-        
-        sentence_mp3s = []
         sentence_cues = []
-        cur_t = 0.0
         
         for idx, s in enumerate(sc["sentences"]):
             s_file = AUDIO_DIR / f"{sid}_s{idx}.mp3"
             asyncio.run(gen_audio_segment(s, s_file))
             s_dur = get_audio_duration(s_file)
-            sentence_mp3s.append(s_file)
             
             sentence_cues.append({
+                "index": idx,
                 "text": s,
-                "start": cur_t,
-                "end": cur_t + s_dur,
                 "duration": s_dur,
                 "file": s_file,
             })
-            cur_t += s_dur
             
-            # If this is the query sentence (index 0) in an interactive scene, inject a 2.0s working pause in timeline
-            if is_query_scene and idx == 0:
-                silence_file = AUDIO_DIR / f"{sid}_silence_working.mp3"
-                make_silence_mp3(2.0, silence_file)
-                sentence_mp3s.append(silence_file)
-                cur_t += 2.0
-
-        # Master concatenated MP3 for this scene
-        master_scene_mp3 = AUDIO_DIR / f"{sid}.mp3"
-        concat_mp3s(sentence_mp3s, master_scene_mp3)
-        total_scene_dur = get_audio_duration(master_scene_mp3)
-        
-        print(f"  [{sid}] -> {total_scene_dur:.2f}s ({len(sc['sentences'])} sentences) | {master_scene_mp3.name}")
+        print(f"  [{sid}] -> {len(sentence_cues)} sentences synthesized.")
         scene_manifest.append({
             "id": sid,
-            "mp3": master_scene_mp3,
-            "duration": total_scene_dur,
             "cues": sentence_cues,
             "data": sc,
-            "is_query_scene": is_query_scene,
+            "is_interactive": "prompt" in sc,
         })
-        total_dur += total_scene_dur
 
-    print(f"Total Master Audio Duration: {total_dur:.1f}s ({total_dur/60:.2f} min)\n")
     return scene_manifest
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -398,15 +416,14 @@ def show_closing_card(page):
 # ─────────────────────────────────────────────────────────────────────────────
 # Scene Recorder Engine: Live Typing & Dynamic Response Generation
 # ─────────────────────────────────────────────────────────────────────────────
-def record_scene_recordly(browser, scene_item: dict) -> Path:
+def record_scene_recordly(browser, scene_item: dict) -> tuple[Path, list[dict]]:
     sc = scene_item["data"]
     sid = sc["id"]
-    duration = scene_item["duration"]
-    mp3 = scene_item["mp3"]
+    cues = scene_item["cues"]
+    is_interactive = scene_item["is_interactive"]
     
-    print(f"\n--- Recording Scene (Recordly Engine): {sid} (Duration: {duration:.2f}s) ---")
+    print(f"\n--- Recording Scene (Recordly Engine): {sid} ---")
     
-    # Always guarantee clean isolated session for every scene
     clean_database_chat_sessions()
 
     context = browser.new_context(
@@ -418,9 +435,8 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
     page = context.new_page()
 
     is_title = (sid == "scene1_title_card")
-    is_closing = (sid == "scene8_closing_card")
+    is_closing = (sid == "scene10_closing_card")
 
-    # Navigate to page and ensure authenticated state
     page.goto(PAGE_URL, wait_until="networkidle", timeout=45000)
     
     login_btn = page.locator('button:has-text("Sign in"), button:has-text("Log in"), button[type="submit"]').first
@@ -443,226 +459,157 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
         time.sleep(0.5)
         show_slim_hud(page, sc["tag"], sc["title"], sc["hud_desc"])
 
-    # Mark exact time when UI is fully loaded and ready for live action
     t_ready = time.time() - t_init
 
-    # Start audio clock
-    t0 = time.time()
-    audio_proc = subprocess.Popen(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(mp3)],
-                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    scene_audio_files = []
+    final_cues = []
+    cur_t = 0.0
 
     if is_title or is_closing:
-        time.sleep(duration)
+        for c in cues:
+            subprocess.run(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(c["file"])])
+            scene_audio_files.append(c["file"])
+            final_cues.append({
+                "text": c["text"], "start": cur_t, "end": cur_t + c["duration"], "duration": c["duration"]
+            })
+            cur_t += c["duration"]
+    elif sid == "scene9_literature_vault":
+        # Cue 0
+        c0 = cues[0]
+        subprocess.run(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(c0["file"])])
+        scene_audio_files.append(c0["file"])
+        final_cues.append({"text": c0["text"], "start": cur_t, "end": cur_t + c0["duration"], "duration": c0["duration"]})
+        cur_t += c0["duration"]
+        focal_scroll(page, 180)
+
+        # Cue 1 (Click citation modal)
+        c1 = cues[1]
+        cit_badge = page.locator('button:has-text("Dickinson"), button:has-text("Myers")').first
+        if cit_badge.is_visible(timeout=1000):
+            cit_badge.click()
+        subprocess.run(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(c1["file"])])
+        scene_audio_files.append(c1["file"])
+        final_cues.append({"text": c1["text"], "start": cur_t, "end": cur_t + c1["duration"], "duration": c1["duration"]})
+        cur_t += c1["duration"]
+        focal_scroll(page, 260)
+
+        # Cue 2
+        c2 = cues[2]
+        subprocess.run(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(c2["file"])])
+        scene_audio_files.append(c2["file"])
+        final_cues.append({"text": c2["text"], "start": cur_t, "end": cur_t + c2["duration"], "duration": c2["duration"]})
+        cur_t += c2["duration"]
+        focal_scroll(page, 420)
     else:
-        if sid == "scene2_assistant_overview":
-            # Cue 0: Live typing & triggering the 6-layer inquiry
-            cue0 = scene_item["cues"][0]
-            chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
-            if chat_input.is_visible(timeout=2000):
-                chat_input.click()
-                chat_input.type(sc.get("prompt", "Explain Pecking Order vs Trade-Off theories."), delay=15)
-                time.sleep(0.2)
-                page.keyboard.press("Enter")
-                # Show 2s of working state on camera
-                time.sleep(2.0)
-                # Wait until generation finishes
-                try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=25000)
-                except Exception:
-                    pass
-                # Screen 3: Immediate top scroll
-                scroll_up_immediate(page)
-            
-            # Cues 1-6: Sequential focal scrolling over the 6 layers
-            anchors = [0, 160, 360, 580, 920, 1250]
-            for idx in range(1, len(scene_item["cues"])):
-                cue = scene_item["cues"][idx]
-                target_y = anchors[min(idx - 1, len(anchors)-1)]
-                focal_scroll(page, target_y)
-                time.sleep(cue["duration"])
+        # ─────────────────────────────────────────────────────────────────────
+        # Interactive Company / Econometrics Flow:
+        # Phase 1: Sentence 0 audio plays while typing query
+        # ─────────────────────────────────────────────────────────────────────
+        c0 = cues[0]
+        final_cues.append({"text": c0["text"], "start": cur_t, "end": cur_t + c0["duration"], "duration": c0["duration"]})
+        cur_t += c0["duration"]
+        scene_audio_files.append(c0["file"])
 
-        elif sid == "scene3_infosys_tech":
-            # Cue 0: Switch to CFO -> Infosys -> Live type exact prompt
-            cfo_radio = page.locator('label:has-text("CFO")').first
-            if cfo_radio.is_visible(timeout=1000):
-                cfo_radio.click()
-                time.sleep(0.5)
-            infosys_btn = page.locator('button:has-text("Infosys")').first
-            if infosys_btn.is_visible(timeout=1000):
-                infosys_btn.click()
-                time.sleep(0.4)
+        # Start playing Sentence 0 in background
+        proc_c0 = subprocess.Popen(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(c0["file"])],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-            chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
-            if chat_input.is_visible(timeout=2000):
-                chat_input.click()
-                chat_input.type(sc.get("prompt", "As CFO of Infosys Ltd., analyze our baseline capital structure and cash-flow profile in Computer software. What Dickinson lifecycle stage are we currently in, and how does our 4.2% leverage compare to the IT software industry median?"), delay=15)
-                time.sleep(0.2)
-                page.keyboard.press("Enter")
-                # Screen 2: Capture 2s of authentic Working state
-                time.sleep(2.0)
-                # Wait until generation finishes
-                try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=25000)
-                except Exception:
-                    pass
-                # Screen 3: Immediate instant scroll-up to top so prompt, telemetry, and badges are in full view
-                scroll_up_immediate(page)
-
-            # Screen 4: Focal scroll down through Narrative -> CFO Recommendations Table -> Chart -> Playbook
-            anchors = [140, 360, 720, 520]
-            for idx in range(1, len(scene_item["cues"])):
-                cue = scene_item["cues"][idx]
-                target_y = anchors[min(idx - 1, len(anchors)-1)]
-                focal_scroll(page, target_y)
-                time.sleep(cue["duration"])
-
-        elif sid == "scene4_tata_steel_stress":
-            # Cue 0: Select Tata Steel -> Live type Macro Stress Test query
-            tata_btn = page.locator('button:has-text("Tata Steel")').first
-            if tata_btn.is_visible(timeout=1000):
-                tata_btn.click()
-                time.sleep(0.5)
-
-            chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
-            if chat_input.is_visible(timeout=2000):
-                chat_input.click()
-                chat_input.type(sc.get("prompt", "Conduct a macro stress test for Tata Steel: if borrowing costs rise by 150 bps and steel spreads contract by 20%, what happens to our Interest Coverage Ratio against the 2.0x floor?"), delay=15)
-                time.sleep(0.2)
-                page.keyboard.press("Enter")
-                time.sleep(2.0)
-                try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=25000)
-                except Exception:
-                    pass
-                scroll_up_immediate(page)
-
-            # Focal scroll down through Covenant Breach Warning -> CFO Playbook
-            anchors = [160, 280, 520]
-            for idx in range(1, len(scene_item["cues"])):
-                cue = scene_item["cues"][idx]
-                target_y = anchors[min(idx - 1, len(anchors)-1)]
-                focal_scroll(page, target_y)
-                time.sleep(cue["duration"])
-
-        elif sid == "scene5_airtel_indigo_pharma":
-            focal_scroll(page, 0)
-            time.sleep(scene_item["cues"][0]["duration"])
-
-            # Cue 1: Bharti Airtel
-            airtel_btn = page.locator('button:has-text("Bharti Airtel")').first
-            if airtel_btn.is_visible(timeout=1000):
-                airtel_btn.click()
-                time.sleep(0.4)
-            exec_2 = page.locator('button:has-text("Execute 🟡 2")').first
-            if exec_2.is_visible(timeout=1000):
-                exec_2.click()
-                try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=20000)
-                except Exception:
-                    pass
-                scroll_up_immediate(page)
-            focal_scroll(page, 180)
-            time.sleep(max(0.5, scene_item["cues"][1]["duration"] - 1.2))
-
-            # Cue 2: IndiGo
-            indigo_btn = page.locator('button:has-text("IndiGo")').first
-            if indigo_btn.is_visible(timeout=1000):
-                indigo_btn.click()
-                time.sleep(0.4)
-            exec_3 = page.locator('button:has-text("Execute 🟠 3")').first
-            if exec_3.is_visible(timeout=1000):
-                exec_3.click()
-                try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=20000)
-                except Exception:
-                    pass
-                scroll_up_immediate(page)
-            focal_scroll(page, 220)
-            time.sleep(max(0.5, scene_item["cues"][2]["duration"] - 1.2))
-
-            # Cue 3: Sun Pharma
-            pharma_btn = page.locator('button:has-text("Sun Pharma")').first
-            if pharma_btn.is_visible(timeout=1000):
-                pharma_btn.click()
-                time.sleep(0.4)
-            exec_4 = page.locator('button:has-text("Execute 🔴 4")').first
-            if exec_4.is_visible(timeout=1000):
-                exec_4.click()
-                try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=20000)
-                except Exception:
-                    pass
-                scroll_up_immediate(page)
-            focal_scroll(page, 260)
-            time.sleep(max(0.5, scene_item["cues"][3]["duration"] - 1.2))
-
-        elif sid == "scene6_researcher_stata":
+        # Mode & Company Switching
+        if sid == "scene8_researcher_stata":
             res_radio = page.locator('label:has-text("Researcher")').first
             if res_radio.is_visible(timeout=1000):
                 res_radio.click()
-                time.sleep(0.5)
+                time.sleep(0.3)
+        else:
+            cfo_radio = page.locator('label:has-text("CFO")').first
+            if cfo_radio.is_visible(timeout=1000):
+                cfo_radio.click()
+                time.sleep(0.3)
+            
+            comp_map = {
+                "scene3_infosys_tech": "Infosys",
+                "scene4_tata_steel_stress": "Tata Steel",
+                "scene5_airtel_telecom": "Bharti Airtel",
+                "scene6_indigo_aviation": "IndiGo",
+                "scene7_sunpharma_pharma": "Sun Pharma",
+            }
+            if sid in comp_map:
+                comp_btn = page.locator(f'button:has-text("{comp_map[sid]}")').first
+                if comp_btn.is_visible(timeout=1000):
+                    comp_btn.click()
+                    time.sleep(0.3)
 
-            # Cue 1: Live type Stata regression
-            cue1 = scene_item["cues"][1]
-            chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
-            if chat_input.is_visible(timeout=2000):
-                chat_input.click()
-                chat_input.type(". xtreg leverage roa tang size, fe cluster(ind_code)", delay=15)
-                time.sleep(0.2)
-                page.keyboard.press("Enter")
-                time.sleep(2.0)
-                try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=20000)
-                except Exception:
-                    pass
-                scroll_up_immediate(page)
+        # Live Typing
+        chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
+        if chat_input.is_visible(timeout=2000):
+            chat_input.click()
+            chat_input.type(sc["prompt"], delay=15)
+            time.sleep(0.2)
+            page.keyboard.press("Enter")
 
-            time.sleep(cue1["duration"])
-            focal_scroll(page, 220)
-            time.sleep(scene_item["cues"][2]["duration"])
-            focal_scroll(page, 560)
-            time.sleep(scene_item["cues"][3]["duration"])
+        proc_c0.wait()
 
-        elif sid == "scene7_literature_vault":
-            focal_scroll(page, 180)
-            time.sleep(scene_item["cues"][0]["duration"])
-            cit_badge = page.locator('button:has-text("Dickinson"), button:has-text("Myers")').first
-            if cit_badge.is_visible(timeout=1000):
-                cit_badge.click()
-                time.sleep(1.0)
-            focal_scroll(page, 240)
-            time.sleep(max(0.5, scene_item["cues"][1]["duration"] - 1.0))
-            focal_scroll(page, 380)
-            time.sleep(scene_item["cues"][2]["duration"])
+        # ─────────────────────────────────────────────────────────────────────
+        # Phase 2: Live Working State on Camera & Deterministic Wait
+        # ─────────────────────────────────────────────────────────────────────
+        t_work_start = time.time()
+        try:
+            page.wait_for_selector('text=Working', state='detached', timeout=35000)
+        except Exception:
+            pass
+        work_elapsed = time.time() - t_work_start
+        print(f"  [working-state] Live generation completed in {work_elapsed:.2f}s.")
 
-    elapsed = time.time() - t0
-    rem = duration - elapsed
-    if rem > 0:
-        time.sleep(rem)
+        # Inject silence gap for the live working state
+        silence_file = AUDIO_DIR / f"{sid}_work_silence.mp3"
+        make_silence_mp3(work_elapsed, silence_file)
+        scene_audio_files.append(silence_file)
+        cur_t += work_elapsed
 
-    audio_proc.poll()
+        # ─────────────────────────────────────────────────────────────────────
+        # Phase 3: Immediate Instant Scroll-Up to Top (y=0)
+        # ─────────────────────────────────────────────────────────────────────
+        scroll_up_immediate(page)
+        time.sleep(0.4)
+
+        # ─────────────────────────────────────────────────────────────────────
+        # Phase 4: Sentences 1..N Audio & Paced Focal Scroll over Output
+        # ─────────────────────────────────────────────────────────────────────
+        anchors = [140, 360, 680, 520, 850, 1100]
+        for idx in range(1, len(cues)):
+            c = cues[idx]
+            final_cues.append({"text": c["text"], "start": cur_t, "end": cur_t + c["duration"], "duration": c["duration"]})
+            cur_t += c["duration"]
+            scene_audio_files.append(c["file"])
+
+            target_y = anchors[min(idx - 1, len(anchors)-1)]
+            focal_scroll(page, target_y)
+            subprocess.run(["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(c["file"])])
+
     page.close()
     raw_video = page.video.path()
     context.close()
 
+    # Master audio for this scene
+    master_scene_mp3 = AUDIO_DIR / f"{sid}.mp3"
+    concat_mp3s(scene_audio_files, master_scene_mp3)
+    total_scene_dur = get_audio_duration(master_scene_mp3)
+
     scene_mp4 = SCENE_DIR / f"{sid}.mp4"
-    
-    # Check actual raw video duration to avoid seeking past EOF
     raw_dur_cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(raw_video)]
     raw_dur = float(subprocess.run(raw_dur_cmd, capture_output=True, text=True, check=True).stdout.strip())
 
     if is_title or is_closing:
         start_offset = 0.0
     else:
-        start_offset = min(t_ready, max(0.0, raw_dur - duration))
+        start_offset = min(t_ready, max(0.0, raw_dur - total_scene_dur))
 
-    # Explicit stream mapping to ensure BOTH video and audio are always present
     mux_cmd = [
         "ffmpeg", "-y",
         "-ss", f"{start_offset:.3f}",
         "-i", str(raw_video),
-        "-i", str(mp3),
-        "-t", f"{duration:.3f}",
+        "-i", str(master_scene_mp3),
+        "-t", f"{total_scene_dur:.3f}",
         "-map", "0:v:0",
         "-map", "1:a:0",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
@@ -670,8 +617,8 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
         str(scene_mp4)
     ]
     subprocess.run(mux_cmd, capture_output=True, check=True)
-    print(f"  [scene] Muxed -> {scene_mp4.name} ({scene_mp4.stat().st_size / 1024 / 1024:.1f} MB)")
-    return scene_mp4
+    print(f"  [scene] Muxed -> {scene_mp4.name} ({scene_mp4.stat().st_size / 1024 / 1024:.1f} MB, {total_scene_dur:.2f}s)")
+    return scene_mp4, final_cues
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Subtitle Generation (Fine-Grained SRT)
@@ -685,14 +632,14 @@ def sec_to_srt_time(seconds: float) -> str:
         millis = 999
     return f"{hrs:02d}:{mins:02d}:{secs:02d},{millis:03d}"
 
-def generate_fine_grained_srt(scene_manifest: list[dict], out_srt: Path):
+def generate_fine_grained_srt(all_scene_cues: list[list[dict]], out_srt: Path):
     print("=== Step 2: Compiling Sentence-by-Sentence SRT Subtitles ===")
     lines = []
     cue_idx = 1
     cum_time = 0.0
 
-    for sc_item in scene_manifest:
-        for cue in sc_item["cues"]:
+    for scene_cues in all_scene_cues:
+        for cue in scene_cues:
             t_start = cum_time + cue["start"]
             t_end   = cum_time + cue["end"]
             text    = cue["text"]
@@ -710,7 +657,8 @@ def generate_fine_grained_srt(scene_manifest: list[dict], out_srt: Path):
             lines.append("")
             cue_idx += 1
 
-        cum_time += sc_item["duration"]
+        if scene_cues:
+            cum_time += scene_cues[-1]["end"]
 
     out_srt.write_text("\n".join(lines), encoding="utf-8")
     print(f"  [srt] Generated {cue_idx - 1} granular subtitle cues -> {out_srt.name}\n")
@@ -772,16 +720,16 @@ def concatenate_and_burn_captions(scene_files: list[Path], srt_file: Path):
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     print("=" * 75)
-    print("AI Financial Assistant: Recordly Master Demo Walkthrough (Live Dynamic Run-Up)")
+    print("AI Financial Assistant: Recordly Master Demo Walkthrough (5 Dedicated Companies)")
     print("=" * 75)
     t_start = time.time()
 
     manifest = prepare_all_audio()
-    master_srt = OUT / "ai_chatbot_master_walkthrough_v2.srt"
-    generate_fine_grained_srt(manifest, master_srt)
 
     print("=== Step 4: Recording Dynamic Synchronized Scenes with Recordly Engine ===")
     scene_mp4s = []
+    all_scene_cues = []
+
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
@@ -792,9 +740,13 @@ def main():
             ]
         )
         for sc_item in manifest:
-            scene_mp4 = record_scene_recordly(browser, sc_item)
+            scene_mp4, final_cues = record_scene_recordly(browser, sc_item)
             scene_mp4s.append(scene_mp4)
+            all_scene_cues.append(final_cues)
         browser.close()
+
+    master_srt = OUT / "ai_chatbot_master_walkthrough_v2.srt"
+    generate_fine_grained_srt(all_scene_cues, master_srt)
 
     ts_clean, ts_sub, ts_srt = concatenate_and_burn_captions(scene_mp4s, master_srt)
 

@@ -15,7 +15,7 @@ LifeCycle Leverage is an academic and executive financial econometrics platform 
 
 ## 2. Git Baseline & Tracking Qualification
 - **Active Branch:** `agy/wave6-8-harness-repair-2026-09-11`
-- **Active Operational Focus:** Recordly Master Walkthrough V4 (`scripts/produce_ai_chatbot_demo_recordly.py`) with 100% dynamic on-screen execution (live typing, 2.0s working state pause, immediate scroll-up to y=0 upon generation, paced focal scrolling down to CFO recommendations), MarginV=90 white space floating captions, isolated session state, 10/10 Red Team visual certification (`docs/review-evidence/RED_TEAM_DEMO_RECORDLY_SCORECARD.md`), automated pre-push hook, and GitHub Actions CI workflow.
+- **Active Operational Focus:** Recordly Master Walkthrough V4 (`scripts/produce_ai_chatbot_demo_recordly.py`) with 100% dynamic on-screen execution across all 5 company archetypes (1. Live typing on camera -> 2. Silent pause during working state -> 3. Instant scroll-up to top / CFO Recommendations upon generation completion -> 4. Commentary & interpretation spoken with paced focal scroll), upper MarginV=90 floating captions, isolated session state, and 10/10 Red Team visual certification.
 - **Local Server:** Streamlit running on `http://localhost:8501`.
 
 ---

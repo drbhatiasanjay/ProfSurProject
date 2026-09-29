@@ -51,3 +51,20 @@ Detailed rule: `.agents/rules/engineering_safeguards.md`.
 - **Deterministic 1s Validation:** Test DB rows and credentials via CLI one-liners before launching browser subagents.
 - **Strict Phase Gate:** Keep large UI/UX designs (e.g. Apple Liquid Glass) as `DESIGNED BUT NOT IMPLEMENTED` until explicit user greenlight.
 - **Deployment Evidence Gate & Anti-Fabrication:** Never declare a deployment (Cloud Run / GCP / local) "done" based solely on an HTTP health check (`/_stcore/health` 200). Verification strictly requires an authenticated browser session confirming the specific target page/feature is rendered in the UI. Under NO circumstances should screenshot paths or completion claims be output until the browser subagent has completed execution and the resulting artifact files are verified to exist on disk.
+
+## 6. Master Video Walkthrough & Screen Recording Directives (AI Assistant)
+- **Canonical Script:** `scripts/produce_ai_chatbot_demo_recordly.py`
+- **Mandatory 4-Phase Screen Recording Flow Invariant:**
+  1. **Phase 1 (Input & Intent):** Type the query live on camera into `stChatInputTextArea` while Sentence 0 audio introduces the entity context.
+  2. **Phase 2 (Silent Authentic Working State):** When the query is submitted, **TOTAL SILENCE** is maintained. Zero audio/talking occurs while the native `Working...` spinner executes (~5–10s).
+  3. **Phase 3 (Immediate Scroll-Up to Top):** The exact millisecond the generation completes and results appear, the viewport immediately snaps to $y=0$ via `scrollTo({top: 0})` so the CFO Recommendations, badges, and hypothesis are in full view.
+  4. **Phase 4 (Commentary & Focal Scroll):** Commentary and subtitles begin narrating the results and interpretation *after* the results are visible, with paced focal scrolling down through tables and charts.
+- **Mandatory 5-Company Archetype Coverage:** Every master walkthrough run MUST include individual, dedicated scenes for all 5 enterprise archetypes:
+  1. **Infosys Ltd. (Tech):** Mature stage, 4.2% leverage, internal cash self-financing.
+  2. **Tata Steel Ltd. (Metals):** Macro rate shock (+150 bps), ICR compression, covenant defense.
+  3. **Bharti Airtel (Telecom):** 5G spectrum commitments, InvIT monetization, balance sheet repair.
+  4. **InterGlobe Aviation / IndiGo (Aviation):** Jet fuel shocks, cash burn runway, Sale-and-Leaseback debt.
+  5. **Sun Pharma (Pharma):** Cross-border M&A, Euro Notes natural currency FX hedge.
+- **Subtitle Governance:** Floating subtitles must be anchored at `MarginV=90` in clean upper white space to guarantee zero chat input bar or control occlusion.
+
+
