@@ -1,25 +1,22 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Operational Status
 
-**Last Updated:** 2026-09-12  
+**Last Updated:** 2026-09-29  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
 
 ---
 
 ## 1. Project Purpose & North Star
-LifeCycle Leverage is an academic and executive financial econometrics platform designed for analyzing Indian manufacturing capital structure (CMIE Prowess, $N=8,677$, 2001–2025) across corporate life stages. It combines:
+LifeCycle Leverage is an academic and executive financial econometrics platform designed for analyzing Indian corporate capital structure across life stages (CMIE Prowess, $N=9,077$, 402 enterprises, 2001–2025). It combines:
 - A Streamlit-based interactive econometrics lab and CFO scenario dashboard.
 - High-contrast Stata 18 emulation (ASCII tables, `esttab`, `coefplot`, `.dta`/`.do` export).
-- An AI financial assistant and cross-reference literature vault grounded in peer-reviewed empirical benchmarks.
+- An AI financial assistant and cross-reference literature vault grounded in peer-reviewed empirical benchmarks (Myers-Majluf, Dickinson, Rajan-Zingales).
 
 ---
 
 ## 2. Git Baseline & Tracking Qualification
-- **Active Branch:** `codex-wave6-8-remediation-2026-09-12` (worktree off master)
-- **Pre-Session Head:** `490045f` (`feat(data-explorer): replace text input with company dropdown selectbox`)
-- **New Baseline Commit (this session):** `feat(stata-studio-v2): prototype parity — typed chips, grouped dropdown, rich run cards, hypothesis scorecard, header block`
-- **Release Tag:** `v2.0.0-ws2-complete`
-- **Previous Master Baseline:** `f8673a2` (`docs: record unpublished wave8 baseline`)
-- **Remote Tracking State:** worktree branch pushed to `origin/codex-wave6-8-remediation-2026-09-12`.
+- **Active Branch:** `agy/wave6-8-harness-repair-2026-09-11` (HEAD: `3f8811c`)
+- **Active Operational Focus:** AI Chatbot Demo V2 Broadcast Walkthrough (`scripts/produce_ai_chatbot_demo_v2.py`) with 6-layer output anatomy breakdown, sentence-synchronized focal scrolling, and broadcast lower-third subtitles.
+- **Local Server:** Streamlit running on `http://localhost:8501`.
 
 ---
 

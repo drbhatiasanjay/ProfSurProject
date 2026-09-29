@@ -145,7 +145,7 @@ def _goto_base_and_login(page: Page, username: str, password: str) -> bool:
 
     page.locator('[data-testid="stTextInput"] input').first.fill(username)
     page.locator('input[type="password"]').first.fill(password)
-    page.locator('button:has-text("Login")').first.click()
+    page.locator('button:has-text("Sign In →"), button:has-text("Sign In"), button:has-text("Login")').first.click()
     time.sleep(RENDER_WAIT)
 
     # Handle guest self-identification form (viewer role must name themselves)
@@ -220,7 +220,7 @@ def test_wrong_password() -> bool:
 
         page.locator('[data-testid="stTextInput"] input').first.fill("sbhatia")
         page.locator('input[type="password"]').first.fill("WrongPassword!")
-        page.locator('button:has-text("Login")').first.click()
+        page.locator('button:has-text("Sign In →"), button:has-text("Sign In"), button:has-text("Login")').first.click()
         time.sleep(RENDER_WAIT)
 
         body = _body(page)

@@ -12,6 +12,7 @@ panel OLS outputs + descriptive statistics.
 import json
 import re
 import os
+import logging
 from models.runtime_config import get_gemini_api_key
 import functools
 import typing
@@ -20,6 +21,8 @@ from typing import Iterator, Generator, Literal, Optional, List, Dict, Union, An
 import pandas as pd
 
 import db
+
+logger = logging.getLogger(__name__)
 
 # Import once at module load so provider tests and runtime calls do not import
 # the SDK while a caller is temporarily patching process environment access.
@@ -151,7 +154,9 @@ def _build_company_context_cached(
         # (those columns live in companies table, not financials)
         company_sql = f"""
             SELECT c.company_name, c.industry_group, f.life_stage, f.size_decile, f.year,
-                   f.leverage, f.profitability, f.tangibility, f.firm_size
+                   f.leverage, f.profitability, f.tangibility, f.firm_size,
+                   f.pbit, f.interest_amt, f.borrowings, f.cash_bal, f.cash_holdings,
+                   f.ncfo, f.ncfi, f.ncff
             FROM financials f
             JOIN companies c ON c.company_code = f.company_code
             WHERE f.company_code = ? AND {vintage_sql}
@@ -170,7 +175,7 @@ def _build_company_context_cached(
         # 2. Peers in same industry_group + life_stage, latest year
         # industry_group is in companies table — use subquery join
         peer_sql = f"""
-            SELECT f.leverage, f.profitability
+            SELECT f.leverage, f.profitability, f.tangibility
             FROM financials f
             JOIN companies c ON c.company_code = f.company_code
             WHERE c.industry_group = ? AND f.life_stage = ? AND f.year = ?
@@ -206,6 +211,34 @@ def _build_company_context_cached(
             )
         comp_md = "\n".join(comp_lines) if comp_lines else "No other direct competitors recorded in same industry year."
 
+        # Compute debt capacity & covenant parameters
+        pbit = float(latest.get("pbit") or 0.0)
+        interest_amt = float(latest.get("interest_amt") or 0.0)
+        borrowings = float(latest.get("borrowings") or 0.0)
+        cash = float(latest.get("cash_holdings") or latest.get("cash_bal") or 0.0)
+        net_debt = borrowings - cash
+        if interest_amt <= 0.01:
+            icr = 99.9 if pbit >= 0 else -99.9
+        else:
+            raw_icr = pbit / interest_amt
+            icr = max(-99.9, min(99.9, raw_icr))
+
+        if icr >= 3.0:
+            covenant_status = "ROBUST (Buffer > 1.0x)"
+        elif icr >= 2.0:
+            covenant_status = "MODERATE (Approaching 2.0x Floor)"
+        elif icr >= 0.0:
+            covenant_status = "TIGHT / COVENANT RISK (< 2.0x Floor)"
+        else:
+            covenant_status = "DISTRESSED (Negative PBIT / Operating Deficit)"
+
+        if icr >= 90.0:
+            shocked_icr = icr
+        elif icr < 0.0:
+            shocked_icr = icr - 0.75
+        else:
+            shocked_icr = max(0.0, icr - 0.75)
+
         # 3. Build markdown
         trend_csv = ", ".join(
             f"{int(r.year)}={float(r.leverage):.3f}"
@@ -217,23 +250,42 @@ def _build_company_context_cached(
             peer_med_lev = float(peer_df["leverage"].median())
             peer_mean_roa = float(peer_df["profitability"].mean())
             peer_med_roa = float(peer_df["profitability"].median())
+            peer_med_tang = float(peer_df["tangibility"].median())
         else:
-            peer_mean_lev = peer_med_lev = peer_mean_roa = peer_med_roa = float("nan")
+            peer_mean_lev = peer_med_lev = peer_mean_roa = peer_med_roa = peer_med_tang = float("nan")
         delta_lev = float(latest["leverage"]) - peer_med_lev if peer_n else float("nan")
         panel_label = _PANEL_DISPLAY_LABELS.get(panel_mode, panel_mode)
         footer = _grounding_footer(panel_label)
+        
+        cfo_instructions = (
+            "## CFO RESPONSE GUIDELINES (MANDATORY):\n"
+            "When responding to this CFO prompt, you MUST structure your answer with:\n"
+            "1. **Executive Status Badge** at the very top:\n"
+            "   - `🟢 STATUS: RESILIENT BALANCE SHEET — FINANCIAL FLEXIBILITY PRESERVED` (for low leverage / cash rich)\n"
+            "   - `🟡 STATUS: BALANCED CAPITAL STRUCTURE — CAPEX DISCIPLINE & COVENANT HEADROOM` (for moderate leverage)\n"
+            "   - `🔴 STATUS: ELEVATED LEVERAGE — ACTIVE REFINANCING & INTEREST COVERAGE SENSITIVITY` (for high debt)\n"
+            "2. **Structured Decision Table** comparing the firm to its peers and covenants:\n"
+            "| Financial Lever / Metric | Company Position | Industry & Peer Benchmark | Covenant Floor / Prudent Band | Strategic CFO Action |\n"
+            "3. Ground recommendations in Pecking Order Theory (Myers 1984) and Trade-Off Theory (Modigliani-Miller 1963, Rajan-Zingales 1995).\n"
+            "4. Provide 3 specific, numbered, highly contextual C-suite action items.\n\n"
+        )
+        
         md = (
             _THESIS_BLOCK
+            + cfo_instructions
             + f"## [SOURCE: {panel_label}] Company: {latest['company_name']} (code: {int(company_code)})\n"
             f"- Industry: {latest['industry_group']} | Life Stage: {latest['life_stage']} | Size Decile: {latest['size_decile']}\n"
             f"- Latest Year ({int(latest['year'])}): Leverage={float(latest['leverage']):.3f}, "
-            f"Profitability={float(latest['profitability']):.3f}, "
+            f"Profitability(ROA)={float(latest['profitability']):.3f}, "
             f"Tangibility={float(latest['tangibility']):.3f}, "
             f"FirmSize={float(latest['firm_size']):.3f}\n"
+            f"- Debt & Liquidity Profile: Borrowings=₹{borrowings:,.1f} Cr, Cash Holdings=₹{cash:,.1f} Cr, Net Debt=₹{net_debt:,.1f} Cr\n"
+            f"- Interest Coverage: PBIT=₹{pbit:,.1f} Cr, Interest Expense=₹{interest_amt:,.1f} Cr, ICR={icr:.2f}x (Covenant Floor: 2.00x, Status: {covenant_status})\n"
+            f"- Macro Shock Sensitivity (+150 bps rate hike): Simulated Shocked ICR = {shocked_icr:.2f}x\n"
             f"- 5-Year Leverage Trend: {trend_csv}\n\n"
             f"## [SOURCE: {panel_label}] Peer Group ({peer_n} firms, same industry + life_stage, {int(latest['year'])})\n"
             f"- Peer Mean Leverage: {peer_mean_lev:.3f} | Peer Median: {peer_med_lev:.3f}\n"
-            f"- Peer Mean Profitability: {peer_mean_roa:.3f} | Peer Median: {peer_med_roa:.3f}\n"
+            f"- Peer Mean Profitability: {peer_mean_roa:.3f} | Peer Median: {peer_med_roa:.3f} | Peer Median Tangibility: {peer_med_tang:.3f}\n"
             f"- Company vs Peer Median (leverage delta): {delta_lev:+.3f}\n\n"
             f"## [SOURCE: {panel_label}] Direct Industry Competitors ({latest['industry_group']}):\n"
             f"{comp_md}\n"
@@ -1438,8 +1490,8 @@ def stream_gemini_agent(
                 t = getattr(resp, "text", None)
                 if t:
                     return t
-            except Exception:
-                pass
+            except Exception as _text_err:
+                logger.debug("Failed extracting text attribute: %s", _text_err)
             return ""
 
         final_text = _extract_response_text(response)
@@ -1739,8 +1791,8 @@ def parse_llm_json(raw: str) -> dict:
                 "followup_questions": parsed.get("followup_questions", []) or [],
                 "chart_request": parsed.get("chart_request"),
             }
-    except json.JSONDecodeError:
-        pass
+    except json.JSONDecodeError as err:
+        logger.debug("Structured JSON decode failed on full payload, attempting block extraction: %s", err)
     # Fallback: extract first {...} block
     m = re.search(r"\{.*\}", raw, re.DOTALL)
     if m:
@@ -1753,8 +1805,8 @@ def parse_llm_json(raw: str) -> dict:
                     "followup_questions": parsed.get("followup_questions", []) or [],
                     "chart_request": parsed.get("chart_request"),
                 }
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as err:
+            logger.debug("Structured JSON decode failed on extracted {...} block: %s", err)
     return default
 
 
@@ -1832,8 +1884,8 @@ def parse_followup_chips(text: str) -> tuple[str, list[str]]:
                 chips = [str(q).strip() for q in raw_chips if isinstance(q, str) and q.strip()]
                 if chips:
                     return display, chips[:3]
-        except (json.JSONDecodeError, AttributeError):
-            pass
+        except (json.JSONDecodeError, AttributeError) as err:
+            logger.debug("Failed parsing followup chips from balanced object: %s", err)
 
     # Salvage: pull quoted question-like strings out of whatever tail we have
     salvaged = [q.strip() for q in _SALVAGE_Q_RE.findall(tail) if q.strip()]
@@ -1888,8 +1940,8 @@ def log_chat_query(
         finally:
             try:
                 conn.close()
-            except Exception:
-                pass
-    except Exception:
-        # Never break user chat on log failure
-        pass
+            except Exception as _close_err:
+                logger.debug("Failed closing audit log connection: %s", _close_err)
+    except Exception as _log_err:
+        # Never break user chat on log failure, but log to debug
+        logger.debug("Failed recording chat query to audit log: %s", _log_err)

@@ -18,7 +18,10 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 import plotly.graph_objects as go
+import logging
 import plotly.express as px
+
+logger = logging.getLogger(__name__)
 
 from helpers import (
     plotly_layout, PLOTLY_CONFIG, STAGE_COLORS, STAGE_ORDER,
@@ -823,8 +826,8 @@ def build_topic_10(company_df, company_info, peers_df, full_panel, stage_summary
                     insights.append(
                         f"Most likely transition: **{top_next}** ({top_prob:.0f}% historical base rate)."
                     )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Stage transition analysis failed in board export: %s", exc, exc_info=True)
 
     # Next-stage capital norms
     if stage_summary is not None and not stage_summary.empty:

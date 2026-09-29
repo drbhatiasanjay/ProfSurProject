@@ -324,6 +324,23 @@ def _login():
         return
 
 
+# Demo recording bypass — PROFSUR_DEMO_SKIP_AUTH=1 auto-authenticates as drbhatia for video production.
+# This env var is ONLY set by the production script; it is never active in normal server operation.
+if os.environ.get("PROFSUR_DEMO_SKIP_AUTH") == "1" and not st.session_state.get("authentication_status"):
+    st.session_state["authentication_status"] = True
+    st.session_state["username"] = "drbhatia"
+    st.session_state["name"] = "Dr. Sanjay Bhatia"
+    st.session_state["auth_user"] = {
+        "username": "drbhatia",
+        "name": "Dr. Sanjay Bhatia",
+        "role": "admin",
+    }
+    st.session_state["user"] = {
+        "name": "Dr. Sanjay Bhatia",
+        "username": "drbhatia",
+        "role": "admin",
+    }
+
 if not st.session_state.get("authentication_status"):
     _login()
     st.stop()

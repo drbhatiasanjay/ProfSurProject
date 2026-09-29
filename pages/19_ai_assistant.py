@@ -14,6 +14,8 @@ import re
 import base64
 import streamlit as st
 import streamlit.components.v1 as components
+import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 from helpers import require_role, plotly_layout
 import db
@@ -415,8 +417,55 @@ def _render_chart_card(spec: dict, key_prefix: str) -> None:
             st.caption("💡 *Tip: Use the toolbar camera icon on the chart above to download high-resolution vector/PNG.*")
 
 
+def _sanitize_untrusted_html(text: str) -> str:
+    """Strip dangerous executable HTML tags and event handlers while preserving markdown and approved formatting."""
+    if not text:
+        return ""
+    # Strip <script>, <iframe>, <object>, <embed>, <style>
+    clean = re.sub(r"(?i)<\s*(script|iframe|object|embed|applet|meta|link|style)[\s\S]*?>[\s\S]*?<\s*/\s*\1\s*>", "", text)
+    clean = re.sub(r"(?i)<\s*(script|iframe|object|embed|applet|meta|link|style)[\s\S]*?/>", "", clean)
+    # Strip inline javascript event handlers (onload, onerror, onclick, etc.)
+    clean = re.sub(r"(?i)\s+on[a-z]+\s*=\s*['\"][^'\"]*['\"]", "", clean)
+    clean = re.sub(r"(?i)\s+on[a-z]+\s*=\s*[^>\s]+", "", clean)
+    return clean
+
+
+def _format_executive_badges_html(text: str) -> str:
+    """Enhance executive status callout badges with sleek, high-contrast visual banners after sanitizing raw HTML."""
+    import html
+    sanitizer = globals().get("_sanitize_untrusted_html")
+    if sanitizer is not None:
+        sanitized = sanitizer(str(text or ""))
+    else:
+        sanitized = str(text or "")
+        sanitized = re.sub(r"(?i)<\s*(script|iframe|object|embed|applet|meta|link|style)[\s\S]*?>[\s\S]*?<\s*/\s*\1\s*>", "", sanitized)
+        sanitized = re.sub(r"(?i)<\s*(script|iframe|object|embed|applet|meta|link|style)[\s\S]*?/>", "", sanitized)
+        sanitized = re.sub(r"(?i)\s+on[a-z]+\s*=\s*['\"][^'\"]*['\"]", "", sanitized)
+        sanitized = re.sub(r"(?i)\s+on[a-z]+\s*=\s*[^>\s]+", "", sanitized)
+
+    def _repl_badge(match):
+        emoji = match.group(1)
+        body = html.escape(match.group(2).strip())
+        if "🟢" in emoji:
+            bg = "rgba(34, 197, 94, 0.12)"
+            border = "#22c55e"
+            color = "#4ade80"
+        elif "🟡" in emoji:
+            bg = "rgba(245, 158, 11, 0.12)"
+            border = "#f59e0b"
+            color = "#fbbf24"
+        else:
+            bg = "rgba(239, 68, 68, 0.12)"
+            border = "#ef4444"
+            color = "#f87171"
+        return f'<div style="background:{bg}; border-left:4px solid {border}; border-radius:6px; padding:10px 16px; margin:12px 0 16px 0; font-size:13.5px; font-weight:700; color:{color}; letter-spacing:0.02em;">{emoji} {body}</div>'
+
+    pattern = r"(🟢|🟡|🔴)\s*(?:\*\*)?(STATUS:[^\n\*]+)(?:\*\*)?"
+    return re.sub(pattern, _repl_badge, sanitized)
+
+
 def _split_supporting_tables(text: str) -> tuple[str, list[str]]:
-    """Keep markdown tables out of the prose column and render them on demand."""
+    """Render core decision and metric tables directly inline; move large raw data dumps to on-demand expanders."""
     lines = str(text or "").splitlines()
     prose: list[str] = []
     tables: list[str] = []
@@ -432,9 +481,16 @@ def _split_supporting_tables(text: str) -> tuple[str, list[str]]:
                 block.append(lines[index])
                 index += 1
             if len(block) >= 3 and re.match(r"^[\s|:\-]+$", block[1]):
-                tables.append("\n".join(block))
-                if prose and prose[-1].strip():
+                table_text = "\n".join(block)
+                # If table is compact (<= 10 data rows) or contains key decision/cfo headers, display directly inline!
+                is_decision_table = any(kw in block[0].lower() for kw in ("decision", "metric", "lever", "cfo", "peer", "covenant", "action", "recommendation", "status", "stage", "dimension"))
+                if len(block) <= 12 or is_decision_table:
+                    prose.extend(block)
                     prose.append("")
+                else:
+                    tables.append(table_text)
+                    if prose and prose[-1].strip():
+                        prose.append("")
                 continue
             prose.extend(block)
             continue
@@ -628,9 +684,9 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
             if after.strip():
                 st.markdown(after.strip())
         else:
-            st.markdown(prose)
+            st.markdown(_format_executive_badges_html(prose), unsafe_allow_html=True)
     else:
-        st.markdown(prose)
+        st.markdown(_format_executive_badges_html(prose), unsafe_allow_html=True)
 
     if chart:
         _render_chart_card(chart, f"{key_prefix}_chart")
@@ -782,15 +838,16 @@ with st.sidebar:
     if mode == "CFO":
         _qp_panel = st.session_state.get("panel_mode", "thesis")
         _companies_df = db.get_companies(_qp_panel)
-        # Curated list of premier corporate archetypes across sectors:
+        # Curated list of premier corporate archetypes across diverse sectors:
         _featured_codes = [
             100632, # Infosys (IT Services / Cash Rich / Low Debt)
-            34162,  # Bharti Airtel (Telecom / High Leverage / Capex)
-            395047, # InterGlobe Aviation - IndiGo (Aviation / Lease Debt / Margin Volatility)
+            248136, # Tata Steel (Steel / Heavy Cyclical Capex / Tangibility)
+            34162,  # Bharti Airtel (Telecom / High Leverage / Spectrum Debt)
+            395047, # InterGlobe Aviation - IndiGo (Aviation / Operating Leases / Thin Margins)
+            239726, # Sun Pharmaceutical Inds. (Pharma / IP-Heavy / Defensive Cash Flows)
             196667, # Reliance Industries (Conglomerate / Energy Transition)
             136444, # Mahindra & Mahindra (Automotive / EV Transition)
             97066,  # ITC Ltd. (FMCG / High Operating Cash Flow)
-            248136, # Tata Steel (Steel / Cyclical Capex & Deleveraging)
             125123, # UltraTech Cement (Cement / High Tangibility)
         ]
         _feat_df = _companies_df[_companies_df["company_code"].isin(_featured_codes)]
@@ -947,46 +1004,239 @@ _STARTER_QUESTIONS = {
     ],
 }
 
-# ── Zero-State Bento Starter Cards ────────────────────────────────────────────
-if not st.session_state["chat_history"]:
-    if mode == "CFO":
-        _cname = _code_to_name.get(company_code, "our company") if 'company_code' in locals() and company_code else "our company"
-        _cind = _code_to_ind.get(company_code, "the industry") if 'company_code' in locals() and company_code else "the industry"
-        st.markdown(f"##### 👔 CFO Strategic Decision Scenarios for **{_cname}** ({_cind})")
-        _starters_meta = [
+def get_cfo_scenario_ladder(comp_code: int, comp_name: str, ind_name: str) -> list[dict]:
+    """Return the 4-tier progressive CFO scenario ladder customized for the firm's industry."""
+    cname = comp_name.strip() or "our company"
+    cind = ind_name.strip() or "the industry"
+    
+    if comp_code == 100632 or "Infosys" in cname:
+        return [
             {
-                "icon": "⚖️",
-                "title": "Capital Structure & WACC",
-                "query": f"As CFO of {_cname}, evaluate our debt ratio and WACC relative to our {_cind} peers. Are we under-leveraged (missing interest tax shields) or facing excessive distress costs?",
+                "tier": "Tier 1: Simple",
+                "badge": "🟢 1. Simple",
+                "title": "Baseline Structure & Dickinson Stage",
+                "desc": "Assess Infosys's near-zero leverage (4.2%), Dickinson cash flow stage, and cash reserves relative to IT peers.",
+                "query": f"As CFO of {cname}, analyze our baseline capital structure and cash-flow profile in {cind}. What Dickinson lifecycle stage are we currently in, and how does our 4.2% leverage compare to the IT software industry median?",
             },
             {
-                "icon": "🏢",
-                "title": "Competitive Benchmarking",
-                "query": f"Benchmark {_cname}'s leverage, operating profitability (ROA), and asset tangibility against our top direct competitors in {_cind}. Who has greater balance-sheet headroom for expansion?",
+                "tier": "Tier 2: Medium",
+                "badge": "🟡 2. Medium",
+                "title": "Peer Benchmark & Tax Shields",
+                "desc": "Compare 34.2% ROA and low leverage against direct peers TCS and Wipro; evaluate tax shields vs financial flexibility.",
+                "query": f"Benchmark {cname}'s leverage (4.2%) and ROA (33.4%) against direct peers TCS and Wipro. Under Trade-Off Theory, are we under-leveraged (missing interest tax shields) or is zero-debt flexibility optimal under Pecking Order?",
             },
             {
-                "icon": "🛡️",
-                "title": "Rate Shock & Covenant Resilience",
-                "query": f"Conduct a financial stress test for {_cname}: if benchmark borrowing rates increase by 150 bps or operating cash flows drop by 20%, what happens to our interest coverage ratio (ICR) and debt covenant headroom?",
+                "tier": "Tier 3: Complex",
+                "badge": "🟠 3. Complex",
+                "title": "Macro Rate Shock (+150 bps)",
+                "desc": "Stress test cash conversion cycle, interest coverage ratio (ICR), and debt covenant headroom.",
+                "query": f"Conduct a macroeconomic stress test for {cname}: if global IT client spending slows and benchmark borrowing rates rise by 150 bps, evaluate our cash conversion cycle and confirm our debt covenant headroom.",
             },
             {
-                "icon": "🚀",
-                "title": "Capex Financing Strategy",
-                "query": f"For upcoming growth capex at {_cname}, evaluate financing options (internal cash flow vs debt vs equity) through Pecking Order and Trade-Off theories given our life stage.",
+                "tier": "Tier 4: Drill Down",
+                "badge": "🔴 4. Drill Down",
+                "title": "Actionable Capital Allocation",
+                "desc": "Determine optimal buyback sizing, liquidity buffer floor, and WACC minimization plan.",
+                "query": f"Drill down into an actionable CFO capital allocation plan for {cname}: evaluate the optimal sizing of share buybacks vs cash reserves, and determine if introducing conservative debt would lower our WACC without risking financial flexibility.",
             },
         ]
-        _scols = st.columns(4)
-        for _idx, _sm in enumerate(_starters_meta):
-            with _scols[_idx]:
-                if st.button(
-                    f"{_sm['icon']} **{_sm['title']}**\n\n{_sm['query'][:90]}...",
-                    use_container_width=True,
-                    key=f"bento_cfo_{_idx}",
-                    help=_sm["query"],
-                ):
-                    st.session_state["_pending_followup"] = _sm["query"]
-                    st.rerun()
+    elif comp_code == 248136 or "Tata Steel" in cname:
+        return [
+            {
+                "tier": "Tier 1: Simple",
+                "badge": "🟢 1. Simple",
+                "title": "Baseline & Tangibility",
+                "desc": "Analyze debt ratio (26.0%), high asset tangibility (37.3%), and Dickinson lifecycle stage in steel manufacturing.",
+                "query": f"As CFO of {cname}, analyze our baseline capital structure (26.0% leverage, 37.3% tangibility). What Dickinson lifecycle stage are we in, and how does our debt ratio compare to the steel industry median?",
+            },
+            {
+                "tier": "Tier 2: Medium",
+                "badge": "🟡 2. Medium",
+                "title": "Direct Competitor Benchmarking",
+                "desc": "Benchmark leverage and operating margins against peers JSW Steel and SAIL; evaluate optimal debt capacity.",
+                "query": f"Benchmark {cname} against direct competitors JSW Steel and SAIL. Under Trade-Off Theory, how do cyclical steel margins and high fixed-asset tangibility determine our optimal debt capacity?",
+            },
+            {
+                "tier": "Tier 3: Complex",
+                "badge": "🟠 3. Complex",
+                "title": "Commodity Shock & +150 bps Rates",
+                "desc": "Stress test Interest Coverage Ratio (ICR) and covenant headroom against the 2.0x floor during margin contraction.",
+                "query": f"Conduct a macro stress test for {cname}: if benchmark borrowing rates increase by 150 bps and steel spreads contract by 20%, what happens to our Interest Coverage Ratio (ICR) against the 2.0x covenant floor?",
+            },
+            {
+                "tier": "Tier 4: Drill Down",
+                "badge": "🔴 4. Drill Down",
+                "title": "Green Steel Capex Financing",
+                "desc": "Formulate ₹15,000 Cr decarbonization capex debt-equity-green bond funding mix to protect credit rating.",
+                "query": f"Drill down into an actionable CFO financing strategy for {cname}: how should we finance ₹15,000 Cr of decarbonization capex (green steel) across internal cash flows, green bonds, and equity to defend our investment-grade rating?",
+            },
+        ]
+    elif comp_code == 34162 or "Bharti Airtel" in cname:
+        return [
+            {
+                "tier": "Tier 1: Simple",
+                "badge": "🟢 1. Simple",
+                "title": "Telecom Capital Intensity Baseline",
+                "desc": "Analyze long-term leverage, spectrum liabilities, and Dickinson cash flow stage in telecommunications.",
+                "query": f"As CFO of {cname}, analyze our baseline debt profile and cash flow components in {cind}. What Dickinson lifecycle stage are we in, and what is our current interest coverage ratio?",
+            },
+            {
+                "tier": "Tier 2: Medium",
+                "badge": "🟡 2. Medium",
+                "title": "Peer Benchmarking vs Indus Towers",
+                "desc": "Evaluate 47.8% leverage against industry medians and trade-offs of massive 5G network rollouts.",
+                "query": f"Benchmark {cname}'s leverage against Indus Towers and telecom peers. Given massive 5G network capex, how does our debt-to-EBITDA ratio align with Trade-Off Theory vs distress risk?",
+            },
+            {
+                "tier": "Tier 3: Complex",
+                "badge": "🟠 3. Complex",
+                "title": "+150 bps Rate Hike & Refinancing",
+                "desc": "Evaluate debt serviceability, floating-rate vulnerability, and remaining covenant headroom against the 2.0x floor.",
+                "query": f"Conduct an interest rate sensitivity stress test for {cname}: if borrowing costs rise by 150 bps, calculate the shock to our debt serviceability and remaining covenant headroom against the 2.0x floor.",
+            },
+            {
+                "tier": "Tier 4: Drill Down",
+                "badge": "🔴 4. Drill Down",
+                "title": "Deleveraging Plan & ICR Restoration",
+                "desc": "Map out tariff revision cash generation, tower asset monetization, and structured debt amortization above 3.0x ICR.",
+                "query": f"Drill down into an actionable balance-sheet deleveraging plan for {cname}: evaluate tariff hike cash flow generation, tower asset monetization, and debt refinancing to strengthen ICR above 3.0x.",
+            },
+        ]
+    elif comp_code == 395047 or "Interglobe" in cname or "IndiGo" in cname:
+        return [
+            {
+                "tier": "Tier 1: Simple",
+                "badge": "🟢 1. Simple",
+                "title": "Aviation Lease Debt Profile",
+                "desc": "Analyze 55.5% leverage, thin operating margins (8.3% ROA), and Dickinson stage under aviation accounting.",
+                "query": f"As CFO of {cname}, analyze our baseline capital structure (55.5% leverage). What Dickinson lifecycle stage are we in, and how do operating leases impact our reported debt profile?",
+            },
+            {
+                "tier": "Tier 2: Medium",
+                "badge": "🟡 2. Medium",
+                "title": "Airline Peer Benchmarking",
+                "desc": "Examine high financial leverage vs low asset tangibility (26.3%) under Trade-Off Theory.",
+                "query": f"Benchmark {cname} against airline industry peers. Given thin operating margins (8.3% ROA), evaluate whether our high leverage creates financial fragility under Trade-Off Theory.",
+            },
+            {
+                "tier": "Tier 3: Complex",
+                "badge": "🟠 3. Complex",
+                "title": "Jet Fuel (ATF) +25% & FX Shock",
+                "desc": "Combined stress test on fuel price increases, INR/USD depreciation, and +150 bps interest rates on cash burn.",
+                "query": f"Conduct a combined macro stress test for {cname}: if jet fuel (ATF) prices spike by 25% and INR depreciates by 5% against USD alongside a +150 bps interest rate hike, calculate the impact on our operating cash burn and liquidity buffer.",
+            },
+            {
+                "tier": "Tier 4: Drill Down",
+                "badge": "🔴 4. Drill Down",
+                "title": "Fleet Financing Strategy (Sale & Leaseback)",
+                "desc": "Optimize aircraft acquisition funding, hedge dollarized lease liabilities, and safeguard working capital.",
+                "query": f"Drill down into an actionable CFO fleet financing strategy for {cname}: compare aircraft sale-and-leaseback versus export credit agency (ECA) debt financing to optimize working capital and minimize foreign currency exposure.",
+            },
+        ]
+    elif comp_code == 239726 or "Sun Pharmaceutical" in cname or "Sun Pharma" in cname:
+        return [
+            {
+                "tier": "Tier 1: Simple",
+                "badge": "🟢 1. Simple",
+                "title": "Pharma Capital Structure Baseline",
+                "desc": "Analyze 15.6% leverage, 13.4% ROA, R&D intensity, and Dickinson maturity cash flow patterns.",
+                "query": f"As CFO of {cname}, analyze our baseline capital structure (15.6% leverage, 13.4% ROA). What Dickinson lifecycle stage are we in, and how does our debt ratio compare to the pharmaceutical sector median?",
+            },
+            {
+                "tier": "Tier 2: Medium",
+                "badge": "🟡 2. Medium",
+                "title": "Peer Benchmarking vs Cipla & Dr. Reddy's",
+                "desc": "Evaluate borrowing capacity against peer pharma leaders; weigh intangible IP assets under Pecking Order Theory.",
+                "query": f"Benchmark {cname}'s leverage and tangibility against Cipla and Dr. Reddy's Laboratories. How does R&D asset intangibility influence our optimal borrowing capacity under Pecking Order Theory?",
+            },
+            {
+                "tier": "Tier 3: Complex",
+                "badge": "🟠 3. Complex",
+                "title": "US FDA Regulatory Alert & Rate Shock",
+                "desc": "Stress test cash flow resilience against generic pipeline delays and +150 bps borrowing costs.",
+                "query": f"Conduct a regulatory and macro stress test for {cname}: if US FDA import alerts delay generic launches and interest rates rise by 150 bps, evaluate our cash flow resilience and debt covenant headroom.",
+            },
+            {
+                "tier": "Tier 4: Drill Down",
+                "badge": "🔴 4. Drill Down",
+                "title": "Specialty M&A Debt Sizing & Rating Defense",
+                "desc": "Calculate maximum borrowing capacity for specialty pipeline acquisitions while preserving investment grade rating.",
+                "query": f"Drill down into an actionable CFO M&A financing blueprint for {cname}: what is our maximum debt capacity for cross-border specialty pharma acquisitions while maintaining an investment-grade credit profile?",
+            },
+        ]
     else:
+        return [
+            {
+                "tier": "Tier 1: Simple",
+                "badge": "🟢 1. Simple",
+                "title": "Baseline Structure & Stage",
+                "desc": f"Analyze debt ratio, tangibility, and Dickinson lifecycle stage in {cind}.",
+                "query": f"As CFO of {cname}, analyze our baseline capital structure and cash-flow profile in {cind}. What Dickinson lifecycle stage are we currently in, and how does our leverage compare to the industry median?",
+            },
+            {
+                "tier": "Tier 2: Medium",
+                "badge": "🟡 2. Medium",
+                "title": "Peer Benchmarking & Trade-Off",
+                "desc": f"Benchmark {cname} against top competitors in {cind}; evaluate tax shields vs distress costs.",
+                "query": f"Benchmark {cname}'s leverage, ROA, and asset tangibility against our top direct competitors in {cind}. Under Trade-Off Theory, are we under-leveraged or facing elevated distress costs?",
+            },
+            {
+                "tier": "Tier 3: Complex",
+                "badge": "🟠 3. Complex",
+                "title": "+150 bps Rate Shock & Covenants",
+                "desc": "Simulate rate hikes and margin compression on Interest Coverage Ratio (ICR).",
+                "query": f"Conduct a financial stress test for {cname}: if benchmark borrowing rates increase by 150 bps or operating cash flows drop by 20%, what happens to our interest coverage ratio (ICR) and debt covenant headroom?",
+            },
+            {
+                "tier": "Tier 4: Drill Down",
+                "badge": "🔴 4. Drill Down",
+                "title": "Granular Capital Plan & Rating Defense",
+                "desc": "Provide financing mix, debt capacity recommendation, and rating defense.",
+                "query": f"Drill down into an actionable CFO decision matrix for {cname}: provide a concrete financing structure for our upcoming capital expenditure, optimal debt-equity mix to defend our credit rating, and working capital cash optimization.",
+            },
+        ]
+
+
+# ── Interactive CFO Scenario Suite & Archetype Quick-Switcher ────────────────
+if mode == "CFO":
+    _cname = _code_to_name.get(company_code, "our company") if 'company_code' in locals() and company_code else "our company"
+    _cind = _code_to_ind.get(company_code, "the industry") if 'company_code' in locals() and company_code else "the industry"
+
+    st.markdown("##### 👔 Corporate Archetype Selector (5 Diverse Industries)")
+    _archetypes = [
+        {"code": 100632, "label": "💻 Infosys (Tech)", "help": "Asset-light, cash-rich, low debt, high ROA"},
+        {"code": 248136, "label": "🏭 Tata Steel (Metals)", "help": "Heavy cyclical capex, high tangibility, deleveraging"},
+        {"code": 34162, "label": "📡 Bharti Airtel (Telecom)", "help": "Capital-intensive, 5G spectrum debt, high leverage"},
+        {"code": 395047, "label": "✈️ IndiGo (Aviation)", "help": "High operating leverage, lease debt, thin margins"},
+        {"code": 239726, "label": "💊 Sun Pharma (Pharma)", "help": "IP-heavy, defensive cash flows, cross-border M&A"},
+    ]
+    _acols = st.columns(5)
+    for _a_idx, _arch in enumerate(_archetypes):
+        with _acols[_a_idx]:
+            _is_selected = company_code == _arch["code"]
+            _btn_label = f"**{_arch['label']}**" if _is_selected else _arch["label"]
+            if st.button(_btn_label, key=f"arch_quick_{_arch['code']}", use_container_width=True, help=_arch["help"]):
+                st.session_state["p19_company_code"] = _arch["code"]
+                if st.session_state.get("chat_session_id"):
+                    db.update_chat_session_company(st.session_state["chat_session_id"], _arch["code"])
+                st.rerun()
+
+    # 4-Tier Progressive Strategic Ladder
+    _ladder = get_cfo_scenario_ladder(company_code, _cname, _cind)
+    _show_expanded = not bool(st.session_state.get("chat_history"))
+    with st.expander(f"🎯 CFO Decision Intelligence Suite: **{_cname}** ({_cind}) — Simple ➔ Medium ➔ Complex ➔ Drill Down", expanded=True):
+        st.caption("Click any tier to run the industry-contextual strategic scenario:")
+        _lcols = st.columns(4)
+        for _l_idx, _item in enumerate(_ladder):
+            with _lcols[_l_idx]:
+                st.markdown(f"**{_item['badge']}**")
+                st.markdown(f"<div style='font-size:12px; font-weight:600; color:#38bdf8; min-height:36px; line-height:1.25;'>{_item['title']}</div>", unsafe_allow_html=True)
+                st.caption(_item['desc'])
+                if st.button(f"Execute {_item['badge'].split('.')[0]}", key=f"cfo_ladder_{company_code}_{_l_idx}", use_container_width=True):
+                    st.session_state["_pending_followup"] = _item["query"]
+                    st.rerun()
+else:
+    if not st.session_state["chat_history"]:
         st.markdown("##### 💡 Suggested Econometric Inquiries")
         _starters_meta = [
             {"icon": "📊", "title": "Industry Distributions", "query": "Which 10 industries carry the highest leverage across the panel and why?"},
@@ -1021,6 +1271,26 @@ for _turn_idx, turn in enumerate(st.session_state["chat_history"]):
         else:
             st.markdown(turn["content"])
             _previous_user_question = turn.get("content", "")
+
+# ── Auto-scroll right panel to reveal all outputs ─────────────────────────
+if st.session_state.get("chat_history"):
+    components.html(
+        """<script>
+        try {
+            const doc = window.parent.document;
+            const mainPane = doc.querySelector('[data-testid="stMain"]') || doc.querySelector('section.main') || doc.querySelector('.stApp');
+            if (mainPane) {
+                setTimeout(() => {
+                    mainPane.scrollTo({ top: mainPane.scrollHeight, behavior: 'smooth' });
+                }, 200);
+            }
+        } catch (e) {
+            // Silently fallback if cross-origin or blocked
+        }
+        </script>""",
+        height=0,
+        width=0,
+    )
 
 # ── Persistent followup chips ──
 _stored_fups = st.session_state.get("_followup_suggestions", [])

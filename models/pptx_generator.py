@@ -7,7 +7,10 @@ Text insight bullets are added as a text box below each chart.
 """
 
 from __future__ import annotations
+import logging
 from io import BytesIO
+
+logger = logging.getLogger(__name__)
 
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
@@ -251,8 +254,8 @@ def build(
             _add_header(slide, title, company_info.get("name", ""))
             try:
                 _add_chart_image(slide, figs[0])
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Failed to render chart image on slide '%s': %s", title, exc)
             _add_insights_text(slide, insights, actions)
             _add_footer(slide, slide_num, total_slides)
 
@@ -263,8 +266,8 @@ def build(
                 _add_header(slide, title + " (cont.)", company_info.get("name", ""))
                 try:
                     _add_chart_image(slide, fig)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to render additional chart image on slide '%s': %s", title, exc)
                 _add_footer(slide, slide_num, total_slides)
 
         # Tables on their own slide
@@ -275,8 +278,8 @@ def build(
                 _add_header(slide, title + " — Data Table", company_info.get("name", ""))
                 try:
                     _add_table(slide, tbl_df.head(12))
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.warning("Failed to render table on slide '%s': %s", title, exc)
                 _add_footer(slide, slide_num, total_slides)
 
         # If topic has no figs but has insights (e.g. text-only topic)

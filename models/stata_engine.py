@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 """Stata Engine for LifeCycle Leverage.
 
 Provides open-source mathematical and visual parity with Stata 17/18:
@@ -387,8 +389,8 @@ def _execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
             import db
             ft = db.filters_to_tuple({})
             df = db.get_active_panel_data(ft)
-        except Exception:
-            pass
+        except Exception as _db_err:
+            logger.debug('Failed fetching default panel data for Stata engine: %s', _db_err)
 
     if df is None or df.empty:
         return {
@@ -1572,7 +1574,20 @@ def _handle_estat_vif(parsed: dict, df: pd.DataFrame) -> dict:
 def _handle_coefplot(parsed: dict, df: pd.DataFrame) -> dict:
     requested_terms = parsed.get("indepvars", [])
     requested_name = requested_terms[0] if requested_terms else None
+
+    session = getattr(_analysis_state(), "session", None)
     stored = _analysis_stored()
+    if not requested_name:
+        runtime_cnt = len(getattr(session, "runtime_estimates", {})) if session else 0
+        stored_cnt = len(stored) if stored else 0
+        models_cnt = len(getattr(session, "stored_models", {})) if session else 0
+        if max(runtime_cnt, stored_cnt, models_cnt) > 1:
+            return {
+                "status": "error",
+                "error_code": "MODEL_ID_REQUIRED",
+                "message": "Multiple models found in session. Please specify a model_id for coefplot.",
+                "ascii_output": "r(198); multiple models present; model_id required for coefplot",
+            }
     if requested_name:
         est = stored.get(requested_name)
     else:
@@ -2375,8 +2390,8 @@ def _handle_xtset(parsed: dict, df: pd.DataFrame) -> dict:
     try:
         import streamlit as st
         st.session_state["active_panel_context"] = ctx
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Streamlit session_state not accessible during xtset: %s", exc)
 
     return {
         "status": "success",

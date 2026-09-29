@@ -46,3 +46,20 @@ DataV[0-9]*/
 *.log
 .DS_Store
 DataUS/
+
+# Recording, Audio & Transient Artifacts
+*.webm
+*.mp3
+scratch/demo_production/final_walkthrough/
+scratch/demo_production/audio/
+scratch/*.png
+scratch/*.mp4
+scratch/*.webm
+scratch/*.mp3
+scratch/*.srt
+*.jpeg
+*.jpg
+*.xml
+verify_frames/
+unpacked/
+tmp/

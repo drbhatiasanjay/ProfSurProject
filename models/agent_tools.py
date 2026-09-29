@@ -11,6 +11,8 @@ import re
 import sqlite3
 import hashlib
 import json
+import logging
+logger = logging.getLogger(__name__)
 from typing import Any, Dict, List, Optional
 import pandas as pd
 
@@ -60,8 +62,8 @@ def _assistant_view_where(panel_mode: str, filters: dict | None) -> str:
             y0, y1 = int(year_range[0]), int(year_range[1])
             if y0 <= y1:
                 where.append(f"f.year BETWEEN {y0} AND {y1}")
-        except (TypeError, ValueError):
-            pass
+        except (TypeError, ValueError) as err:
+            logger.debug("Failed parsing year_range filter %s: %s", year_range, err)
 
     def _quoted_values(values):
         if not isinstance(values, (list, tuple)):
@@ -267,8 +269,8 @@ def describe_financial_database(
     if isinstance(year_range, (list, tuple)) and len(year_range) == 2:
         try:
             frame = frame[frame["year"].between(int(year_range[0]), int(year_range[1]))]
-        except (TypeError, ValueError):
-            pass
+        except (TypeError, ValueError) as err:
+            logger.debug("Failed filtering frame by year_range %s: %s", year_range, err)
     run_id = hashlib.sha256(json.dumps(
         {"variables": requested, "group_by": group_column, "panel_mode": panel_mode, "filters": filters},
         sort_keys=True, default=str,
@@ -354,7 +356,8 @@ def generate_chat_chart(
             try:
                 import json
                 series = json.loads(series_json)
-            except Exception:
+            except Exception as exc:
+                logger.debug("Failed parsing series_json in generate_chat_chart: %s", exc)
                 series = []
         elif isinstance(series_json, (list, tuple)):
             series = list(series_json)
@@ -1090,8 +1093,8 @@ def run_live_econometric_model(
         h_res = run_hausman_test(fe_res, re_res)
         hausman_stat = h_res.get("chi2")
         hausman_p = h_res.get("p_value")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning('Econometric estimation in agent_tools failed: %s', e)
 
     mtype = str(model_type).lower()
     if mtype == "pooled_ols" and ols_res:

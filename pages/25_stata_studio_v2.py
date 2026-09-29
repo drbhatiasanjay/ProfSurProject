@@ -48,12 +48,15 @@ ensure_session_state()
 
 db.log_page_visit("Stata Studio V2")
 
-st.set_page_config(
-    page_title="Stata Studio V2 — LifeCycle Leverage",
-    page_icon="💻",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+try:
+    st.set_page_config(
+        page_title="Stata Studio V2 — LifeCycle Leverage",
+        page_icon="💻",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+except Exception:
+    pass
 
 # Accessible to all roles
 require_role("admin", "researcher", "viewer", "cfo", "guest")
@@ -383,6 +386,7 @@ with tab_cli:
     # 2. Supported Commands Dropdown (Categorized & Ordered by Frequency)
     # Categorized command options (prototype parity: grouped by domain)
     SUPPORTED_COMMAND_OPTIONS = [
+        "(Select a template command to load & execute...)",
         "── 1. Data Exploration & Summaries ──────────────",
         "describe",
         "summarize leverage profitability tangibility log_size, detail",
@@ -413,15 +417,15 @@ with tab_cli:
         "histogram leverage, normal",
         "graph box leverage, over(corplifestage)",
     ]
-    # Section headers in dropdown (start with ──) should be non-selectable
-    _DROPDOWN_HEADERS = {o for o in SUPPORTED_COMMAND_OPTIONS if o.startswith("──")}
+    # Section headers in dropdown (start with ── or () should be non-executable
+    _DROPDOWN_HEADERS = {o for o in SUPPORTED_COMMAND_OPTIONS if o.startswith("──") or o.startswith("(")}
 
     selected_cmd = st.selectbox(
         "Command Library — grouped by category:",
         options=SUPPORTED_COMMAND_OPTIONS,
         index=0,
         key="stata_v2_cmd_select",
-        format_func=lambda x: f"  {x}" if not x.startswith("──") else x,
+        format_func=lambda x: f"  {x}" if not x.startswith("──") and not x.startswith("(") else x,
     )
 
     if selected_cmd and selected_cmd not in _DROPDOWN_HEADERS:
@@ -430,6 +434,8 @@ with tab_cli:
             st.session_state["_last_selected_cmd"] = selected_cmd
             st.session_state["_trigger_stata_v2_run"] = True
             st.rerun()
+    elif selected_cmd and selected_cmd.startswith("──"):
+        st.caption("ℹ️ *Category header selected. Please choose a specific Stata command below this header.*")
 
     # 3. Command Input Prompt & Form
     with st.form("stata_v2_command_form", clear_on_submit=False):
