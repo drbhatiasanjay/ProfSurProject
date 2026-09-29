@@ -169,6 +169,25 @@
 
 ---
 
+## Milestone — Recordly Master Walkthrough V4 & Dynamic Screen Run-Up Synchronization (2026-09-30)
+
+**Session Summary:** Full synchronization of Recordly Master Demo Walkthrough V4 (`scripts/produce_ai_chatbot_demo_recordly.py`) implementing deterministic 4-phase per-query choreography, white space subtitle placement, and zero-leak session isolation.
+
+### Key Capabilities & Flow Implementations:
+1. **Deterministic 4-Phase Choreography across All Featured Archetypes & Tiers:**
+   - **Screen 1 (Live Typing):** Character-by-character typing in clear view of chat input box.
+   - **Screen 2 (Working State Pause):** Camera captures authentic `Working... Querying financial database & synthesizing econometrics` reasoning trace with 2.0s timing pause.
+   - **Screen 3 (Immediate Top Reset):** As soon as generation completes, screen immediately snaps to $y=0$ (`scrollTo({top: 0})`), revealing user prompt, Dickinson Life Stage badges, and Telemetry.
+   - **Screen 4 (Paced Focal Scrolling):** Camera smoothly scrolls down through the Theory Narrative $\to$ CFO Strategic Recommendations Table $\to$ Interactive Plotly / Stata Outputs $\to$ Peer-Reviewed Literature Vault in lockstep with the neural voiceover.
+2. **Subtitle Floating in White Space (`MarginV=90`):**
+   - Subtitle ASS filter configured with `MarginV=90` (floating ~90px above bottom screen edge), ensuring captions sit comfortably in the open white area between the main decision card and chat input bar with zero occlusion.
+3. **Database Session Isolation:**
+   - Pre-scene database cleaner wipes prior `drbhatia` session turns from `capital_structure.db`, guaranteeing a fresh canvas with zero cross-company residual history.
+4. **All Fast Tests Verified:** 6/6 tests passing (`tests/test_chart_switcher_and_literature.py`).
+5. **Red Team 10/10 Scorecard:** Verified in `docs/review-evidence/RED_TEAM_DEMO_RECORDLY_SCORECARD.md`.
+
+---
+
 ## Milestone — Stata Studio V2 Prototype Parity (2026-09-12)
 
 **Session Summary:** Full prototype-parity implementation of `pages/25_stata_studio_v2.py` against the design reference `scratch/stata_studio_prototype.html`.

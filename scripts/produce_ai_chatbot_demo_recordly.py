@@ -3,13 +3,13 @@ produce_ai_chatbot_demo_recordly.py
 
 Recordly Master Production Pipeline for the AI Financial Assistant Master Walkthrough.
 Implements 100% Dynamic Screen Run-Up:
-  1. Live character-by-character typing into chat input on camera.
-  2. Live triggering of the submit event (Enter) and real-time response generation.
-  3. Automatic scroll-up to y=0 upon generation so top telemetry and executive badges are visible.
-  4. Paced focal scrolling tracking every spoken sentence across the 6 component layers.
+  1. Live character-by-character typing into chat input on camera (Screen 1).
+  2. Live triggering of the submit event (Enter) and 2.0s capture of 'Working...' reasoning trace (Screen 2).
+  3. Automatic immediate scroll-up to y=0 upon generation so user prompt, telemetry, and Dickinson Lifecycle Stage are visible (Screen 3).
+  4. Paced focal scrolling tracking every spoken sentence down to CFO Actionable Recommendations and Literature Vault (Screen 4).
   5. Live dynamic execution across all archetypes (Infosys, Tata Steel, Airtel, IndiGo, Sun Pharma, Stata xtreg).
-  6. Non-obstructive broadcast lower-third subtitles (outline style, transparent background).
-  7. Exact zero-drift lockstep across all 8 scenes.
+  6. Non-obstructive broadcast lower-third subtitles with MarginV=90 floating in clean white space.
+  7. Exact zero-drift lockstep across all scenes with isolated clean database sessions.
 
 Authors:
   Dr. Sanjay Bhatia (CoFounder, EOLABS.IN)
@@ -22,6 +22,7 @@ import sys
 import time
 import json
 import asyncio
+import sqlite3
 import subprocess
 from pathlib import Path
 from datetime import datetime
@@ -80,13 +81,13 @@ SCENES = [
         "tag": "CORPORATE ARCHETYPE 1: TECH",
         "title": "Infosys Ltd. (100632): Near-Zero Debt & Financial Flexibility",
         "hud_desc": "Leverage 4.2%, ROA 33.4%, Dickinson Mature Stage | Pecking Order vs Tax Shields",
-        "prompt": "As CFO of Infosys Ltd., analyze our baseline capital structure (4.2% leverage, 33.4% ROA) under Dickinson Mature stage and Trade-Off Theory.",
+        "prompt": "As CFO of Infosys Ltd., analyze our baseline capital structure and cash-flow profile in Computer software. What Dickinson lifecycle stage are we currently in, and how does our 4.2% leverage compare to the IT software industry median?",
         "sentences": [
-            "We begin with Infosys in the technology sector, submitting a capital structure optimization prompt.",
+            "We begin with Infosys in the technology sector, submitting our baseline capital structure and cash-flow query.",
             "Looking at the executive badge, Infosys is diagnosed in Dickinson's Mature stage with four point two percent leverage and thirty-three percent return on assets.",
             "Under Trade-Off Theory, the model analyzes why software leaders forfeit interest tax shields to preserve debt capacity.",
             "The interactive peer benchmark chart contrasts Infosys against industry competitors.",
-            "The actionable playbook recommends self-financing capital expenditures through internal cash flows while defending strategic liquidity."
+            "The actionable CFO playbook recommends self-financing capital expenditures through internal cash flows while defending strategic liquidity."
         ],
     },
     {
@@ -152,9 +153,56 @@ SCENES = [
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Audio Generation & Sentence-Level Timing
+# Database Isolation Helper (Zero Residual Session Bleed)
 # ─────────────────────────────────────────────────────────────────────────────
-async def gen_audio(text: str, out_path: Path):
+def clean_database_chat_sessions():
+    """Wipe prior chat sessions so every run is 100% clean."""
+    try:
+        conn = sqlite3.connect("capital_structure.db")
+        conn.execute("DELETE FROM chat_messages")
+        conn.execute("DELETE FROM chat_sessions")
+        conn.commit()
+        conn.close()
+        print("  [db-clean] ✓ Chat sessions and messages wiped for clean scene isolation.")
+    except Exception as e:
+        print(f"  [db-clean] Note: {e}")
+
+def scroll_up_immediate(page):
+    """Instantly scroll all candidate main containers to y=0."""
+    page.evaluate("""() => {
+        const targets = [
+            document.querySelector('[data-testid="stMain"]'),
+            document.querySelector('section.main'),
+            document.querySelector('.main'),
+            document.documentElement,
+            document.body,
+            window
+        ];
+        for (const t of targets) {
+            try {
+                if (t && t.scrollTo) { t.scrollTo({top: 0, behavior: 'instant'}); }
+            } catch(e) {}
+        }
+    }""")
+
+def focal_scroll(page, target_y: int):
+    """Smoothly scroll candidate main containers to a vertical anchor."""
+    page.evaluate(f"""() => {{
+        const targets = [
+            document.querySelector('[data-testid="stMain"]'),
+            document.querySelector('section.main'),
+            document.querySelector('.main'),
+            document.documentElement,
+            document.body,
+            window
+        ];
+        for (const t of targets) {{
+            try {{
+                if (t && t.scrollTo) {{ t.scrollTo({{top: {target_y}, behavior: 'smooth'}}); }}
+            }} catch(e) {{}}
+        }}
+    }}""")
+async def gen_audio_segment(text: str, out_path: Path):
     communicate = edge_tts.Communicate(text, VOICE, rate="+3%", pitch="+0Hz")
     await communicate.save(str(out_path))
 
@@ -168,6 +216,34 @@ def get_audio_duration(mp3_path: Path) -> float:
     res = subprocess.run(cmd, capture_output=True, text=True, check=True)
     return float(res.stdout.strip())
 
+def make_silence_mp3(dur: float, out_path: Path):
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", f"anullsrc=r=24000:cl=mono",
+        "-t", f"{dur:.3f}",
+        "-q:a", "9",
+        "-acodec", "libmp3lame",
+        str(out_path)
+    ]
+    subprocess.run(cmd, capture_output=True, check=True)
+
+def concat_mp3s(mp3_list: list[Path], out_mp3: Path):
+    list_txt = out_mp3.parent / f"list_{out_mp3.stem}.txt"
+    with open(list_txt, "w", encoding="utf-8") as f:
+        for m in mp3_list:
+            p_str = m.resolve().as_posix()
+            f.write(f"file '{p_str}'\n")
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "concat", "-safe", "0",
+        "-i", str(list_txt),
+        "-c", "copy",
+        str(out_mp3)
+    ]
+    subprocess.run(cmd, capture_output=True, check=True)
+    if list_txt.exists():
+        list_txt.unlink()
+
 def prepare_all_audio() -> list[dict]:
     print("=== Step 1: Generating Neural Voice & Sentence Cues (edge-tts) ===")
     scene_manifest = []
@@ -175,38 +251,49 @@ def prepare_all_audio() -> list[dict]:
     
     for sc in SCENES:
         sid = sc["id"]
-        mp3_file = AUDIO_DIR / f"{sid}.mp3"
-        full_text = " ".join(sc["sentences"])
+        is_query_scene = sid in ("scene2_assistant_overview", "scene3_infosys_tech", "scene4_tata_steel_stress", "scene6_researcher_stata")
         
-        asyncio.run(gen_audio(full_text, mp3_file))
-        duration = get_audio_duration(mp3_file)
-        
-        words_per_sentence = [len(s.split()) for s in sc["sentences"]]
-        total_words = sum(words_per_sentence)
-        
+        sentence_mp3s = []
         sentence_cues = []
         cur_t = 0.0
-        for s, w_cnt in zip(sc["sentences"], words_per_sentence):
-            s_dur = duration * (w_cnt / total_words)
+        
+        for idx, s in enumerate(sc["sentences"]):
+            s_file = AUDIO_DIR / f"{sid}_s{idx}.mp3"
+            asyncio.run(gen_audio_segment(s, s_file))
+            s_dur = get_audio_duration(s_file)
+            sentence_mp3s.append(s_file)
+            
             sentence_cues.append({
                 "text": s,
                 "start": cur_t,
                 "end": cur_t + s_dur,
                 "duration": s_dur,
+                "file": s_file,
             })
             cur_t += s_dur
-        if sentence_cues:
-            sentence_cues[-1]["end"] = duration
             
-        print(f"  [{sid}] -> {duration:.2f}s ({len(sentence_cues)} cues) | {mp3_file.name}")
+            # If this is the query sentence (index 0) in an interactive scene, inject a 2.0s working pause in timeline
+            if is_query_scene and idx == 0:
+                silence_file = AUDIO_DIR / f"{sid}_silence_working.mp3"
+                make_silence_mp3(2.0, silence_file)
+                sentence_mp3s.append(silence_file)
+                cur_t += 2.0
+
+        # Master concatenated MP3 for this scene
+        master_scene_mp3 = AUDIO_DIR / f"{sid}.mp3"
+        concat_mp3s(sentence_mp3s, master_scene_mp3)
+        total_scene_dur = get_audio_duration(master_scene_mp3)
+        
+        print(f"  [{sid}] -> {total_scene_dur:.2f}s ({len(sc['sentences'])} sentences) | {master_scene_mp3.name}")
         scene_manifest.append({
             "id": sid,
-            "mp3": mp3_file,
-            "duration": duration,
+            "mp3": master_scene_mp3,
+            "duration": total_scene_dur,
             "cues": sentence_cues,
             "data": sc,
+            "is_query_scene": is_query_scene,
         })
-        total_dur += duration
+        total_dur += total_scene_dur
 
     print(f"Total Master Audio Duration: {total_dur:.1f}s ({total_dur/60:.2f} min)\n")
     return scene_manifest
@@ -308,22 +395,6 @@ def show_closing_card(page):
         </div>`;
     }''')
 
-def scroll_up_immediate(page):
-    """Instantly scroll container to y=0."""
-    page.evaluate("""() => {
-        const el = document.querySelector('[data-testid="stMain"]') || window;
-        if (el.scrollTo) { el.scrollTo({top: 0, behavior: 'instant'}); }
-        else { window.scrollTo({top: 0, behavior: 'instant'}); }
-    }""")
-
-def focal_scroll(page, target_y: int):
-    """Smoothly scroll the main container to a vertical anchor."""
-    page.evaluate(f"""() => {{
-        const el = document.querySelector('[data-testid="stMain"]') || window;
-        if (el.scrollTo) {{ el.scrollTo({{top: {target_y}, behavior: 'smooth'}}); }}
-        else {{ window.scrollTo({{top: {target_y}, behavior: 'smooth'}}); }}
-    }}""")
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Scene Recorder Engine: Live Typing & Dynamic Response Generation
 # ─────────────────────────────────────────────────────────────────────────────
@@ -335,6 +406,9 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
     
     print(f"\n--- Recording Scene (Recordly Engine): {sid} (Duration: {duration:.2f}s) ---")
     
+    # Always guarantee clean isolated session for every scene
+    clean_database_chat_sessions()
+
     context = browser.new_context(
         viewport={"width": 1920, "height": 1080},
         record_video_dir=str(SCENE_DIR / "raw"),
@@ -383,28 +457,22 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
         if sid == "scene2_assistant_overview":
             # Cue 0: Live typing & triggering the 6-layer inquiry
             cue0 = scene_item["cues"][0]
-            new_chat_btn = page.locator('button:has-text("New Chat")').first
-            if new_chat_btn.is_visible(timeout=1000):
-                new_chat_btn.click()
-                time.sleep(0.5)
-
             chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
             if chat_input.is_visible(timeout=2000):
                 chat_input.click()
                 chat_input.type(sc.get("prompt", "Explain Pecking Order vs Trade-Off theories."), delay=15)
                 time.sleep(0.2)
                 page.keyboard.press("Enter")
+                # Show 2s of working state on camera
+                time.sleep(2.0)
                 # Wait until generation finishes
                 try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=15000)
+                    page.wait_for_selector('text=Working', state='detached', timeout=25000)
                 except Exception:
                     pass
+                # Screen 3: Immediate top scroll
                 scroll_up_immediate(page)
             
-            elapsed_c0 = time.time() - t0
-            if cue0["duration"] > elapsed_c0:
-                time.sleep(cue0["duration"] - elapsed_c0)
-
             # Cues 1-6: Sequential focal scrolling over the 6 layers
             anchors = [0, 160, 360, 580, 920, 1250]
             for idx in range(1, len(scene_item["cues"])):
@@ -414,12 +482,7 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
                 time.sleep(cue["duration"])
 
         elif sid == "scene3_infosys_tech":
-            # Cue 0: Switch to CFO -> Infosys -> Live type query
-            cue0 = scene_item["cues"][0]
-            new_chat = page.locator('button:has-text("New Chat")').first
-            if new_chat.is_visible(timeout=1000):
-                new_chat.click()
-                time.sleep(0.4)
+            # Cue 0: Switch to CFO -> Infosys -> Live type exact prompt
             cfo_radio = page.locator('label:has-text("CFO")').first
             if cfo_radio.is_visible(timeout=1000):
                 cfo_radio.click()
@@ -432,20 +495,21 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
             chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
             if chat_input.is_visible(timeout=2000):
                 chat_input.click()
-                chat_input.type(sc.get("prompt", "Analyze Infosys baseline capital structure."), delay=15)
+                chat_input.type(sc.get("prompt", "As CFO of Infosys Ltd., analyze our baseline capital structure and cash-flow profile in Computer software. What Dickinson lifecycle stage are we currently in, and how does our 4.2% leverage compare to the IT software industry median?"), delay=15)
                 time.sleep(0.2)
                 page.keyboard.press("Enter")
+                # Screen 2: Capture 2s of authentic Working state
+                time.sleep(2.0)
+                # Wait until generation finishes
                 try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=15000)
+                    page.wait_for_selector('text=Working', state='detached', timeout=25000)
                 except Exception:
                     pass
+                # Screen 3: Immediate instant scroll-up to top so prompt, telemetry, and badges are in full view
                 scroll_up_immediate(page)
 
-            elapsed_c0 = time.time() - t0
-            if cue0["duration"] > elapsed_c0:
-                time.sleep(cue0["duration"] - elapsed_c0)
-
-            anchors = [140, 340, 680, 480]
+            # Screen 4: Focal scroll down through Narrative -> CFO Recommendations Table -> Chart -> Playbook
+            anchors = [140, 360, 720, 520]
             for idx in range(1, len(scene_item["cues"])):
                 cue = scene_item["cues"][idx]
                 target_y = anchors[min(idx - 1, len(anchors)-1)]
@@ -454,11 +518,6 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
 
         elif sid == "scene4_tata_steel_stress":
             # Cue 0: Select Tata Steel -> Live type Macro Stress Test query
-            cue0 = scene_item["cues"][0]
-            new_chat = page.locator('button:has-text("New Chat")').first
-            if new_chat.is_visible(timeout=1000):
-                new_chat.click()
-                time.sleep(0.4)
             tata_btn = page.locator('button:has-text("Tata Steel")').first
             if tata_btn.is_visible(timeout=1000):
                 tata_btn.click()
@@ -467,20 +526,18 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
             chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
             if chat_input.is_visible(timeout=2000):
                 chat_input.click()
-                chat_input.type(sc.get("prompt", "Conduct macro stress test for Tata Steel (+150 bps rate shock)."), delay=15)
+                chat_input.type(sc.get("prompt", "Conduct a macro stress test for Tata Steel: if borrowing costs rise by 150 bps and steel spreads contract by 20%, what happens to our Interest Coverage Ratio against the 2.0x floor?"), delay=15)
                 time.sleep(0.2)
                 page.keyboard.press("Enter")
+                time.sleep(2.0)
                 try:
-                    page.wait_for_selector('text=Working', state='detached', timeout=15000)
+                    page.wait_for_selector('text=Working', state='detached', timeout=25000)
                 except Exception:
                     pass
                 scroll_up_immediate(page)
 
-            elapsed_c0 = time.time() - t0
-            if cue0["duration"] > elapsed_c0:
-                time.sleep(cue0["duration"] - elapsed_c0)
-
-            anchors = [160, 260, 460]
+            # Focal scroll down through Covenant Breach Warning -> CFO Playbook
+            anchors = [160, 280, 520]
             for idx in range(1, len(scene_item["cues"])):
                 cue = scene_item["cues"][idx]
                 target_y = anchors[min(idx - 1, len(anchors)-1)]
@@ -499,7 +556,11 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
             exec_2 = page.locator('button:has-text("Execute 🟡 2")').first
             if exec_2.is_visible(timeout=1000):
                 exec_2.click()
-                time.sleep(0.8)
+                try:
+                    page.wait_for_selector('text=Working', state='detached', timeout=20000)
+                except Exception:
+                    pass
+                scroll_up_immediate(page)
             focal_scroll(page, 180)
             time.sleep(max(0.5, scene_item["cues"][1]["duration"] - 1.2))
 
@@ -511,7 +572,11 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
             exec_3 = page.locator('button:has-text("Execute 🟠 3")').first
             if exec_3.is_visible(timeout=1000):
                 exec_3.click()
-                time.sleep(0.8)
+                try:
+                    page.wait_for_selector('text=Working', state='detached', timeout=20000)
+                except Exception:
+                    pass
+                scroll_up_immediate(page)
             focal_scroll(page, 220)
             time.sleep(max(0.5, scene_item["cues"][2]["duration"] - 1.2))
 
@@ -523,24 +588,19 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
             exec_4 = page.locator('button:has-text("Execute 🔴 4")').first
             if exec_4.is_visible(timeout=1000):
                 exec_4.click()
-                time.sleep(0.8)
+                try:
+                    page.wait_for_selector('text=Working', state='detached', timeout=20000)
+                except Exception:
+                    pass
+                scroll_up_immediate(page)
             focal_scroll(page, 260)
             time.sleep(max(0.5, scene_item["cues"][3]["duration"] - 1.2))
 
         elif sid == "scene6_researcher_stata":
-            cue0 = scene_item["cues"][0]
-            new_chat = page.locator('button:has-text("New Chat")').first
-            if new_chat.is_visible(timeout=1000):
-                new_chat.click()
-                time.sleep(0.4)
             res_radio = page.locator('label:has-text("Researcher")').first
             if res_radio.is_visible(timeout=1000):
                 res_radio.click()
                 time.sleep(0.5)
-
-            elapsed_c0 = time.time() - t0
-            if cue0["duration"] > elapsed_c0:
-                time.sleep(cue0["duration"] - elapsed_c0)
 
             # Cue 1: Live type Stata regression
             cue1 = scene_item["cues"][1]
@@ -550,7 +610,11 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
                 chat_input.type(". xtreg leverage roa tang size, fe cluster(ind_code)", delay=15)
                 time.sleep(0.2)
                 page.keyboard.press("Enter")
-                time.sleep(1.0)
+                time.sleep(2.0)
+                try:
+                    page.wait_for_selector('text=Working', state='detached', timeout=20000)
+                except Exception:
+                    pass
                 scroll_up_immediate(page)
 
             time.sleep(cue1["duration"])
@@ -646,9 +710,9 @@ def concatenate_and_burn_captions(scene_files: list[Path], srt_file: Path):
     print("=== Step 3: Concatenating Master MP4 & Burning Styled Captions ===")
     timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     
-    ts_clean_mp4 = OUT / f"ai_chatbot_walkthrough_recordly_v3_{timestamp}_clean.mp4"
-    ts_sub_mp4   = OUT / f"ai_chatbot_walkthrough_recordly_v3_{timestamp}_subtitled.mp4"
-    ts_srt       = OUT / f"ai_chatbot_walkthrough_recordly_v3_{timestamp}.srt"
+    ts_clean_mp4 = OUT / f"ai_chatbot_walkthrough_recordly_v4_{timestamp}_clean.mp4"
+    ts_sub_mp4   = OUT / f"ai_chatbot_walkthrough_recordly_v4_{timestamp}_subtitled.mp4"
+    ts_srt       = OUT / f"ai_chatbot_walkthrough_recordly_v4_{timestamp}.srt"
     
     final_clean = OUT / "ai_chatbot_master_walkthrough_v2.mp4"
     final_sub   = OUT / "ai_chatbot_master_walkthrough_v2_subtitled.mp4"
@@ -671,9 +735,9 @@ def concatenate_and_burn_captions(scene_files: list[Path], srt_file: Path):
     shutil.copy2(ts_clean_mp4, final_clean)
     print(f"  [master] Clean MP4: {ts_clean_mp4.name} ({ts_clean_mp4.stat().st_size / 1024 / 1024:.1f} MB)")
 
-    # 2. Burned Subtitled MP4 with broadcast lower-third styling (non-obstructive outline)
+    # 2. Burned Subtitled MP4 with broadcast upper-white-space placement (MarginV=90 to avoid chat box)
     srt_escaped = str(srt_file.resolve()).replace("\\", "/").replace(":", "\\:")
-    style = "FontName=Arial,FontSize=11,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BackColour=&H00000000,BorderStyle=1,Outline=1.5,Shadow=0.5,MarginV=12,Alignment=2"
+    style = "FontName=Arial,FontSize=11,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BackColour=&H00000000,BorderStyle=1,Outline=1.5,Shadow=0.5,MarginV=90,Alignment=2"
     vf_arg = f"subtitles='{srt_escaped}':force_style='{style}'"
 
     burn_cmd = [
