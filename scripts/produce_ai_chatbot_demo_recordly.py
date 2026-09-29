@@ -646,13 +646,25 @@ def record_scene_recordly(browser, scene_item: dict) -> Path:
     context.close()
 
     scene_mp4 = SCENE_DIR / f"{sid}.mp4"
-    # Precise offset trimming using -ss {t_ready:.3f} so video starts exactly on live UI action
+    
+    # Check actual raw video duration to avoid seeking past EOF
+    raw_dur_cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(raw_video)]
+    raw_dur = float(subprocess.run(raw_dur_cmd, capture_output=True, text=True, check=True).stdout.strip())
+
+    if is_title or is_closing:
+        start_offset = 0.0
+    else:
+        start_offset = min(t_ready, max(0.0, raw_dur - duration))
+
+    # Explicit stream mapping to ensure BOTH video and audio are always present
     mux_cmd = [
         "ffmpeg", "-y",
-        "-ss", f"{t_ready:.3f}",
+        "-ss", f"{start_offset:.3f}",
         "-i", str(raw_video),
         "-i", str(mp3),
         "-t", f"{duration:.3f}",
+        "-map", "0:v:0",
+        "-map", "1:a:0",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", "18",
         "-c:a", "aac", "-b:a", "192k",
         str(scene_mp4)
