@@ -637,3 +637,6 @@ automated matrix evidence.
 - Automated verification: 107 regression/token/page tests passed (100%), targeted smoke tests passed, `git diff --check` clean, Streamlit `/_stcore/health` returns `ok`.
 - Database exclusion preserved: `capital_structure.db` remains untracked/unstaged.
 
+## 2026-09-29 — Demo rehearsal
+Authenticated V2 as drbhatia; confirmed 17 main pages and Tata Steel availability. Saved silent 1080p rehearsal (489.12 seconds) under scratch/demo_production. Final recording blocked by Stata V2 scorecard TypeError and AI Assistant StreamlitSecretNotFoundError. No product/deployment changes. See docs/operations/DEMO_REHEARSAL_STATUS.md for evidence, the 48-minute outline, and remaining work. User requests low-cost model usage, lean tool calls, and brief updates.
+

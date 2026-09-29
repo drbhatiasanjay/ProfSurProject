@@ -668,14 +668,15 @@ with tab_cli:
                         _prof_sign = None
                         _tang_sign = None
                         for k, v in _coefs.items():
+                            val = v.get("coef") if isinstance(v, dict) else v
                             if "profitability" in k.lower() or k.lower() in ("profitability", "prof", "roa"):
-                                _prof_sign = v
+                                _prof_sign = val
                             if "tangibility" in k.lower() or k.lower() in ("tangibility", "tang"):
-                                _tang_sign = v
+                                _tang_sign = val
 
                         _m1, _m2, _m3, _m4 = st.columns(4)
                         with _m1:
-                            _pot = "Supported" if (_prof_sign is not None and _prof_sign < 0) else "—"
+                            _pot = "Supported" if (isinstance(_prof_sign, (int, float)) and _prof_sign < 0) else "—"
                             _pot_color = accent_green if _pot == "Supported" else ("#F59E0B" if is_dark else "#D97706")
                             st.markdown(f"""<div style="background:{'rgba(30,41,59,0.5)' if is_dark else '#F8FAFC'}; border:1px solid {'#334155' if is_dark else '#E2E8F0'}; border-radius:6px; padding:10px; text-align:center;">
                             <div style="font-size:0.85rem; font-weight:700; color:{_pot_color};">{_pot}</div>

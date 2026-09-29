@@ -12,6 +12,7 @@ panel OLS outputs + descriptive statistics.
 import json
 import re
 import os
+from models.runtime_config import get_gemini_api_key
 import functools
 import typing
 from typing import Iterator, Generator, Literal, Optional, List, Dict, Union, Any
@@ -1270,18 +1271,7 @@ def stream_gemini_agent(
     Yields:
         String chunks and dict payloads (e.g. {"type": "chart", "spec": ...}).
     """
-    api_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-    if not api_key:
-        try:
-            import streamlit as st
-            api_key = (
-                st.session_state.get("gemini_api_key")
-                or st.secrets.get("GEMINI_API_KEY")
-                or st.secrets.get("GOOGLE_API_KEY")
-                or st.secrets.get("credentials", {}).get("gemini_api_key")
-            )
-        except Exception:
-            api_key = None
+    api_key = get_gemini_api_key()
 
     if not api_key:
         yield "[Google Gemini backend not configured. Set GEMINI_API_KEY in .streamlit/secrets.toml]"

@@ -3,6 +3,7 @@ Page 19 — AI Financial Assistant.
 Full-screen dedicated chat interface grounded in the capital structure panel data.
 """
 import os
+from models.runtime_config import get_gemini_api_key
 import time
 import uuid as _uuid
 import copy
@@ -764,12 +765,7 @@ with st.sidebar:
         help="Gemini: Google GenAI multi-tool agent. Anthropic: Claude Sonnet. Ollama: local.",
     )
     if backend == "gemini":
-        _has_gemini_key = bool(
-            os.environ.get("GEMINI_API_KEY")
-            or os.environ.get("GOOGLE_API_KEY")
-            or st.session_state.get("gemini_api_key")
-            or (hasattr(st, "secrets") and (st.secrets.get("GEMINI_API_KEY") or st.secrets.get("GOOGLE_API_KEY")))
-        )
+        _has_gemini_key = bool(get_gemini_api_key())
         if not _has_gemini_key:
             _custom_gkey = st.text_input(
                 "Gemini API Key",
