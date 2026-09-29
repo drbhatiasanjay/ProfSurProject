@@ -191,26 +191,30 @@ def expand_expanders(page):
         except Exception:
             pass
 
-def navigate_to_page(page, label, slug):
-    """Navigate reliably via sidebar or route."""
+def ensure_sidebar_expanded(page):
     sidebar = page.locator("section[data-testid='stSidebar']")
-    
-    # Expand "View more" if present
     try:
-        more = sidebar.locator('button:has-text("View")').first
-        if more.count() > 0:
-            more.click(timeout=1500)
-            page.wait_for_timeout(500)
+        btns = sidebar.locator("button").all()
+        for b in btns:
+            txt = b.inner_text()
+            if "view" in txt.lower() and "more" in txt.lower():
+                b.click(timeout=1500)
+                page.wait_for_timeout(800)
+                break
     except Exception:
         pass
+
+def navigate_to_page(page, label, slug):
+    """Navigate reliably via sidebar links — NEVER call page.goto() which kills session."""
+    sidebar = page.locator("section[data-testid='stSidebar']")
+    ensure_sidebar_expanded(page)
     
-    try:
-        link = sidebar.locator('a').filter(has_text=re.compile(f"{re.escape(label)}", re.IGNORECASE)).first
-        link.click(timeout=3000)
-    except Exception:
-        url_target = f"{BASE_URL}/{slug}" if slug else f"{BASE_URL}/"
-        page.goto(url_target, timeout=20000, wait_until="networkidle")
+    link = sidebar.locator("a").filter(has_text=re.compile(f"^{re.escape(label)}$", re.IGNORECASE)).first
+    if link.count() == 0:
+        link = sidebar.locator("a").filter(has_text=re.compile(f"{re.escape(label)}", re.IGNORECASE)).first
         
+    link.scroll_into_view_if_needed()
+    link.click(timeout=6000)
     page.wait_for_timeout(3500)
 
 def run_recording():
@@ -504,9 +508,12 @@ def run_recording():
                         )
                         print("  [CFO Scenario 1: Tech] Analyzing Infosys Ltd. (Cash Rich / Low Debt)...")
                         comp_select = sidebar.locator('div[data-testid="stSelectbox"]').filter(has_text="Select Company").first
+                        if not comp_select.is_visible():
+                            comp_select = sidebar.locator('div[data-testid="stSelectbox"]').last
+                            
                         if comp_select.is_visible():
                             comp_select.click()
-                            page.wait_for_timeout(500)
+                            page.wait_for_timeout(600)
                             infy_opt = page.locator('li[role="option"], div[role="option"]').filter(has_text=re.compile("Infosys", re.IGNORECASE)).first
                             if infy_opt.is_visible():
                                 infy_opt.click()
@@ -526,9 +533,13 @@ def run_recording():
                             "Benchmarking against Indus Towers: 47.8% leverage, 5G spectrum commitments, assessing debt serviceability & refinancing risk."
                         )
                         print("  [CFO Scenario 2: Telecom] Analyzing Bharti Airtel Ltd. (High Debt / 5G Capex)...")
+                        comp_select = sidebar.locator('div[data-testid="stSelectbox"]').filter(has_text="Select Company").first
+                        if not comp_select.is_visible():
+                            comp_select = sidebar.locator('div[data-testid="stSelectbox"]').last
+                            
                         if comp_select.is_visible():
                             comp_select.click()
-                            page.wait_for_timeout(500)
+                            page.wait_for_timeout(600)
                             airtel_opt = page.locator('li[role="option"], div[role="option"]').filter(has_text=re.compile("Bharti Airtel", re.IGNORECASE)).first
                             if airtel_opt.is_visible():
                                 airtel_opt.click()
@@ -548,9 +559,13 @@ def run_recording():
                             "Benchmarking against JSW Steel (32.2%) & SAIL (25.9%): financing ₹15,000 Cr green steel capex while defending credit rating."
                         )
                         print("  [CFO Scenario 3: Manufacturing] Analyzing Tata Steel Ltd. (Cyclical Capex & Deleveraging)...")
+                        comp_select = sidebar.locator('div[data-testid="stSelectbox"]').filter(has_text="Select Company").first
+                        if not comp_select.is_visible():
+                            comp_select = sidebar.locator('div[data-testid="stSelectbox"]').last
+                            
                         if comp_select.is_visible():
                             comp_select.click()
-                            page.wait_for_timeout(500)
+                            page.wait_for_timeout(600)
                             tata_opt = page.locator('li[role="option"], div[role="option"]').filter(has_text=re.compile("Tata Steel", re.IGNORECASE)).first
                             if tata_opt.is_visible():
                                 tata_opt.click()
