@@ -819,39 +819,58 @@ with tab_export:
 
     with c_exp1:
         st.markdown("#### 📜 Master Stata Do-File (`replication_master.do`)")
-        do_code = f"""* ==============================================================================
-* LifeCycle Leverage — Stata Empirical Master Replication Script
-* Generated automatically on {time.strftime('%Y-%m-%d %H:%M:%S')}
-* ==============================================================================
-clear all
-set more off
+        # Dynamic Do-File Generator from Actual Session Run (SW-12)
+        history_cmds = st.session_state.get("stata_cmd_history", [])
+        active_vintage = st.session_state.get("panel_mode", "thesis")
+        dta_filename = f"lifecycle_leverage_{active_vintage}.dta"
 
-* 1. Load panel dataset
-use "sample_manufacturing_panel.dta", clear
+        lines = [
+            "* ==============================================================================",
+            "* LifeCycle Leverage — Stata Dynamic Empirical Replication Script",
+            f"* Generated automatically on {time.strftime('%Y-%m-%d %H:%M:%S')}",
+            f"* Active Dataset Vintage: {active_vintage}",
+            "* ==============================================================================",
+            "clear all",
+            "set more off",
+            "",
+            f"* 1. Load panel dataset for vintage '{active_vintage}'",
+            f"use "{dta_filename}", clear",
+            "",
+            "* 2. Set longitudinal panel structure",
+            "xtset company_code year",
+            "",
+        ]
 
-* 2. Set panel longitudinal structure
-xtset company_code year
+        if history_cmds:
+            lines.append("* 3. User Executed Session Command Sequence")
+            for idx, cmd in enumerate(history_cmds, 1):
+                clean_cmd = str(cmd).strip()
+                if clean_cmd and not clean_cmd.startswith("xtset") and not clean_cmd.startswith("use"):
+                    lines.append(f"{clean_cmd}")
+        else:
+            lines.extend([
+                "* 3. Baseline Descriptive & Estimation Workflow",
+                "summarize leverage profitability tangibility log_size, detail",
+                "pwcorr leverage profitability tangibility log_size, sig star(0.05)",
+                "",
+                "* 4. Core Panel Econometrics",
+                "regress leverage profitability tangibility log_size",
+                "estimates store m1_ols",
+                "",
+                "xtreg leverage profitability tangibility log_size, fe cluster(company_code)",
+                "estimates store m2_fe",
+                "",
+                "xtreg leverage profitability tangibility log_size, re",
+                "estimates store m3_re",
+                "",
+                "* 5. Specification Test",
+                "hausman m2_fe m3_re",
+                "",
+                "* 6. Publication Export Table",
+                "esttab m1_ols m2_fe m3_re using "table_results.tex", replace se r2 star(* 0.10 ** 0.05 *** 0.01)",
+            ])
 
-* 3. Descriptive Statistics & Diagnostics
-summarize leverage profitability tangibility log_size, detail
-pwcorr leverage profitability tangibility log_size, sig star(0.05)
-
-* 4. Estimate Core Econometric Models
-regress leverage profitability tangibility log_size
-estimates store m1_ols
-
-xtreg leverage profitability tangibility log_size, fe cluster(company_code)
-estimates store m2_fe
-
-xtreg leverage profitability tangibility log_size, re
-estimates store m3_re
-
-* 5. Model Selection Tests
-hausman m2_fe m3_re
-
-* 6. Export Publication Matrix
-esttab m1_ols m2_fe m3_re using "table_results.tex", replace se r2 star(* 0.10 ** 0.05 *** 0.01)
-"""
+        do_code = "\n".join(lines) + "\n" 
         st.code(do_code, language="stata")
         st.download_button(
             "📥 Download `replication_master.do`",

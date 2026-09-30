@@ -562,8 +562,9 @@ interaction_effects = st.Page("pages/15_interaction_effects.py", title="Interact
 admin_activity      = st.Page("pages/16_admin_activity.py",    title="Activity Log",        icon=":material/monitoring:")
 board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck",          icon=":material/description:")
 ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
-stata_studio        = st.Page("pages/23_stata_studio.py",       title="Stata Studio",        icon=":material/terminal:")
-stata_studio_v2     = st.Page("pages/25_stata_studio_v2.py",    title="Stata Studio V2",     icon=":material/terminal:")
+stata_studio        = st.Page("pages/25_stata_studio_v2.py",    title="Stata Studio",        icon=":material/terminal:")
+# Legacy Studio archived for rollback verification; canonical route is pages/25_stata_studio_v2.py (SW-06)
+legacy_stata_studio = st.Page("pages/23_stata_studio.py",       title="Stata Studio (Legacy)", icon=":material/history:")
 ai_chat_guide       = st.Page("pages/24_ai_chat_guide.py",      title="AI Chat Guide",       icon=":material/menu_book:")
 # knowledge_graph2  = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")  # temporarily hidden
 _admin_tools = [settings, ai_chat_guide]
@@ -577,7 +578,7 @@ nav = st.navigation({
         overview, dashboard, data_explorer, benchmarks,
         life_stage_dynamics, transitions,
         scenarios, econometrics, advanced_econ, interaction_effects,
-        stata_studio, stata_studio_v2,
+        stata_studio,
         ml_models, forecasting, clustering,
         ai_assistant, board_deck,
     ],

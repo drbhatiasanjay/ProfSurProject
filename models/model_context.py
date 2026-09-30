@@ -32,6 +32,11 @@ class ModelResultContext:
     estimation_index: tuple[Any, ...]
     parameters: tuple[tuple[str, float], ...]
     covariance: tuple[tuple[float, ...], ...]
+    # Estimation-sample ledger fields (SW-10)
+    raw_obs: int | None = None
+    dropped_missing: int | None = None
+    n_firms: int | None = None
+    vintage: str | None = None
 
     @classmethod
     def from_frame(
@@ -78,6 +83,10 @@ class ModelResultContext:
             "dataset_fingerprint": self.dataset_fingerprint,
             "sample_fingerprint": self.sample_fingerprint,
             "n_obs": self.n_obs,
+            "raw_obs": self.raw_obs or self.n_obs,
+            "dropped_missing": self.dropped_missing or 0,
+            "n_firms": self.n_firms,
+            "vintage": self.vintage or "thesis",
             "parameters": dict(self.parameters),
             "covariance": [list(row) for row in self.covariance],
         }

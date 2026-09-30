@@ -1,3 +1,51 @@
+
+# ── Canonical Stata Command Registry (SW-07, SW-08) ──────────────────────────
+COMMAND_REGISTRY = {
+    # Data Exploration & Panel Setup
+    "xtset": {"tier": "SUPPORTED", "description": "Declare dataset to be panel data", "category": "Panel Setup"},
+    "describe": {"tier": "SUPPORTED", "description": "Describe data in memory", "category": "Data Exploration"},
+    "summarize": {"tier": "SUPPORTED", "description": "Summary statistics & distribution", "category": "Data Exploration"},
+    "tabstat": {"tier": "SUPPORTED", "description": "Compact table of summary statistics", "category": "Data Exploration"},
+    "tabulate": {"tier": "SUPPORTED", "description": "One-way and two-way frequency tables", "category": "Data Exploration"},
+    "pwcorr": {"tier": "SUPPORTED", "description": "Pairwise correlation matrix with significance", "category": "Data Exploration"},
+    
+    # Core Econometrics
+    "regress": {"tier": "SUPPORTED", "description": "Pooled Linear Regression with robust standard errors", "category": "Estimation"},
+    "xtreg": {"tier": "SUPPORTED", "description": "Fixed-effects and random-effects panel regression", "category": "Estimation"},
+    "hausman": {"tier": "SUPPORTED", "description": "Hausman specification test (FE vs. RE)", "category": "Diagnostics"},
+    "estat": {"tier": "SUPPORTED", "description": "Postestimation statistics (e.g. estat vif)", "category": "Diagnostics"},
+    "xttest0": {"tier": "SUPPORTED", "description": "Breusch-Pagan LM test for random effects", "category": "Diagnostics"},
+    "xtserial": {"tier": "SUPPORTED", "description": "Wooldridge test for autocorrelation in panel data", "category": "Diagnostics"},
+    
+    # Post-Estimation & Export
+    "estimates": {"tier": "SUPPORTED", "description": "Store and manage estimation results in memory", "category": "Post-Estimation"},
+    "esttab": {"tier": "SUPPORTED", "description": "Publication-quality side-by-side regression tables", "category": "Reporting"},
+    "coefplot": {"tier": "SUPPORTED", "description": "Plot point estimates and confidence intervals", "category": "Visualisation"},
+    "margins": {"tier": "SUPPORTED", "description": "Marginal effects and predictive margins", "category": "Post-Estimation"},
+    "marginsplot": {"tier": "SUPPORTED", "description": "Graph marginal effects profiles", "category": "Visualisation"},
+    "export": {"tier": "SUPPORTED", "description": "Export dataset or results", "category": "Export"},
+    
+    # Graphs
+    "twoway": {"tier": "SUPPORTED", "description": "Two-way scatter and line plots", "category": "Visualisation"},
+    "scatter": {"tier": "SUPPORTED", "description": "Scatter plot matrix and pairwise graphs", "category": "Visualisation"},
+    "histogram": {"tier": "SUPPORTED", "description": "Frequency and density histograms", "category": "Visualisation"},
+    "box": {"tier": "SUPPORTED", "description": "Box-and-whisker plots", "category": "Visualisation"},
+    "lgraph": {"tier": "SUPPORTED", "description": "Life-stage mean trajectories", "category": "Visualisation"},
+
+    # Experimental / Proxy (SW-08)
+    "ivregress": {"tier": "EXPERIMENTAL", "description": "IV/GMM estimation with lagged instruments (Proxy specification)", "category": "Advanced Estimation"},
+
+    # Methodologically Gated / Roadmap (SW-07)
+    "hdfe": {"tier": "PLANNED", "description": "High-dimensional multi-way fixed effects (reghdfe)", "category": "Roadmap", "alternative": "Use xtreg fe with cluster(company_code)"},
+    "gmm": {"tier": "PLANNED", "description": "Full System GMM (Blundell-Bond moment conditions)", "category": "Roadmap", "alternative": "Use Advanced Econometrics page or IV proxy"},
+    "didregress": {"tier": "PLANNED", "description": "Difference-in-differences panel estimation", "category": "Roadmap", "alternative": "Use Interaction Effects page"},
+    "test": {"tier": "PLANNED", "description": "Linear hypothesis test after estimation", "category": "Roadmap", "alternative": "Inspect confidence intervals in esttab/coefplot"},
+    "predict": {"tier": "PLANNED", "description": "Calculate fitted values and residuals", "category": "Roadmap", "alternative": "Available via Advanced Econometrics Lab"},
+    "predict_ml": {"tier": "PLANNED", "description": "Machine learning prediction overlay", "category": "Roadmap", "alternative": "Use ML Models page"},
+    "scenario": {"tier": "PLANNED", "description": "Interactive counterfactual scenario runner", "category": "Roadmap", "alternative": "Use Scenarios page or run_cfo_stress_simulation"},
+    "winsor2": {"tier": "PLANNED", "description": "Winsorize or trim extreme variables", "category": "Roadmap", "alternative": "Variables are pre-winsorized at 1st/99th percentiles in active panel"},
+}
+
 import logging
 logger = logging.getLogger(__name__)
 """Stata Engine for LifeCycle Leverage.
@@ -459,24 +507,35 @@ def _execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
         elif cmd in ("margins", "marginsplot"):
             res = _handle_margins(parsed, df)
         else:
-            supported_cmds = [
-                "xtset", "xtreg", "regress", "summarize", "tabstat", "pwcorr",
-                "tabulate", "lgraph", "scatter", "histogram", "graph box",
-                "hausman", "estat vif", "estimates store", "esttab", "coefplot",
-                "xttest0", "xtserial", "margins", "export"
-            ]
+            reg_entry = COMMAND_REGISTRY.get(cmd)
+            if reg_entry and reg_entry.get("tier") == "PLANNED":
+                alt_str = f" Suggested alternative: {reg_entry.get('alternative')}" if reg_entry.get("alternative") else ""
+                return {
+                    "status": "unsupported",
+                    "error_code": "PLANNED_COMMAND",
+                    "tier": "PLANNED",
+                    "command": cmd,
+                    "message": f"Command '{cmd}' ({reg_entry.get('description')}) is scheduled on the methodological roadmap.{alt_str}",
+                    "supported_commands": [k for k, v in COMMAND_REGISTRY.items() if v.get("tier") == "SUPPORTED"],
+                    "ascii_output": (
+                        f". {parsed.get('raw', cmd_str)}\n"
+                        f"command {cmd} is currently planned on the research roadmap (r(199)).\n"
+                        f"{alt_str.strip()}"
+                    ),
+                }
+            
+            supported_cmds = [k for k, v in COMMAND_REGISTRY.items() if v.get("tier") == "SUPPORTED"]
             supported_list_str = ", ".join(supported_cmds[:10]) + ", etc."
             return {
                 "status": "unsupported",
                 "error_code": "UNSUPPORTED_COMMAND",
+                "tier": "UNSUPPORTED",
                 "command": cmd,
-                "message": f"Command '{cmd}' is not currently supported in Stata Studio.",
-                "admin_contact": "admin@lifecycle-leverage.internal",
+                "message": f"Command '{cmd}' is not recognized in Stata Studio.",
                 "supported_commands": supported_cmds,
                 "ascii_output": (
                     f". {parsed.get('raw', cmd_str)}\n"
-                    f"command {cmd} is unrecognized or not supported in this runtime.\n"
-                    f"If you require this econometric capability, please contact the administrator (r(199)).\n"
+                    f"command {cmd} is unrecognized in this runtime (r(199)).\n"
                     f"Supported commands include: {supported_list_str}"
                 ),
             }

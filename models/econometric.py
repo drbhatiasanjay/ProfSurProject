@@ -254,7 +254,7 @@ def run_hausman_test(fe_result, re_result):
 
     # Pseudoinverse handles rank-deficient but estimable covariance differences
     # while preserving the quadratic-form definition.
-    chi2 = float(diff @ np.linalg.pinv(v_diff) @ diff)
+    chi2 = max(0.0, float(diff @ np.linalg.pinv(v_diff) @ diff))
     df = int(np.linalg.matrix_rank(v_diff, tol=1e-10))
     if df <= 0:
         raise ValueError("Hausman covariance difference has zero rank")
