@@ -26,6 +26,13 @@ from models.ml_predict import (
 ensure_session_state()
 db.log_page_visit("ML Models")
 
+st.info(
+    "**Methodological Guardrail (SW-19):** Machine learning models (Random Forest, XGBoost, LightGBM) and SHAP feature "
+    "attributions on this page serve as **non-causal predictive diagnostics and non-linear ranking tools**. They do not "
+    "substitute for structural causal identification (e.g. Entity Fixed Effects or IV estimation).",
+    icon="ℹ️"
+)
+
 _username = st.session_state.get("user", {}).get("username", "")
 _mprefs   = db.load_user_prefs(_username, "ml_models") if _username else {}
 

@@ -222,8 +222,19 @@ def build_forest_plot(
 
     display_names = [get_canonical_label(v) for v in vars_list]
     coefs = [coef_data[v].get("coef", 0.0) for v in vars_list]
-    ci_lows = [coef_data[v].get("ci_low", coef - 1.96 * coef_data[v].get("se", 1.0)) for v, coef in zip(vars_list, coefs)]
-    ci_highs = [coef_data[v].get("ci_high", coef + 1.96 * coef_data[v].get("se", 1.0)) for v, coef in zip(vars_list, coefs)]
+    ci_lows = []
+    ci_highs = []
+    for v, coef in zip(vars_list, coefs):
+        se = coef_data[v].get("se")
+        if "ci_low" in coef_data[v]:
+            ci_lows.append(coef_data[v]["ci_low"])
+            ci_highs.append(coef_data[v].get("ci_high", coef + (coef - coef_data[v]["ci_low"])))
+        elif se is not None and isinstance(se, (int, float)) and se > 0:
+            ci_lows.append(coef - 1.96 * se)
+            ci_highs.append(coef + 1.96 * se)
+        else:
+            ci_lows.append(coef)
+            ci_highs.append(coef)
     err_plus = [high - c for high, c in zip(ci_highs, coefs)]
     err_minus = [c - low for low, c in zip(ci_lows, coefs)]
 

@@ -58,12 +58,18 @@ st.caption(
     "Edges show: company → industry, company → life stage, stage transitions."
 )
 
-# ── View selector ──────────────────────────────────────────────
+# ── View selector (Task-Gated SW-23) ───────────────────────────
+st.info(
+    "**Task-Gated Navigation (SW-23):** Network visualization is anchored to explicit research tasks. "
+    "Select an empirical focus or focal entity to explore sub-graph relational dynamics.",
+    icon="🎯"
+)
+
 kcol1, kcol2, kcol3 = st.columns([2, 2, 3])
 with kcol1:
     kg_view = st.radio(
-        "View",
-        ["Stage + Industry overview", "With companies", "Company drill-down"],
+        "Research Focus",
+        ["Stage + Industry overview", "Company drill-down", "With companies (Unfiltered)"],
         key="kg_view",
         horizontal=False,
     )
