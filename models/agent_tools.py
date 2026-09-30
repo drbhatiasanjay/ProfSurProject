@@ -66,31 +66,36 @@ def _assistant_view_where(panel_mode: str, filters: dict | None) -> str:
             logger.debug("Failed parsing year_range filter %s: %s", year_range, err)
 
     def _quoted_values(values):
+        if isinstance(values, str) and values.strip():
+            return [_sql_literal(values.strip())]
         if not isinstance(values, (list, tuple)):
             return []
         return [_sql_literal(v) for v in values if isinstance(v, str) and v.strip()]
 
-    stages = _quoted_values(filters.get("life_stages"))
+    stages = _quoted_values(filters.get("life_stages") or filters.get("life_stage"))
     if stages:
         where.append(f"f.life_stage IN ({','.join(stages)})")
 
-    industries = _quoted_values(filters.get("industry_groups"))
+    industries = _quoted_values(filters.get("industry_groups") or filters.get("industry_group"))
     if industries:
         where.append(
             "f.company_code IN (SELECT company_code FROM companies "
             f"WHERE industry_group IN ({','.join(industries)}))"
         )
 
-    raw_codes = filters.get("company_codes", [])
-    if isinstance(raw_codes, (list, tuple)):
-        company_codes = []
-        for code in raw_codes:
-            try:
-                company_codes.append(str(int(code)))
-            except (TypeError, ValueError):
-                continue
-        if company_codes:
-            where.append(f"f.company_code IN ({','.join(company_codes)})")
+    raw_codes = filters.get("company_codes") or filters.get("company_code")
+    if raw_codes is not None:
+        if isinstance(raw_codes, (int, str)) and str(raw_codes).strip():
+            raw_codes = [raw_codes]
+        if isinstance(raw_codes, (list, tuple)):
+            company_codes = []
+            for c in raw_codes:
+                try:
+                    company_codes.append(str(int(c)))
+                except (TypeError, ValueError):
+                    continue
+            if company_codes:
+                where.append(f"f.company_code IN ({','.join(company_codes)})")
 
     return " AND ".join(where) or "1=1"
 
@@ -256,11 +261,12 @@ def describe_financial_database(
 
     conn = db.get_connection()
     try:
+        where_sql = _assistant_view_where(panel_mode, filters)
         columns = ["company_code", "year", *requested]
         if group_column and group_column not in columns:
             columns.append(group_column)
         frame = pd.read_sql_query(
-            f"SELECT {', '.join(dict.fromkeys(columns))} FROM financials", conn
+            f"SELECT {', '.join(dict.fromkeys(columns))} FROM financials f WHERE {where_sql}", conn
         )
     finally:
         conn.close()
@@ -1108,10 +1114,10 @@ def run_live_econometric_model(
     else:
         # Default / Auto: Fixed Effects
         active_res = fe_res if fe_res else ols_res
-        selected_model_name = "Two-Way Fixed Effects Panel Regression"
+        selected_model_name = "Entity Fixed Effects (Within-Estimator)"
         if hausman_p is not None and hausman_p < 0.05:
             selection_reason = (
-                f"Automated Hausman test rejected Random Effects (Chi2={hausman_stat:.2f}, p < 0.0001). "
+                f"Automated Hausman test rejected Random Effects (Chi2={hausman_stat:.2f}, p = {('< 0.0001' if hausman_p < 0.0001 else f'{hausman_p:.4f}')}). "
                 "Fixed Effects within-estimator is mathematically required to eliminate unobserved firm-specific heterogeneity."
             )
         else:
@@ -1182,6 +1188,7 @@ def run_cfo_stress_simulation(
     operating_margin_shock_pct: float = -15.0,
     collateral_tangibility_shock_pct: float = 0.0,
     new_life_stage: str = "",
+    panel_mode: str = "thesis",
 ) -> dict:
     """Simulates dynamic macroeconomic, covenant, and life-cycle shocks for CFO decision-making.
 
@@ -1191,14 +1198,15 @@ def run_cfo_stress_simulation(
         operating_margin_shock_pct: Operating profitability (ROA) change in % (e.g. -15.0).
         collateral_tangibility_shock_pct: Tangible collateral asset change in % (e.g. +5.0).
         new_life_stage: Optional simulated Dickinson stage migration (e.g. 'Shakeout', 'Decline').
+        panel_mode: Active panel vintage ('thesis', 'latest', 'run3').
 
     Returns:
-        Dict with target leverage shift, Interest Coverage Ratio (ICR), covenant headroom (Rs. Cr), rating band, and 3-point CFO playbook.
+        Dict with target leverage shift, Interest Coverage Ratio (ICR), covenant headroom (Rs. Cr), indicative rating band, and 3-point CFO playbook.
     """
-    # 1. Resolve Company
+    # 1. Resolve Company Strictly (SW-04)
     conn = db.get_connection()
     try:
-        vintage_sql, vintage_params = db._vintage_predicate("thesis", "f")
+        vintage_sql, vintage_params = db._vintage_predicate(panel_mode, "f")
         sql = f"""
             SELECT f.*, c.company_name, c.industry_group 
             FROM financials f 
@@ -1216,6 +1224,9 @@ def run_cfo_stress_simulation(
     # Match numeric code
     if target_name.isdigit():
         target_code = int(target_name)
+        comp_match = comp_df[comp_df["company_code"] == target_code]
+        if not comp_match.empty:
+            target_name = comp_match.iloc[0]["company_name"]
     else:
         # Match by name in companies
         matches = comp_df[comp_df["company_name"].str.contains(target_name, case=False, na=False)]
@@ -1224,25 +1235,29 @@ def run_cfo_stress_simulation(
             target_name = matches.iloc[0]["company_name"]
 
     if target_code is None:
-        target_code = 2451  # Default fallback: Tata Motors
-        target_name = "Tata Motors Ltd."
+        return {
+            "status": "error",
+            "error_code": "COMPANY_NOT_FOUND",
+            "error": f"Company '{company_name_or_code}' not found in active '{panel_mode}' panel dataset.",
+        }
 
     # Extract latest company stats
     firm_rows = df[df["company_code"] == target_code].sort_values("year")
     if firm_rows.empty:
-        base_lev = 34.20
-        base_roa = 12.45
-        base_tang = 48.10
-        base_stage = "Maturity"
-    else:
-        latest = firm_rows.iloc[-1]
-        base_lev = float(latest.get("leverage", 34.20))
-        base_roa = float(latest.get("profitability", 12.45))
-        base_tang = float(latest.get("tangibility", 48.10))
-        base_stage = str(latest.get("life_stage", "Maturity"))
+        return {
+            "status": "error",
+            "error_code": "NO_FIRM_OBSERVATIONS",
+            "error": f"No observations found for company '{target_name}' (code: {target_code}) in '{panel_mode}' panel.",
+        }
 
-    # 2. Calculate Econometric Shift
-    # Target leverage elasticity: beta_roa = -0.245, beta_tang = +0.312, rate_drag = -0.015
+    latest = firm_rows.iloc[-1]
+    latest_year = int(latest.get("year", 2025))
+    base_lev = float(latest.get("leverage", 0.0))
+    base_roa = float(latest.get("profitability", 0.0))
+    base_tang = float(latest.get("tangibility", 0.0))
+    base_stage = str(latest.get("life_stage", "Maturity"))
+
+    # 2. Calculate Econometric Shift (SW-05)
     stage_adj = 0.0
     active_stage = new_life_stage.capitalize() if new_life_stage else base_stage
     if active_stage in ("Growth", "Stage 2"):
@@ -1260,45 +1275,50 @@ def run_cfo_stress_simulation(
     )
     shocked_target_lev = max(0.0, base_lev + delta_target_lev)
 
-    # 3. Calculate Interest Coverage Ratio (ICR)
-    # Baseline ICR ~ 3.55x; rate shock increases interest denominator; margin shock reduces EBIT numerator
-    base_icr = 3.55
+    # 3. Dynamic Stress Simulation Grounding (SW-05)
+    base_icr = 3.55  # Scenario baseline parameter
     shocked_icr = max(0.60, base_icr + (operating_margin_shock_pct * 0.05) - (interest_rate_shock_bps * 0.0055))
 
     # 4. Debt Headroom in Rs. Crores
-    # Base headroom Rs. 1,420 Cr; each 1% ICR buffer ~ Rs. 350 Cr
-    base_headroom = 1420
     headroom_delta = int((shocked_icr - 2.0) * 850)
     available_headroom_cr = max(0, headroom_delta)
 
-    # 5. Credit Rating Band Mapping
+    # 5. Indicative Financial Health Band (SW-05)
     if shocked_icr >= 3.2:
-        rating_band = "AAA / AA+ (High Safety)"
+        rating_band = "High Coverage Safety (ICR >= 3.2x)"
     elif shocked_icr >= 2.3:
-        rating_band = "AA (Stable Investment Grade)"
+        rating_band = "Adequate Investment Grade (ICR 2.3x-3.2x)"
     elif shocked_icr >= 1.95:
-        rating_band = "A- (Negative Watch / Moderate Safety)"
+        rating_band = "Tight Covenant Watch (ICR 1.95x-2.3x)"
     else:
-        rating_band = "BBB- (Sub-Investment / Covenant Distress Risk)"
+        rating_band = "Covenant Distress / High Leverage Risk (ICR < 1.95x)"
 
     covenant_status = "SAFE (Buffer > 0.45x)" if shocked_icr >= 2.45 else "TIGHT (Approaching 2.0x Floor)" if shocked_icr >= 2.0 else "BREACH RISK (Below 2.0x Covenant Floor)"
 
     # 6. Strategic C-Suite Action Playbook
     playbook = [
-        f"1. Refinance Short-Term Commercial Paper: Pre-fund maturing obligations with 3- to 5-year fixed paper to insulate against the +{int(interest_rate_shock_bps)} bps rate shock.",
+        f"1. Refinance Short-Term Commercial Paper: Pre-fund maturing obligations with 3- to 5-year fixed paper to insulate against the {int(interest_rate_shock_bps):+d} bps rate shock.",
         f"2. Calibrate Capital Expenditure: Adjust discretionary CapEx by 10-15% to preserve internal operating cash flow.",
         f"3. Working Capital Cash Acceleration: Reduce receivables cash conversion cycle (DSO) by 6 days to free Rs. {min(350, max(120, int(available_headroom_cr * 0.15)))} Cr in liquid cash.",
     ]
 
     return {
         "status": "success",
+        "simulation_type": "ILLUSTRATIVE_STRESS_SANDBOX",
         "company": target_name,
         "company_code": target_code,
-        "life_stage": active_stage,
+        "latest_reporting_year": latest_year,
+        "measured_baseline": {
+            "leverage": f"{base_lev:.2f}%",
+            "profitability_roa": f"{base_roa:.2f}%",
+            "tangibility": f"{base_tang:.2f}%",
+            "life_stage": base_stage,
+        },
         "simulation_parameters": {
             "interest_rate_shock_bps": f"{'+' if interest_rate_shock_bps >= 0 else ''}{interest_rate_shock_bps} bps",
             "operating_margin_shock": f"{'+' if operating_margin_shock_pct >= 0 else ''}{operating_margin_shock_pct}%",
             "tangibility_shock": f"{'+' if collateral_tangibility_shock_pct >= 0 else ''}{collateral_tangibility_shock_pct}%",
+            "assumed_baseline_icr": f"{base_icr:.2f}x (scenario baseline parameter)",
         },
         "covenant_and_debt_metrics": {
             "baseline_leverage": f"{base_lev:.2f}%",
@@ -1308,9 +1328,8 @@ def run_cfo_stress_simulation(
             "covenant_floor": "2.00x",
             "covenant_status": covenant_status,
             "available_debt_headroom_cr": f"Rs. {available_headroom_cr:,} Cr",
-            "simulated_credit_rating": rating_band,
+            "indicative_financial_health_band": rating_band,
         },
         "cfo_action_playbook": playbook,
-        "guardrail_notice": "Stress simulation parameters are based on dynamic econometric sensitivity functions. Actual covenant compliance depends on specific syndicated banking loan agreements.",
+        "guardrail_notice": "Illustrative stress simulation based on empirical sensitivity elasticities. Actual covenant compliance and formal credit ratings require syndicated loan agreements and formal agency evaluation.",
     }
-

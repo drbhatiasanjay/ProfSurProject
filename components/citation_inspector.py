@@ -93,6 +93,8 @@ def show_citation_dialog(citation_query: str):
     with c1:
         if doi:
             st.link_button(f"🔗 Open Verified DOI ({doi.replace('https://doi.org/', '')})", doi, use_container_width=True)
+        else:
+            st.caption("ℹ️ *Unverified reference: No DOI or primary source verification in catalog.*")
     with c2:
         theories = meta.get("theories", [])
         if theories:

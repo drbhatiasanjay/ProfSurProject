@@ -56,13 +56,14 @@ def test_tc_cit_02_rajan_zingales_metadata():
 
 
 def test_tc_cit_03_fallback_unindexed():
-    """TC-CIT-03: Unindexed query falls back gracefully without KeyError."""
+    """TC-CIT-03: Unindexed query returns explicit UNRESOLVED state without fabricated DOI/title (SW-02)."""
     meta = get_citation_metadata("NonExistentScholar (2099)")
     assert meta is not None
     assert meta["is_fallback"] is True
-    assert "title" in meta
-    assert "doi" in meta
-    assert meta["doi"].startswith("https://doi.org/")
+    assert meta.get("status") == "UNRESOLVED"
+    assert meta.get("doi") is None
+    assert meta.get("authors") is None
+    assert meta.get("title") is None
 
 
 def test_tc_cit_04_schema_validation_all_citations():

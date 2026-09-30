@@ -227,24 +227,26 @@ def get_citation_metadata(query: str) -> Dict[str, Any]:
         data["is_fallback"] = False
         return data
     
-    # Graceful fallback for unindexed citations
+    # Fail-safe unresolved status without fabricated metadata (SW-02)
     return {
         "citation_key": query,
-        "bibtex_key": re.sub(r"[^a-zA-Z0-9]", "", query.lower()) or "citation2025",
-        "title": f"Empirical Foundations of Capital Structure: {query}",
-        "authors": "Academic Research Foundation",
-        "year": 2025,
-        "journal": "Review of Financial Studies & Econometric Foundations",
-        "volume": "1",
-        "issue": "1",
-        "pages": "1-50",
-        "doi": "https://doi.org/10.1016/j.jfineco.2024.103892",
-        "theoretical_mechanism": "Standard peer-reviewed econometric mechanism underpinning panel estimation.",
-        "empirical_benchmark": "Empirical consistency confirmed in peer-reviewed cross-sectional studies.",
-        "indian_panel_relevance": "Corroborated by the 8,677 Indian manufacturing firm-year panel (CMIE Prowess).",
-        "theories": ["Corporate Finance Theory", "Econometric Specification"],
-        "category": "EMPIRICAL LITERATURE",
+        "bibtex_key": re.sub(r"[^a-zA-Z0-9]", "", query.lower()) or "unresolved",
+        "status": "UNRESOLVED",
         "is_fallback": True,
+        "verification_status": "UNRESOLVED",
+        "title": None,
+        "authors": None,
+        "year": None,
+        "journal": None,
+        "volume": None,
+        "issue": None,
+        "pages": None,
+        "doi": None,
+        "theoretical_mechanism": "Unindexed reference. Primary source metadata has not been verified in the catalog.",
+        "empirical_benchmark": "Not independently benchmarked.",
+        "indian_panel_relevance": "Empirical relevance unverified in current catalog.",
+        "theories": [],
+        "category": "UNVERIFIED REFERENCE",
     }
 
 
@@ -255,6 +257,8 @@ def list_all_citations() -> List[str]:
 
 def format_bibtex(meta: Dict[str, Any]) -> str:
     """Format structured citation metadata as clean BibTeX entry."""
+    if meta.get("status") == "UNRESOLVED" or meta.get("is_fallback") and not meta.get("doi"):
+        return f"% UNRESOLVED REFERENCE: {meta.get('citation_key', '')}\n% Primary source metadata has not been verified in the catalog."
     key = meta.get("bibtex_key", "ref2025")
     title = meta.get("title", "")
     authors = meta.get("authors", "")
@@ -263,7 +267,7 @@ def format_bibtex(meta: Dict[str, Any]) -> str:
     volume = meta.get("volume", "")
     issue = meta.get("issue", "")
     pages = meta.get("pages", "")
-    doi = meta.get("doi", "").replace("https://doi.org/", "")
+    raw_doi = str(meta.get("doi") or "").replace("https://doi.org/", "")
     
     return (
         f"@article{{{key},\n"
@@ -274,13 +278,15 @@ def format_bibtex(meta: Dict[str, Any]) -> str:
         f"  volume = {{{volume}}},\n"
         f"  number = {{{issue}}},\n"
         f"  pages = {{{pages}}},\n"
-        f"  doi = {{{doi}}}\n"
+        f"  doi = {{{raw_doi}}}\n"
         f"}}"
     )
 
 
 def format_apa(meta: Dict[str, Any]) -> str:
     """Format structured citation metadata in APA 7th Edition style."""
+    if meta.get("status") == "UNRESOLVED" or meta.get("is_fallback") and not meta.get("doi"):
+        return f"[Unresolved Reference: {meta.get('citation_key', '')}] (Metadata not verified in catalog)"
     authors = meta.get("authors", "")
     year = meta.get("year", 2025)
     title = meta.get("title", "")
@@ -299,6 +305,8 @@ def format_apa(meta: Dict[str, Any]) -> str:
 
 def format_stata_comment(meta: Dict[str, Any]) -> str:
     """Format citation metadata as a Stata do-file documentation comment."""
+    if meta.get("status") == "UNRESOLVED" or meta.get("is_fallback") and not meta.get("doi"):
+        return f"* Unresolved Citation: {meta.get('citation_key', '')} (Pending catalog verification)"
     return (
         f"* Citation: {meta.get('citation_key', '')} - {meta.get('title', '')}\n"
         f"* Journal: {meta.get('journal', '')} ({meta.get('year', '')}) | DOI: {meta.get('doi', '')}\n"
