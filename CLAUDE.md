@@ -1,3 +1,23 @@
+# Engineering Standard & Lessons Learnt Directives (30 Sept 2026 Update)
+
+## A. Windows File Writing & Escaping Rules
+- NEVER pass inline Python code containing `$` (LaTeX variables like `$Y_{it}$`) or complex nested quotes inside PowerShell `-c "..."`. PowerShell expands `$` into empty variables or breaks string delimiters.
+- ALWAYS use PowerShell verbatim single-quoted here-strings (`@' ... '@ | Out-File -FilePath <path> -Encoding utf8`) or standalone python scripts.
+
+## B. First-Time-Right Verification Protocol
+1. **Query Database Ground Truth First:** Before writing test assertions, verify actual database values (`N=8,677`, exact mean values, exact primary keys like Tata Motors = `248093`).
+2. **Inspect Signatures First:** Always inspect module exports via `dir(module)` before writing test imports to avoid `ImportError` on collection.
+3. **Adversarial Red-Team Check:** Test edge cases (unestimated standard errors, negative quadratic forms, unsupported command routing) rather than only happy-path cases.
+
+## C. Manuscript & Paper Isolation
+- Keep `paper/iimcfrc-2026-lifestagedebtai` cleanly isolated and frozen.
+- Never bleed software changes into manuscript paths.
+- Enforce formal academic tone: zero em-dashes (`--`), no AI tropes/clichés, Dickinson (2011) life-cycle attribution.
+
+## D. Automated Capability Synchronization
+- Run `python scripts/sync_command_registry_docs.py` whenever modifying `models/stata_engine.py` to keep `docs/COMMAND_CAPABILITIES.md` synchronized.
+
+---
 # ProfSurProject — LifeCycle Leverage Dashboard
 
 ## What This Is
