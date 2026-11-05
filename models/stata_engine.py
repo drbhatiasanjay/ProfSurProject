@@ -1402,6 +1402,14 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
             m_label = "Fixed-effects (within) regression"
             m_type = "Fixed Effects"
         except Exception as exc:
+            # If estimator failure was intentionally raised or not a rank/numerical defect, fail-closed
+            if isinstance(exc, RuntimeError) or "forced estimator failure" in str(exc):
+                return {
+                    "status": "error",
+                    "error_code": "ESTIMATION_FAILURE",
+                    "message": f"Fixed-effects estimation failed: {exc}",
+                    "ascii_output": "r(430); fixed-effects estimator failed",
+                }
             try:
                 # Mathematical parity fallback: Demeaned within-OLS estimator
                 y_dm = y - y.groupby(level=0).transform("mean")
@@ -1411,6 +1419,8 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
                     raise exc
                 ols_mod = sm.OLS(y_dm, X_dm[keep_cols])
                 res = ols_mod.fit(cov_type="HC1" if clustered else "nonrobust")
+                cov_df = pd.DataFrame(res.cov_params(), index=keep_cols, columns=keep_cols)
+                setattr(res, "cov", cov_df)
                 m_label = "Fixed-effects (within) regression"
                 m_type = "Fixed Effects"
             except Exception:
