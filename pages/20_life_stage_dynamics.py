@@ -40,7 +40,7 @@ st.caption("How firms move between stages, what triggers transitions, and how ev
 
 
 # ── Build / cache the graph + source data ──
-@st.cache_resource
+@st.cache_resource(show_spinner=False)
 def _build_graph(db_revision: int):
     _ = db_revision  # cache key only — busts graph when capital_structure.db mtime changes
     fin_df = db.get_graph_financials()

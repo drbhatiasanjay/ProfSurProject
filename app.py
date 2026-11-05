@@ -15,16 +15,23 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Theme: light (default) or dark. Toggle lives on the Settings page.
-if "theme" not in st.session_state:
-    st.session_state.theme = "light"
+# ── Query params for theme override (supports direct navbar toggle & shareable URLs) ──
+_qp_theme = st.query_params.get("theme")
+if _qp_theme in ("light", "dark"):
+    st.session_state["theme"] = _qp_theme
+    st.session_state["theme_override"] = _qp_theme
+    del st.query_params["theme"]
 
-# Load theme CSS. style_light.css is the original; style_dark.css is the DataV2-era refresh.
-_theme = st.session_state.theme if st.session_state.theme in ("light", "dark") else "light"
+# Theme: dark (default) or light.
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+
+# Load theme CSS.
+_theme = st.session_state.theme if st.session_state.theme in ("light", "dark") else "dark"
 _css_filename = f"style_{_theme}.css"
 css_path = os.path.join(os.path.dirname(__file__), "assets", _css_filename)
 if os.path.exists(css_path):
-    with open(css_path) as f:
+    with open(css_path, "r", encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # ── Secure LeverageDebtAI authentication ───────────────────────────────────────
@@ -341,6 +348,11 @@ if os.environ.get("PROFSUR_DEMO_SKIP_AUTH") == "1" and not st.session_state.get(
         "role": "admin",
     }
 
+if st.query_params.get("logout") == "1":
+    st.session_state.clear()
+    st.query_params.clear()
+    st.rerun()
+
 if not st.session_state.get("authentication_status"):
     _login()
     st.stop()
@@ -397,9 +409,14 @@ if "panel_mode" not in st.session_state:
 
 # ── Restore saved preferences (theme only — panel is URL-driven, filters are panel-derived) ──
 if "prefs_loaded" not in st.session_state:
-    _saved = db.load_user_prefs(_username, "app")
-    if _saved:
-        if "theme" in _saved:
+    _override = st.session_state.pop("theme_override", None)
+    if _override:
+        st.session_state["theme"] = _override
+        if _username:
+            db.save_user_pref(_username, "app", {"theme": _override})
+    else:
+        _saved = db.load_user_prefs(_username, "app")
+        if _saved and "theme" in _saved:
             st.session_state["theme"] = _saved["theme"]
     st.session_state["prefs_loaded"] = True
 
@@ -413,19 +430,7 @@ ensure_session_state()
 # ── Sidebar: Global filters ──
 from helpers import PANEL_LABELS as panel_label_map
 with st.sidebar:
-    _sb_hcol1, _sb_hcol2 = st.columns([3, 1])
-    with _sb_hcol1:
-        st.markdown("# LifeCycle Leverage")
-    with _sb_hcol2:
-        _cur_t = st.session_state.get("theme", "light")
-        _t_icon = "🌙" if _cur_t == "light" else "☀️"
-        if st.button(_t_icon, key="quick_theme_toggle", help=f"Switch to {'Dark' if _cur_t == 'light' else 'Light'} theme"):
-            _next_t = "dark" if _cur_t == "light" else "light"
-            st.session_state.theme = _next_t
-            if _username:
-                db.save_user_pref(_username, "app", {"theme": _next_t})
-            st.rerun()
-    st.divider()
+    st.markdown("### Global Filters")
 
     # Dataset selectbox — native Streamlit widget triggers proper rerun + state propagation
     _panel_display_opts = ["bf2001-25_Sept26", "(2001-25)_April26", "Latest (2001–present)", "Thesis (2001–2024)", "US S&P Sample"]
@@ -587,6 +592,9 @@ nav = st.navigation({
 
 # ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
 from datetime import datetime, timezone as _tz
+_theme = st.session_state.get("theme", "dark")
+if _theme not in ("light", "dark"):
+    _theme = "dark" 
 _panel_display = panel_label_map.get(st.session_state.get("panel_mode", "latest"), "Latest")
 _user_obj     = st.session_state.get("user", {})
 _display_name = _user_obj.get("name", _user_obj.get("username", ""))
@@ -618,6 +626,14 @@ _arrow_border = "rgba(79, 70, 229, 0.3)" if _theme == "light" else "#38BDF8"
 _arrow_color = "#4F46E5" if _theme == "light" else "#38BDF8"
 _panel_title = _panel_labels_map.get(_qp_panel, _qp_panel)
 
+_target_theme = "light" if _theme == "dark" else "dark"
+_theme_btn_icon = "☀️" if _theme == "dark" else "🌙"
+_theme_btn_label = "Light Mode" if _theme == "dark" else "Dark Mode"
+_theme_btn_bg = "rgba(255, 255, 255, 0.08)" if _theme == "dark" else "rgba(15, 23, 42, 0.06)"
+_theme_btn_border = "rgba(255, 255, 255, 0.16)" if _theme == "dark" else "rgba(15, 23, 42, 0.15)"
+_theme_btn_color = "#F8FAFC" if _theme == "dark" else "#0F172A"
+_theme_btn_hover = "rgba(255, 255, 255, 0.16)" if _theme == "dark" else "rgba(15, 23, 42, 0.12)" 
+
 st.markdown(f"""
 <div id="lc-navbar" style="
     position: fixed;
@@ -639,16 +655,44 @@ st.markdown(f"""
     color: {_header_text};
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 ">
-    <span style="font-family:'Plus Jakarta Sans', sans-serif; font-weight:800; color:{'#4F46E5' if _theme=='light' else '#38BDF8'}; font-size:18px; white-space:nowrap; display:flex; align-items:center; gap:6px;">
-        💎 LifeCycle Leverage<span style="font-size:11px;color:{_header_sub};font-weight:600;margin-left:6px;border:1px solid {_version_border};padding:2px 6px;border-radius:6px;">v{_APP_VERSION}</span>
+    <span style="font-family:'Plus Jakarta Sans', sans-serif; font-weight:800; color:{'#4F46E5' if _theme=='light' else '#38BDF8'}; font-size:17px; white-space:nowrap; display:flex; align-items:center; gap:8px;">
+        <span style="background:{'linear-gradient(135deg, #4F46E5, #06B6D4)' if _theme=='light' else 'linear-gradient(135deg, #6366F1, #38BDF8)'}; color:#FFFFFF; font-weight:800; font-size:11px; padding:2px 6px; border-radius:5px; letter-spacing:0.04em;">LL</span>
+        LifeCycle Leverage<span style="font-size:11px;color:{_header_sub};font-weight:600;margin-left:4px;border:1px solid {_version_border};padding:2px 6px;border-radius:6px;">v{_APP_VERSION}</span>
     </span>
-    <span style="background:{_tag_bg};color:{_tag_color};border:1px solid {_tag_border};border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;white-space:nowrap;">
-        🏷️&nbsp;{_panel_title}
+    <span style="background:{_tag_bg};color:{_tag_color};border:1px solid {_tag_border};border-radius:6px;padding:3px 9px;font-size:12px;font-weight:600;white-space:nowrap;">
+        {_panel_title}
     </span>
     <span style="white-space:nowrap; color:{_header_sub};"><strong>{_display_name}</strong> &middot; <span style="text-transform:capitalize;">{_role_display}</span></span>
     <span style="margin-left:auto; color:{_header_sub}; font-size:13px; font-family:'JetBrains Mono', monospace; white-space:nowrap;">{_now_str}</span>
-    <button
-        onclick="(function(){{var btns=document.querySelectorAll('section[data-testid=stSidebar] button');for(var b of btns){{if(b.innerText.includes('Sign out')){{b.click();return;}}}}}})()"
+    <a
+        id="navbar-theme-toggle-btn"
+        href="?theme={_target_theme}"
+        title="Switch to {_theme_btn_label}"
+        style="
+            background: {_theme_btn_bg};
+            color: {_theme_btn_color};
+            border: 1px solid {_theme_btn_border};
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 8px;
+            padding: 0 12px;
+            height: 34px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        "
+    >
+        <span style="font-size: 14px;">{_theme_btn_icon}</span>
+        <span>{_theme_btn_label}</span>
+    </a>
+    <a
+        id="navbar-signout-btn"
+        href="?logout=1"
         style="
             background: {_signout_bg};
             color: {_signout_color};
@@ -658,15 +702,23 @@ st.markdown(f"""
             border-radius: 8px;
             padding: 0 14px;
             height: 34px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s ease;
+            box-sizing: border-box;
         "
-        onmouseover="this.style.background='rgba(244,63,94,0.2)'"
-        onmouseout="this.style.background='{_signout_bg}'"
-    >Sign Out</button>
+    >Sign Out</a>
 </div>
 <style>
+#navbar-theme-toggle-btn:hover {{
+    background: {_theme_btn_hover} !important;
+}}
+#navbar-signout-btn:hover {{
+    background: rgba(244, 63, 94, 0.2) !important;
+}}
 /* ROW 2: Streamlit native header pushed below our 64px navbar */
 header[data-testid="stHeader"] {{
     position: fixed !important;
@@ -736,17 +788,6 @@ button[data-testid="collapsedControl"],
 /* Ensure any popover/dropdown appears above the fixed navbar */
 [data-baseweb="popover"] {{
     z-index: 1000010 !important;
-}}
-/* Move our sidebar filter widgets (Dataset, Companies, etc.) ABOVE the nav links */
-[data-testid="stSidebarUserContent"] {{
-    display: flex !important;
-    flex-direction: column !important;
-}}
-[data-testid="stSidebarUserContent"] > div:has(nav) {{
-    order: 100 !important;
-}}
-[data-testid="stSidebarUserContent"] > div:not(:has(nav)) {{
-    order: 1 !important;
 }}
 </style>
 """, unsafe_allow_html=True)

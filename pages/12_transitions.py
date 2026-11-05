@@ -9,7 +9,7 @@ from helpers import (
     STAGE_COLORS, STAGE_ORDER, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     render_bento_kpi, render_stage_badge,
     interpret_survival, render_interpretation,
-    df_download_button, chart_download_button,
+    df_download_button, chart_download_button, heatmap_colorscale,
 )
 from models.survival import (
     prepare_transition_data, fit_kaplan_meier, fit_cox_ph,
@@ -137,7 +137,18 @@ with km1:
 
 with km2:
     st.markdown("**Stage Duration Summary**")
-    st.dataframe(km_summary, hide_index=True, use_container_width=True)
+    st.dataframe(
+        km_summary,
+        hide_index=True,
+        use_container_width=True,
+        column_config={
+            "Stage": st.column_config.TextColumn("Life Stage", width="small"),
+            "N Spells": st.column_config.NumberColumn("Spells", format="%d", width="small"),
+            "N Transitions": st.column_config.NumberColumn("Transitions", format="%d", width="small"),
+            "Median Duration (yrs)": st.column_config.TextColumn("Median (yrs)", width="small"),
+            "5yr Survival (%)": st.column_config.NumberColumn("5-Yr Survival", format="%.1f%%", width="small"),
+        }
+    )
     df_download_button(km_summary, "kaplan_meier_summary.csv")
 
 st.divider()
@@ -153,11 +164,22 @@ if cph is not None:
 
     with cx1:
         st.markdown("**Hazard Ratios**")
-        st.dataframe(hr_df, hide_index=True, use_container_width=True)
+        st.dataframe(
+            hr_df,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "Variable": st.column_config.TextColumn("Variable", width="medium"),
+                "Hazard Ratio": st.column_config.NumberColumn("Hazard Ratio", format="%.3f", width="small"),
+                "p-value": st.column_config.NumberColumn("p-Value", format="%.4f", width="small"),
+                "Interpretation": st.column_config.TextColumn("Empirical Interpretation", width="large"),
+            }
+        )
         df_download_button(hr_df, "cox_hazard_ratios.csv")
 
     with cx2:
         # Forest plot of hazard ratios
+        is_dark = st.session_state.get("theme", "light") == "dark"
         fig_hr = go.Figure()
         fig_hr.add_trace(go.Bar(
             x=hr_df["Hazard Ratio"] - 1,
@@ -166,6 +188,10 @@ if cph is not None:
             marker_color=[PRIMARY if hr > 1 else "#EF4444" for hr in hr_df["Hazard Ratio"]],
             text=[f"HR={hr:.2f}" for hr in hr_df["Hazard Ratio"]],
             textposition="outside",
+            textfont=dict(color="#F8FAFC" if is_dark else "#0F172A", size=12),
+            cliponaxis=False,
+            hovertemplate="<b>%{y}</b><br>Hazard Ratio: %{customdata:.3f}<br>Transition Effect: %{x:+.1%}<extra></extra>",
+            customdata=hr_df["Hazard Ratio"],
         ))
         fig_hr.add_vline(x=0, line_dash="dash", line_color="#9CA3AF")
         fig_hr.update_layout(**plotly_layout("Hazard Ratios", height=350))
@@ -197,15 +223,17 @@ if not trans_matrix.empty:
     stage_order_cols = [s for s in STAGE_ORDER if s in trans_matrix.columns]
     trans_matrix = trans_matrix.reindex(index=stage_order, columns=stage_order_cols).fillna(0)
 
+    is_dark = st.session_state.get("theme", "light") == "dark"
     fig_heat = px.imshow(
         trans_matrix.values,
         x=trans_matrix.columns.tolist(),
         y=trans_matrix.index.tolist(),
-        color_continuous_scale=["#F8FAFC", PRIMARY, "#065F46"],
+        color_continuous_scale=heatmap_colorscale(),
         aspect="auto",
         text_auto=".1f",
         labels={"color": "Probability (%)"},
     )
+    fig_heat.update_traces(textfont=dict(color="#F8FAFC" if is_dark else "#0F172A", size=12))
     fig_heat.update_layout(**plotly_layout("Transition Probability Matrix (%)", height=450))
     fig_heat.update_xaxes(title="To Stage", side="top")
     fig_heat.update_yaxes(title="From Stage")

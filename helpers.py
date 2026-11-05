@@ -295,9 +295,9 @@ def apply_theme() -> None:
     """Inject active theme CSS (light or dark) across all pages."""
     import streamlit as st
     import os
-    theme = st.session_state.get("theme", "light")
+    theme = st.session_state.get("theme", "dark")
     if theme not in ("light", "dark"):
-        theme = "light"
+        theme = "dark"
     css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", f"style_{theme}.css")
     if os.path.exists(css_path):
         with open(css_path, "r", encoding="utf-8") as f:
@@ -335,7 +335,7 @@ def ensure_session_state() -> None:
         }
 
     if "theme" not in st.session_state:
-        st.session_state.theme = "light"
+        st.session_state.theme = "dark"
 
     if "data_source_mode" not in st.session_state:
         st.session_state.data_source_mode = "sqlite"
@@ -730,30 +730,37 @@ PLOTLY_CONFIG = {
 
 
 def _current_theme() -> str:
-    """Read session_state.theme if Streamlit is running; default 'light'.
+    """Read session_state.theme if Streamlit is running; default 'dark'.
     Kept lazy so this module stays importable from scripts/tests without Streamlit."""
     try:
         import streamlit as st  # local import so helpers stays importable without Streamlit
-        t = getattr(st.session_state, "theme", "light")
-        return t if t in ("light", "dark") else "light"
+        t = getattr(st.session_state, "theme", "dark")
+        return t if t in ("light", "dark") else "dark"
     except Exception:
-        return "light"
+        return "dark"
 
 
 def plotly_layout_light(title="", height=400, year_range=None):
     _t = 65 if title else 30
     layout = dict(
         title=dict(text=title, font=dict(family="Plus Jakarta Sans, Inter, sans-serif", size=15, color="#0F172A"), x=0, xanchor="left", pad=dict(l=4)),
-        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#475569"),
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#334155"),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=20, t=_t, b=60),
         height=height,
-        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
+        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5, font=dict(color="#334155")),
         modebar=dict(orientation="h", bgcolor="rgba(255,255,255,0.7)",
                      activecolor="#4F46E5", color="#64748B"),
-        xaxis=dict(gridcolor="rgba(226, 232, 240, 0.8)", zerolinecolor="rgba(226, 232, 240, 0.8)"),
-        yaxis=dict(gridcolor="rgba(226, 232, 240, 0.8)", zerolinecolor="rgba(226, 232, 240, 0.8)"),
+        xaxis=dict(gridcolor="rgba(226, 232, 240, 0.8)", zerolinecolor="rgba(226, 232, 240, 0.8)",
+                   tickcolor="#64748B", tickfont=dict(color="#334155"), title=dict(font=dict(color="#0F172A"))),
+        yaxis=dict(gridcolor="rgba(226, 232, 240, 0.8)", zerolinecolor="rgba(226, 232, 240, 0.8)",
+                   tickcolor="#64748B", tickfont=dict(color="#334155"), title=dict(font=dict(color="#0F172A"))),
+        hoverlabel=dict(
+            bgcolor="#FFFFFF",
+            bordercolor="rgba(0, 0, 0, 0.15)",
+            font=dict(family="Inter, system-ui, sans-serif", size=12, color="#0F172A"),
+        ),
         hovermode="x unified",
     )
     if year_range is not None and len(year_range) == 2:
@@ -770,7 +777,7 @@ def plotly_layout_dark(title="", height=400, year_range=None):
         xaxis_cfg["range"] = [year_range[0], year_range[1]]
     return dict(
         title=dict(text=title, font=dict(family="Plus Jakarta Sans, Inter, sans-serif", size=15, color="#F8FAFC"), x=0, xanchor="left", pad=dict(l=4)),
-        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#94A3B8"),
+        font=dict(family="Inter, system-ui, sans-serif", size=12, color="#F8FAFC"),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=40, r=20, t=_t, b=60),
@@ -783,8 +790,21 @@ def plotly_layout_dark(title="", height=400, year_range=None):
         yaxis=dict(gridcolor="rgba(255, 255, 255, 0.08)", zerolinecolor="rgba(255, 255, 255, 0.08)",
                    tickcolor="#94A3B8", tickfont=dict(color="#94A3B8"),
                    title=dict(font=dict(color="#F8FAFC"))),
+        hoverlabel=dict(
+            bgcolor="#141824",
+            bordercolor="rgba(255, 255, 255, 0.2)",
+            font=dict(family="Inter, system-ui, sans-serif", size=12, color="#F8FAFC"),
+        ),
         hovermode="x unified",
     )
+
+
+
+def heatmap_colorscale():
+    """Theme-aware heatmap colorscale avoiding stark white backgrounds in dark mode."""
+    if _current_theme() == "dark":
+        return ["#0E1626", "#0D9488", "#10B981"]
+    return ["#F8FAFC", PRIMARY, "#065F46"]
 
 
 def plotly_layout(title="", height=400, year_range=None):

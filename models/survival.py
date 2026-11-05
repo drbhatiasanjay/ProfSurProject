@@ -89,7 +89,7 @@ def fit_kaplan_meier(transition_df, stage_col="from_stage"):
             "N Spells": len(sub),
             "N Transitions": int(sub["event"].sum()),
             "Median Duration (yrs)": round(float(median_surv), 1) if not np.isinf(median_surv) else ">24",
-            "5yr Survival (%)": round(float(kmf.predict(5)) * 100, 1) if 5 <= kmf.timeline.max() else "N/A",
+            "5yr Survival (%)": round(float(kmf.predict(5)) * 100, 1) if 5 <= kmf.timeline.max() else np.nan,
         })
 
     summary_df = pd.DataFrame(summaries)

@@ -77,6 +77,7 @@ from models.llm_adapters import (
     stream_with_fallback,
 )
 from models.agent_tools import render_chat_chart_figure, extract_chat_chart_spec, extract_table_chart_spec
+from components import covenant_pilot_chat
 
 _CHART_INSTRUCTION = (
     "\n\nVISUALIZATION INSTRUCTIONS:\n"
@@ -559,6 +560,10 @@ def _render_stata_terminal_in_chat(stata_cmd: str, ascii_output: str) -> None:
 
 def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) -> None:
     """Render the common answer hierarchy: prose, chart, observations, data."""
+    if (turn.get("result_envelope") or {}).get("capability") == "covenant_pilot":
+        st.markdown(turn.get("content", ""))
+        covenant_pilot_chat.render_turn(turn, key_prefix)
+        return
     if isinstance(turn.get("artifact_provenance"), dict):
         render_artifact_provenance(turn["artifact_provenance"], key_prefix=key_prefix)
     if turn.get("capability_id") == "descriptive_summary":
@@ -642,16 +647,18 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
             if interp:
                 st.markdown(interp)
 
-        # Render Academic Literature Vault
+        # Render Academic Literature Vault (collapsible drawer, collapsed by default)
         lit_eval = turn.get("literature_eval")
         if lit_eval and lit_eval.get("citations"):
-            st.markdown(render_academic_vault_html(lit_eval["citations"], theme=current_theme), unsafe_allow_html=True)
-            from components.citation_inspector import render_citation_badge_button
-            cols_cit = st.columns(min(len(lit_eval["citations"]), 4))
-            for idx, cit in enumerate(lit_eval["citations"][:4]):
-                with cols_cit[idx]:
-                    cit_key = cit.get("author", cit.get("source", "Citation")) if isinstance(cit, dict) else str(cit)
-                    render_citation_badge_button(cit_key, scope=f"ai_turn_{key_prefix}", idx=idx)
+            _cits = lit_eval["citations"]
+            with st.expander(f"📚 Peer-Reviewed Literature & Institutional Benchmark Vault ({len(_cits)} verified citations)", expanded=False):
+                st.markdown(render_academic_vault_html(_cits, theme=current_theme), unsafe_allow_html=True)
+                from components.citation_inspector import render_citation_badge_button
+                cols_cit = st.columns(min(len(_cits), 4))
+                for idx, cit in enumerate(_cits[:4]):
+                    with cols_cit[idx]:
+                        cit_key = cit.get("author", cit.get("source", "Citation")) if isinstance(cit, dict) else str(cit)
+                        render_citation_badge_button(cit_key, scope=f"ai_turn_{key_prefix}", idx=idx)
 
         _render_answer_context(key_prefix)
         return
@@ -709,20 +716,21 @@ def _render_assistant_content(turn: dict, key_prefix: str, *, placeholder=None) 
     if lit_citations:
         from models.rich_chat_renderer import render_academic_vault_html
         current_theme = st.session_state.get("theme", "light")
-        st.markdown(
-            render_academic_vault_html(
-                lit_citations,
-                theme=current_theme,
-                title="📚 Peer-Reviewed Literature & Institutional Benchmark Vault"
-            ),
-            unsafe_allow_html=True
-        )
-        from components.citation_inspector import render_citation_badge_button
-        cols_cit_gen = st.columns(min(len(lit_citations), 4))
-        for idx, cit in enumerate(lit_citations[:4]):
-            with cols_cit_gen[idx]:
-                cit_key = cit.get("author", cit.get("source", "Citation")) if isinstance(cit, dict) else str(cit)
-                render_citation_badge_button(cit_key, scope=f"ai_gen_{key_prefix}", idx=idx)
+        with st.expander(f"📚 Peer-Reviewed Literature & Institutional Benchmark Vault ({len(lit_citations)} verified citations)", expanded=False):
+            st.markdown(
+                render_academic_vault_html(
+                    lit_citations,
+                    theme=current_theme,
+                    title="Peer-Reviewed Literature & Institutional Benchmark Vault"
+                ),
+                unsafe_allow_html=True
+            )
+            from components.citation_inspector import render_citation_badge_button
+            cols_cit_gen = st.columns(min(len(lit_citations), 4))
+            for idx, cit in enumerate(lit_citations[:4]):
+                with cols_cit_gen[idx]:
+                    cit_key = cit.get("author", cit.get("source", "Citation")) if isinstance(cit, dict) else str(cit)
+                    render_citation_badge_button(cit_key, scope=f"ai_gen_{key_prefix}", idx=idx)
 
     _render_answer_context(key_prefix)
 
@@ -756,7 +764,7 @@ def _render_response_actions(content: str, key_prefix: str, regenerate_question:
     with action_cols[4]:
         if model_name:
             _mu = str(model_name).lower()
-            _m_label = "Gemini 1.5 Pro" if "gemini" in _mu else ("Claude 3.5 Sonnet" if "sonnet" in _mu else ("Claude 3.5 Haiku" if "haiku" in _mu else "Ollama Local"))
+            _m_label = "Deterministic covenant pilot" if "covenant pilot" in _mu else ("Gemini 2.5 Flash" if "gemini" in _mu else ("Claude Sonnet" if "sonnet" in _mu else ("Claude Haiku" if "haiku" in _mu else "Ollama Local")))
             _s_label = f" · {elapsed_s}s" if elapsed_s else ""
             st.caption(f"⚡ {_m_label}{_s_label}")
 
@@ -790,21 +798,53 @@ _blocks_filled = min(_turns_cnt, 6)
 _blocks_empty = max(0, 6 - _blocks_filled)
 _gauge = f"[{'■' * _blocks_filled}{'□' * _blocks_empty}]"
 
-_header_cols = st.columns([2.4, 1.2, 1.2, 1.6])
-with _header_cols[0]:
-    st.markdown("**💬 AI Financial Research Studio**")
-    st.caption(_panel_label)
-with _header_cols[1]:
-    st.caption("Mode")
-    st.markdown(f"**{st.session_state.get('p19_mode', 'Researcher')}**")
-with _header_cols[2]:
-    st.caption("Backend")
-    st.markdown(f"**{st.session_state.get('p19_backend', 'gemini').title()}**")
-with _header_cols[3]:
-    st.caption("Context Capacity")
-    st.markdown(f"**{_gauge} {_turns_cnt}/6 Turns** ({_token_est:,} Tok)")
+_context_color = "#10B981" if _turns_cnt <= 2 else ("#F59E0B" if _turns_cnt <= 4 else "#EF4444")
+_mode_curr = st.session_state.get('p19_mode', 'Researcher')
+_backend_curr = st.session_state.get('p19_backend', 'gemini').title()
+
+st.markdown(f"""
+<div class="ai-chat-hud" style="
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #111827;
+    border: 1px solid rgba(148, 163, 184, 0.20);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+">
+    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <span style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 14px; color: #F1F5F9; letter-spacing: -0.01em;">
+            AI Financial Assistant
+        </span>
+        <span style="background: rgba(99, 102, 241, 0.18); color: #818CF8; border: 1px solid rgba(99, 102, 241, 0.32); border-radius: 5px; padding: 2px 7px; font-size: 11px; font-weight: 600;">
+            {_panel_label}
+        </span>
+        <span style="font-size: 12px; color: #94A3B8;">
+            Mode: <strong style="color: #F8FAFC;">{_mode_curr}</strong>
+        </span>
+        <span style="color: rgba(148, 163, 184, 0.3);">|</span>
+        <span style="font-size: 12px; color: #94A3B8;">
+            Model: <strong style="color: #38BDF8;">{_backend_curr}</strong>
+        </span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #94A3B8; white-space: nowrap;">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: {_context_color}; display: inline-block;"></span>
+        <span>{_turns_cnt}/6 Turns</span>
+        <span style="color: rgba(148, 163, 184, 0.35);">&middot;</span>
+        <span>{_token_est:,} Tok</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # ── Sidebar controls ─────────────────────────────────────────────────────────
+# Prefer the verified cloud provider once for existing sessions after this fix.
+if st.session_state.get("p19_cloud_provider_revision") != "gemini-recovery-1":
+    if get_gemini_api_key():
+        st.session_state["p19_backend"] = "gemini"
+    st.session_state["p19_cloud_provider_revision"] = "gemini-recovery-1"
+
 with st.sidebar:
     mode = st.radio(
         "Mode",
@@ -1202,20 +1242,26 @@ if mode == "CFO":
     _cname = _code_to_name.get(company_code, "our company") if 'company_code' in locals() and company_code else "our company"
     _cind = _code_to_ind.get(company_code, "the industry") if 'company_code' in locals() and company_code else "the industry"
 
-    st.markdown("##### 👔 Corporate Archetype Selector (5 Diverse Industries)")
+    st.markdown(
+        '<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #94A3B8; margin-bottom: 8px;">'
+        'Enterprise Archetypes &middot; 5 Diverse Sectors'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     _archetypes = [
-        {"code": 100632, "label": "💻 Infosys (Tech)", "help": "Asset-light, cash-rich, low debt, high ROA"},
-        {"code": 248136, "label": "🏭 Tata Steel (Metals)", "help": "Heavy cyclical capex, high tangibility, deleveraging"},
-        {"code": 34162, "label": "📡 Bharti Airtel (Telecom)", "help": "Capital-intensive, 5G spectrum debt, high leverage"},
-        {"code": 395047, "label": "✈️ IndiGo (Aviation)", "help": "High operating leverage, lease debt, thin margins"},
-        {"code": 239726, "label": "💊 Sun Pharma (Pharma)", "help": "IP-heavy, defensive cash flows, cross-border M&A"},
+        {"code": 100632, "name": "Infosys", "sector": "Tech", "metric": "4.2% Lev", "help": "Asset-light, cash-rich, low debt, high ROA"},
+        {"code": 248136, "name": "Tata Steel", "sector": "Metals", "metric": "54.1% Lev", "help": "Heavy cyclical capex, high tangibility, deleveraging"},
+        {"code": 34162, "name": "Bharti Airtel", "sector": "Telecom", "metric": "68.2% Lev", "help": "Capital-intensive, 5G spectrum debt, high leverage"},
+        {"code": 395047, "name": "IndiGo", "sector": "Aviation", "metric": "SLB Debt", "help": "High operating leverage, lease debt, thin margins"},
+        {"code": 239726, "name": "Sun Pharma", "sector": "Pharma", "metric": "15.6% Lev", "help": "IP-heavy, defensive cash flows, cross-border M&A"},
     ]
     _acols = st.columns(5)
     for _a_idx, _arch in enumerate(_archetypes):
         with _acols[_a_idx]:
             _is_selected = company_code == _arch["code"]
-            _btn_label = f"**{_arch['label']}**" if _is_selected else _arch["label"]
-            if st.button(_btn_label, key=f"arch_quick_{_arch['code']}", use_container_width=True, help=_arch["help"]):
+            _btn_text = f"★ {_arch['name']}" if _is_selected else _arch["name"]
+            st.caption(f"{_arch['sector']} · {_arch['metric']}")
+            if st.button(_btn_text, key=f"arch_quick_{_arch['code']}", use_container_width=True, help=_arch["help"]):
                 st.session_state["p19_company_code"] = _arch["code"]
                 if st.session_state.get("chat_session_id"):
                     db.update_chat_session_company(st.session_state["chat_session_id"], _arch["code"])
@@ -1224,33 +1270,84 @@ if mode == "CFO":
     # 4-Tier Progressive Strategic Ladder
     _ladder = get_cfo_scenario_ladder(company_code, _cname, _cind)
     _show_expanded = not bool(st.session_state.get("chat_history"))
-    with st.expander(f"🎯 CFO Decision Intelligence Suite: **{_cname}** ({_cind}) — Simple ➔ Medium ➔ Complex ➔ Drill Down", expanded=True):
-        st.caption("Click any tier to run the industry-contextual strategic scenario:")
+    with st.expander(f"🎯 CFO Decision Intelligence Suite: {_cname} ({_cind}) — Simple ➔ Medium ➔ Complex ➔ Drill Down", expanded=_show_expanded):
         _lcols = st.columns(4)
         for _l_idx, _item in enumerate(_ladder):
             with _lcols[_l_idx]:
-                st.markdown(f"**{_item['badge']}**")
-                st.markdown(f"<div style='font-size:12px; font-weight:600; color:#38bdf8; min-height:36px; line-height:1.25;'>{_item['title']}</div>", unsafe_allow_html=True)
-                st.caption(_item['desc'])
-                if st.button(f"Execute {_item['badge'].split('.')[0]}", key=f"cfo_ladder_{company_code}_{_l_idx}", use_container_width=True):
+                _tier_title = _item['tier'].split(':')[0]
+                st.markdown(f"""
+                <div style="
+                    background: #151C2C;
+                    border: 1px solid rgba(148, 163, 184, 0.18);
+                    border-radius: 8px;
+                    padding: 10px 12px;
+                    min-height: 110px;
+                    margin-bottom: 6px;
+                ">
+                    <div style="font-size:10px; font-weight:700; color:#818CF8; text-transform:uppercase; margin-bottom:2px;">{_tier_title}</div>
+                    <div style="font-size:12px; font-weight:700; color:#F1F5F9; line-height:1.25; margin-bottom:4px;">{_item['title']}</div>
+                    <div style="font-size:10.5px; color:#94A3B8; line-height:1.35;">{_item['desc']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button(f"Run {_tier_title} →", key=f"cfo_ladder_{company_code}_{_l_idx}", use_container_width=True):
                     st.session_state["_pending_followup"] = _item["query"]
                     st.rerun()
 else:
-    if not st.session_state["chat_history"]:
-        st.markdown("##### 💡 Suggested Econometric Inquiries")
+    _show_res_expanded = not bool(st.session_state.get("chat_history"))
+    with st.expander("📚 Empirical Research Suite — 3 Theoretical Pillars & Logical Drill-Downs", expanded=_show_res_expanded):
         _starters_meta = [
-            {"icon": "📊", "title": "Industry Distributions", "query": "Which 10 industries carry the highest leverage across the panel and why?"},
-            {"icon": "🔬", "title": "Theory Validation", "query": "Explain how profitability tests Pecking Order vs Trade-Off theory in this panel."},
-            {"icon": "📉", "title": "Crisis Comparison", "query": "Compare leverage patterns during GFC 2008 and COVID-19 2020 across life stages."},
+            {
+                "pillar": "Pillar 1: Life-Cycle Dynamics",
+                "tag": "Dickinson (2011)",
+                "title": "Cross-Stage Leverage Distributions",
+                "desc": "Empirically evaluate leverage differences across Dickinson cash flow stages (Startup to Decline).",
+                "query": "Which 10 industries carry the highest leverage across the panel and why?",
+                "accent": "#6366F1",
+            },
+            {
+                "pillar": "Pillar 2: Capital Structure Theory",
+                "tag": "Within-FE Estimator",
+                "title": "Pecking Order vs Trade-Off",
+                "desc": "Test whether negative profitability coefficients corroborate Pecking Order or static Trade-Off theory.",
+                "query": "Explain how profitability tests Pecking Order vs Trade-Off theory in this panel.",
+                "accent": "#06B6D4",
+            },
+            {
+                "pillar": "Pillar 3: Macro & Institutional Regimes",
+                "tag": "IBC 2016 & Shocks",
+                "title": "GFC 2008 vs COVID 2020 Resilience",
+                "desc": "Compare corporate debt adjustment and insolvency risk under external macro and statutory shocks.",
+                "query": "Compare leverage patterns during GFC 2008 and COVID-19 2020 across life stages.",
+                "accent": "#10B981",
+            },
         ]
         _scols = st.columns(3)
         for _idx, _sm in enumerate(_starters_meta):
             with _scols[_idx]:
-                if st.button(
-                    f"{_sm['icon']} **{_sm['title']}**\n\n{_sm['query']}",
-                    use_container_width=True,
-                    key=f"bento_starter_{_idx}",
-                ):
+                st.markdown(f"""
+                <div style="
+                    background: #151C2C;
+                    border: 1px solid rgba(148, 163, 184, 0.18);
+                    border-top: 3px solid {_sm['accent']};
+                    border-radius: 8px;
+                    padding: 14px 16px;
+                    min-height: 142px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    margin-bottom: 8px;
+                ">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                            <span style="font-size:10px; font-weight:700; text-transform:uppercase; color:{_sm['accent']}; letter-spacing:0.04em;">{_sm['pillar']}</span>
+                            <span style="font-size:10px; color:#94A3B8; font-family:'JetBrains Mono', monospace;">{_sm['tag']}</span>
+                        </div>
+                        <div style="font-size:13px; font-weight:700; color:#F1F5F9; margin-bottom:4px; line-height:1.25;">{_sm['title']}</div>
+                        <div style="font-size:11px; color:#94A3B8; line-height:1.45;">{_sm['desc']}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                if st.button("Launch Inquiry →", key=f"bento_starter_{_idx}", use_container_width=True):
                     st.session_state["_pending_followup"] = _sm["query"]
                     st.rerun()
 
@@ -1292,16 +1389,86 @@ if st.session_state.get("chat_history"):
         width=0,
     )
 
-# ── Persistent followup chips ──
+def get_intelligent_drilldown_suggestions(chat_history: list, mode: str = "Researcher", company_code=None) -> list[str]:
+    """Dynamically generate intelligent logical drill-down suggestions so chat never dead-ends."""
+    for turn in reversed(chat_history):
+        if turn.get("role") == "assistant" and turn.get("followups"):
+            return turn["followups"][:3]
+
+    last_text = ""
+    for turn in reversed(chat_history):
+        last_text += " " + str(turn.get("content", ""))
+        if len(last_text) > 800:
+            break
+    last_lower = last_text.lower()
+
+    if "infosys" in last_lower or company_code == 100632:
+        return [
+            "Simulate dividend payout vs debt buyback under cash surplus",
+            "Compare Infosys tangibility & tax shields against TCS and Wipro",
+            "How does Infosys's mature life stage govern its zero net-debt policy?",
+        ]
+    elif "tata steel" in last_lower or company_code == 248136:
+        return [
+            "Simulate a +150 bps interest rate shock and ICR covenant defense",
+            "Benchmark Tata Steel tangibility and asset collateral against JSW Steel",
+            "What is Tata Steel's optimal leverage under Trade-Off Theory?",
+        ]
+    elif "airtel" in last_lower or "bharti" in last_lower or company_code == 34162:
+        return [
+            "Evaluate 5G spectrum debt and InvIT monetization capacity",
+            "Calculate Net Debt to EBITDA covenant threshold under stress",
+            "Analyze Bharti Airtel's speed of adjustment toward target leverage",
+        ]
+    elif "indigo" in last_lower or "interglobe" in last_lower or company_code == 395047:
+        return [
+            "Analyze operating lease liabilities and aircraft SLB debt",
+            "Stress test cash runway under jet fuel price shocks",
+            "Evaluate working capital cash burn across high-leverage quarters",
+        ]
+    elif "sun pharma" in last_lower or company_code == 239726:
+        return [
+            "Analyze cross-border US dollar bond FX exposure & natural hedges",
+            "Benchmark R&D capitalization vs internal cash retention",
+            "Evaluate M&A debt capacity while preserving investment-grade rating",
+        ]
+
+    if mode == "CFO":
+        return [
+            "Run +150 bps rate hike stress test on ICR covenant headroom",
+            "Benchmark debt ratio & tangibility against top sector peers",
+            "Formulate actionable capital structure plan to defend credit rating",
+        ]
+    else:
+        return [
+            "Estimate dynamic panel GMM (xtabond2) for leverage speed of adjustment",
+            "Compare Pecking Order vs Trade-Off Theory across Dickinson life stages",
+            "Analyze leverage response during GFC 2008 vs COVID-19 2020 regimes",
+        ]
+
+# ── Intelligent Logical Drill-Down Auto-Suggestions ──
 _stored_fups = st.session_state.get("_followup_suggestions", [])
+if not _stored_fups:
+    _stored_fups = get_intelligent_drilldown_suggestions(
+        st.session_state.get("chat_history", []),
+        mode=mode,
+        company_code=company_code if mode == "CFO" else None,
+    )
+
 if _stored_fups:
-    st.caption("💡 **Continue exploring:**")
+    st.markdown(
+        '<div style="display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #38BDF8; margin-top: 14px; margin-bottom: 8px;">'
+        '<span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #38BDF8;"></span>'
+        'Intelligent Logical Drill-Down Suggestions'
+        '</div>',
+        unsafe_allow_html=True,
+    )
     _fup_cols = st.columns(min(3, len(_stored_fups)))
     for _idx, _fq in enumerate(_stored_fups[:3]):
         with _fup_cols[_idx]:
-            if st.button(_fq, key=f"fq_{hash(_fq)}_{len(st.session_state['chat_history'])}", use_container_width=True):
+            if st.button(f"{_fq} →", key=f"fq_{hash(_fq)}_{len(st.session_state.get('chat_history', []))}_{_idx}", use_container_width=True):
                 st.session_state["_pending_followup"] = _fq
-                st.session_state.pop("_followup_suggestions", None)
+                st.session_state["_followup_suggestions"] = []
                 st.rerun()
 
 # CFO mode: offer to add the last AI reply to the board deck.
@@ -1315,6 +1482,10 @@ if mode == "CFO" and _last_qa:
         st.toast("Added to Board Deck ✓")
 
 # ── Input — always rendered so the chat box never disappears ─────────────────
+_covenant_scope = f"{_username}:{st.session_state.get('chat_session_id', '')}:{st.session_state.get('panel_mode', 'thesis')}"
+if covenant_pilot_chat.enabled():
+    st.caption("Covenant pilot available: ask 'covenant pilot for Tata Steel' or 'covenant pilot for IndiGo'.")
+    covenant_pilot_chat.render_pending(st.session_state["chat_history"], _covenant_scope)
 user_q = st.chat_input("Ask about the panel data...", key="chat_input_p19")
 if not user_q and st.session_state.get("_pending_followup"):
     user_q = st.session_state.pop("_pending_followup")
@@ -1322,6 +1493,16 @@ elif st.session_state.get("_pending_followup"):
     st.session_state.pop("_pending_followup")  # typed message wins; discard chip
 
 if user_q:
+    _pilot_turn = covenant_pilot_chat.route(user_q, st.session_state["chat_history"], _covenant_scope, selected_company=company_code)
+    if _pilot_turn is not None:
+        db.append_chat_message(st.session_state.get("chat_session_id", ""), "user", user_q)
+        db.append_chat_message(st.session_state.get("chat_session_id", ""), "assistant", _pilot_turn["content"],
+                               model_used=_pilot_turn["model_used"], followups=_pilot_turn.get("followups"),
+                               result_envelope=_pilot_turn["result_envelope"])
+        st.session_state["chat_history"].extend([{"role": "user", "content": user_q}, _pilot_turn])
+        st.session_state.pop("_followup_suggestions", None)
+        st.session_state.pop("_last_qa", None)
+        st.rerun()
     st.session_state.pop("_followup_suggestions", None)  # clear old chips on new message
     st.session_state.pop("_last_qa", None)
     panel_mode = st.session_state.get("panel_mode", "thesis")
@@ -1492,23 +1673,31 @@ if user_q:
             )
 
         if backend == "gemini":
+            _fallback_backend, _fallback_model = "anthropic", "claude-sonnet-4-6"
             _fallback_stream = lambda: stream_anthropic(
                 messages, system=ctx, model="claude-sonnet-4-6", max_tokens=max_tokens,
                 role=_user_role, citations=citations_on, panel_mode=panel_mode,
                 filters=_filters, chart_requested=_chart_requested,
             )
         elif backend == "ollama":
-            _fallback_stream = lambda: stream_anthropic(
-                messages, system=ctx, model=model_to_use, max_tokens=max_tokens,
+            _fallback_backend, _fallback_model = "gemini", "gemini-2.5-flash"
+            _fallback_stream = lambda: stream_gemini_agent(
+                messages, system=ctx, model="gemini-2.5-flash", max_tokens=max_tokens,
                 role=_user_role, citations=citations_on, panel_mode=panel_mode,
                 filters=_filters, chart_requested=_chart_requested,
             )
         else:
-            _fallback_stream = lambda: stream_ollama(
-                [{"role": "system", "content": ctx}] + messages,
-                panel_mode=panel_mode, filters=_filters, chart_requested=_chart_requested,
+            _fallback_backend, _fallback_model = "gemini", "gemini-2.5-flash"
+            _fallback_stream = lambda: stream_gemini_agent(
+                messages, system=ctx, model="gemini-2.5-flash", max_tokens=max_tokens,
+                role=_user_role, citations=citations_on, panel_mode=panel_mode,
+                filters=_filters, chart_requested=_chart_requested,
             )
-        _stream = stream_with_fallback(_stream, _fallback_stream)
+        _actual_provider = {"backend": backend, "model": model_to_use}
+        _stream = stream_with_fallback(
+            _stream, _fallback_stream,
+            on_fallback=lambda: _actual_provider.update(backend=_fallback_backend, model=_fallback_model),
+        )
 
         _first_chunk = True
         for _chunk in _stream:
@@ -1568,6 +1757,7 @@ if user_q:
             f"live_{len(st.session_state['chat_history'])}",
         )
 
+        model_to_use = _actual_provider["model"]
         if "gemini" in model_to_use.lower():
             _model_badge = "Gemini"
         elif "haiku" in model_to_use.lower():
@@ -1602,7 +1792,7 @@ if user_q:
         st.session_state["_last_qa"] = {"question": user_q, "answer": full_display}
 
     _u = st.session_state.get("user", {}) or {}
-    _backend_logged = f"{backend}:{model_to_use}"
+    _backend_logged = f"{_actual_provider['backend']}:{model_to_use}"
     log_chat_query(
         username=_u.get("username", "anonymous"),
         role=_u.get("role", "viewer"),
@@ -1611,5 +1801,4 @@ if user_q:
         query=user_q,
         session_id=st.session_state.get("chat_session_id", ""),
     )
-
     st.rerun()

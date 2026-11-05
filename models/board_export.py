@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 from helpers import (
     plotly_layout, PLOTLY_CONFIG, STAGE_COLORS, STAGE_ORDER,
-    PRIMARY, SECONDARY, ACCENT, NEUTRAL,
+    PRIMARY, SECONDARY, ACCENT, NEUTRAL, heatmap_colorscale,
+    _current_theme,
 )
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -802,29 +803,38 @@ def build_topic_10(company_df, company_info, peers_df, full_panel, stage_summary
             tmat = get_transition_matrix(trans_df)
             if not tmat.empty:
                 ordered = [s for s in STAGE_ORDER if s in tmat.index]
-                tmat = tmat.reindex(index=ordered, columns=[s for s in STAGE_ORDER if s in tmat.columns]).fillna(0)
+                ordered_cols = [s for s in STAGE_ORDER if s in tmat.columns]
+                tmat = tmat.reindex(index=ordered, columns=ordered_cols).fillna(0)
                 fig_tmat = px.imshow(
-                    tmat * 100,
-                    color_continuous_scale="Blues",
+                    tmat.values,
+                    x=tmat.columns.tolist(),
+                    y=tmat.index.tolist(),
+                    color_continuous_scale=heatmap_colorscale(),
                     aspect="auto",
                     labels={"color": "Probability (%)"},
                     text_auto=".1f",
                 )
-                lay_tm = plotly_layout("Stage Transition Probability Matrix (%)", height=400)
+                is_dark = _current_theme() == "dark"
+                text_c = "#F8FAFC" if is_dark else "#0F172A"
+                tick_c = "#CBD5E1" if is_dark else "#334155"
+                fig_tmat.update_traces(textfont=dict(color=text_c, size=12))
+                lay_tm = plotly_layout("Stage Transition Probability Matrix (%)", height=420)
                 fig_tmat.update_layout(**lay_tm)
+                fig_tmat.update_xaxes(title="To Stage", side="top", tickfont=dict(color=tick_c, size=11))
+                fig_tmat.update_yaxes(title="From Stage", tickfont=dict(color=tick_c, size=11))
                 figs.append(fig_tmat)
-                tables.append(tmat.round(3).reset_index().rename(columns={"index": "From Stage"}))
+                tables.append(tmat.round(1).reset_index().rename(columns={"index": "From Stage"}))
 
                 if cur_stage in tmat.index:
                     row_probs = tmat.loc[cur_stage].sort_values(ascending=False)
                     top_next = row_probs.index[0] if row_probs.index[0] != cur_stage else row_probs.index[1] if len(row_probs) > 1 else "Unknown"
-                    top_prob = float(row_probs.iloc[0] if row_probs.index[0] != cur_stage else row_probs.iloc[1]) * 100
-                    stay_prob = float(tmat.loc[cur_stage, cur_stage]) * 100 if cur_stage in tmat.columns else 0
+                    top_prob = float(row_probs.iloc[0] if row_probs.index[0] != cur_stage else row_probs.iloc[1])
+                    stay_prob = float(tmat.loc[cur_stage, cur_stage]) if cur_stage in tmat.columns else 0
                     insights.append(
-                        f"Probability of **remaining in {cur_stage}** stage next year: **{stay_prob:.0f}%**."
+                        f"Probability of **remaining in {cur_stage}** stage next year: **{stay_prob:.1f}%**."
                     )
                     insights.append(
-                        f"Most likely transition: **{top_next}** ({top_prob:.0f}% historical base rate)."
+                        f"Most likely transition: **{top_next}** ({top_prob:.1f}% historical base rate)."
                     )
         except Exception as exc:
             logger.warning("Stage transition analysis failed in board export: %s", exc, exc_info=True)
@@ -1176,7 +1186,8 @@ def build_topic_13_ai(company_code: int, panel_mode: str = "thesis", backend: st
         out["actions"] = bullets_per_topic["13.4 Three actions"]
         return out
 
-    except Exception:
+    except Exception as _llm_exc:
+        logger.info("LLM backend offline (%s) — activating deterministic empirical CFO engine", _llm_exc)
         out["ai_offline"] = True
         try:
             import db
@@ -1184,44 +1195,139 @@ def build_topic_13_ai(company_code: int, panel_mode: str = "thesis", backend: st
             conn = db.get_connection()
             vintage_sql, vintage_params = db._vintage_predicate(panel_mode)
             sql = f"""
-                SELECT year, leverage, profitability, life_stage, industry_group
-                FROM financials
-                WHERE company_code = ? AND {vintage_sql}
-                ORDER BY year DESC LIMIT 1
+                SELECT f.year, f.leverage, f.profitability, f.tangibility, f.interest_amt, f.pbit, f.firm_size, f.life_stage,
+                       c.company_name, c.industry_group
+                FROM financials f
+                LEFT JOIN companies c ON f.company_code = c.company_code
+                WHERE f.company_code = ? AND {vintage_sql}
+                ORDER BY f.year ASC
             """
-            row = pd.read_sql_query(
-                sql, conn, params=[int(company_code)] + vintage_params
-            )
-            if not row.empty:
-                r = row.iloc[0]
-                lev = float(r.get("leverage", 0) or 0)
-                prof = float(r.get("profitability", 0) or 0)
-                stage = str(r.get("life_stage", "Unknown"))
-                ind = str(r.get("industry_group", "Unknown"))
-                out["insights"] = [
-                    ("13.1 Positioning vs peers", [
-                        f"Current leverage: {lev:.3f} (industry {ind}, stage {stage}).",
-                        f"Profitability at latest year: {prof:.3f}.",
-                    ]),
-                    ("13.2 Relevant determinants", [
-                        "firm_size, profitability, tangibility, and age are the four core "
-                        "regressors validated in this thesis panel.",
-                    ]),
-                    ("13.3 Trajectory diagnosis", [
-                        "AI offline — refer to the leverage trend chart on the dashboard.",
-                    ]),
-                ]
-                out["actions"] = [
-                    f"Review leverage of {lev:.3f} against the {stage}-stage peer median.",
-                    "Stress-test capital structure under +/-200bps interest-rate scenarios.",
-                    "Consult Page 8 (Econometrics) for stage-specific OLS coefficients.",
-                ]
+            df = pd.read_sql_query(sql, conn, params=[int(company_code)] + vintage_params)
+            if df.empty:
+                out["insights"] = [("13 Strategic CFO Recommendations", [f"Company code {company_code} not found in database."])]
+                out["actions"] = ["Verify company code and refresh dashboard."]
+                return out
+
+            latest = df.iloc[-1]
+            co_name = str(latest.get("company_name", "The Company"))
+            cur_stage = str(latest.get("life_stage", "Maturity"))
+            ind = str(latest.get("industry_group", "General Industry"))
+            lev = float(latest.get("leverage", 0) or 0)
+            prof = float(latest.get("profitability", 0) or 0)
+            tang = float(latest.get("tangibility", 0) or 0)
+            interest = float(latest.get("interest_amt", 0) or 0)
+            pbit = float(latest.get("pbit", 0) or 0)
+            icr = (pbit / interest) if interest > 0 else (99.0 if pbit > 0 else 0.0)
+
+            # 5-year leverage shift
+            df_5yr = df.tail(5)
+            if len(df_5yr) >= 2:
+                lev_start = float(df_5yr.iloc[0].get("leverage", 0) or 0)
+                lev_change = (lev - lev_start) * 100
+                traj_dir = "rising" if lev_change > 2.0 else ("declining" if lev_change < -2.0 else "stable")
             else:
-                out["insights"] = [("13 AI Recommendations", [f"Company code {company_code} not found."])]
-                out["actions"] = ["Verify company_code and try again."]
-        except Exception:
-            out["insights"] = [("13 AI Recommendations", ["AI offline; data unavailable."])]
-            out["actions"] = ["Try again with LLM backend configured."]
+                lev_change = 0.0
+                traj_dir = "stable"
+
+            # Benchmark peer distribution
+            sql_peers = f"""
+                SELECT f.leverage, f.profitability, f.tangibility
+                FROM financials f
+                WHERE f.life_stage = ? AND {vintage_sql} AND f.year = ?
+            """
+            peers_df = pd.read_sql_query(sql_peers, conn, params=[cur_stage] + vintage_params + [int(latest['year'])])
+            if peers_df.empty:
+                sql_peers_all = f"""
+                    SELECT f.leverage, f.profitability, f.tangibility
+                    FROM financials f
+                    WHERE f.life_stage = ? AND {vintage_sql}
+                """
+                peers_df = pd.read_sql_query(sql_peers_all, conn, params=[cur_stage] + vintage_params)
+
+            p25_lev = float(peers_df["leverage"].quantile(0.25)) if not peers_df.empty else 0.20
+            p50_lev = float(peers_df["leverage"].median()) if not peers_df.empty else 0.35
+            p75_lev = float(peers_df["leverage"].quantile(0.75)) if not peers_df.empty else 0.50
+            p50_prof = float(peers_df["profitability"].median()) if not peers_df.empty else 0.08
+            p50_tang = float(peers_df["tangibility"].median()) if not peers_df.empty else 0.30
+
+            # 13.1 Positioning vs Peers
+            pos_bullets = []
+            if lev < p25_lev:
+                pos_bullets.append(
+                    f"**Conservative Capitalization:** {co_name}'s leverage of {lev*100:.1f}% sits below the {cur_stage} 25th percentile ({p25_lev*100:.1f}%), indicating untapped debt capacity under Trade-Off theory."
+                )
+            elif lev > p75_lev:
+                pos_bullets.append(
+                    f"**Elevated Debt Exposure:** Leverage of {lev*100:.1f}% exceeds the {cur_stage} 75th percentile ({p75_lev*100:.1f}%), raising financial distress exposure during cyclical contraction."
+                )
+            else:
+                pos_bullets.append(
+                    f"**Balanced Capital Positioning:** Leverage of {lev*100:.1f}% is anchored within the {cur_stage} interquartile peer band ({p25_lev*100:.1f}%–{p75_lev*100:.1f}%, median {p50_lev*100:.1f}%)."
+                )
+            prof_comp = "above" if prof >= p50_prof else "below"
+            pos_bullets.append(
+                f"**Operating Profitability:** ROA of {prof*100:.1f}% is {prof_comp} the peer cohort median ({p50_prof*100:.1f}%), dictating internal cash generation and debt absorption capacity."
+            )
+
+            # 13.2 Relevant Determinants
+            det_bullets = []
+            if tang >= p50_tang:
+                det_bullets.append(
+                    f"**Tangibility & Collateral Backing:** Asset tangibility of {tang*100:.1f}% (vs peer median {p50_tang*100:.1f}%) provides robust collateral backing, lowering lender spreads on term borrowings."
+                )
+            else:
+                det_bullets.append(
+                    f"**Asset-Light Operating Model:** Low tangibility of {tang*100:.1f}% (vs peer median {p50_tang*100:.1f}%) signals limited physical collateral, requiring primary reliance on operating cash flows."
+                )
+            if icr >= 5.0:
+                det_bullets.append(
+                    f"**Interest Coverage & Covenant Headroom:** Robust coverage of {icr:.1f}x provides substantial headroom against macro rate shocks (+150 bps) well above the IBC distress boundary (1.5x)."
+                )
+            elif icr >= 2.0:
+                det_bullets.append(
+                    f"**Moderate Debt Servicing Buffer:** Coverage at {icr:.1f}x meets standard lender covenants but warrants vigilance against rising borrowing costs and margin compression."
+                )
+            else:
+                det_bullets.append(
+                    f"**Critical Debt Servicing Vulnerability:** Coverage at {icr:.1f}x breaches institutional safety minimums (<2.0x), signalling immediate covenant pressure under tight monetary conditions."
+                )
+
+            # 13.3 Trajectory Diagnosis
+            traj_bullets = []
+            if traj_dir == "rising":
+                traj_bullets.append(
+                    f"**Expanding Leverage Trajectory:** Over the last 5 years, leverage expanded by {lev_change:+.1f} pp, reflecting accelerated debt-financed capital expenditure or working capital growth."
+                )
+            elif traj_dir == "declining":
+                traj_bullets.append(
+                    f"**Active Deleveraging Discipline:** Over the past 5 years, leverage contracted by {lev_change:+.1f} pp, demonstrating disciplined debt paydown aligned with Myers' Pecking Order cash accumulation."
+                )
+            else:
+                traj_bullets.append(
+                    f"**Stable Balance Sheet Posture:** Leverage trajectory has remained steady ({lev_change:+.1f} pp shift over 5 years), reflecting deliberate target capital structure maintenance."
+                )
+            traj_bullets.append(
+                f"**Life-Cycle Governance:** Firm operates in the **{cur_stage}** phase in **{ind}**; capital allocation priorities should balance dividend payouts, reinvestment hurdles, and debt maturities."
+            )
+
+            # 13.4 Three actions
+            actions = [
+                f"**Target Capital Structure (0–90 Days):** Rebalance leverage towards {p50_lev*100:.1f}% peer benchmark; evaluate whether current liquidity supports unhedged debt obligations.",
+                f"**Debt Maturity & Covenant Defense (1–3 Years):** Stress-test debt service against a +150 bps interest rate hike and establish dynamic liquidity buffers matching 6 months of fixed debt service.",
+                f"**Life-Stage Capital Policy (3–5 Years):** Align payout and capex hurdles with {cur_stage} empirical norms to avoid suboptimal equity dilution or over-leveraging prior to subsequent stage migration."
+            ]
+
+            out["insights"] = [
+                ("13.1 Positioning vs Peers", pos_bullets),
+                ("13.2 Relevant Determinants", det_bullets),
+                ("13.3 Trajectory Diagnosis", traj_bullets),
+            ]
+            out["actions"] = actions
+
+        except Exception as _inner_exc:
+            logger.error("Deterministic rule-based recommendation failed: %s", _inner_exc, exc_info=True)
+            out["insights"] = [("13 Strategic Recommendations", ["Empirical metrics temporarily unavailable."])]
+            out["actions"] = ["Verify database connectivity and refresh."]
         return out
 
 

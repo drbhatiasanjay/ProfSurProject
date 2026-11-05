@@ -1,8 +1,8 @@
 # Recordly Master Demo Walkthrough — Red Team 10/10 Scorecard
 `docs/review-evidence/RED_TEAM_DEMO_RECORDLY_SCORECARD.md`
 
-- **Evaluated Video:** `ai_chatbot_walkthrough_recordly_2026-09-29_231824_subtitled.mp4` (23.8 MB)
-- **Evaluation Date:** 2026-09-29 23:19:51
+- **Evaluated Video:** `ai_chatbot_walkthrough_recordly_v4_2026-09-30_004605_subtitled.mp4` (15.9 MB)
+- **Evaluation Date:** 2026-09-30 00:47:17
 - **Standard:** Recordly Automated Screen Production Standard (1080p FHD, Sentence-Level Audio-Video Lockstep)
 - **Certification Result:** **10.0 / 10.0 (PASS — CERTIFIED BROADCAST GRADE)**
 
@@ -42,11 +42,12 @@
 | `13_sunpharma_pharma` | `190.0s` | Sun Pharma Euro Notes Natural FX Hedge |
 | `14_stata_terminal` | `205.0s` | Stata 18 SE Dark Terminal Card (. xtreg lev roa tang size, fe) |
 | `15_citation_modal` | `220.0s` | Interactive Citation Inspector Modal |
+| `16_closing_card` | `235.0s` | Closing Epilogue & Verified Institutional Credentials |
 
 ---
 
 ## 3. Artifact Deliverables
-- **Timestamped Subtitled Master Video:** `scratch/demo_production/ai_chatbot_walkthrough_recordly_2026-09-29_231824_subtitled.mp4`
-- **Timestamped Clean Master Video:** `scratch/demo_production/ai_chatbot_walkthrough_recordly_2026-09-29_231824_clean.mp4`
-- **Timestamped SRT Subtitles:** `scratch/demo_production/ai_chatbot_walkthrough_recordly_2026-09-29_231824.srt`
+- **Timestamped Subtitled Master Video:** `scratch/demo_production/ai_chatbot_walkthrough_recordly_v4_2026-09-30_004605_subtitled.mp4`
+- **Timestamped Clean Master Video:** `scratch/demo_production/ai_chatbot_walkthrough_recordly_v4_2026-09-30_004605_clean.mp4`
+- **Timestamped SRT Subtitles:** `scratch/demo_production/ai_chatbot_walkthrough_recordly_v4_2026-09-30_004605.srt`
 - **Contact Sheet Matrix:** `scratch/demo_production/redteam_review_recordly/contact_sheet_recordly.png`

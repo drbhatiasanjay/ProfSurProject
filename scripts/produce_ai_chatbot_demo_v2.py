@@ -354,35 +354,124 @@ def record_scene_v2(browser, scene_item: dict) -> Path:
         page.wait_for_selector("text=AI Financial Assistant", timeout=30000)
         show_slim_hud(page, sc["tag"], sc["title"], sc["hud_desc"])
         
-        # Pre-execute responses for Scene 2 (Anatomy), Scene 3 (Infosys), Scene 4 (Tata Steel)
-        if sid == "scene2_assistant_overview":
-            # Execute a starter prompt so the full 6-layer response anatomy is loaded
-            starter_btn = page.locator('button:has-text("Execute 🟢 1")').first
-            if starter_btn.is_visible(timeout=2000):
-                starter_btn.click()
-                time.sleep(2)
-            scroll_up_immediate(page)
+        # 1. Always start with a fresh clean chat session
+        new_chat_btn = page.locator('button:has-text("New Chat")').first
+        if new_chat_btn.is_visible(timeout=2000):
+            new_chat_btn.click()
+            time.sleep(1.0)
 
-        elif sid == "scene3_infosys_tech":
+        # 2. Dynamic execution per scene
+        if sid in ("scene2_assistant_overview", "scene3_infosys_tech"):
+            # Switch to CFO mode
+            cfo_radio = page.locator('label:has-text("CFO")').first
+            if cfo_radio.is_visible(timeout=2000):
+                cfo_radio.click()
+                time.sleep(1.0)
+
+            # Select Infosys archetype
             infosys_btn = page.locator('button:has-text("Infosys")').first
             if infosys_btn.is_visible(timeout=2000):
                 infosys_btn.click()
-                time.sleep(0.8)
-            exec_1 = page.locator('button:has-text("Execute 🟢 1")').first
-            if exec_1.is_visible(timeout=2000):
-                exec_1.click()
-                time.sleep(2)
+                time.sleep(1.0)
+
+            # Live type Infosys query into chat input
+            chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
+            if chat_input.is_visible(timeout=3000):
+                chat_input.click()
+                prompt_q = "As CFO of Infosys Ltd., analyze our baseline capital structure (4.2% leverage, 33.4% ROA) under Dickinson Mature stage and Trade-Off Theory."
+                chat_input.type(prompt_q, delay=15)
+                time.sleep(0.3)
+                page.keyboard.press("Enter")
+                time.sleep(5.0)
+
             scroll_up_immediate(page)
 
         elif sid == "scene4_tata_steel_stress":
+            # Switch to CFO mode
+            cfo_radio = page.locator('label:has-text("CFO")').first
+            if cfo_radio.is_visible(timeout=2000):
+                cfo_radio.click()
+                time.sleep(1.0)
+
+            # Select Tata Steel archetype
             tata_btn = page.locator('button:has-text("Tata Steel")').first
             if tata_btn.is_visible(timeout=2000):
                 tata_btn.click()
-                time.sleep(0.8)
-            exec_3 = page.locator('button:has-text("Execute 🟠 3")').first
-            if exec_3.is_visible(timeout=2000):
-                exec_3.click()
-                time.sleep(2)
+                time.sleep(1.0)
+
+            # Live type Tata Steel Macro Stress query
+            chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
+            if chat_input.is_visible(timeout=3000):
+                chat_input.click()
+                prompt_q = "Conduct a macro stress test for Tata Steel: if borrowing costs rise by 150 bps and steel spreads contract by 20%, what happens to our Interest Coverage Ratio against the 2.0x floor?"
+                chat_input.type(prompt_q, delay=15)
+                time.sleep(0.3)
+                page.keyboard.press("Enter")
+                time.sleep(5.0)
+
+            scroll_up_immediate(page)
+
+        elif sid == "scene5_airtel_indigo_pharma":
+            # Switch to CFO mode
+            cfo_radio = page.locator('label:has-text("CFO")').first
+            if cfo_radio.is_visible(timeout=2000):
+                cfo_radio.click()
+                time.sleep(1.0)
+
+            # Pre-load Airtel
+            airtel_btn = page.locator('button:has-text("Bharti Airtel")').first
+            if airtel_btn.is_visible(timeout=2000):
+                airtel_btn.click()
+                time.sleep(1.0)
+
+            chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
+            if chat_input.is_visible(timeout=3000):
+                chat_input.click()
+                prompt_q = "As CFO of Bharti Airtel, evaluate InvIT asset monetization to deleverage 5G spectrum debt."
+                chat_input.type(prompt_q, delay=15)
+                time.sleep(0.3)
+                page.keyboard.press("Enter")
+                time.sleep(5.0)
+
+            scroll_up_immediate(page)
+
+        elif sid == "scene6_researcher_stata":
+            # Switch to Researcher mode
+            res_radio = page.locator('label:has-text("Researcher")').first
+            if res_radio.is_visible(timeout=2000):
+                res_radio.click()
+                time.sleep(1.0)
+
+            # Live type Stata regression query
+            chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
+            if chat_input.is_visible(timeout=3000):
+                chat_input.click()
+                prompt_q = ". xtreg leverage roa tang size, fe cluster(ind_code)"
+                chat_input.type(prompt_q, delay=15)
+                time.sleep(0.3)
+                page.keyboard.press("Enter")
+                time.sleep(5.0)
+
+            scroll_up_immediate(page)
+
+        elif sid == "scene7_literature_vault":
+            # Switch to CFO mode with active response
+            cfo_radio = page.locator('label:has-text("CFO")').first
+            if cfo_radio.is_visible(timeout=2000):
+                cfo_radio.click()
+                time.sleep(1.0)
+            infosys_btn = page.locator('button:has-text("Infosys")').first
+            if infosys_btn.is_visible(timeout=2000):
+                infosys_btn.click()
+                time.sleep(1.0)
+            chat_input = page.locator('textarea[data-testid="stChatInputTextArea"]').first
+            if chat_input.is_visible(timeout=3000):
+                chat_input.click()
+                prompt_q = "Explain Myers-Majluf Pecking Order vs Dickinson lifecycle stages for Infosys."
+                chat_input.type(prompt_q, delay=15)
+                time.sleep(0.3)
+                page.keyboard.press("Enter")
+                time.sleep(5.0)
             scroll_up_immediate(page)
 
     t_setup = time.time() - t_init

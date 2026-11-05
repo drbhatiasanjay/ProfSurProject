@@ -209,16 +209,19 @@ with res_right:
     values = list(contributions.values()) + [predicted]
     measures = ["relative"] * len(contributions) + ["total"]
 
+    is_dark = _theme == "dark"
     fig_wf = go.Figure(go.Waterfall(
         name="", orientation="v",
         measure=measures,
         x=names, y=values,
-        connector=dict(line=dict(color="#D1D5DB", width=1)),
+        connector=dict(line=dict(color="rgba(255,255,255,0.2)" if is_dark else "#D1D5DB", width=1)),
         increasing=dict(marker_color=PRIMARY),
         decreasing=dict(marker_color="#EF4444"),
         totals=dict(marker_color=SECONDARY),
         text=[f"{v:+.1f}" if m != "total" else f"{v:.1f}" for v, m in zip(values, measures)],
         textposition="outside",
+        textfont=dict(color="#F8FAFC" if is_dark else "#0F172A", size=12),
+        cliponaxis=False,
     ))
     fig_wf.update_layout(**plotly_layout("Determinant Contributions to Leverage", height=420))
 
@@ -254,6 +257,8 @@ with res_right:
         marker_color=bar_colors,
         text=[f"{v:+.2f}pp" for v in contrib_vals],
         textposition="outside",
+        textfont=dict(color="#F8FAFC" if is_dark else "#0F172A", size=12),
+        cliponaxis=False,
         hovertemplate="<b>%{y}</b><br>Leverage Impact: %{x:+.2f} pp<extra></extra>",
     ))
     fig_bar.add_vline(x=0, line_width=1, line_color="#94A3B8")
@@ -300,7 +305,21 @@ with res_right:
         name="Current Scenario",
     ))
     fig_radar.update_layout(**plotly_layout("Factor Sensitivity Radar (Normalized vs Panel Mean)", height=420))
-    fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, max(2.5, max(user_norm) * 1.15)])))
+    fig_radar.update_layout(
+        polar=dict(
+            bgcolor="rgba(0,0,0,0)",
+            radialaxis=dict(
+                visible=True,
+                range=[0, max(2.5, max(user_norm) * 1.15)],
+                tickfont=dict(color="#94A3B8" if is_dark else "#64748B"),
+                gridcolor="rgba(255,255,255,0.1)" if is_dark else "rgba(0,0,0,0.1)",
+            ),
+            angularaxis=dict(
+                tickfont=dict(color="#F8FAFC" if is_dark else "#0F172A"),
+                gridcolor="rgba(255,255,255,0.1)" if is_dark else "rgba(0,0,0,0.1)",
+            ),
+        )
+    )
 
     # Dispatch Active Chart
     if c_view == "Waterfall (Contributions)":

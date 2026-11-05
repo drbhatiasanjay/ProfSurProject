@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import db
 from helpers import (
+    heatmap_colorscale,
     plotly_layout, format_pct, ensure_session_state, panel_label, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
     interpret_ml_comparison, render_interpretation,
@@ -360,7 +361,7 @@ with tab2:
                     pivot.values,
                     x=pivot.columns.tolist(),
                     y=pivot.index.tolist(),
-                    color_continuous_scale=["#F8FAFC", PRIMARY, "#065F46"],
+                    color_continuous_scale=heatmap_colorscale(),
                     aspect="auto",
                     labels={"color": "Importance (%)"},
                 )

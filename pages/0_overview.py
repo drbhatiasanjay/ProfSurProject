@@ -25,75 +25,75 @@ _yr_min  = int(_meta.get("year_min",    2001))
 _yr_max  = int(_meta.get("year_max",    2024))
 _n_years = _yr_max - _yr_min + 1
 
-# ── Hero ──────────────────────────────────────────────────────────────────────
-st.markdown("""
-<div style="
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.9) 0%, rgba(6, 182, 212, 0.85) 100%);
-    border-radius: 16px;
-    padding: 2.2rem 2.5rem;
-    margin-bottom: 1.8rem;
-    color: #ffffff;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.25);
+# ── De-slopped Academic Masthead (Institutional Doctoral Standard) ─────────────
+st.markdown(f"""
+<div class="overview-masthead" style="
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.75rem;
 ">
-    <div style="font-size:0.75rem; letter-spacing:0.12em; text-transform:uppercase;
-                font-weight:700; color:rgba(255,255,255,0.85); margin-bottom:0.4rem;">
-        🎓 Research Platform & Econometric Lab
+    <div>
+        <div style="font-size:0.75rem; letter-spacing:0.10em; text-transform:uppercase; font-weight:700; color:#6366F1; margin-bottom:0.35rem;">
+            Doctoral Research Foundation &middot; University of Delhi
+        </div>
+        <h1 style="margin:0; font-size:1.95rem; font-weight:800; color:var(--text-primary); line-height:1.2; font-family:'Plus Jakarta Sans', sans-serif; letter-spacing:-0.02em;">
+            Capital Structure Across Corporate Life Stages
+        </h1>
+        <p style="margin:0.45rem 0 0; font-size:0.95rem; color:var(--text-secondary); max-width:800px; line-height:1.55;">
+            An empirical econometrics and capital allocation platform linking firm life-cycle dynamics with debt structure theory, developed from the doctoral thesis of Prof. Surendra Kumar.
+        </p>
     </div>
-    <h1 style="margin:0; font-size:2.1rem; font-weight:800; color:#ffffff; line-height:1.25; font-family:'Plus Jakarta Sans', sans-serif;">
-        Life Stage Financial Leverage Strategist
-    </h1>
-    <p style="margin:0.75rem 0 0; font-size:1rem; color:rgba(255,255,255,0.92); max-width:820px; line-height:1.6;">
-        A quantitative research engine connecting corporate life-stage dynamics with capital
-        structure theory — built on the PhD thesis of Prof. Surendra Kumar, University of Delhi.
-    </p>
+    <div style="text-align:right; font-size:0.80rem; color:var(--text-muted); font-family:'JetBrains Mono', monospace; line-height:1.6; white-space:nowrap;">
+        <div><strong style="color:var(--text-primary);">N = {_n_obs:,}</strong> Firm-Years</div>
+        <div>{_n_firms} Enterprises &middot; {_yr_min}&ndash;{_yr_max}</div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Current Context Bento Grid ───────────────────────────────────────────────
-st.markdown("### 🗺️ Active Panel Architecture & Context")
+# ── Current Context Bento Grid (Single-purpose indicators, no pill clutter) ───
+st.markdown("### Active Panel Architecture & Context")
 
 _c1, _c2, _c3, _c4 = st.columns(4)
 with _c1:
     st.markdown(render_bento_kpi(
-        title="Observations",
+        title="Sample Size",
         value=f"{_n_obs:,}",
         delta="100% Balanced",
         percentile=100.0,
-        tag="SAMPLE SIZE",
         stroke_color="#6366F1"
     ), unsafe_allow_html=True)
 with _c2:
     st.markdown(render_bento_kpi(
         title="Covered Companies",
         value=f"{_n_firms:,}",
-        delta="Nifty / CMIE",
+        delta="Nifty / CMIE Universe",
         percentile=100.0,
-        tag="UNIVERSE",
         stroke_color="#06B6D4"
     ), unsafe_allow_html=True)
 with _c3:
     st.markdown(render_bento_kpi(
-        title="Time Span",
+        title="Panel Horizon",
         value=f"{_yr_min}–{_yr_max}",
-        delta=f"{_n_years} Years",
+        delta=f"{_n_years} Observation Years",
         percentile=100.0,
-        tag="LONG PANEL",
         stroke_color="#10B981"
     ), unsafe_allow_html=True)
 with _c4:
     st.markdown(render_bento_kpi(
-        title="Active Dataset",
+        title="Active Vintage",
         value=_panel_mode.upper(),
         delta=_panel_label,
         percentile=100.0,
-        tag="VINTAGE",
         stroke_color="#8B5CF6"
     ), unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# ── Three paradigm sections ───────────────────────────────────────────────────
-st.markdown("### 🏛️ Theoretical Foundations & Research Paradigms")
+# ── Three paradigm sections (Institutional Editorial Cards) ───────────────────
+st.markdown("### Theoretical Foundations & Research Paradigms")
 
 col_p1, col_p2, col_p3 = st.columns(3)
 
@@ -101,7 +101,7 @@ with col_p1:
     st.markdown("""
     <div class="bento-card" style="height:100%; border-top: 3px solid #6366F1;">
         <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#6366F1; margin-bottom:8px;">
-            🌐 Global &amp; Western Paradigms
+            Global &amp; Western Paradigms
         </div>
         <p style="font-size:0.88rem; line-height:1.65; color:var(--text-secondary); margin:0;">
             Traditional corporate finance frameworks largely treat capital structure as a <em>static optimization problem</em> (balancing tax shields vs bankruptcy costs). In volatile markets, capital structure decisions are intrinsically bound to secular life-stage transitions.
@@ -113,7 +113,7 @@ with col_p2:
     st.markdown("""
     <div class="bento-card" style="height:100%; border-top: 3px solid #06B6D4;">
         <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#06B6D4; margin-bottom:8px;">
-            🌏 The Asian Corporate Matrix
+            The Asian Corporate Matrix
         </div>
         <p style="font-size:0.88rem; line-height:1.65; color:var(--text-secondary); margin:0;">
             In emerging Asian economies, corporations face concentrated ownership and credit friction. Operational cash-flow volatility dictates corporate survival, turning capital structure management into an <em>active strategic defense mechanism</em>.
@@ -125,7 +125,7 @@ with col_p3:
     st.markdown("""
     <div class="bento-card" style="height:100%; border-top: 3px solid #10B981;">
         <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#10B981; margin-bottom:8px;">
-            🇮🇳 Indian Ecosystem &amp; IBC
+            Indian Ecosystem &amp; IBC
         </div>
         <p style="font-size:0.88rem; line-height:1.65; color:var(--text-secondary); margin:0;">
             The <strong>Insolvency &amp; Bankruptcy Code (IBC 2016)</strong> has fundamentally transformed corporate risk-taking. By disaggregating panel dynamics into Dickinson life stages, this platform bridges theory and empirical debt reality.

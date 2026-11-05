@@ -102,16 +102,32 @@ def show_citation_dialog(citation_query: str):
 
     st.divider()
 
+    # Theme-aware card styles
+    card_bg_theory = "rgba(2, 132, 199, 0.14)" if is_dark else "#f0f9ff"
+    card_border_theory = "rgba(56, 189, 248, 0.35)" if is_dark else "#bae6fd"
+    card_fg_theory = "#38BDF8" if is_dark else "#0369a1"
+    card_text_theory = "#F1F5F9" if is_dark else "#1e293b"
+
+    card_bg_bench = "rgba(16, 185, 129, 0.14)" if is_dark else "#ecfdf5"
+    card_border_bench = "rgba(52, 211, 153, 0.35)" if is_dark else "#a7f3d0"
+    card_fg_bench = "#34D399" if is_dark else "#047857"
+    card_text_bench = "#F1F5F9" if is_dark else "#1e293b"
+
+    card_bg_india = "rgba(245, 158, 11, 0.14)" if is_dark else "#fffbeb"
+    card_border_india = "rgba(251, 191, 36, 0.35)" if is_dark else "#fde68a"
+    card_fg_india = "#FBBF24" if is_dark else "#b45309"
+    card_text_india = "#F1F5F9" if is_dark else "#1e293b"
+
     # Two column theoretical & empirical breakdown
     col_left, col_right = st.columns(2)
     with col_left:
         st.markdown(
             f"""
-            <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; height: 100%;">
-                <div style="font-size: 12px; font-weight: 700; color: #0369a1; margin-bottom: 6px;">
+            <div style="background: {card_bg_theory}; border: 1px solid {card_border_theory}; border-radius: 8px; padding: 12px; height: 100%;">
+                <div style="font-size: 12px; font-weight: 700; color: {card_fg_theory}; margin-bottom: 6px;">
                     🔬 Theoretical Mechanism & Channel
                 </div>
-                <div style="font-size: 12.5px; line-height: 1.5; color: #1e293b;">
+                <div style="font-size: 12.5px; line-height: 1.5; color: {card_text_theory};">
                     {meta.get('theoretical_mechanism', '')}
                 </div>
             </div>
@@ -121,11 +137,11 @@ def show_citation_dialog(citation_query: str):
     with col_right:
         st.markdown(
             f"""
-            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 12px; height: 100%;">
-                <div style="font-size: 12px; font-weight: 700; color: #047857; margin-bottom: 6px;">
+            <div style="background: {card_bg_bench}; border: 1px solid {card_border_bench}; border-radius: 8px; padding: 12px; height: 100%;">
+                <div style="font-size: 12px; font-weight: 700; color: {card_fg_bench}; margin-bottom: 6px;">
                     📊 International Benchmark Findings
                 </div>
-                <div style="font-size: 12.5px; line-height: 1.5; color: #1e293b;">
+                <div style="font-size: 12.5px; line-height: 1.5; color: {card_text_bench};">
                     {meta.get('empirical_benchmark', '')}
                 </div>
             </div>
@@ -138,11 +154,11 @@ def show_citation_dialog(citation_query: str):
     # Indian Panel Corroboration Card
     st.markdown(
         f"""
-        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px;">
-            <div style="font-size: 12px; font-weight: 700; color: #b45309; margin-bottom: 6px;">
+        <div style="background: {card_bg_india}; border: 1px solid {card_border_india}; border-radius: 8px; padding: 12px;">
+            <div style="font-size: 12px; font-weight: 700; color: {card_fg_india}; margin-bottom: 6px;">
                 🇮🇳 Application to Indian Panel Dataset (N=8,677, CMIE Prowess 2001–2025)
             </div>
-            <div style="font-size: 12.5px; line-height: 1.5; color: #1e293b;">
+            <div style="font-size: 12.5px; line-height: 1.5; color: {card_text_india};">
                 {meta.get('indian_panel_relevance', '')}
             </div>
         </div>

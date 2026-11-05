@@ -65,6 +65,9 @@ _chosen = st.radio(
 )
 if _chosen != _current:
     st.session_state.theme = _chosen
+    _user = st.session_state.get("username", "") or st.session_state.get("auth_user", {}).get("username", "")
+    if _user:
+        db.save_user_pref(_user, "app", {"theme": _chosen})
     st.rerun()
 st.caption("Theme persists for the current session. Switching does not alter any data.")
 

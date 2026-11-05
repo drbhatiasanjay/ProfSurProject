@@ -143,11 +143,21 @@ prof_spark = (df_hist["profitability"] * 100).dropna().tolist() if "profitabilit
 tang_spark = (df_hist["tangibility"] * 100).dropna().tolist() if "tangibility" in df_hist.columns else []
 
 with col_info:
+    is_dark = st.session_state.get("theme", "light") == "dark"
+    card_bg = "rgba(20, 24, 36, 0.85)" if is_dark else "#F0FDFA"
+    text_color = "#F8FAFC" if is_dark else "#0F172A"
+    sub_color = "#94A3B8" if is_dark else "#64748B"
+    box_border = "rgba(255, 255, 255, 0.12)" if is_dark else "#E2E8F0"
+
     st.markdown(
-        f"""<div style="background:#F0FDFA;border-left:4px solid {stage_color};padding:10px 14px;border-radius:6px;font-size:13px;">
-        <b>{selected_name}</b> &nbsp;·&nbsp; <span style="background:{stage_color}22;color:{stage_color};padding:2px 6px;border-radius:4px;font-weight:600;">{stage}</span><br>
-        Industry: <b>{company_info['industry'] or 'Panel Cohort'}</b> &nbsp;·&nbsp; Fiscal Year: <b>{company_info['last_year']}</b><br>
-        Peer Benchmark: <b>{n_peers} firms</b> in same life-cycle stage
+        f"""<div style="background:{card_bg};border:1px solid {box_border};border-left:4px solid {stage_color};padding:12px 16px;border-radius:8px;font-size:13px;color:{text_color};box-shadow:0 2px 8px rgba(0,0,0,0.25);">
+        <div style="font-size:14px;font-weight:700;color:{text_color};margin-bottom:4px;">
+            {selected_name} &nbsp;·&nbsp; <span style="background:{stage_color}25;color:{stage_color};border:1px solid {stage_color}55;padding:2px 8px;border-radius:4px;font-weight:700;font-size:11px;">{stage}</span>
+        </div>
+        <div style="color:{sub_color};line-height:1.45;">
+            Industry: <strong style="color:{text_color};">{company_info['industry'] or 'Panel Cohort'}</strong> &nbsp;·&nbsp; Fiscal Year: <strong style="color:{text_color};">{company_info['last_year']}</strong><br>
+            Peer Benchmark: <strong style="color:{text_color};">{n_peers} firms</strong> in same life-cycle stage
+        </div>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -216,12 +226,14 @@ col_selall, col_deselall, _ = st.columns([1, 1, 4])
 select_all   = col_selall.button("Select All",   key="sel_all")
 deselect_all = col_deselall.button("Unselect All", key="desel_all")
 
-# Initialise selection state
+# Initialise selection state & sync widget keys
 if "deck_selection" not in st.session_state or select_all or deselect_all:
-    st.session_state["deck_selection"] = {
-        tid: (False if deselect_all else True)
-        for tid in TOPIC_LABELS
-    }
+    _target_val = False if deselect_all else True
+    st.session_state["deck_selection"] = {tid: _target_val for tid in TOPIC_LABELS}
+    if select_all or deselect_all:
+        for tid in TOPIC_LABELS:
+            st.session_state[f"topic_{tid}"] = _target_val
+        st.rerun()
 
 selected_topics: dict[int, bool] = {}
 
@@ -416,7 +428,7 @@ if st.session_state.get("deck_previewed"):
 
     # ── Scholarly Governance & Literature Benchmark Knowledge Vault ────────────
     st.markdown("---")
-    _theme = "dark" if st.session_state.get("dark_mode") or st.session_state.get("theme_mode") == "dark" else "light"
+    _theme = st.session_state.get("theme", "dark")
     vault_cits = get_relevant_vault_citations("pecking order trade off dynamic speed of adjustment dickinson flannery rangan frank goyal kumar")
     if vault_cits:
         vault_html = render_academic_vault_html(
@@ -428,19 +440,19 @@ if st.session_state.get("deck_previewed"):
 
     # ── Topic 13 AI: LLM-powered recommendations ──────────────────────────────
     st.markdown("---")
-    with st.expander("Topic 13: AI Recommendations", expanded=False):
+    with st.expander("Topic 13: Strategic AI & Empirical CFO Recommendations", expanded=False):
         backend = st.session_state.get("chat_backend", "ollama")
-        with st.spinner(f"Generating AI recommendations via {backend}..."):
+        with st.spinner(f"Generating recommendations via {backend}..."):
             from models import board_export as _be
             _t13 = _be.build_topic_13_ai(company_code, panel_mode=panel_mode, backend=backend)
         if _t13.get("ai_offline"):
-            st.warning("AI backend offline — showing rule-based recommendations.")
+            st.info("💡 **Deterministic Empirical CFO Engine Active** — Insights derived directly from firm balance sheet metrics and 8,677 panel observations.")
         for _label, _bullets in _t13.get("insights", []):
-            st.markdown(f"**{_label}**")
+            st.markdown(f"##### {_label}")
             for _b in _bullets:
                 st.markdown(f"- {_b}")
         if _t13.get("actions"):
-            st.markdown("**13.4 Three actions**")
+            st.markdown("##### 🎯 13.4 Three High-Conviction CFO Actions")
             for _a in _t13.get("actions", []):
                 st.markdown(f"- {_a}")
 

@@ -834,7 +834,7 @@ with tab_export:
             "set more off",
             "",
             f"* 1. Load panel dataset for vintage '{active_vintage}'",
-            f"use "{dta_filename}", clear",
+            f'use "{dta_filename}", clear',
             "",
             "* 2. Set longitudinal panel structure",
             "xtset company_code year",
@@ -867,7 +867,7 @@ with tab_export:
                 "hausman m2_fe m3_re",
                 "",
                 "* 6. Publication Export Table",
-                "esttab m1_ols m2_fe m3_re using "table_results.tex", replace se r2 star(* 0.10 ** 0.05 *** 0.01)",
+                'esttab m1_ols m2_fe m3_re using "table_results.tex", replace se r2 star(* 0.10 ** 0.05 *** 0.01)',
             ])
 
         do_code = "\n".join(lines) + "\n" 

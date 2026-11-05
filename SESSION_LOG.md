@@ -836,3 +836,33 @@ automated matrix evidence.
 ## 2026-09-29 — Demo rehearsal
 Authenticated V2 as drbhatia; confirmed 17 main pages and Tata Steel availability. Saved silent 1080p rehearsal (489.12 seconds) under scratch/demo_production. Final recording blocked by Stata V2 scorecard TypeError and AI Assistant StreamlitSecretNotFoundError. No product/deployment changes. See docs/operations/DEMO_REHEARSAL_STATUS.md for evidence, the 48-minute outline, and remaining work. User requests low-cost model usage, lean tool calls, and brief updates.
 
+
+## 2026-10-01 — Opt-in covenant chatbot pilot
+Implemented deterministic covenant drafts, confirmation, evidence, saved conversation envelopes and scenario comparison, plus separately gated pydynpd System GMM research candidate. Authenticated browser verification passed for requested drbhatia and two other available profiles using an isolated database. No commit, push or deployment performed. See docs/COVENANT_CHATBOT_PILOT.md for assumptions, evidence and outstanding independent validation gates.
+
+
+## 2026-10-01 � Independent covenant formula reconciliation
+Created visible Excel-formula builds for Tata Steel and IndiGo, with analytical headroom constraints independent of the production bisection algorithm. All 18 scenarios / 2,610 comparisons passed declared tolerances; one 0.01 crore headroom difference is explicitly recorded. Both later-quarter sensitivity checks passed, no unexpected formula errors, and 6 project fast tests passed. Workbook and hashed JSON evidence: scratch/covenant_pilot/validation. Method and remaining professional/native-Excel review gates: docs/COVENANT_CALCULATION_VALIDATION.md. No app, borrower data, estimator, commit, push or deployment change.
+
+
+## 2026-10-01 � Chat-driven borrower evidence intake
+Rechecked frozen public issuer anchors against Tata Steel and IndiGo releases; no actual borrower agreements found in scoped project search. Added isolated borrower evidence checks, blank packet, CLI and chat upload/report workflow opened with 'validate borrower'. Hash identity, source references, schedule controls, finite amounts, covenant definitions and owner/chat scoping are checked without enabling contractual calculation. 47 combined focused tests passed before the final uppercase-hash test; final borrower suite18passed; fast6passed. Browser verification pending at this checkpoint. Real borrower identity and source folder requested asynchronously. Guide: docs/BORROWER_VALIDATION_INTAKE.md.
+
+
+## 2026-10-02 � Borrower chatbot evidence gate completed
+Authenticated browser checks passed for drbhatia, profsurkumar and skumar: intake, template download, missing input, incomplete report, reload/reauth restoration and cancellation. drbhatia positive synthetic six-file case verified hashes and READY_FOR_PROFESSIONAL_REVIEW, while retaining NOT_VALIDATED and disabled contractual calculation. sbhatia absent from available secrets; cross-account browser isolation not run (unit scoping check passed). Evidence: scratch/covenant_pilot/borrower_browser/summary.json and drbhatia_synthetic_report.json/png. Final borrower tests18passed, fast6passed. Actual borrower documents and professional definition review remain outstanding; automatic raw-document extraction is not implemented. No commit/push/deployment performed.
+
+
+## Gemini connection recovery (2026-10-02)
+- Switched existing chatbot sessions to Gemini when configured; Anthropic connection failures now fall back to Gemini 2.5 Flash. Actual fallback provider/model is recorded in response metadata and usage logs.
+- Direct Gemini probe succeeded outside the restricted network sandbox. Initial browser call still failed from the sandbox-launched server; restarted localhost:8501 with network access and preserved the isolated covenant validation database.
+- Browser verification: drbhatia received a substantive new response (#526) in approximately 4.3 seconds, persisted as gemini-2.5-flash without APIConnectionError. All three configured profiles selected Gemini by default; sbhatia is absent. Evidence: scratch/covenant_pilot/gemini_browser/summary.json and drbhatia_response.json/png.
+- Checks: 23 Gemini adapter tests passed; standard fast suite 6 passed; diff whitespace check passed. No commit, push, or deployment.
+
+## 2026-11-05 — V2.1 UI/UX Stabilization & Universal Theme Interoperability
+- **Light/Dark Universal Parity:** Implemented comprehensive Light Mode CSS tokens in assets/style_light.css with dark-slate typography (#1E293B), active indigo pills, and crisp card borders. Fixed white-on-white text in left panel navigation.
+- **Dynamic Chart & Table Contrast:** Updated helpers.py:plotly_layout_light() to dynamically enforce dark axis ticks (#64748B), tick fonts (#334155), and labels. Theme-adapted Transition Matrix in models/board_export.py. Universal Glide Data Grid container rules for div[data-testid="stDataFrame"].
+- **Sidebar Hierarchy Restoration:** Fixed inverted sidebar ordering by removing artificial CSS flex overrides; core navigation links (stSidebarNav) are pinned at the top, and global filters sit below.
+- **Top Header Theme Switching:** Implemented #navbar-theme-toggle-btn directly in the fixed top #lc-navbar with query-param state sync (?theme=light/?theme=dark) and SQLite preference persistence (db.save_user_pref).
+- **Markdown Code Block Escapes:** Resolved CRCRLF line-ending corruption in app.py and dedented HTML blocks, ensuring zero raw <pre><code> leakage on login and main headers.
+- **Automated Verification:** 6 Playwright visual regression screenshots captured across Overview, Dashboard, Transitions, Scenarios, Board Deck, and AI Assistant. Fast test suite passed (6 passed in 20.13s). Bumped VERSION to 2.1.0.

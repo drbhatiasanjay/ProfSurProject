@@ -260,20 +260,109 @@ div.stata-rich-terminal-card {
     cursor: pointer;
 }
 
-/* Sidebar */
+/* Sidebar Container & Content */
 section[data-testid="stSidebar"] {
-    background: var(--bg-surface) !important;
+    background: #FFFFFF !important;
     border-right: 1px solid var(--border-subtle) !important;
 }
 
-section[data-testid="stSidebar"] h1 {
+section[data-testid="stSidebar"] * {
+    color: var(--text-secondary);
+}
+
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] h4 {
     color: var(--text-primary) !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+section[data-testid="stSidebar"] h1 {
     font-size: 1.25rem;
     font-weight: 800;
     padding-bottom: 0.5rem;
     border-bottom: 2px solid var(--accent-indigo);
     margin-bottom: 1rem;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Sidebar navigation links */
+[data-testid="stSidebarNav"] a,
+[data-testid="stSidebarNav"] a span,
+[data-testid="stSidebarNav"] a div,
+[data-testid="stSidebarNav"] span,
+[data-testid="stSidebarNav"] p,
+[data-testid="stSidebarNav"] li,
+[data-testid="stSidebarNavItems"] div,
+[data-testid="stSidebarNavItems"] span {
+    color: #1E293B !important;
+    font-size: 0.90rem !important;
+    font-weight: 500 !important;
+    transition: all 0.15s ease !important;
+}
+
+[data-testid="stSidebarNav"] a:hover,
+[data-testid="stSidebarNav"] a:hover span,
+[data-testid="stSidebarNav"] a:hover div {
+    color: #4F46E5 !important;
+    background: rgba(79, 70, 229, 0.08) !important;
+    border-radius: 8px !important;
+}
+
+[data-testid="stSidebarNav"] a[aria-current="page"],
+[data-testid="stSidebarNav"] a[aria-current="page"] span,
+[data-testid="stSidebarNav"] a[aria-current="page"] div {
+    color: #4F46E5 !important;
+    background: rgba(79, 70, 229, 0.12) !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+}
+
+/* Sidebar navigation section separators & headers */
+[data-testid="stSidebarNavSeparator"],
+[data-testid="stSidebarNav"] [data-testid="stSidebarNavSeparator"] {
+    border-color: #E2E8F0 !important;
+}
+
+[data-testid="stSidebarNav"] header,
+[data-testid="stSidebarNav"] [data-testid="stSidebarNavViewButton"],
+[data-testid="stSidebarNav"] ul > li > div:first-child span,
+[data-testid="stSidebarNav"] > div:first-child span {
+    color: #64748B !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
+/* Sidebar form widgets, labels & inputs */
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] label p,
+section[data-testid="stSidebar"] label span {
+    color: #0F172A !important;
+    font-weight: 600 !important;
+}
+
+section[data-testid="stSidebar"] div[data-baseweb="select"] > div {
+    background: #FFFFFF !important;
+    border-color: #CBD5E1 !important;
+    color: #0F172A !important;
+}
+
+section[data-testid="stSidebar"] div[data-baseweb="select"] span,
+section[data-testid="stSidebar"] div[data-baseweb="select"] div {
+    color: #0F172A !important;
+}
+
+section[data-testid="stSidebar"] input {
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    border-color: #CBD5E1 !important;
+}
+
+section[data-testid="stSidebar"] div[data-testid="stCaptionContainer"] p,
+section[data-testid="stSidebar"] small {
+    color: #64748B !important;
 }
 
 /* Buttons */
@@ -471,4 +560,121 @@ div[data-testid="stTabs"],
     opacity: 1 !important;
     filter: none !important;
     transition: none !important;
+}
+
+
+/* ==========================================================================
+   UNIFIED MODERN CHAT & DATA TABLE SUITE (STREAMLIT LIGHT THEME)
+   ========================================================================== */
+
+/* 1. Markdown & Chat Financial Data Tables */
+div[data-testid="stMarkdownContainer"] table,
+div[data-testid="stChatMessage"] table,
+div[data-testid="stTable"] table {
+    width: 100% !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    margin: 16px 0 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+div[data-testid="stMarkdownContainer"] table thead,
+div[data-testid="stChatMessage"] table thead,
+div[data-testid="stTable"] table thead {
+    background: #F8FAFC !important;
+}
+
+div[data-testid="stMarkdownContainer"] table th,
+div[data-testid="stChatMessage"] table th,
+div[data-testid="stTable"] table th {
+    background: #F8FAFC !important;
+    color: #334155 !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    padding: 12px 16px !important;
+    border: none !important;
+    border-bottom: 2px solid #CBD5E1 !important;
+    text-align: left !important;
+}
+
+div[data-testid="stMarkdownContainer"] table td,
+div[data-testid="stChatMessage"] table td,
+div[data-testid="stTable"] table td {
+    background: transparent !important;
+    color: #1E293B !important;
+    font-size: 13px !important;
+    padding: 11px 16px !important;
+    border: none !important;
+    border-bottom: 1px solid #F1F5F9 !important;
+    line-height: 1.5 !important;
+}
+
+div[data-testid="stMarkdownContainer"] table tbody tr:nth-child(even),
+div[data-testid="stChatMessage"] table tbody tr:nth-child(even),
+div[data-testid="stTable"] table tbody tr:nth-child(even) {
+    background-color: #F8FAFC !important;
+}
+
+div[data-testid="stMarkdownContainer"] table tbody tr:hover,
+div[data-testid="stChatMessage"] table tbody tr:hover,
+div[data-testid="stTable"] table tbody tr:hover {
+    background-color: #F1F5F9 !important;
+    transition: background-color 0.15s ease-in-out !important;
+}
+
+div[data-testid="stMarkdownContainer"] table tbody tr:last-child td,
+div[data-testid="stChatMessage"] table tbody tr:last-child td,
+div[data-testid="stTable"] table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+/* 2. Reasoning Trace / Status Widget */
+[data-testid="stStatusWidget"],
+div[data-testid="stStatusWidget"] {
+    background: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    margin: 14px 0 16px 0 !important;
+}
+
+[data-testid="stStatusWidget"] summary,
+div[data-testid="stStatusWidget"] summary {
+    background: #F1F5F9 !important;
+    color: #0F172A !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    padding: 10px 16px !important;
+    border-bottom: 1px solid #E2E8F0 !important;
+}
+
+/* 3. User Message in Light Mode */
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+    background: #F0F4FF !important;
+    border: 1px solid #DBEAFE !important;
+    border-radius: 12px !important;
+    padding: 14px 18px !important;
+    margin-bottom: 16px !important;
+}
+
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) div[data-testid="stMarkdownContainer"] p {
+    color: #1E3A8A !important;
+}
+
+
+
+/* Universal Dataframe (st.dataframe Glide Data Grid) container in Light Mode */
+div[data-testid="stDataFrame"],
+div[data-testid="stDataFrame"] > div {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
 }

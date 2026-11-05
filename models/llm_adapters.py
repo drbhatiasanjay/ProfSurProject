@@ -1160,7 +1160,7 @@ def normalize_assistant_chunk(chunk: Any) -> tuple[str, Optional[dict]]:
     return str(text), chart
 
 
-def stream_with_fallback(primary: Iterator[Any], fallback_factory) -> Iterator[Any]:
+def stream_with_fallback(primary: Iterator[Any], fallback_factory, on_fallback=None) -> Iterator[Any]:
     """Use one fallback provider when the primary fails before yielding content."""
     yielded_content = False
     for chunk in primary:
@@ -1170,6 +1170,8 @@ def stream_with_fallback(primary: Iterator[Any], fallback_factory) -> Iterator[A
             for err_marker in ("error", "not configured", "not installed", "backend not", "invalid_argument")
         )
         if is_error and not yielded_content:
+            if on_fallback is not None:
+                on_fallback()
             yield from fallback_factory()
             return
         if text or _chart:

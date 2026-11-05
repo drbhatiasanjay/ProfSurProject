@@ -15,6 +15,16 @@ from models.llm_adapters import (
 
 
 class TestStreamGeminiAgent:
+    def test_connection_error_switches_actual_provider_to_gemini(self):
+        provider = {"backend": "anthropic", "model": "claude-sonnet-4-6"}
+        stream = stream_with_fallback(
+            iter(["[Anthropic error: APIConnectionError: Connection error.]"]),
+            lambda: iter(["Gemini answer"]),
+            on_fallback=lambda: provider.update(backend="gemini", model="gemini-2.5-flash"),
+        )
+        assert list(stream) == ["Gemini answer"]
+        assert provider == {"backend": "gemini", "model": "gemini-2.5-flash"}
+
     def test_provider_fallback_only_runs_before_primary_content(self):
         primary = iter(["[Anthropic error: temporary outage]"])
         fallback = lambda: iter(["fallback answer"])

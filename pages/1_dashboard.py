@@ -10,6 +10,7 @@ import numpy as np
 from scipy import stats
 import db
 from helpers import (
+    heatmap_colorscale,
     winsorize, format_pct, format_inr, format_number, format_pvalue,
     plotly_layout, event_bands, new_badge, ensure_session_state, is_india_panel, STAGE_COLORS, STAGE_ORDER,
     PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG,
@@ -22,6 +23,7 @@ from models.llm_adapters import generate_page_insights
 
 ensure_session_state()
 db.log_page_visit("Dashboard")
+_is_dark = st.session_state.get("theme", "dark") == "dark"
 filters = st.session_state.filters
 ft = db.filters_to_tuple(filters)
 _india = is_india_panel(st.session_state.get("panel_mode", "latest"))
@@ -705,9 +707,11 @@ if _sig_pairs:
     for _idx, (_sa, _sb) in enumerate(_sig_pairs):
         _diff_val = _matrix_diff.loc[_sa, _sb] if _sa in _matrix_diff.index and _sb in _matrix_diff.columns else 0.0
         with _pw_cols[_idx % len(_pw_cols)]:
+            _pw_bg = "rgba(239, 68, 68, 0.15)" if _is_dark else "#FEE2E2"
+            _pw_text = "#F8FAFC" if _is_dark else "#991B1B"
             st.markdown(
-                f"<div style='background:#FEE2E2;border-left:3px solid #DC2626;padding:6px 8px;"
-                f"border-radius:4px;font-size:12px;margin:2px 0'>"
+                f"<div style='background:{_pw_bg};border:1px solid rgba(239,68,68,0.3);border-left:3px solid #EF4444;padding:6px 8px;"
+                f"border-radius:4px;font-size:12px;margin:2px 0;color:{_pw_text};'>"
                 f"<b>{_sa}</b> vs <b>{_sb}</b><br>"
                 f"Δμ = {_diff_val:+.1f}pp · p&lt;0.05</div>",
                 unsafe_allow_html=True,
@@ -766,15 +770,17 @@ for col in determinants:
     if mx > mn:
         heat_norm[col] = (heat_norm[col] - mn) / (mx - mn) * 100
 
+_is_dark = st.session_state.get("theme", "light") == "dark"
 fig_heat = px.imshow(
     heat_norm.values,
     x=[det_labels.get(c, c) for c in determinants],
     y=stage_order_present,
-    color_continuous_scale=["#F8FAFC", PRIMARY, "#065F46"],
+    color_continuous_scale=heatmap_colorscale(),
     aspect="auto",
     text_auto=".0f",
     labels={"color": "Relative Level (0-100)"},
 )
+fig_heat.update_traces(textfont=dict(color="#F8FAFC" if _is_dark else "#0F172A", size=12))
 fig_heat.update_layout(**plotly_layout("Determinant Profiles by Life Stage (Normalized)", height=380))
 st.plotly_chart(fig_heat, use_container_width=True, config=PLOTLY_CONFIG)
 chart_download_button(fig_heat, "determinant_profiles_heatmap.png")
