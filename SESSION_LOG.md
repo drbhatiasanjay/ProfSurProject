@@ -1,5 +1,37 @@
 # ProfSurProject — Session Log
 
+## CHECKPOINT — Release v2.1.0 Full Deployment, Red-Team Integrity & GCP Live Verification (2026-11-05 22:38 IST)
+
+**Branch:** `master` · **HEAD:** `07f6622` · **Tag:** `v2.1.0`  
+**Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  
+**Cloud Run Revision:** `lifecycle-leverage-00222-wsw`  
+**Conversation:** `f6978611-2b08-4fd9-8af9-7b703ed76b10`
+
+### State at Checkpoint
+- **Google Cloud Run Deployment:**
+  - Automated deployment pipeline (`.github/workflows/deploy.yml`, Run `42068823114`) completed with zero manual approval gates.
+  - Pytest: 820 tests passed in 2m41s (100% clean test execution on Linux Python 3.11).
+  - OCaml: `lifecycle-ontology` build and tests passed in 3m49s.
+  - Cloud Run deployment succeeded in 4m35s.
+- **Live Evidence Gate (AGENTS.md Rule 5):**
+  - Authenticated Playwright session against `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`.
+  - Visual verification artifact: `verified_gcp_v2_1_live_dark.png` (44,351 bytes on disk).
+  - Verified top navigation bar displaying `v2.1.0`, `bf2001-25_Sept26`, `drbhatia · Admin`, and top-anchored sidebar navigation.
+- **All 5 Role Logins Verified (100% bcrypt pass):**
+  - `drbhatia` (admin) -> PASS
+  - `skumar` (researcher) -> PASS
+  - `profsurkumar` (researcher) -> PASS
+  - `sbhatia` (viewer) -> PASS
+  - `guest` (viewer) -> PASS
+- **Econometric & Calculation Integrity:**
+  - Demeaned within-OLS fallback refined with `.cov` covariance matrix DataFrame preservation for Hausman specification test (`hausman fe re`).
+  - Strict fail-closed error handling on runtime estimator exceptions.
+  - Verified ground truth panel values ($N=8,677$ primary thesis sample, $N=9,031$ extended universe, Tata Motors = `248093`).
+- **Knowledge Graph:**
+  - Refreshed via Graphify (`graphify extract .` and `graphify cluster-only .`): 7,450 nodes, 12,204 edges, 850 communities in `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.json`.
+- **Capabilities Documentation:**
+  - Synchronized via `scripts/sync_command_registry_docs.py` to `docs/COMMAND_CAPABILITIES.md`.
+
 ## CHECKPOINT — Recordly Master Walkthrough V4: 10-Scene Dynamic Run-Up & 5 Dedicated Company Archetypes (2026-09-30 01:25 IST)
 
 **Branch:** `agy/wave6-8-harness-repair-2026-09-11` · **HEAD:** `6844305`  
