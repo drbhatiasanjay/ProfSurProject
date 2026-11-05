@@ -3,8 +3,14 @@ param([switch]$PrePush)
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
 Set-Location $repo
-$python = Join-Path $repo ".venv\Scripts\python.exe"
-if (-not (Test-Path $python)) { $python = "python" }
+$python = "python"
+$venvPy = Join-Path $repo ".venv\Scripts\python.exe"
+if (Test-Path $venvPy) {
+    try {
+        & $venvPy -m pytest --version 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $python = $venvPy }
+    } catch {}
+}
 
 & $python -m py_compile models\agent_tools.py models\llm_adapters.py models\ml_predict.py models\stata_engine.py pages\19_ai_assistant.py pages\23_stata_studio.py
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
