@@ -532,6 +532,7 @@ def _execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
                 "tier": "UNSUPPORTED",
                 "command": cmd,
                 "message": f"Command '{cmd}' is not recognized in Stata Studio.",
+                "admin_contact": "admin@lifecycle-leverage.internal",
                 "supported_commands": supported_cmds,
                 "ascii_output": (
                     f". {parsed.get('raw', cmd_str)}\n"

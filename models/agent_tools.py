@@ -1308,6 +1308,7 @@ def run_cfo_stress_simulation(
         "company": target_name,
         "company_code": target_code,
         "latest_reporting_year": latest_year,
+        "life_stage": active_stage,
         "measured_baseline": {
             "leverage": f"{base_lev:.2f}%",
             "profitability_roa": f"{base_roa:.2f}%",
@@ -1329,6 +1330,7 @@ def run_cfo_stress_simulation(
             "covenant_status": covenant_status,
             "available_debt_headroom_cr": f"Rs. {available_headroom_cr:,} Cr",
             "indicative_financial_health_band": rating_band,
+            "simulated_credit_rating": rating_band,
         },
         "cfo_action_playbook": playbook,
         "guardrail_notice": "Illustrative stress simulation based on empirical sensitivity elasticities. Actual covenant compliance and formal credit ratings require syndicated loan agreements and formal agency evaluation.",
