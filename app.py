@@ -430,6 +430,16 @@ ensure_session_state()
 # ── Sidebar: Global filters ──
 from helpers import PANEL_LABELS as panel_label_map
 with st.sidebar:
+    st.markdown("### Workspace Mode")
+    _ws_mode_label = st.radio(
+        "Workspace Mode",
+        options=["Public Universe (8,600+ CMIE)", "Pre-IPO Deal Dossier"],
+        index=0 if st.session_state.get("workspace_mode", "public") == "public" else 1,
+        key="workspace_mode_radio",
+        label_visibility="collapsed",
+    )
+    st.session_state["workspace_mode"] = "pre_ipo" if "Pre-IPO" in _ws_mode_label else "public"
+
     st.markdown("### Global Filters")
 
     # Dataset selectbox — native Streamlit widget triggers proper rerun + state propagation
@@ -572,6 +582,7 @@ stata_studio        = st.Page("pages/25_stata_studio_v2.py",    title="Stata Stu
 # Legacy Studio archived for rollback verification; canonical route is pages/25_stata_studio_v2.py (SW-06)
 legacy_stata_studio = st.Page("pages/23_stata_studio.py",       title="Stata Studio (Legacy)", icon=":material/history:")
 ai_chat_guide       = st.Page("pages/24_ai_chat_guide.py",      title="AI Chat Guide",       icon=":material/menu_book:")
+pre_ipo             = st.Page("pages/27_pre_ipo_drhp.py",       title="Pre-IPO DRHP Intelligence", icon=":material/rocket_launch:")
 # knowledge_graph2  = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")  # temporarily hidden
 _admin_tools = [settings, ai_chat_guide]
 if _role in {"admin", "researcher"}:
@@ -579,17 +590,30 @@ if _role in {"admin", "researcher"}:
 if _role == "admin":
     _admin_tools.extend([admin_activity, workbench])
 
-nav = st.navigation({
-    "": [
-        overview, dashboard, data_explorer, benchmarks,
-        life_stage_dynamics, transitions,
-        scenarios, econometrics, advanced_econ, interaction_effects,
-        stata_studio,
-        ml_models, forecasting, clustering,
-        ai_assistant, board_deck, company_financing,
-    ],
-    "Admin & Tools": _admin_tools,
-})
+if st.session_state.get("workspace_mode") == "pre_ipo":
+    nav = st.navigation({
+        "Pre-IPO Deal Workflow": [
+            pre_ipo,
+            benchmarks,
+            company_financing,
+            scenarios,
+            ai_assistant,
+            board_deck,
+        ],
+        "Admin & Tools": _admin_tools,
+    })
+else:
+    nav = st.navigation({
+        "": [
+            overview, dashboard, pre_ipo, data_explorer, benchmarks,
+            life_stage_dynamics, transitions,
+            scenarios, econometrics, advanced_econ, interaction_effects,
+            stata_studio,
+            ml_models, forecasting, clustering,
+            ai_assistant, board_deck, company_financing,
+        ],
+        "Admin & Tools": _admin_tools,
+    })
 
 # ── Fixed top header bar — pure HTML overlay, no CSS selector fragility ──
 from datetime import datetime, timezone as _tz
