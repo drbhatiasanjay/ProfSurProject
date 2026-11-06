@@ -19,9 +19,34 @@ import pandas as pd
 from scipy import stats
 import plotly.graph_objects as go
 import logging
+from functools import wraps
 import plotly.express as px
 
 logger = logging.getLogger(__name__)
+
+
+def board_ratios(frame):
+    """Thesis DB leverage is percent; legacy board builders consume fractions.
+
+    Explicit unit metadata makes this idempotent; never infer units by magnitude.
+    Call only with thesis-panel data, not US/API panel data.
+    """
+    if frame is None or frame.attrs.get("board_leverage_unit") == "fraction":
+        return frame
+    result = frame.copy()
+    for col in ("leverage", "avg_leverage"):
+        if col in result:
+            result[col] = result[col] / 100.0
+    result.attrs["board_leverage_unit"] = "fraction"
+    return result
+
+
+def _board_units(builder):
+    @wraps(builder)
+    def wrapped(company_df, company_info, peers_df, full_panel, stage_summary):
+        return builder(board_ratios(company_df), company_info, board_ratios(peers_df),
+                       board_ratios(full_panel), board_ratios(stage_summary))
+    return wrapped
 
 from helpers import (
     plotly_layout, PLOTLY_CONFIG, STAGE_COLORS, STAGE_ORDER,
@@ -77,6 +102,7 @@ def _add_hline_zero(fig):
 
 # ── Topic 1 — Executive Summary ───────────────────────────────────────────────
 
+@_board_units
 def build_topic_1(company_df, company_info, peers_df, full_panel, stage_summary):
     row = _co_latest(company_df)
     df5 = _last_n(company_df, 5)
@@ -96,10 +122,16 @@ def build_topic_1(company_df, company_info, peers_df, full_panel, stage_summary)
     ]
     fig_kpi = go.Figure()
     for i, (label, val, _) in enumerate(kpis):
+        suffix = "x" if label == "Interest Cover" else ("" if label == "Tax Shield" else "%")
+        scaled = val if label in ("Interest Cover", "Tax Shield") else (val * 100 if pd.notna(val) else None)
+        if pd.isna(scaled):
+            fig_kpi.add_annotation(text=f"{label}<br>N/A", x=(i + 0.5) / len(kpis), y=0.5,
+                                   xref="paper", yref="paper", showarrow=False)
+            continue
         fig_kpi.add_trace(go.Indicator(
             mode="number",
-            value=round(val * 100, 2) if pd.notna(val) else 0,
-            number={"suffix": "%", "font": {"size": 28}},
+            value=round(scaled, 2),
+            number={"suffix": suffix, "valueformat": ".2f", "font": {"size": 28}},
             title={"text": label, "font": {"size": 13}},
             domain={"row": 0, "column": i},
         ))
@@ -141,7 +173,7 @@ def build_topic_1(company_df, company_info, peers_df, full_panel, stage_summary)
         )
     if pd.notna(row.get("interest_amt")) and row.get("interest_amt", 0) > 0:
         cover = row.get("pbit", 0) / row["interest_amt"]
-        flag = "healthy" if cover >= 3 else ("watch" if cover >= 1.5 else "**critical — below IBC threshold**")
+        flag = "healthy" if cover >= 3 else ("watch" if cover >= 1.5 else "**critical — below illustrative coverage floor**")
         insights.append(f"Interest coverage is **{cover:.1f}x** ({flag}).")
 
     actions = [
@@ -156,6 +188,7 @@ def build_topic_1(company_df, company_info, peers_df, full_panel, stage_summary)
 
 # ── Topic 2 — Corporate Life Cycle ────────────────────────────────────────────
 
+@_board_units
 def build_topic_2(company_df, company_info, peers_df, full_panel, stage_summary):
     df = company_df.sort_values("year")
     stage_col = "life_stage"
@@ -173,7 +206,7 @@ def build_topic_2(company_df, company_info, peers_df, full_panel, stage_summary)
             marker=dict(color=stage_colors_map.get(stage, PRIMARY), size=14, symbol="square"),
             name=stage,
         ))
-    lay = plotly_layout("Life-Stage Trajectory (2001–2024)", height=320)
+    lay = plotly_layout(f"Life-Stage Trajectory ({int(df.year.min())}-{int(df.year.max())})", height=320)
     lay["yaxis"] = {"title": "Stage", "categoryorder": "array", "categoryarray": STAGE_ORDER[::-1]}
     lay["xaxis_title"] = "Year"
     fig_tl.update_layout(**lay)
@@ -218,9 +251,10 @@ def build_topic_2(company_df, company_info, peers_df, full_panel, stage_summary)
         "indicating a characteristically stable trajectory."
     )
     if full_panel is not None and not full_panel.empty:
-        peers_in_stage = full_panel[full_panel[stage_col] == cur_stage]["company_code"].nunique()
+        latest_panel = full_panel[full_panel.year == df.year.max()]
+        peers_in_stage = latest_panel[latest_panel[stage_col] == cur_stage]["company_code"].nunique()
         insights.append(
-            f"**{peers_in_stage} of 401 firms** are currently classified as {cur_stage} — "
+            f"**{peers_in_stage} of {latest_panel.company_code.nunique()} firms** are classified as {cur_stage} in FY{int(df.year.max())} — "
             "your immediate peer universe for benchmarking."
         )
     actions = [
@@ -235,6 +269,7 @@ def build_topic_2(company_df, company_info, peers_df, full_panel, stage_summary)
 
 # ── Topic 3 — Capital Structure Profile ───────────────────────────────────────
 
+@_board_units
 def build_topic_3(company_df, company_info, peers_df, full_panel, stage_summary):
     df = _last_n(company_df, 10)
     row = _co_latest(company_df)
@@ -280,7 +315,7 @@ def build_topic_3(company_df, company_info, peers_df, full_panel, stage_summary)
         fig_cov.add_hline(y=3, line_dash="dot", line_color=SECONDARY,
                            annotation_text="3x healthy", annotation_position="top right")
         fig_cov.add_hline(y=1.5, line_dash="dot", line_color=ACCENT,
-                           annotation_text="1.5x IBC threshold", annotation_position="top right")
+                           annotation_text="1.5x illustrative coverage floor", annotation_position="top right")
         fig_cov.add_trace(go.Scatter(
             x=df["year"], y=df["coverage"],
             mode="lines+markers", name="Interest Coverage",
@@ -324,6 +359,7 @@ def build_topic_3(company_df, company_info, peers_df, full_panel, stage_summary)
 
 # ── Topic 4 — Profitability & Earnings ────────────────────────────────────────
 
+@_board_units
 def build_topic_4(company_df, company_info, peers_df, full_panel, stage_summary):
     df = _last_n(company_df, 10)
     row = _co_latest(company_df)
@@ -398,6 +434,7 @@ def build_topic_4(company_df, company_info, peers_df, full_panel, stage_summary)
 
 # ── Topic 5 — Asset Base & Tangibility ────────────────────────────────────────
 
+@_board_units
 def build_topic_5(company_df, company_info, peers_df, full_panel, stage_summary):
     df = _last_n(company_df, 10)
     row = _co_latest(company_df)
@@ -473,6 +510,7 @@ def build_topic_5(company_df, company_info, peers_df, full_panel, stage_summary)
 
 # ── Topic 6 — Cash Flow Analysis ──────────────────────────────────────────────
 
+@_board_units
 def build_topic_6(company_df, company_info, peers_df, full_panel, stage_summary):
     df = _last_n(company_df, 10)
     row = _co_latest(company_df)
@@ -541,7 +579,7 @@ def build_topic_6(company_df, company_info, peers_df, full_panel, stage_summary)
         )
     actions = [
         "Negative NCFF (financing outflows) indicates net debt repayment — a deleveraging signal.",
-        "Sustained negative NCFO is the primary IBC stress indicator — monitor closely.",
+        "Sustained negative operating cash flow warrants a liquidity review; it does not establish legal default.",
         "Review cashflow sign pattern year-over-year — a shift in NCFO sign triggers a stage reclassification.",
     ]
 
@@ -551,6 +589,7 @@ def build_topic_6(company_df, company_info, peers_df, full_panel, stage_summary)
 
 # ── Topic 7 — Tax & Dividend Policy ───────────────────────────────────────────
 
+@_board_units
 def build_topic_7(company_df, company_info, peers_df, full_panel, stage_summary):
     df = _last_n(company_df, 10)
     row = _co_latest(company_df)
@@ -573,11 +612,11 @@ def build_topic_7(company_df, company_info, peers_df, full_panel, stage_summary)
     fig_shield = go.Figure()
     if "tax_shield" in df.columns:
         fig_shield.add_trace(go.Bar(
-            x=df["year"], y=df["tax_shield"] * 100,
+            x=df["year"], y=df["tax_shield"],
             marker_color=SECONDARY, name="Tax Shield",
         ))
         lay_sh = plotly_layout("Tax Shield from Interest Deductibility", height=280)
-        lay_sh["yaxis_title"] = "Tax Shield (%)"
+        lay_sh["yaxis_title"] = "Tax Shield (source monetary units)"
         fig_shield.update_layout(**lay_sh)
         figs = [fig_tax, fig_shield]
     else:
@@ -597,8 +636,8 @@ def build_topic_7(company_df, company_info, peers_df, full_panel, stage_summary)
     shield_now = row.get("tax_shield")
     if pd.notna(shield_now):
         insights.append(
-            f"Tax shield value is **{_fmt(shield_now)}** — "
-            f"{'above-average benefit from debt' if shield_now > 0.03 else 'modest debt tax benefit; scope to increase if leverage rises'}."
+            f"Reported tax shield is **{_fmt(shield_now, pct=False)}** in source monetary units. "
+            "Confirm tax capacity and deductibility before estimating an incremental benefit."
         )
     insights.append(
         f"Dividend paid in **{payer_yrs}/{total_yrs} years** ({round(payer_yrs/total_yrs*100)}% of period) — "
@@ -616,6 +655,7 @@ def build_topic_7(company_df, company_info, peers_df, full_panel, stage_summary)
 
 # ── Topic 8 — Peer Benchmarking ───────────────────────────────────────────────
 
+@_board_units
 def build_topic_8(company_df, company_info, peers_df, full_panel, stage_summary):
     row = _co_latest(company_df)
     cur_stage = company_info.get("current_stage", row.get("life_stage", ""))
@@ -691,7 +731,7 @@ def build_topic_8(company_df, company_info, peers_df, full_panel, stage_summary)
         elif co_lev > p75:
             insights.append(f"Leverage ({_fmt(co_lev)}) **exceeds the peer 75th percentile** ({_fmt(p75)}) — above the typical {cur_stage} range.")
         else:
-            insights.append(f"Leverage ({_fmt(co_lev)}) is **within the optimal peer band** ({_fmt(p25)}–{_fmt(p75)}) — well-positioned.")
+            insights.append(f"Leverage ({_fmt(co_lev)}) is **within the observed peer band** ({_fmt(p25)}–{_fmt(p75)}) — well-positioned.")
         insights.append(f"Leverage percentile rank among {cur_stage} peers: **{lev_pct}th**.")
     peer_n = len(peers_df) if peers_df is not None else 0
     insights.append(f"Peer set: **{peer_n} firms** in {cur_stage} stage with similar size (±1 decile).")
@@ -707,27 +747,29 @@ def build_topic_8(company_df, company_info, peers_df, full_panel, stage_summary)
 
 # ── Topic 9 — Capital Structure Optimisation ──────────────────────────────────
 
+@_board_units
 def build_topic_9(company_df, company_info, peers_df, full_panel, stage_summary):
     row = _co_latest(company_df)
     cur_stage = company_info.get("current_stage", row.get("life_stage", ""))
     co_lev = row.get("leverage", np.nan)
 
-    # Peer distribution for optimal band
+    # Peer distribution for observed peer band
     if full_panel is not None and not full_panel.empty:
-        stage_latest = full_panel[full_panel["life_stage"] == cur_stage].sort_values("year").groupby("company_code").last().reset_index()
+        stage_latest = full_panel[(full_panel["life_stage"] == cur_stage) & (full_panel.year == row.year) & (full_panel.company_code != company_info["code"])].drop_duplicates("company_code")
         p25 = stage_latest["leverage"].quantile(0.25)
         p50 = stage_latest["leverage"].quantile(0.50)
         p75 = stage_latest["leverage"].quantile(0.75)
     else:
-        p25, p50, p75 = 0.25, 0.40, 0.55
+        p25, p50, p75 = np.nan, np.nan, np.nan
 
+    has_peers = pd.notna(p25) and pd.notna(p75)
     # Gauge chart
     gauge_val = float(co_lev * 100) if pd.notna(co_lev) else 0
     fig_gauge = go.Figure(go.Indicator(
         mode="gauge+number+delta",
         value=gauge_val,
         delta={"reference": float(p50 * 100), "valueformat": ".1f"},
-        title={"text": f"Leverage vs {cur_stage} Optimal Band (%)"},
+        title={"text": f"Leverage vs {cur_stage} Observed Peer Band (%)"},
         gauge={
             "axis": {"range": [0, max(100, gauge_val * 1.2)]},
             "bar": {"color": PRIMARY},
@@ -740,6 +782,10 @@ def build_topic_9(company_df, company_info, peers_df, full_panel, stage_summary)
                           "thickness": 0.75, "value": p75 * 100},
         },
     ))
+    if not has_peers:
+        fig_gauge.data[0].gauge.steps = ()
+        fig_gauge.data[0].gauge.threshold = None
+        fig_gauge.add_annotation(text="Peer band unavailable", x=.5, y=.1, showarrow=False)
     fig_gauge.update_layout(**plotly_layout("", height=300))
 
     # Scenario table
@@ -748,41 +794,41 @@ def build_topic_9(company_df, company_info, peers_df, full_panel, stage_summary)
                                ("Current", 0), ("+10% debt", 0.10), ("+20% debt", 0.20)]:
         new_lev = max(0, float(co_lev or 0) * (1 + delta_lev))
         pct_rank = _pct(stage_latest["leverage"] if full_panel is not None and not full_panel.empty else pd.Series([co_lev]), new_lev)
-        in_band = "✓ In band" if p25 <= new_lev <= p75 else ("↓ Under" if new_lev < p25 else "↑ Over")
+        in_band = "N/A" if pd.isna(p25) else ("In band" if p25 <= new_lev <= p75 else ("Below" if new_lev < p25 else "Above"))
         scenarios.append({
             "Scenario": label,
             "Leverage": f"{new_lev*100:.1f}%",
             "Peer Percentile": f"{pct_rank}th",
-            "vs Optimal Band": in_band,
+            "vs Observed Peer Band": in_band,
         })
     scen_df = pd.DataFrame(scenarios)
 
     # Debt headroom bar
-    headroom = max(0, (p75 - float(co_lev or 0)))
-    headroom_cr = headroom * float(row.get("total_capital", 0) or 0) if row.get("total_capital") else None
+    headroom = max(0, (p75 - float(co_lev or 0))) if has_peers else np.nan
     fig_head = go.Figure(go.Bar(
-        x=["Current Leverage", "75th Percentile Threshold", "Headroom"],
+        x=["Current Leverage", "75th Percentile Threshold", "Leverage gap"],
         y=[float(co_lev or 0) * 100, p75 * 100, headroom * 100],
         marker_color=[PRIMARY, NEUTRAL, SECONDARY],
     ))
-    fig_head.update_layout(**plotly_layout("Debt Headroom to 75th Peer Percentile", height=280))
+    fig_head.update_layout(**plotly_layout("Leverage Gap to 75th Peer Percentile (not debt capacity)", height=280))
 
     insights, actions = [], []
-    if pd.notna(co_lev):
+    if pd.notna(co_lev) and pd.notna(p25):
         if co_lev < p25:
-            insights.append(f"Leverage ({_fmt(co_lev)}) is **below** the optimal peer band ({_fmt(p25)}–{_fmt(p75)}) — potential untapped debt capacity.")
+            insights.append(f"Leverage ({_fmt(co_lev)}) is **below** the observed peer band ({_fmt(p25)}–{_fmt(p75)}) — this does not establish unused borrowing capacity.")
         elif co_lev > p75:
-            insights.append(f"Leverage ({_fmt(co_lev)}) **exceeds** the 75th peer percentile ({_fmt(p75)}) — above optimal range.")
+            insights.append(f"Leverage ({_fmt(co_lev)}) **exceeds** the 75th peer percentile ({_fmt(p75)}) — above observed range.")
         else:
-            insights.append(f"Leverage is **within the optimal peer band** ({_fmt(p25)}–{_fmt(p75)}) — well-positioned.")
+            insights.append(f"Leverage is **within the observed peer band** ({_fmt(p25)}–{_fmt(p75)}) — well-positioned.")
         headroom_pct = headroom * 100
-        insights.append(f"Debt headroom to 75th percentile: **{headroom_pct:.1f}pp**" +
-                         (f" (≈ ₹{headroom_cr:.0f} Cr)" if headroom_cr else "") + ".")
+        insights.append(f"Descriptive leverage gap to 75th percentile: **{headroom_pct:.1f}pp**. This is not borrowing capacity.")
     actions = [
-        "The ±20% scenario table provides the board with a clear range of feasible outcomes.",
+        "The ±20% scenario table provides the board with a clear range of illustrative outcomes.",
         "Headroom calculation should be updated when peer panel is refreshed annually.",
-        "For capital raise decisions: target leverage in the 40th–60th peer percentile range.",
+        "For capital raise decisions: assess forecast cash flows, covenants and liquidity buffers.",
     ]
+    if not insights:
+        insights.append("A same-year peer leverage band is unavailable; debt capacity cannot be inferred.")
 
     return {"figs": [fig_gauge, fig_head], "tables": [scen_df], "insights": insights,
             "actions": actions, "title": "Topic 9 — Capital Structure Optimisation"}
@@ -790,6 +836,7 @@ def build_topic_9(company_df, company_info, peers_df, full_panel, stage_summary)
 
 # ── Topic 10 — Forward View & Strategy ────────────────────────────────────────
 
+@_board_units
 def build_topic_10(company_df, company_info, peers_df, full_panel, stage_summary):
     from models.survival import prepare_transition_data, get_transition_matrix
 
@@ -859,6 +906,7 @@ def build_topic_10(company_df, company_info, peers_df, full_panel, stage_summary
 
 # ── Topic 11 — Risk & Stress Testing ──────────────────────────────────────────
 
+@_board_units
 def build_topic_11(company_df, company_info, peers_df, full_panel, stage_summary):
     row = _co_latest(company_df)
     df = company_df.sort_values("year")
@@ -914,9 +962,9 @@ def build_topic_11(company_df, company_info, peers_df, full_panel, stage_summary
         if base_cover < 3:
             insights.append(
                 "Coverage below 3x — a +200bp rate shock or 20% PBIT decline could push coverage "
-                "below the IBC threshold of 1.5x."
+                "below the illustrative coverage floor of 1.5x."
             )
-    ibc_yrs = int(df.get("ibc_2016", pd.Series([0])).sum()) if "ibc_2016" in df.columns else 0
+    ibc_yrs = 0  # IBC event dummies are not firm distress indicators.
     if ibc_yrs > 0:
         insights.append(f"IBC stress flag active for **{ibc_yrs} year(s)** in historical record.")
     actions = [
@@ -931,67 +979,26 @@ def build_topic_11(company_df, company_info, peers_df, full_panel, stage_summary
 
 # ── Topic 12 — SEBI / Regulatory Compliance ───────────────────────────────────
 
+@_board_units
 def build_topic_12(company_df, company_info, peers_df, full_panel, stage_summary):
     df = company_df.sort_values("year").copy()
-    # D/E ratio from leverage: leverage = D/(D+E) → D/E = leverage/(1-leverage)
-    df["de_ratio"] = df["leverage"].apply(
-        lambda v: v / (1 - v) if pd.notna(v) and v < 1 else np.nan
-    )
-    # SEBI LODR — general D/E guideline: typically ≤ 2:1 for most sectors
-    SEBI_DE_THRESHOLD = 2.0
-    df["de_status"] = df["de_ratio"].apply(
-        lambda v: "✓ Compliant" if pd.notna(v) and v <= SEBI_DE_THRESHOLD
-        else ("✗ Breach" if pd.notna(v) else "N/A")
-    )
-    df["coverage_status"] = df.apply(
-        lambda r: "✓" if (r.get("pbit", 0) / r.get("interest_amt", 1) >= 1.5
-                          if r.get("interest_amt", 0) > 0 else True)
-        else "✗ IBC risk", axis=1
-    )
-
-    # D/E trend
-    fig_de = go.Figure()
-    fig_de.add_hline(y=SEBI_DE_THRESHOLD, line_dash="dot", line_color=ACCENT,
-                     annotation_text=f"SEBI threshold {SEBI_DE_THRESHOLD}:1",
-                     annotation_position="top right")
-    colors = [PRIMARY if v <= SEBI_DE_THRESHOLD else ACCENT
-              for v in df["de_ratio"].fillna(0)]
-    fig_de.add_trace(go.Bar(x=df["year"], y=df["de_ratio"],
-                             marker_color=colors, name="D/E Ratio"))
-    fig_de.update_layout(**plotly_layout("Debt-to-Equity Ratio vs SEBI Threshold", height=320))
-
-    # Compliance summary table
-    comp_table = df[["year", "de_ratio", "de_status", "coverage_status"]].tail(10).copy()
-    comp_table["de_ratio"] = comp_table["de_ratio"].round(2)
-    comp_table.columns = ["Year", "D/E Ratio", "SEBI D/E Status", "IBC Coverage Status"]
-
-    # Peer compliance %
-    insights, actions = [], []
-    recent_de = df["de_ratio"].iloc[-1] if not df.empty else np.nan
-    if pd.notna(recent_de):
-        status = "compliant" if recent_de <= SEBI_DE_THRESHOLD else "above SEBI threshold"
-        insights.append(f"Current D/E ratio: **{recent_de:.2f}** — **{status}** (SEBI LODR guideline ≤ {SEBI_DE_THRESHOLD}).")
-    breaches = int((df["de_ratio"] > SEBI_DE_THRESHOLD).sum())
-    if breaches > 0:
-        insights.append(f"D/E ratio breached the {SEBI_DE_THRESHOLD} threshold in **{breaches} year(s)** historically.")
-    else:
-        insights.append("D/E ratio has remained within SEBI LODR guidelines throughout the analysis period.")
-    if peers_df is not None and not peers_df.empty and "leverage" in peers_df.columns:
-        peers_de = peers_df["leverage"].apply(lambda v: v / (1 - v) if pd.notna(v) and v < 1 else np.nan)
-        compliant_pct = int((peers_de <= SEBI_DE_THRESHOLD).mean() * 100)
-        insights.append(f"**{compliant_pct}%** of {company_info.get('current_stage', '')} peers are currently SEBI-compliant on D/E.")
-    actions = [
-        "Include SEBI LODR D/E compliance status in every board risk register.",
-        "If D/E is approaching 2:1, pre-approve an equity raise contingency before debt commitment.",
-        "IBC coverage status should be monitored quarterly — flag any year below 1.5x immediately.",
-    ]
-
-    return {"figs": [fig_de], "tables": [comp_table], "insights": insights,
-            "actions": actions, "title": "Topic 12 — SEBI / Regulatory Compliance"}
+    df["coverage"] = df["pbit"] / df["interest_amt"].where(df["interest_amt"] > 0)
+    table = df[["year", "leverage", "coverage"]].tail(10).copy()
+    table["leverage"] *= 100
+    table.columns = ["Year", "Debt / Assets (%)", "Interest coverage (x)"]
+    fig = go.Figure(go.Scatter(x=df.year, y=df.coverage, mode="lines+markers", name="Coverage"))
+    fig.update_layout(**plotly_layout("Observed coverage: contractual limits require input", height=320))
+    return {"figs": [fig], "tables": [table],
+            "insights": ["Debt policy and covenant review requires actual loan terms and applicable regulatory requirements.",
+                         "The panel does not establish SEBI compliance, legal default or a universal D/E limit."],
+            "actions": ["Record contractual definitions, limits, testing dates and responsible owners.",
+                        "Obtain equity and principal repayment data before computing D/E or full debt-service coverage."],
+            "title": "Topic 12 - Policy, Covenants & Regulatory Review"}
 
 
 # ── Topic 13 — Recommendations ────────────────────────────────────────────────
 
+@_board_units
 def build_topic_13(company_df, company_info, peers_df, full_panel, stage_summary):
     """
     Data-driven recommendations synthesised from Topics 1–12.
@@ -1008,31 +1015,31 @@ def build_topic_13(company_df, company_info, peers_df, full_panel, stage_summary
 
     # Peer band
     if full_panel is not None and not full_panel.empty and "life_stage" in full_panel.columns:
-        stage_latest = full_panel[full_panel["life_stage"] == cur_stage].sort_values("year").groupby("company_code").last().reset_index()
+        stage_latest = full_panel[(full_panel.life_stage == cur_stage) & (full_panel.year == row.year) & (full_panel.company_code != company_info["code"])].drop_duplicates("company_code")
         p25 = stage_latest["leverage"].quantile(0.25)
         p75 = stage_latest["leverage"].quantile(0.75)
     else:
-        p25, p75 = 0.25, 0.60
+        p25, p75 = np.nan, np.nan
 
     insights, actions = [], []
 
     # Leverage position
-    if pd.notna(co_lev):
+    if pd.notna(co_lev) and pd.notna(p25):
         if co_lev < p25:
             insights.append(
                 f"**Leverage ({_fmt(co_lev)}) is below the {cur_stage}-stage peer band** ({_fmt(p25)}–{_fmt(p75)}). "
-                "The firm has unused debt capacity that could fund growth or enhance returns."
+                "Peer position alone does not establish debt capacity or a case for more borrowing."
             )
-            actions.append(f"Evaluate a controlled leverage increase towards the 40th–60th peer percentile.")
+            actions.append(f"Assess funding needs and cash-flow serviceability before considering additional debt.")
         elif co_lev > p75:
             insights.append(
                 f"**Leverage ({_fmt(co_lev)}) exceeds the 75th peer percentile** ({_fmt(p75)}). "
-                "Prioritise debt reduction to bring leverage within the optimal band."
+                "Assess servicing capacity and liquidity before choosing a debt reduction target."
             )
-            actions.append("Develop a 2–3 year deleveraging roadmap targeting the peer median.")
+            actions.append("Develop a cash-flow-based financing plan; do not set debt targets from peer rank alone.")
         else:
             insights.append(
-                f"Leverage ({_fmt(co_lev)}) is **within the optimal peer band** ({_fmt(p25)}–{_fmt(p75)}). "
+                f"Leverage ({_fmt(co_lev)}) is **within the observed peer band** ({_fmt(p25)}–{_fmt(p75)}). "
                 "Maintain current structure while monitoring for stage transitions."
             )
             actions.append("Maintain leverage within peer band; review if life stage changes.")
@@ -1058,14 +1065,14 @@ def build_topic_13(company_df, company_info, peers_df, full_panel, stage_summary
     if base_cover is not None:
         if base_cover < 1.5:
             insights.append(
-                f"**Interest coverage ({base_cover:.1f}x) is critical** — below the IBC threshold of 1.5x. "
+                f"**Interest coverage ({base_cover:.1f}x) is critical** — below the illustrative coverage floor of 1.5x. "
                 "Immediate board escalation recommended."
             )
             actions.append("Engage lenders on covenant relief; initiate emergency deleveraging plan.")
         elif base_cover < 3:
             insights.append(
                 f"Interest coverage ({base_cover:.1f}x) is below the healthy 3x threshold. "
-                "A +200bp rate shock or 20% PBIT decline could breach IBC threshold."
+                "A +200bp rate shock or 20% PBIT decline could breach illustrative coverage floor."
             )
             actions.append("Stress-test coverage quarterly; consider interest rate hedging.")
 
@@ -1075,9 +1082,11 @@ def build_topic_13(company_df, company_info, peers_df, full_panel, stage_summary
         if tp > 65 and pd.notna(co_lev) and co_lev < p25:
             insights.append(
                 f"High tangibility ({_fmt(co_tang)}, {tp}th peer percentile) provides strong collateral — "
-                "Trade-Off theory supports higher leverage than current level."
+                "Collateral quality and cash-flow serviceability require separate validation."
             )
 
+    if pd.isna(p25):
+        insights.append("Same-year peer leverage comparison is unavailable; assess funding from cash flows and contractual terms.")
     if not insights:
         insights.append("Analysis complete. Review individual topic sections for detailed findings.")
     if not actions:
@@ -1128,6 +1137,17 @@ def build_topic_13_ai(company_code: int, panel_mode: str = "thesis", backend: st
     Returns dict: {figs: [], tables: [], insights: [(label, [bullets])], actions: [str], ai_offline: bool}
     """
     out = {"figs": [], "tables": [], "insights": [], "actions": [], "ai_offline": False}
+
+    if backend == "deterministic":
+        import db
+        vintage_sql, params = db._vintage_predicate(panel_mode)
+        df = db._query(f"SELECT * FROM financials WHERE company_code = ? AND {vintage_sql} ORDER BY year", [company_code, *params])
+        if df.empty:
+            return dict(out, ai_offline=True, insights=[("13.1 Evidence", ["No observations in the selected panel."])], actions=["Verify the company and panel."])
+        info = dict(code=company_code, name=str(company_code), current_stage=df.iloc[-1].life_stage)
+        base = build_topic_13(df, info, pd.DataFrame(), None, None)
+        return dict(out, ai_offline=True, insights=[("13.1 Observed evidence", base["insights"]),
+            ("13.2 Evidence required", ["Validate cash-flow forecasts, repayment schedules, covenant terms and liquidity before financing approval."])], actions=base["actions"])
 
     try:
         from models.llm_adapters import (
@@ -1191,7 +1211,6 @@ def build_topic_13_ai(company_code: int, panel_mode: str = "thesis", backend: st
         out["ai_offline"] = True
         try:
             import db
-            import pandas as pd
             conn = db.get_connection()
             vintage_sql, vintage_params = db._vintage_predicate(panel_mode)
             sql = f"""
@@ -1281,7 +1300,7 @@ def build_topic_13_ai(company_code: int, panel_mode: str = "thesis", backend: st
                 )
             if icr >= 5.0:
                 det_bullets.append(
-                    f"**Interest Coverage & Covenant Headroom:** Robust coverage of {icr:.1f}x provides substantial headroom against macro rate shocks (+150 bps) well above the IBC distress boundary (1.5x)."
+                    f"**Interest Coverage & Covenant Headroom:** Robust coverage of {icr:.1f}x provides substantial headroom against macro rate shocks (+150 bps) well above the illustrative coverage floor (1.5x)."
                 )
             elif icr >= 2.0:
                 det_bullets.append(
@@ -1415,6 +1434,6 @@ TOPIC_LABELS = {
     9:  "Capital Structure Optimisation",
     10: "Forward View & Strategy",
     11: "Risk & Stress Testing",
-    12: "SEBI / Regulatory Compliance",
+    12: "Policy, Covenants & Regulatory Review",
     13: "Recommendations & Actions",
 }

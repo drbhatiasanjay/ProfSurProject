@@ -8,6 +8,8 @@ Text insight bullets are added as a text box below each chart.
 
 from __future__ import annotations
 import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from io import BytesIO
 
 logger = logging.getLogger(__name__)
@@ -78,7 +80,13 @@ def _add_chart_image(slide, fig, top=None, height=None) -> None:
     """Export a Plotly figure as PNG and embed it on the slide."""
     top = top if top is not None else _CHART_TOP
     height = height if height is not None else _CHART_H
-    img_bytes = fig.to_image(format="png", width=1600, height=600, scale=2)
+    # Slides use a white canvas even when the interactive application is dark.
+    import plotly.graph_objects as go
+    from helpers import plotly_layout_light
+    export_fig = go.Figure(fig)
+    export_fig.update_layout(**dict(plotly_layout_light(title=fig.layout.title.text or "", height=600), paper_bgcolor="white", plot_bgcolor="white"))
+    export_fig.update_traces(number_font_color="#1F2937", title_font_color="#1F2937", selector=dict(type="indicator"))
+    img_bytes = export_fig.to_image(format="png", width=1600, height=600, scale=2)
     slide.shapes.add_picture(
         BytesIO(img_bytes),
         _MARGIN_L, top, _CHART_W, height,
@@ -89,12 +97,13 @@ def _add_table(slide, df, top=None) -> None:
     """Add a pandas DataFrame as a PPTX table."""
     if df is None or df.empty:
         return
-    top = top if top is not None else _TEXT_TOP
+    top = top if top is not None else _CHART_TOP
     rows, cols = len(df) + 1, len(df.columns)
     col_w = _CHART_W / cols
     tbl = slide.shapes.add_table(rows, cols, _MARGIN_L, top,
-                                  _CHART_W, min(_TEXT_H, Inches(0.3 * rows))).table
-    tbl.columns[0].width = col_w
+                                  _CHART_W, Inches(0.55 * rows)).table
+    for column in tbl.columns:
+        column.width = int(col_w)
     # Header row
     for j, col_name in enumerate(df.columns):
         cell = tbl.cell(0, j)
@@ -103,7 +112,7 @@ def _add_table(slide, df, top=None) -> None:
         cell.fill.fore_color.rgb = _COLOR_HEADER_BG
         p = cell.text_frame.paragraphs[0]
         run = p.runs[0] if p.runs else p.add_run()
-        run.font.size = Pt(9)
+        run.font.size = Pt(12)
         run.font.bold = True
         run.font.color.rgb = _COLOR_HEADER_FG
     # Data rows
@@ -113,14 +122,14 @@ def _add_table(slide, df, top=None) -> None:
             cell.text = str(val) if val is not None else ""
             p = cell.text_frame.paragraphs[0]
             run = p.runs[0] if p.runs else p.add_run()
-            run.font.size = Pt(8)
+            run.font.size = Pt(11)
             run.font.color.rgb = _COLOR_BODY_FG
             if i % 2 == 1:
                 cell.fill.solid()
                 cell.fill.fore_color.rgb = RGBColor(0xF3, 0xF4, 0xF6)
 
 
-def _add_insights_text(slide, insights: list[str], actions: list[str]) -> None:
+def _add_insights_text(slide, insights: list[str], actions: list[str], *, full_height=False) -> None:
     """Two-column text box: key findings (left) + actions (right)."""
     half_w = (_CHART_W - Inches(0.15)) / 2
 
@@ -129,7 +138,8 @@ def _add_insights_text(slide, insights: list[str], actions: list[str]) -> None:
         ("Actions", actions, _COLOR_ACTION_FG),
     ]):
         x = _MARGIN_L + col_idx * (half_w + Inches(0.15))
-        txBox = slide.shapes.add_textbox(x, _TEXT_TOP, half_w, _TEXT_H)
+        txBox = slide.shapes.add_textbox(x, _CHART_TOP if full_height else _TEXT_TOP,
+                                       half_w, Inches(5.7) if full_height else _TEXT_H)
         tf = txBox.text_frame
         tf.word_wrap = True
 
@@ -137,7 +147,7 @@ def _add_insights_text(slide, insights: list[str], actions: list[str]) -> None:
         p = tf.paragraphs[0]
         run = p.add_run()
         run.text = heading
-        run.font.size = Pt(9)
+        run.font.size = Pt(17 if full_height else 12)
         run.font.bold = True
         run.font.color.rgb = _COLOR_HEADER_BG
 
@@ -148,13 +158,12 @@ def _add_insights_text(slide, insights: list[str], actions: list[str]) -> None:
             run = p.add_run()
             # Strip markdown bold markers for PPTX plain text
             run.text = "• " + item.replace("**", "")
-            run.font.size = Pt(8)
+            run.font.size = Pt(16 if full_height else 10)
             run.font.color.rgb = color
 
 
 def _cover_slide(prs: Presentation, company_info: dict, selected_count: int) -> None:
     """Branded cover slide."""
-    from datetime import date
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank
     # Full background block
     bg = slide.shapes.add_textbox(0, 0, SLIDE_W, SLIDE_H)
@@ -181,7 +190,7 @@ def _cover_slide(prs: Presentation, company_info: dict, selected_count: int) -> 
     run2.text = (
         f"Capital Structure Board Deck  ·  {company_info.get('industry', '')}  ·  "
         f"Life Stage: {company_info.get('current_stage', '')}  ·  "
-        f"{selected_count} topics selected  ·  {date.today().strftime('%d %b %Y')}"
+        f"{selected_count} sections selected  ·  {datetime.now(ZoneInfo('Asia/Kolkata')).strftime('%d %b %Y')}"
     )
     run2.font.size = Pt(14)
     run2.font.color.rgb = RGBColor(0xE0, 0xF2, 0xF1)
@@ -204,92 +213,76 @@ def build(
     full_panel,
     stage_summary,
     selected_topics: dict,
+    *, warnings=None, topic_data=None,
 ) -> bytes:
     """
     Build a PPTX presentation and return as bytes.
 
     selected_topics: {topic_id: bool} — True = include, False = skip.
     """
-    prs = Presentation()
-    prs.slide_width  = SLIDE_W
-    prs.slide_height = SLIDE_H
-
-    selected_count = sum(v for v in selected_topics.values())
-    _cover_slide(prs, company_info, selected_count)
-
-    # Count total content slides for footer
-    total_slides = 1 + selected_count  # cover + content
-    slide_num = 1
-
+    warnings = warnings if warnings is not None else []
+    sections = []
     for topic_id in sorted(selected_topics.keys()):
         if not selected_topics.get(topic_id):
             continue
 
         builder = TOPIC_BUILDERS.get(topic_id)
-        if builder is None:
-            continue
-
         try:
-            topic_data = builder(company_df, company_info, peers_df, full_panel, stage_summary)
+            section = topic_data[topic_id] if topic_data is not None and topic_id in topic_data else builder(company_df, company_info, peers_df, full_panel, stage_summary)
         except Exception as exc:
-            # Never crash the whole deck for one topic — add an error slide
-            slide = prs.slides.add_slide(prs.slide_layouts[6])
-            slide_num += 1
-            _add_header(slide, TOPIC_LABELS.get(topic_id, f"Topic {topic_id}"), company_info.get("name", ""))
-            err_box = slide.shapes.add_textbox(_MARGIN_L, _CHART_TOP, _CHART_W, _CHART_H)
-            err_box.text_frame.text = f"Chart unavailable: {exc}"
-            _add_footer(slide, slide_num, total_slides)
-            continue
+            message = f"Topic {topic_id} unavailable ({type(exc).__name__})."
+            warnings.append(message)
+            section = dict(title=TOPIC_LABELS.get(topic_id, f"Topic {topic_id}"), insights=[message],
+                           actions=["Resolve the analysis error before using this section."], tables=[], figs=[])
+        sections.append(section)
+    return build_sections(company_info, sections, warnings=warnings)
 
-        figs    = topic_data.get("figs", [])
-        tables  = topic_data.get("tables", [])
-        insights = topic_data.get("insights", [])
-        actions  = topic_data.get("actions", [])
-        title    = topic_data.get("title", TOPIC_LABELS.get(topic_id, ""))
 
-        if figs:
-            # First figure: full chart height
-            slide = prs.slides.add_slide(prs.slide_layouts[6])
-            slide_num += 1
-            _add_header(slide, title, company_info.get("name", ""))
+def build_sections(company_info, sections, *, warnings=None):
+    """Render prepared sections shared with the preview, with no silent omissions."""
+    warnings = warnings if warnings is not None else []
+    prs = Presentation()
+    prs.slide_width, prs.slide_height = SLIDE_W, SLIDE_H
+    _cover_slide(prs, company_info, len(sections))
+
+    def slide_for(section, continuation=""):
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        slide.background.fill.solid()
+        slide.background.fill.fore_color.rgb = RGBColor(255, 255, 255)
+        _add_header(slide, section["title"] + continuation, company_info.get("name", ""))
+        slide.notes_slide.notes_text_frame.text = "\n".join(
+            [section.get("provenance", ""), *section.get("insights", []), *section.get("actions", [])])
+        return slide
+
+    for section in sections:
+        for fig in section.get("figs", []):
+            slide = slide_for(section)
             try:
-                _add_chart_image(slide, figs[0])
+                _add_chart_image(slide, fig, height=Inches(5.6))
             except Exception as exc:
-                logger.warning("Failed to render chart image on slide '%s': %s", title, exc)
-            _add_insights_text(slide, insights, actions)
-            _add_footer(slide, slide_num, total_slides)
-
-            # Additional figures on their own slides
-            for fig in figs[1:]:
-                slide = prs.slides.add_slide(prs.slide_layouts[6])
-                slide_num += 1
-                _add_header(slide, title + " (cont.)", company_info.get("name", ""))
-                try:
-                    _add_chart_image(slide, fig)
-                except Exception as exc:
-                    logger.warning("Failed to render additional chart image on slide '%s': %s", title, exc)
-                _add_footer(slide, slide_num, total_slides)
-
-        # Tables on their own slide
-        for tbl_df in tables:
-            if tbl_df is not None and not tbl_df.empty:
-                slide = prs.slides.add_slide(prs.slide_layouts[6])
-                slide_num += 1
-                _add_header(slide, title + " — Data Table", company_info.get("name", ""))
-                try:
-                    _add_table(slide, tbl_df.head(12))
-                except Exception as exc:
-                    logger.warning("Failed to render table on slide '%s': %s", title, exc)
-                _add_footer(slide, slide_num, total_slides)
-
-        # If topic has no figs but has insights (e.g. text-only topic)
-        if not figs and (insights or actions):
-            slide = prs.slides.add_slide(prs.slide_layouts[6])
-            slide_num += 1
-            _add_header(slide, title, company_info.get("name", ""))
-            _add_insights_text(slide, insights, actions)
-            _add_footer(slide, slide_num, total_slides)
-
+                message = f"{section['title']}: chart unavailable ({type(exc).__name__})."
+                warnings.append(message)
+                _add_insights_text(slide, [message], ["Resolve the chart renderer and regenerate."], full_height=True)
+        for table in section.get("tables", []):
+            if table is None or table.empty:
+                continue
+            for col_start in range(0, len(table.columns), 4):
+                columns = list(table.columns[:4]) if not col_start else [table.columns[0], *table.columns[col_start:col_start + 4]]
+                for start in range(0, len(table), 8):
+                    slide = slide_for(section, " | Data" if start == 0 else " | Data continued")
+                    try:
+                        _add_table(slide, table.loc[:, columns].iloc[start:start + 8])
+                    except Exception as exc:
+                        message = f"{section['title']}: table unavailable ({type(exc).__name__})."
+                        warnings.append(message)
+                        _add_insights_text(slide, [message], ["Review the source table and regenerate."], full_height=True)
+        insights, actions = section.get("insights", []), section.get("actions", [])
+        for start in range(0, max(len(insights), len(actions)), 3):
+            slide = slide_for(section, " | Findings" if start == 0 else " | Findings continued")
+            _add_insights_text(slide, insights[start:start + 3], actions[start:start + 3], full_height=True)
+    total = len(prs.slides)
+    for index, slide in enumerate(prs.slides, 1):
+        _add_footer(slide, index, total)
     buf = BytesIO()
     prs.save(buf)
     return buf.getvalue()

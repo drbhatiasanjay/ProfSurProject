@@ -22,7 +22,8 @@ from helpers import (
     render_bento_kpi, render_stage_badge,
     PRIMARY, SECONDARY, ACCENT, NEUTRAL,
 )
-from models.board_export import TOPIC_BUILDERS, TOPIC_LABELS, build_topic_ai_narrative
+from models.board_export import TOPIC_BUILDERS, TOPIC_LABELS, build_topic_ai_narrative, board_ratios
+from models.debt_board import get_thesis_companies
 from models.econometric_literature_vault import get_relevant_vault_citations
 from models.rich_chat_renderer import render_academic_vault_html
 import models.pptx_generator as pptx_generator
@@ -45,32 +46,37 @@ _bd_prefs  = db.load_user_prefs(_username, "board_deck") if _username else {}
 
 try:
     with st.spinner("Loading..."):
-        companies_df = db.get_companies("thesis")
+        companies_df = get_thesis_companies()
 except Exception as _e:
     st.error(f"Failed to load company list. Please refresh. ({_e})")
     st.stop()
-# Put Indian firms first (they have thesis data), US firms at the end
-india_df = companies_df[~companies_df["company_name"].str.contains(r"Inc\.|Corp\.|Co\.", regex=True, na=False)]
-us_df    = companies_df[companies_df["company_name"].str.contains(r"Inc\.|Corp\.|Co\.", regex=True, na=False)]
-ordered_names = india_df["company_name"].tolist() + us_df["company_name"].tolist()
-
-_saved_company = _bd_prefs.get("selected_company", ordered_names[0] if ordered_names else "")
-_default_idx   = ordered_names.index(_saved_company) if _saved_company in ordered_names else 0
+if companies_df.empty:
+    st.warning("No companies have observations in the Thesis panel.")
+    st.stop()
+_company_codes = companies_df.company_code.astype(int).tolist()
+_company_names = dict(zip(_company_codes, companies_df.company_name))
+_duplicate_names = set(companies_df.loc[companies_df.company_name.duplicated(False), "company_name"])
+_saved_code = _bd_prefs.get("selected_company_code")
+if _saved_code not in _company_codes:
+    _saved_code = next((code for code in _company_codes if _company_names[code] == _bd_prefs.get("selected_company")), _company_codes[0])
 
 col_co, col_info = st.columns([2, 1])
 with col_co:
-    selected_name = st.selectbox(
+    company_code = st.selectbox(
         "Select company",
-        options=ordered_names,
-        index=_default_idx,
-        help="401 Indian firms + 25 US firms. Analysis is always against Thesis panel (2001–2024).",
+        options=_company_codes,
+        index=_company_codes.index(_saved_code),
+        format_func=lambda code: f"{_company_names[code]} ({code})" if _company_names[code] in _duplicate_names else _company_names[code],
+        help="Indian-company analysis against the frozen Thesis panel.",
     )
+selected_name = _company_names[company_code]
 
 # Persist company selection
 if _username:
-    db.save_user_pref(_username, "board_deck", {"selected_company": selected_name})
-company_row = companies_df[companies_df["company_name"] == selected_name].iloc[0]
-company_code = int(company_row["company_code"])
+    _bd_prefs = dict(_bd_prefs, selected_company=selected_name, selected_company_code=int(company_code))
+    db.save_user_pref(_username, "board_deck", _bd_prefs)
+company_row = companies_df[companies_df["company_code"] == company_code].iloc[0]
+company_code = int(company_code)
 panel_mode = "thesis"  # page 17 is always thesis-pinned
 st.session_state["active_company_cin"] = company_code
 
@@ -86,10 +92,11 @@ def _load_company_data(company_code: int):
         "industry_groups": [],
         "events": {"gfc": False, "ibc": False, "covid": False},
     })
-    company_df    = db.get_company_detail(company_code)
-    full_panel    = db.get_active_financials(thesis_ft)
+    full_panel    = db.get_filtered_financials(thesis_ft)
+    company_df    = db._query("SELECT * FROM financials WHERE company_code = ? AND vintage = ? ORDER BY year", [company_code, "thesis"])
     stage_summary = db.get_life_stage_summary(thesis_ft)
-    peers_df      = db.get_company_peers(company_code, full_panel)
+    same_year = full_panel[full_panel.year == company_df.year.max()] if not company_df.empty else full_panel.iloc[:0]
+    peers_df      = db.get_company_peers(company_code, same_year)
     return company_df, full_panel, stage_summary, peers_df
 
 
@@ -114,6 +121,22 @@ company_info = {
     "last_year":     int(_latest.get("year", 2024)),
 }
 
+_deck_modes = ["Full analytical deck (13 topics)", "Debt strategy board deck"]
+deck_mode = st.radio("Deck format", _deck_modes,
+    index=_deck_modes.index(_bd_prefs.get("deck_mode")) if _bd_prefs.get("deck_workflow_version") == 2 and _bd_prefs.get("deck_mode") in _deck_modes else 0,
+    key="p17_deck_mode_v2", horizontal=True)
+_bd_prefs = dict(_bd_prefs, deck_mode=deck_mode, deck_workflow_version=2)
+if _username:
+    db.save_user_pref(_username, "board_deck", _bd_prefs)
+if deck_mode == "Debt strategy board deck":
+    from components.debt_board_view import render_debt_board
+    render_debt_board(company_df, company_info, peers_df, full_panel, stage_summary, _bd_prefs)
+    st.stop()
+
+# Legacy analytical visuals consume ratios, while the DB stores leverage in percent.
+company_df, peers_df, full_panel, stage_summary = map(board_ratios, (company_df, peers_df, full_panel, stage_summary))
+_latest = company_df.sort_values("year").iloc[-1]
+
 # ── STEP 3: Snapshot header & Executive Bento Grid ────────────────────────────
 stage = company_info["current_stage"]
 stage_color = STAGE_COLORS.get(stage, "#0D9488")
@@ -122,7 +145,7 @@ prof_val = float(_latest.get("profitability", 0) or 0)
 tang_val = float(_latest.get("tangibility", 0) or 0)
 pbit_val = float(_latest.get("pbit", 0) or 0)
 int_val = float(_latest.get("interest_amt", 0) or 0)
-ic_val = (pbit_val / int_val) if int_val > 0 else (np.nan if pbit_val == 0 else 99.9)
+ic_val = (pbit_val / int_val) if int_val > 0 else np.nan
 
 n_peers = len(peers_df) if peers_df is not None else 0
 peer_lev_med = float(peers_df["leverage"].median()) if peers_df is not None and not peers_df.empty and "leverage" in peers_df.columns else lev_val
@@ -280,6 +303,8 @@ if col_clear.button("Clear Preview", key="clear_btn"):
 if preview_clicked:
     st.session_state["deck_previewed"] = True
 
+preview_topics = {}
+
 # ── STEP 6: Preview ───────────────────────────────────────────────────────────
 if st.session_state.get("deck_previewed"):
     st.markdown("---")
@@ -303,6 +328,7 @@ if st.session_state.get("deck_previewed"):
             with st.spinner(f"Building Topic {tid}…"):
                 topic_data = builder(company_df, company_info, peers_df, full_panel, stage_summary)
 
+            preview_topics[tid] = topic_data
             if tid == 1:
                 t1_view = st.radio(
                     "Topic 1 Visual Mode",
@@ -353,6 +379,7 @@ if st.session_state.get("deck_previewed"):
                     )
                     st.plotly_chart(fig_radar, use_container_width=True, config=PLOTLY_CONFIG)
                     chart_download_button(fig_radar, "board_topic1_radar.png")
+                    topic_data["figs"] = [fig_radar]
 
                 elif t1_view == "📊 Peer Quartile Distribution":
                     # Peer comparison distribution bars
@@ -389,6 +416,7 @@ if st.session_state.get("deck_previewed"):
                     )
                     st.plotly_chart(fig_dist, use_container_width=True, config=PLOTLY_CONFIG)
                     chart_download_button(fig_dist, "board_topic1_distribution.png")
+                    topic_data["figs"] = [fig_dist]
 
                 else:
                     for _fig_idx, fig in enumerate(topic_data.get("figs", [])):
@@ -422,6 +450,7 @@ if st.session_state.get("deck_previewed"):
                 if st.session_state.get(_ai_key):
                     with st.expander("🤖 Board AI Narrative", expanded=True):
                         st.markdown(st.session_state[_ai_key])
+                    topic_data["insights"] = [*topic_data.get("insights", []), st.session_state[_ai_key]]
 
         except Exception as exc:
             st.error(f"Topic {tid} could not render: {exc}")
@@ -438,46 +467,45 @@ if st.session_state.get("deck_previewed"):
         )
         st.markdown(vault_html, unsafe_allow_html=True)
 
-    # ── Topic 13 AI: LLM-powered recommendations ──────────────────────────────
-    st.markdown("---")
-    with st.expander("Topic 13: Strategic AI & Empirical CFO Recommendations", expanded=False):
-        backend = st.session_state.get("chat_backend", "ollama")
-        with st.spinner(f"Generating recommendations via {backend}..."):
+    with st.expander("Topic 13: Additional Empirical CFO Recommendations", expanded=False):
+        if st.button("Generate additional strategic commentary", key="p17_extra_commentary"):
             from models import board_export as _be
-            _t13 = _be.build_topic_13_ai(company_code, panel_mode=panel_mode, backend=backend)
-        if _t13.get("ai_offline"):
-            st.info("💡 **Deterministic Empirical CFO Engine Active** — Insights derived directly from firm balance sheet metrics and 8,677 panel observations.")
-        for _label, _bullets in _t13.get("insights", []):
-            st.markdown(f"##### {_label}")
-            for _b in _bullets:
-                st.markdown(f"- {_b}")
-        if _t13.get("actions"):
-            st.markdown("##### 🎯 13.4 Three High-Conviction CFO Actions")
-            for _a in _t13.get("actions", []):
+            _t13 = _be.build_topic_13_ai(company_code, panel_mode=panel_mode, backend="deterministic")
+            st.session_state["p17_extra_commentary_result"] = (company_code, _t13)
+        _extra = st.session_state.get("p17_extra_commentary_result")
+        if _extra and _extra[0] == company_code:
+            for _label, _bullets in _extra[1].get("insights", []):
+                st.markdown(f"##### {_label}")
+                for _b in _bullets:
+                    st.markdown(f"- {_b}")
+            for _a in _extra[1].get("actions", []):
                 st.markdown(f"- {_a}")
+        st.caption("Additional strategic commentary is separate from the analytical export.")
 
 # ── STEP 7: PPTX generation & download ───────────────────────────────────────
+import hashlib
+_export_signature = hashlib.sha256((str(company_code) + str(selected_topics) + str(st.session_state.get("p17_t1_vmode"))
+    + str(ai_narratives_on) + str(st.session_state.get("theme")) + company_df.to_json()
+    + peers_df.to_json() + full_panel.to_json() + stage_summary.to_json()).encode()).hexdigest()
+if st.session_state.get("p17_export_signature") != _export_signature:
+    st.session_state.pop("p17_export", None)
+    st.session_state["p17_export_signature"] = _export_signature
 if download_clicked:
     if n_selected == 0:
         st.warning("Select at least one topic before generating the deck.")
     else:
-        with st.spinner(f"Building {n_selected}-topic board deck for {selected_name}…"):
+        with st.spinner(f"Building the analytical deck for {selected_name}..."):
             try:
-                pptx_bytes = pptx_generator.build(
-                    company_df, company_info, peers_df,
-                    full_panel, stage_summary, selected_topics,
-                )
-                fname = f"{selected_name.replace(' ', '_').replace('.', '')}_BoardDeck.pptx"
-                st.download_button(
-                    label=f"⬇ Download {fname}",
-                    data=pptx_bytes,
-                    file_name=fname,
-                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    type="primary",
-                )
-                st.success(
-                    f"Board deck ready — {n_selected} topics, {selected_name}. "
-                    "Click the download button above."
-                )
+                warnings = []
+                pptx_bytes = pptx_generator.build(company_df, company_info, peers_df, full_panel,
+                    stage_summary, selected_topics, warnings=warnings, topic_data=preview_topics)
+                st.session_state["p17_export"] = dict(data=pptx_bytes, warnings=warnings)
             except Exception as exc:
                 st.error(f"PPTX generation failed: {exc}")
+_export = st.session_state.get("p17_export")
+if _export:
+    for warning in _export["warnings"]:
+        st.warning(warning)
+    st.download_button("Download analytical .pptx", data=_export["data"],
+        file_name=f"{company_code}_Analytical_BoardDeck.pptx",
+        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation")

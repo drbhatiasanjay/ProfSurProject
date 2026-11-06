@@ -29,6 +29,11 @@ ASIAN_PAINTS_CODE = 22859   # well-known Maturity-stage firm in thesis panel
 RELIANCE_CODE     = 196667
 
 
+@pytest.fixture
+def sample_company_code():
+    return ASIAN_PAINTS_CODE
+
+
 @pytest.fixture(scope="module")
 def company_df():
     return db.get_company_detail(ASIAN_PAINTS_CODE)
@@ -419,7 +424,7 @@ def test_require_role_imported_in_page_17():
     found_viewer_block = False
     for call in calls:
         arg_values = [
-            a.s if isinstance(a, ast.Constant) else None
+            a.value if isinstance(a, ast.Constant) else None
             for a in call.args
         ]
         if "viewer" not in arg_values:
