@@ -41,6 +41,8 @@ DataV[0-9]*/
 
 # Transient SQLite backups (safety net taken during migrations)
 *.db.bak-*
+*.db-wal
+*.db-shm
 
 # Misc
 *.log

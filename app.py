@@ -566,6 +566,7 @@ interaction_effects = st.Page("pages/15_interaction_effects.py", title="Interact
 
 admin_activity      = st.Page("pages/16_admin_activity.py",    title="Activity Log",        icon=":material/monitoring:")
 board_deck          = st.Page("pages/17_board_export.py",      title="Board Deck",          icon=":material/description:")
+company_financing   = st.Page("pages/26_company_financing.py", title="Company Financing", icon=":material/account_balance:")
 ai_assistant        = st.Page("pages/19_ai_assistant.py",       title="AI Assistant",        icon=":material/smart_toy:")
 stata_studio        = st.Page("pages/25_stata_studio_v2.py",    title="Stata Studio",        icon=":material/terminal:")
 # Legacy Studio archived for rollback verification; canonical route is pages/25_stata_studio_v2.py (SW-06)
@@ -585,7 +586,7 @@ nav = st.navigation({
         scenarios, econometrics, advanced_econ, interaction_effects,
         stata_studio,
         ml_models, forecasting, clustering,
-        ai_assistant, board_deck,
+        ai_assistant, board_deck, company_financing,
     ],
     "Admin & Tools": _admin_tools,
 })
