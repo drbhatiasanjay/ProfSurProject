@@ -3,8 +3,28 @@ name: Test and Deploy
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - 'docs/**'
+      - 'paper/**'
+      - '**.md'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.pptx'
+      - '**.pdf'
+      - '**.mp4'
   pull_request:
     branches: [master]
+    paths-ignore:
+      - 'docs/**'
+      - 'paper/**'
+      - '**.md'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.pptx'
+      - '**.pdf'
+      - '**.mp4'
   workflow_dispatch:
 
 jobs:
@@ -20,6 +40,14 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
@@ -45,24 +73,42 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check for lifecycle-ontology changes
+        id: check_changes
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "CHANGED=true" >> $GITHUB_OUTPUT
+          elif git rev-parse HEAD~1 >/dev/null 2>&1 && git diff --name-only HEAD~1 HEAD | grep -q "^lifecycle-ontology/"; then
+            echo "CHANGED=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes in lifecycle-ontology. Skipping OCaml build."
+            echo "CHANGED=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Set up OCaml 5.2
+        if: steps.check_changes.outputs.CHANGED == 'true'
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: "5.2"
 
       - name: Install OCaml dependencies
+        if: steps.check_changes.outputs.CHANGED == 'true'
         run: |
           opam install dune -y
           cd lifecycle-ontology
           opam install --deps-only --with-test -y .
 
       - name: Build
+        if: steps.check_changes.outputs.CHANGED == 'true'
         run: |
           cd lifecycle-ontology
           opam exec -- dune build
 
       - name: Run tests
+        if: steps.check_changes.outputs.CHANGED == 'true'
         run: |
           cd lifecycle-ontology
           opam exec -- dune runtest

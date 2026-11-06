@@ -32,6 +32,15 @@ def test_missing_exposure_and_bad_assumptions():
     assert coverage_case(100, 20, 1000, floating_share=0, shock_bps=100)["coverage"] == 5
 
 
+def test_master_response_aliases_preserve_observed_and_simulated_context():
+    result = run_cfo_stress_simulation("248093", 0, 0, new_life_stage="Decline")
+    assert result["status"] == "success"
+    assert result["life_stage"] == "Decline"
+    assert result["observed_life_stage"] == result["measured_baseline"]["life_stage"]
+    assert result["covenant_and_debt_metrics"]["simulated_credit_rating"] == "Not assessed"
+    assert result["covenant_and_debt_metrics"]["available_debt_headroom_cr"] is None
+
+
 def test_recursive_forecast_updates_target_by_name_only():
     if not timeseries.HAS_TORCH:
         pytest.skip("PyTorch unavailable")

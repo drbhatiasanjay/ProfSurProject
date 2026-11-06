@@ -1,5 +1,58 @@
 # ProfSurProject — Session Log
 
+## CHECKPOINT — Test Automation & CI/CD Pipeline Acceleration (2026-11-06 12:10 IST)
+
+**Branch:** `master` · **HEAD:** Pending Commit  
+**Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  
+**Conversation:** `f6978611-2b08-4fd9-8af9-7b703ed76b10`
+
+### State at Checkpoint
+- **Local Pytest Startup Optimization (`pytest.ini`):**
+  - Quarantined unused third-party plugins (`napari`, `opik`, `langsmith`, `napari-plugin-engine`, `npe2`, `zarr`, `syrupy`) using `-p no:<plugin>`.
+  - Cleaned up pytest execution overhead and eliminated hangs.
+- **Smart Doc-Aware Git Hook (`scripts/test_fast.ps1`):**
+  - Added early detection for changes strictly confined to documentation (`docs/`, `paper/`, `.md`, images).
+  - Skips full pytest runs on doc-only commits, passing in <2 seconds.
+- **CI/CD Optimization (`.github/workflows/deploy.yml`):**
+  - **Path Filtering:** Configured `paths-ignore` on `push` and `pull_request` branches for documentation, markdown, and media files.
+  - **Pip Wheel Caching:** Added `actions/cache@v4` on `~/.cache/pip` keyed on `requirements.txt` to eliminate repeated torch and dependency wheel downloads.
+  - **Conditional OCaml Build:** Configured conditional execution for `lifecycle-ontology/` so OCaml compiler setup and dune tests only run if ontology files actually changed or upon manual `workflow_dispatch`.
+- **Reusable Playwright E2E Helper (`scripts/e2e_auth_helper.py`):**
+  - Authored standard browser automation module targeting explicit `input[type='text']` and `input[type='password']`.
+  - Eliminates 30-second selector timeouts caused by Streamlit's hidden radio-button elements.
+
+## CHECKPOINT — Release v2.1.0 Full Deployment, Red-Team Integrity & GCP Live Verification (2026-11-05 22:38 IST)
+
+**Branch:** `master` · **HEAD:** `07f6622` · **Tag:** `v2.1.0`  
+**Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  
+**Cloud Run Revision:** `lifecycle-leverage-00222-wsw`  
+**Conversation:** `f6978611-2b08-4fd9-8af9-7b703ed76b10`
+
+### State at Checkpoint
+- **Google Cloud Run Deployment:**
+  - Automated deployment pipeline (`.github/workflows/deploy.yml`, Run `42068823114`) completed with zero manual approval gates.
+  - Pytest: 820 tests passed in 2m41s (100% clean test execution on Linux Python 3.11).
+  - OCaml: `lifecycle-ontology` build and tests passed in 3m49s.
+  - Cloud Run deployment succeeded in 4m35s.
+- **Live Evidence Gate (AGENTS.md Rule 5):**
+  - Authenticated Playwright session against `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`.
+  - Visual verification artifact: `verified_gcp_v2_1_live_dark.png` (44,351 bytes on disk).
+  - Verified top navigation bar displaying `v2.1.0`, `bf2001-25_Sept26`, `drbhatia · Admin`, and top-anchored sidebar navigation.
+- **All 5 Role Logins Verified (100% bcrypt pass):**
+  - `drbhatia` (admin) -> PASS
+  - `skumar` (researcher) -> PASS
+  - `profsurkumar` (researcher) -> PASS
+  - `sbhatia` (viewer) -> PASS
+  - `guest` (viewer) -> PASS
+- **Econometric & Calculation Integrity:**
+  - Demeaned within-OLS fallback refined with `.cov` covariance matrix DataFrame preservation for Hausman specification test (`hausman fe re`).
+  - Strict fail-closed error handling on runtime estimator exceptions.
+  - Verified ground truth panel values ($N=8,677$ primary thesis sample, $N=9,031$ extended universe, Tata Motors = `248093`).
+- **Knowledge Graph:**
+  - Refreshed via Graphify (`graphify extract .` and `graphify cluster-only .`): 7,450 nodes, 12,204 edges, 850 communities in `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.json`.
+- **Capabilities Documentation:**
+  - Synchronized via `scripts/sync_command_registry_docs.py` to `docs/COMMAND_CAPABILITIES.md`.
+
 ## CHECKPOINT — Recordly Master Walkthrough V4: 10-Scene Dynamic Run-Up & 5 Dedicated Company Archetypes (2026-09-30 01:25 IST)
 
 **Branch:** `agy/wave6-8-harness-repair-2026-09-11` · **HEAD:** `6844305`  
@@ -895,3 +948,11 @@ Authenticated browser checks passed for drbhatia, profsurkumar and skumar: intak
 - Browser subagent completed all four configured profiles in light/dark: researcher/admin flows, expected viewer denial, owner separation, saves/revisions/reauth restoration, actual Excel download/import and explicit apply/save3/restore. Fixed real light label/placeholder/alert/uploader/help-icon defects using page-scoped CSS only; fixed post-save selector refresh and Create-new reset. Verified final evidence files and visually inspected light form.
 - Browser confirmed prior funding-to-stress failure was rerun timing: correct four fields and two bars after settling. No fresh browser PPTX download in this run; automated PPTX integrity remains covered. Manual negative-principal canvas edit not exercised; backend adversarial tests cover it.
 - Evidence: ignored `scratch/financing_evidence/browser_acceptance.json` and final PNGs. Implementation/merge notes: `docs/COMPANY_FINANCING.md`. Final consolidated suite: 172 passed (two upstream warnings); project fast checks: six passed; whitespace check passed. Added optional Google tool-schema conversion also validated offline without any model request.
+
+## 2026-11-06 - Direct local master integration
+
+- User explicitly requested direct local integration while Antigravity builds a PPT. Prepared `codex/integrate-company-financing` from the verified financing branch and merged existing master `e73cb5b`, which already includes the approved board deck. Main checkout had no tracked edits; no incoming paths collided with its untracked files. PPT artifacts and generation scripts were excluded from all staging and edits.
+- Resolved one conflict in `models/agent_tools.py`: retained master-compatible `life_stage` and `simulated_credit_rating` fields, preserved observed stage separately, and kept unsupported ratings/headroom unavailable. Added a regression test; no undefined legacy stage variable remains.
+- Combined integration passed 173 focused tests and six project fast checks. Whitespace validation passed. Master Stata changes, existing theme files, PPT generator and accepted financing/deck UI source were preserved without modifications relative to their appropriate parent.
+- Fresh browser verification was attempted by the browser subagent, but IAB was unavailable and Computer Use stopped native Edge input because it could not determine the current browser URL confidently. No bypass attempted. No fresh integrated four-profile or PPTX-download claim. Blocker: ignored `scratch/financing_evidence/integration_browser_acceptance.json`; prior feature-branch browser evidence remains separately identified.
+- Local master promotion is restricted to a guarded fast-forward after rechecking its HEAD, branch and tracked cleanliness. No push, deployment, server restart, stash, reset or cleanup is authorized by this integration step.

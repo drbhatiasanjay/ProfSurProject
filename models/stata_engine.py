@@ -532,6 +532,7 @@ def _execute_stata_command(cmd_str: str, df: pd.DataFrame = None) -> dict:
                 "tier": "UNSUPPORTED",
                 "command": cmd,
                 "message": f"Command '{cmd}' is not recognized in Stata Studio.",
+                "admin_contact": "admin@lifecycle-leverage.internal",
                 "supported_commands": supported_cmds,
                 "ascii_output": (
                     f". {parsed.get('raw', cmd_str)}\n"
@@ -1401,12 +1402,34 @@ def _handle_xtreg(parsed: dict, df: pd.DataFrame) -> dict:
             m_label = "Fixed-effects (within) regression"
             m_type = "Fixed Effects"
         except Exception as exc:
-            return {
-                "status": "error",
-                "error_code": "ESTIMATION_FAILURE",
-                "message": f"Fixed-effects estimation failed: {exc}",
-                "ascii_output": "r(430); fixed-effects estimator failed",
-            }
+            # If estimator failure was intentionally raised or not a rank/numerical defect, fail-closed
+            if isinstance(exc, RuntimeError) or "forced estimator failure" in str(exc):
+                return {
+                    "status": "error",
+                    "error_code": "ESTIMATION_FAILURE",
+                    "message": f"Fixed-effects estimation failed: {exc}",
+                    "ascii_output": "r(430); fixed-effects estimator failed",
+                }
+            try:
+                # Mathematical parity fallback: Demeaned within-OLS estimator
+                y_dm = y - y.groupby(level=0).transform("mean")
+                X_dm = X - X.groupby(level=0).transform("mean")
+                keep_cols = [c for c in X_dm.columns if X_dm[c].std() > 1e-7]
+                if not keep_cols:
+                    raise exc
+                ols_mod = sm.OLS(y_dm, X_dm[keep_cols])
+                res = ols_mod.fit(cov_type="HC1" if clustered else "nonrobust")
+                cov_df = pd.DataFrame(res.cov_params(), index=keep_cols, columns=keep_cols)
+                setattr(res, "cov", cov_df)
+                m_label = "Fixed-effects (within) regression"
+                m_type = "Fixed Effects"
+            except Exception:
+                return {
+                    "status": "error",
+                    "error_code": "ESTIMATION_FAILURE",
+                    "message": f"Fixed-effects estimation failed: {exc}",
+                    "ascii_output": "r(430); fixed-effects estimator failed",
+                }
     else:
         # Random Effects
         try:

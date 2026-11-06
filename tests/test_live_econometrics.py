@@ -106,7 +106,7 @@ def test_run_cfo_stress_simulation_baseline_and_shock():
 def test_run_cfo_stress_simulation_stage_migration():
     """Test life stage migration from Mature to Shakeout."""
     res = run_cfo_stress_simulation(
-        company_name_or_code="2451",
+        company_name_or_code="248093",
         interest_rate_shock_bps=150.0,
         operating_margin_shock_pct=-20.0,
         new_life_stage="Shakeout",

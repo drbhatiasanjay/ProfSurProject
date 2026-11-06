@@ -1298,6 +1298,8 @@ def run_cfo_stress_simulation(
         "company": target_name,
         "company_code": target_code,
         "latest_reporting_year": latest_year,
+        "life_stage": new_life_stage.capitalize() if new_life_stage else base_stage,
+        "observed_life_stage": base_stage,
         "measured_baseline": {
             "leverage": display(base_lev, "%"),
             "profitability_roa": display(base_roa * 100 if base_roa is not None else None, "%"),
@@ -1325,6 +1327,7 @@ def run_cfo_stress_simulation(
             "covenant_status": "Not established: agreement required",
             "available_debt_headroom_cr": None,
             "indicative_financial_health_band": "Not assessed",
+            "simulated_credit_rating": "Not assessed",
         },
         "cfo_action_playbook": playbook,
         "missing_evidence": (["Existing floating-rate share required for rate stress"] if shock and floating_rate_share is None else []) +
