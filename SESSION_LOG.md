@@ -1,5 +1,26 @@
 # ProfSurProject — Session Log
 
+## CHECKPOINT — Test Automation & CI/CD Pipeline Acceleration (2026-11-06 12:10 IST)
+
+**Branch:** `master` · **HEAD:** Pending Commit  
+**Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  
+**Conversation:** `f6978611-2b08-4fd9-8af9-7b703ed76b10`
+
+### State at Checkpoint
+- **Local Pytest Startup Optimization (`pytest.ini`):**
+  - Quarantined unused third-party plugins (`napari`, `opik`, `langsmith`, `napari-plugin-engine`, `npe2`, `zarr`, `syrupy`) using `-p no:<plugin>`.
+  - Cleaned up pytest execution overhead and eliminated hangs.
+- **Smart Doc-Aware Git Hook (`scripts/test_fast.ps1`):**
+  - Added early detection for changes strictly confined to documentation (`docs/`, `paper/`, `.md`, images).
+  - Skips full pytest runs on doc-only commits, passing in <2 seconds.
+- **CI/CD Optimization (`.github/workflows/deploy.yml`):**
+  - **Path Filtering:** Configured `paths-ignore` on `push` and `pull_request` branches for documentation, markdown, and media files.
+  - **Pip Wheel Caching:** Added `actions/cache@v4` on `~/.cache/pip` keyed on `requirements.txt` to eliminate repeated torch and dependency wheel downloads.
+  - **Conditional OCaml Build:** Configured conditional execution for `lifecycle-ontology/` so OCaml compiler setup and dune tests only run if ontology files actually changed or upon manual `workflow_dispatch`.
+- **Reusable Playwright E2E Helper (`scripts/e2e_auth_helper.py`):**
+  - Authored standard browser automation module targeting explicit `input[type='text']` and `input[type='password']`.
+  - Eliminates 30-second selector timeouts caused by Streamlit's hidden radio-button elements.
+
 ## CHECKPOINT — Release v2.1.0 Full Deployment, Red-Team Integrity & GCP Live Verification (2026-11-05 22:38 IST)
 
 **Branch:** `master` · **HEAD:** `07f6622` · **Tag:** `v2.1.0`  

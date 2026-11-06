@@ -1,6 +1,6 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 05 November 2026 (Release v2.1.0 Closure Checkpoint)  
+**Last Updated:** 06 November 2026 (CI/CD Acceleration & E2E Tooling Checkpoint)  
 **Active Baseline Commit:** `07f6622` on `master`  
 **Release Tag:** `v2.1.0` (Synced to `origin/master`)  
 **Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  
@@ -34,6 +34,12 @@ Release `v2.1.0` consolidates the full-stack stability, high-contrast theme inte
    - Fixed Effects within-estimator fallback with `.cov` covariance matrix preservation for Hausman specification test (`hausman fe re`).
    - Fail-closed error handling for runtime estimator anomalies.
    - Dynamic 95% Confidence Intervals and variance-covariance standard errors.
+5. **CI/CD & Developer Experience Optimization (6 Nov 2026):**
+   - **Path Filtering in CI:** Docs/media commits bypass redundant Cloud Run test/deploy rebuilds.
+   - **Pip Dependency Caching:** Fast CI wheel reuse via `actions/cache@v4`.
+   - **Selective OCaml Execution:** OCaml compiler setup skips automatically when `lifecycle-ontology/` is untouched.
+   - **Smart Doc-Aware Hook:** `scripts/test_fast.ps1` fast-paths documentation commits in <2s.
+   - **Standardized E2E Auth Helper:** `scripts/e2e_auth_helper.py` guarantees deterministic Playwright automation without Streamlit radio-button locator timeouts.
 
 ---
 
