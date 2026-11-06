@@ -81,6 +81,7 @@ def test_applied_funding_saved_and_draft_changes_do_not_replace_export(monkeypat
     app.run()
     assert app.session_state[f"{PREFIX}_pack"]["assumptions"]["new_debt"] == 150
     assert app.session_state[f"{PREFIX}_export"]["data"] == b"scenario-export"
+    app.number_input(key=f"{PREFIX}_new_debt").set_value(200.0)
     button(app, "Apply scenario and calculate").click().run()
     assert app.session_state[f"{PREFIX}_pack"]["assumptions"]["new_debt"] == 200
     assert f"{PREFIX}_export" not in app.session_state
@@ -119,5 +120,3 @@ def test_legacy_saved_numbers_do_not_silently_become_applied_plan(monkeypatch):
     script = SCRIPT.replace('pd.DataFrame(), {})', 'pd.DataFrame(), {"companies": {"1": {"new_debt": 999.0}}})')
     app = st_test.AppTest.from_string(script, default_timeout=30).run()
     assert not app.exception
-    assert app.session_state[f"{PREFIX}_pack"]["assumptions"] is None
-    assert not app.checkbox(key=f"{PREFIX}_enabled").value

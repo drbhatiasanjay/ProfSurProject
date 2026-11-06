@@ -47,7 +47,8 @@ def test_native_page_profiles_and_blank_evidence(profile, role, case_store):
     app.run()
     assert not app.exception
     # Two revisions belong to one case, not two replacement cases.
-    working_keys = [k for k in app.session_state.filtered_state if k.endswith("_working")]
+    raw_keys = app.session_state.filtered_state if hasattr(app.session_state, "filtered_state") else list(app.session_state.keys())
+    working_keys = [k for k in raw_keys if str(k).endswith("_working")]
     assert len(working_keys) == 1
     working = app.session_state[working_keys[0]]
     assert case_store.load_case(profile, working["case_id"], 1)

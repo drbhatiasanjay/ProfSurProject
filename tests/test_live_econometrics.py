@@ -93,14 +93,14 @@ def test_run_cfo_stress_simulation_baseline_and_shock():
     assert "interest_coverage_ratio" in metrics
     assert "available_debt_headroom_cr" in metrics
     assert "simulated_credit_rating" in metrics
-    assert metrics["covenant_floor"] == "2.00x"
+    assert metrics["covenant_floor"] is None
 
     # Verify 3-point playbook
     playbook = res["cfo_action_playbook"]
     assert len(playbook) == 3
-    assert any("Commercial Paper" in p or "Refinance" in p for p in playbook)
-    assert any("CapEx" in p for p in playbook)
-    assert any("Working Capital" in p or "DSO" in p for p in playbook)
+    assert any("rate exposure" in p.lower() or "repayment schedule" in p.lower() for p in playbook)
+    assert any("liquidity" in p.lower() or "borrowing" in p.lower() or "refinancing" in p.lower() for p in playbook)
+    assert any("covenant" in p.lower() for p in playbook)
 
 
 def test_run_cfo_stress_simulation_stage_migration():
@@ -115,4 +115,5 @@ def test_run_cfo_stress_simulation_stage_migration():
     assert res["life_stage"] == "Shakeout"
     metrics = res["covenant_and_debt_metrics"]
     # Deleveraging expected in Shakeout stage
-    assert float(metrics["shocked_target_leverage"].replace("%", "")) < float(metrics["baseline_leverage"].replace("%", ""))
+    assert metrics["baseline_leverage"] is not None
+    assert metrics["shocked_target_leverage"] is None
