@@ -77,7 +77,27 @@ from models.llm_adapters import (
     stream_with_fallback,
 )
 from models.agent_tools import render_chat_chart_figure, extract_chat_chart_spec, extract_table_chart_spec
-from components import covenant_pilot_chat
+try:
+    from components import covenant_pilot_chat
+except Exception:
+    class _CovenantPilotChatStub:
+        @staticmethod
+        def enabled() -> bool:
+            return False
+
+        @staticmethod
+        def render_turn(turn, key_prefix):
+            pass
+
+        @staticmethod
+        def render_pending(chat_history, scope):
+            pass
+
+        @staticmethod
+        def route(query, chat_history, scope, selected_company=None):
+            return None
+
+    covenant_pilot_chat = _CovenantPilotChatStub()
 
 _CHART_INSTRUCTION = (
     "\n\nVISUALIZATION INSTRUCTIONS:\n"
