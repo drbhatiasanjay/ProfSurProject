@@ -1,11 +1,11 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
 **Last Updated:** 06 November 2026 (CI/CD Acceleration & E2E Tooling Checkpoint)  
-**Active Baseline Commit:** `07f6622` on `master`  
-**Release Tag:** `v2.1.0` (Synced to `origin/master`)  
+**Active Baseline Commit:** `162fafd` on `master`  
+**Release Tag:** `v2.2.0` (Synced to `origin/master`)  
 **Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  
 **GCP Project:** `tempproject-462219` (Region: `us-east1`)  
-**Active Revision:** `lifecycle-leverage-00222-wsw`  
+**Active CI Run:** `42217086937` (Test and Deploy: 100% Passed)  
 **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
 
