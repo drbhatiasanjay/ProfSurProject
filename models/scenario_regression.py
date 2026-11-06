@@ -37,7 +37,11 @@ def _prepare_ols_frame(df: pd.DataFrame) -> pd.DataFrame:
     need = ["leverage", *PREDICTORS]
     if df.empty or any(c not in df.columns for c in need):
         return pd.DataFrame()
-    return df[need].dropna()
+    result = df[need].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna().copy()
+    # Database ROA and tangibility are fractions; the visible scenario sliders use percent.
+    for column in ("profitability", "tangibility"):
+        result[column] *= 100
+    return result
 
 
 def compute_leverage_ols_coefs(df: pd.DataFrame) -> dict:
@@ -60,6 +64,7 @@ def compute_leverage_ols_coefs(df: pd.DataFrame) -> dict:
         ss_tot = float(np.sum((y - np.mean(y)) ** 2))
         coefs["r_squared"] = float(1 - ss_res / ss_tot) if ss_tot > 0 else 0.0
         coefs["n_obs"] = int(len(work))
+        coefs["sample_mean"] = float(np.mean(y))
     except np.linalg.LinAlgError:
         coefs = dict(_FALLBACK_COEFS)
     return coefs
@@ -91,5 +96,5 @@ def leverage_predictor_sample_means(df: pd.DataFrame) -> dict:
             out[key] = dflt
             continue
         v = sub[col].mean(skipna=True)
-        out[key] = float(v) if pd.notna(v) else dflt
+        out[key] = float(v) * (100 if col in ("profitability", "tangibility") else 1) if pd.notna(v) else dflt
     return out

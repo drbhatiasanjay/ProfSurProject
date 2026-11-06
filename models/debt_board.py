@@ -8,6 +8,7 @@ import pandas as pd
 import plotly.graph_objects as go
 
 from helpers import plotly_layout, PRIMARY, SECONDARY
+from models.debt_metrics import coverage_case
 
 
 def get_thesis_companies():
@@ -157,18 +158,19 @@ def build_debt_board(company_df, company_info, peers_df, assumptions=None):
         ], columns=["Alternative", "Potential role", "Decision condition"])])
 
     scenario_rows = []
-    new_interest = a["new_debt"] * a["new_rate"] / 100 if funding_supplied else 0
     cases = [("Observed baseline", False, False)]
     if funding_supplied:
         cases += [("Proposed funding", True, False), ("Combined downside", True, True)]
     elif has_scenario:
         cases += [("Existing debt downside", False, True)]
     for label, include_new, shocked in cases:
-        adj_ebit = ebit * (1 - a["earnings_shock"] if shocked else 1) if ebit is not None else None
-        # Existing floating share is explicit. New debt is fully exposed in the stress.
-        shock_cost = ((debt * a["floating_share"] + a["new_debt"]) * a["rate_shock"] / 10000) if shocked and debt is not None and debt >= 0 else (None if shocked else 0)
-        adj_interest = interest + (new_interest if include_new else 0) + shock_cost if interest is not None and interest >= 0 and shock_cost is not None else None
-        cov = adj_ebit / adj_interest if adj_ebit is not None and adj_interest is not None and adj_interest > 0 else None
+        case = coverage_case(ebit, interest, debt,
+            new_debt=a["new_debt"] if include_new else 0,
+            new_rate=a["new_rate"] if include_new else 0,
+            floating_share=a["floating_share"] if shocked else None,
+            shock_bps=a["rate_shock"] if shocked else 0,
+            earnings_decline=a["earnings_shock"] if shocked else 0)
+        adj_ebit, adj_interest, cov = case["pbit"], case["annual_interest"], case["coverage"]
         scenario_rows.append([label, adj_ebit, adj_interest, cov,
                               "No policy floor supplied" if not has_scenario else ("Not estimable" if cov is None else ("Below policy floor" if cov < a["coverage_floor"] else "Within policy floor"))])
     scenario = pd.DataFrame(scenario_rows, columns=["Scenario", "PBIT", "Annual interest", "Coverage (x)", "Illustrative policy test"])

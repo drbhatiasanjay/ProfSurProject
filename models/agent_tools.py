@@ -1189,20 +1189,25 @@ def run_cfo_stress_simulation(
     collateral_tangibility_shock_pct: float = 0.0,
     new_life_stage: str = "",
     panel_mode: str = "thesis",
+    floating_rate_share: float | None = None,
+    coverage_floor: float | None = None,
 ) -> dict:
     """Simulates dynamic macroeconomic, covenant, and life-cycle shocks for CFO decision-making.
 
     Args:
         company_name_or_code: Company name (e.g. 'Tata Motors') or numeric code (e.g. '2451').
         interest_rate_shock_bps: Macro interest rate change in basis points (e.g. +100 for +1.0%).
-        operating_margin_shock_pct: Operating profitability (ROA) change in % (e.g. -15.0).
+        operating_margin_shock_pct: Proportional PBIT change in percent (from -100 to 0).
         collateral_tangibility_shock_pct: Tangible collateral asset change in % (e.g. +5.0).
         new_life_stage: Optional simulated Dickinson stage migration (e.g. 'Shakeout', 'Decline').
         panel_mode: Active panel vintage ('thesis', 'latest', 'run3').
+        floating_rate_share: Explicit rate-exposed share between 0 and 1; missing withholds rate stress.
+        coverage_floor: Optional analytical PBIT/interest floor; never a contractual covenant.
 
     Returns:
-        Dict with target leverage shift, Interest Coverage Ratio (ICR), covenant headroom (Rs. Cr), indicative rating band, and 3-point CFO playbook.
+        Company-grounded baseline/downside coverage and explicit evidence gaps. No debt capacity or rating is inferred.
     """
+    from models.debt_metrics import coverage_case, finite
     # 1. Resolve Company Strictly (SW-04)
     conn = db.get_connection()
     try:
@@ -1229,7 +1234,12 @@ def run_cfo_stress_simulation(
             target_name = comp_match.iloc[0]["company_name"]
     else:
         # Match by name in companies
-        matches = comp_df[comp_df["company_name"].str.contains(target_name, case=False, na=False)]
+        eligible = comp_df[comp_df.company_code.isin(df.company_code)]
+        matches = eligible[eligible.company_name.str.casefold() == target_name.casefold()]
+        if matches.empty and target_name:
+            matches = eligible[eligible.company_name.str.contains(target_name, case=False, regex=False, na=False)]
+        if matches.company_code.nunique() > 1:
+            return dict(status="error", error_code="AMBIGUOUS_COMPANY", error="Select a company code; this name matches multiple companies in the active panel.")
         if not matches.empty:
             target_code = int(matches.iloc[0]["company_code"])
             target_name = matches.iloc[0]["company_name"]
@@ -1251,55 +1261,35 @@ def run_cfo_stress_simulation(
         }
 
     latest = firm_rows.iloc[-1]
+    if firm_rows.year.duplicated().any():
+        return dict(status="error", error_code="AMBIGUOUS_VINTAGE", error="Select one dataset vintage before stressing debt.")
     latest_year = int(latest.get("year", 2025))
-    base_lev = float(latest.get("leverage", 0.0))
-    base_roa = float(latest.get("profitability", 0.0))
-    base_tang = float(latest.get("tangibility", 0.0))
+    base_lev = finite(latest.get("leverage"))
+    base_roa = finite(latest.get("profitability"))
+    base_tang = finite(latest.get("tangibility"))
     base_stage = str(latest.get("life_stage", "Maturity"))
 
-    # 2. Calculate Econometric Shift (SW-05)
-    stage_adj = 0.0
-    active_stage = new_life_stage.capitalize() if new_life_stage else base_stage
-    if active_stage in ("Growth", "Stage 2"):
-        stage_adj = -4.0
-    elif active_stage in ("Shakeout", "Shakeout1", "Shakeout2", "Shakeout3", "Stage 4"):
-        stage_adj = -8.5
-    elif active_stage in ("Decline", "Decay", "Stage 5"):
-        stage_adj = -14.0
-
-    delta_target_lev = (
-        (operating_margin_shock_pct * 0.245)
-        - (interest_rate_shock_bps * 0.015)
-        + (collateral_tangibility_shock_pct * 0.12)
-        + stage_adj
-    )
-    shocked_target_lev = max(0.0, base_lev + delta_target_lev)
-
-    # 3. Dynamic Stress Simulation Grounding (SW-05)
-    base_icr = 3.55  # Scenario baseline parameter
-    shocked_icr = max(0.60, base_icr + (operating_margin_shock_pct * 0.05) - (interest_rate_shock_bps * 0.0055))
-
-    # 4. Debt Headroom in Rs. Crores
-    headroom_delta = int((shocked_icr - 2.0) * 850)
-    available_headroom_cr = max(0, headroom_delta)
-
-    # 5. Indicative Financial Health Band (SW-05)
-    if shocked_icr >= 3.2:
-        rating_band = "High Coverage Safety (ICR >= 3.2x)"
-    elif shocked_icr >= 2.3:
-        rating_band = "Adequate Investment Grade (ICR 2.3x-3.2x)"
-    elif shocked_icr >= 1.95:
-        rating_band = "Tight Covenant Watch (ICR 1.95x-2.3x)"
-    else:
-        rating_band = "Covenant Distress / High Leverage Risk (ICR < 1.95x)"
-
-    covenant_status = "SAFE (Buffer > 0.45x)" if shocked_icr >= 2.45 else "TIGHT (Approaching 2.0x Floor)" if shocked_icr >= 2.0 else "BREACH RISK (Below 2.0x Covenant Floor)"
-
-    # 6. Strategic C-Suite Action Playbook
+    shock, margin = finite(interest_rate_shock_bps), finite(operating_margin_shock_pct)
+    floor = finite(coverage_floor)
+    if shock is None or shock < 0 or margin is None or not -100 <= margin <= 0 or (coverage_floor is not None and (floor is None or floor <= 0)):
+        return dict(status="error", error_code="INVALID_ASSUMPTIONS", error="Supply a nonnegative rate shock, PBIT change from -100 to 0 percent and a positive optional analytical floor.")
+    if floating_rate_share is not None and finite(floating_rate_share) is None:
+        return dict(status="error", error_code="INVALID_ASSUMPTIONS", error="Floating share must be a finite fraction between 0 and 1.")
+    try:
+        baseline = coverage_case(latest.get("pbit"), latest.get("interest_amt"), latest.get("borrowings"))
+        downside = coverage_case(latest.get("pbit"), latest.get("interest_amt"), latest.get("borrowings"),
+            floating_share=floating_rate_share, shock_bps=shock, earnings_decline=-margin / 100)
+    except ValueError as exc:
+        return dict(status="error", error_code="INVALID_ASSUMPTIONS", error=str(exc))
+    def display(value, suffix=""):
+        value = finite(value)
+        return "Not estimable" if value is None else f"{value:.2f}{suffix}"
+    policy_status = "No analytical floor supplied" if floor is None else ("Not estimable" if downside["coverage"] is None else
+        "Below selected analytical floor" if downside["coverage"] < floor else "Within selected analytical floor")
     playbook = [
-        f"1. Refinance Short-Term Commercial Paper: Pre-fund maturing obligations with 3- to 5-year fixed paper to insulate against the {int(interest_rate_shock_bps):+d} bps rate shock.",
-        f"2. Calibrate Capital Expenditure: Adjust discretionary CapEx by 10-15% to preserve internal operating cash flow.",
-        f"3. Working Capital Cash Acceleration: Reduce receivables cash conversion cycle (DSO) by 6 days to free Rs. {min(350, max(120, int(available_headroom_cr * 0.15)))} Cr in liquid cash.",
+        "Confirm rate exposure and the debt repayment schedule.",
+        "Assess forward liquidity before proposing new borrowing or refinancing.",
+        "Obtain contractual covenant definitions before testing compliance.",
     ]
 
     return {
@@ -1309,27 +1299,35 @@ def run_cfo_stress_simulation(
         "company_code": target_code,
         "latest_reporting_year": latest_year,
         "measured_baseline": {
-            "leverage": f"{base_lev:.2f}%",
-            "profitability_roa": f"{base_roa:.2f}%",
-            "tangibility": f"{base_tang:.2f}%",
+            "leverage": display(base_lev, "%"),
+            "profitability_roa": display(base_roa * 100 if base_roa is not None else None, "%"),
+            "tangibility": display(base_tang * 100 if base_tang is not None else None, "%"),
             "life_stage": base_stage,
+            "interest_coverage": display(baseline["coverage"], "x"),
         },
         "simulation_parameters": {
             "interest_rate_shock_bps": f"{'+' if interest_rate_shock_bps >= 0 else ''}{interest_rate_shock_bps} bps",
             "operating_margin_shock": f"{'+' if operating_margin_shock_pct >= 0 else ''}{operating_margin_shock_pct}%",
             "tangibility_shock": f"{'+' if collateral_tangibility_shock_pct >= 0 else ''}{collateral_tangibility_shock_pct}%",
-            "assumed_baseline_icr": f"{base_icr:.2f}x (scenario baseline parameter)",
+            "floating_rate_share": floating_rate_share,
+            "analytical_coverage_floor": floor,
+            "collateral_and_stage_effect": "Context only; no inferred borrowing capacity or leverage target",
         },
+        "panel_mode": panel_mode,
+        "calculated_cases": {"baseline": baseline, "downside": downside},
         "covenant_and_debt_metrics": {
-            "baseline_leverage": f"{base_lev:.2f}%",
-            "shocked_target_leverage": f"{shocked_target_lev:.2f}%",
-            "leverage_delta": f"{'+' if delta_target_lev >= 0 else ''}{delta_target_lev:.2f}% (delta)",
-            "interest_coverage_ratio": f"{shocked_icr:.2f}x",
-            "covenant_floor": "2.00x",
-            "covenant_status": covenant_status,
-            "available_debt_headroom_cr": f"Rs. {available_headroom_cr:,} Cr",
-            "indicative_financial_health_band": rating_band,
+            "baseline_leverage": display(base_lev, "%"),
+            "shocked_target_leverage": None,
+            "leverage_delta": None,
+            "interest_coverage_ratio": display(downside["coverage"], "x"),
+            "covenant_floor": None,
+            "analytical_policy_status": policy_status,
+            "covenant_status": "Not established: agreement required",
+            "available_debt_headroom_cr": None,
+            "indicative_financial_health_band": "Not assessed",
         },
         "cfo_action_playbook": playbook,
-        "guardrail_notice": "Illustrative stress simulation based on empirical sensitivity elasticities. Actual covenant compliance and formal credit ratings require syndicated loan agreements and formal agency evaluation.",
+        "missing_evidence": (["Existing floating-rate share required for rate stress"] if shock and floating_rate_share is None else []) +
+            ["Principal repayment schedule", "Forward cash flows", "Contractual covenants", "Confirmed currency and monetary scale"],
+        "guardrail_notice": "Company-grounded static PBIT/interest illustration in source dataset units. Margin shock is a proportional PBIT change. No principal, fees, growth or tax benefit modeled. Missing rate exposure withholds rate-stressed coverage. No borrowing capacity, contractual covenant compliance or credit rating is inferred.",
     }

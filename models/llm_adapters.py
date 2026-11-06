@@ -932,24 +932,32 @@ def run_cfo_stress_simulation(
     operating_margin_shock_pct: float = -15.0,
     collateral_tangibility_shock_pct: float = 0.0,
     new_life_stage: str = "",
+    floating_rate_share: float | None = None,
+    coverage_floor: float | None = None,
 ) -> str:
     """Simulates dynamic macroeconomic interest rate hikes, margin compression, and Dickinson life-stage shocks for CFO decision-making.
 
     Args:
         company_name_or_code: Company name (e.g. 'Tata Motors') or code (e.g. '2451').
         interest_rate_shock_bps: Interest rate shock in basis points (e.g. 100 for +100 bps).
-        operating_margin_shock_pct: Operating profitability ROA shock in % (e.g. -15.0).
+        operating_margin_shock_pct: Proportional PBIT change in percent (from -100 to 0).
         collateral_tangibility_shock_pct: Collateral tangibility shock in % (e.g. 5.0).
         new_life_stage: Optional new simulated life-cycle stage (e.g. 'Shakeout', 'Decline').
+        floating_rate_share: User-confirmed fraction of rate-exposed debt (0 to 1); missing withholds rate stress.
+        coverage_floor: Optional user-selected coverage multiple; never a verified covenant.
     """
     import json
     from models.agent_tools import run_cfo_stress_simulation as _rcss
+    import streamlit as st
     res = _rcss(
         company_name_or_code=company_name_or_code,
         interest_rate_shock_bps=float(interest_rate_shock_bps),
         operating_margin_shock_pct=float(operating_margin_shock_pct),
         collateral_tangibility_shock_pct=float(collateral_tangibility_shock_pct),
         new_life_stage=new_life_stage,
+        panel_mode=st.session_state.get("panel_mode", "thesis"),
+        floating_rate_share=floating_rate_share,
+        coverage_floor=coverage_floor,
     )
     return json.dumps(res, default=str)
 
@@ -1407,7 +1415,7 @@ def stream_gemini_agent(
             "3. Join companies and financials on company_code: JOIN companies c ON f.company_code = c.company_code (Note: use company_code, not company_id).\n"
             "4. When the user requests a chart, plot, graph, or visual representation, query the database if needed, call generate_chat_chart, and accompany the interactive visualization with the complete data table and an insightful economic analysis. For industry comparisons, return all qualifying industry groups (do not reduce the query to two examples); for time comparisons, return every year in the requested range. The UI automatically renders the interactive Plotly graph and provides category selectors.\n"
             "5. LIVE ON-THE-FLY STATISTICAL & ECONOMETRIC MODELING: Whenever the user asks natural language questions about relationships between variables, empirical effects, or regressions (e.g. 'Do auto firms use profits to pay down debt?', 'How does tangibility impact leverage?', 'Test if profitability reduces debt post-COVID'), YOU MUST call run_live_econometric_model. Structure your response with the 5-Step Scientific Method: (1) Variable & Sample Formulation, (2) Automated Diagnostic Selection Rationale (Hausman & Breusch-Pagan tests), (3) Live Regression Table with exact β and p-values, (4) Economic & Theoretical Interpretation (Pecking Order vs Trade-Off vs Dickinson Stages), (5) Strict Methodological Guardrails & Limitations.\n"
-            "6. DYNAMIC CFO COUNTERFACTUAL STRESS TESTING: Whenever the user asks 'What-If' macro/operating shock questions (e.g. 'What happens if RBI hikes rates 100 bps?', 'Simulate a 15% margin drop on Tata Motors', 'What is our debt headroom?'), YOU MUST call run_cfo_stress_simulation to compute covenant floors, ICR, headroom in ₹ Cr, and the 3-point C-suite action playbook.\n"
+            "6. CFO STRESS TESTING: For rate or PBIT stress questions, call run_cfo_stress_simulation using explicit user assumptions. Ask for floating_rate_share before rate stress; coverage_floor is an optional analytical assumption. Report measured baseline and calculated coverage. Never infer monetary borrowing capacity, contractual covenant thresholds or credit ratings from coverage. Missing evidence must remain unavailable.\n"
             "7. Cite sources using [Source: Theory], [Source: Latest (2001-2025)], or [Source: OLS Model] where appropriate.\n"
             "8. The interactive charting system is fully supported and operational. NEVER output apologies or statements claiming you are unable to generate charts or graphs.\n"
             "9. CONVERSATION SCOPE & TURN ISOLATION: Focus STRICTLY and EXCLUSIVELY on answering the LATEST user prompt. NEVER preface your response with recaps, summaries, or repetitions of previous conversation turns or previous tool calls (e.g. NEVER say 'Here is the analysis for [Previous Company] and [Current Subject]'). Treat each new prompt as a focused task.\n"

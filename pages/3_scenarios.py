@@ -59,7 +59,7 @@ def compute_coefficients(filters_tuple, data_source: str, version_id: str | None
         panel = db.get_api_panel_data(version_id, filters_tuple)
     else:
         panel = db.get_panel_data(filters_tuple)
-    return compute_leverage_ols_coefs(panel)
+    return dict(compute_leverage_ols_coefs(panel))  # v2: percent-valued UI inputs and fitted sample mean
 
 
 @st.cache_data(ttl=3600)
@@ -68,7 +68,7 @@ def get_sample_means(filters_tuple, data_source: str, version_id: str | None):
         panel = db.get_api_panel_data(version_id, filters_tuple)
     else:
         panel = db.get_panel_data(filters_tuple)
-    return leverage_predictor_sample_means(panel)
+    return dict(leverage_predictor_sample_means(panel))  # v2: ROA/tangibility defaults in percent
 
 
 try:
@@ -77,6 +77,10 @@ try:
         means = get_sample_means(ft, _data_source, _version_id)
 except Exception as _e:
     st.error(f"Failed to load data. Please refresh. ({_e})")
+    st.stop()
+
+if coefs.get("n_obs", 0) == 0:
+    st.warning("Regression unavailable for this sample. Adjust filters or supply a valid dataset; no predicted leverage is calculated from fallback coefficients.")
     st.stop()
 
 if db.is_cmie_lab_enabled() and _data_source == "cmie" and _version_id:
@@ -125,10 +129,10 @@ with res_left:
     st.markdown(render_bento_kpi(
         title="Predicted Leverage",
         value=format_pct(predicted),
-        delta=f"{predicted - 21.0:+.1f}pp vs sample mean",
+        delta=f"{predicted - coefs['sample_mean']:+.1f}pp vs fitted sample mean",
         percentile=min(100.0, max(0.0, predicted * 2.0)),
         tag=f"R² = {coefs.get('r_squared', 0):.3f}",
-        stroke_color="#6366F1" if predicted <= 35 else "#F43F5E"
+        stroke_color="#6366F1"
     ), unsafe_allow_html=True)
 
     st.markdown("**Model Specification**")

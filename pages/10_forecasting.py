@@ -7,11 +7,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
+import hashlib
+import json
 import db
 from helpers import plotly_layout, format_pct, ensure_session_state, panel_label, PRIMARY, SECONDARY, ACCENT, PLOTLY_CONFIG, df_download_button, chart_download_button
 try:
-    from models.timeseries import run_full_forecast, forecast_firm
-    HAS_TORCH = True
+    from models.timeseries import run_full_forecast, forecast_firm, HAS_TORCH
 except (ImportError, NameError):
     HAS_TORCH = False
 
@@ -81,6 +82,12 @@ if panel_df.empty:
     st.stop()
 
 # Train model
+forecast_signature = hashlib.sha256(
+    panel_df.to_json(date_format="iso").encode() +
+    json.dumps([_panel, ft, model_type, seq_len], sort_keys=True, default=str).encode()).hexdigest()
+if st.session_state.get("forecast_signature") != forecast_signature:
+    st.session_state.forecast_result = None
+    st.session_state.forecast_signature = forecast_signature
 if "forecast_result" not in st.session_state:
     st.session_state.forecast_result = None
 
@@ -162,10 +169,18 @@ with tc2:
 # ── Firm-level forecast ──
 st.divider()
 st.markdown("#### Firm-Level Forecast")
-companies_df = db.get_companies()
-sel_firm = st.selectbox("Select company", companies_df["company_name"].tolist(), index=0, key="fc_firm")
-firm_code = int(companies_df[companies_df["company_name"] == sel_firm]["company_code"].iloc[0])
-firm_df = db.get_company_detail(firm_code)
+st.caption("Multi-year projections update leverage recursively. Other predictors are held at their latest observed values; this is a conditional projection, not a cash-flow forecast.")
+companies_df = db.get_companies(_panel)
+available_codes = panel_df.company_code.unique()
+companies_df = companies_df[companies_df.company_code.isin(available_codes)]
+if companies_df.empty:
+    st.info("No companies available in this training dataset.")
+    st.stop()
+firm_names = dict(zip(companies_df.company_code, companies_df.company_name))
+firm_code = st.selectbox("Select company", list(firm_names),
+    format_func=lambda code: f"{firm_names[code]} ({code})", key=f"fc_firm_{_panel}")
+sel_firm = firm_names[firm_code]
+firm_df = panel_df[panel_df.company_code == firm_code].copy()
 
 if not firm_df.empty and result.get("model"):
     features = result["features"]

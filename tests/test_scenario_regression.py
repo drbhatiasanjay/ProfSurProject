@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from models.scenario_regression import compute_leverage_ols_coefs, leverage_predictor_sample_means
 
@@ -29,8 +30,8 @@ def test_sample_means_keys():
     df = pd.DataFrame(
         {
             "leverage": [10.0, 20.0],
-            "profitability": [1.0, 3.0],
-            "tangibility": [10.0, 20.0],
+            "profitability": [.01, .03],
+            "tangibility": [.1, .2],
             "tax": [5.0, 15.0],
             "log_size": [2.0, 4.0],
             "tax_shield": [1.0, 2.0],
@@ -38,8 +39,8 @@ def test_sample_means_keys():
         }
     )
     m = leverage_predictor_sample_means(df)
-    assert m["prof"] == 2.0
-    assert m["tang"] == 15.0
+    assert m["prof"] == pytest.approx(2.0)
+    assert m["tang"] == pytest.approx(15.0)
 
 
 def test_compute_fallback_when_empty():

@@ -12,7 +12,7 @@ COLUMN_ALIASES = {
     "company_code": ["company_code", "comp_code", "firm_code", "code", "companycode"],
     "year": ["year", "yr", "fiscal_year", "fy", "period"],
     # Financials
-    "leverage": ["leverage", "lev", "debt_ratio", "financial_leverage", "debt_equity"],
+    "leverage": ["leverage", "lev", "debt_ratio", "financial_leverage"],
     "profitability": ["profitability", "prof", "roa", "pbdita_ta", "ebitda_ta", "return_on_assets"],
     "tangibility": ["tangibility", "tang", "fixed_assets_ta", "nfa_ta", "asset_tangibility"],
     "tax": ["tax", "tax_rate", "effective_tax", "corporate_tax"],
@@ -63,6 +63,8 @@ def validate_upload(df):
         }
 
     cols_lower = {c.lower().strip().replace(" ", "_"): c for c in df.columns}
+    if "debt_equity" in cols_lower:
+        warnings.append("Debt/equity is not mapped to leverage: confirm the metric denominator before converting to debt/assets.")
 
     # Check for entity column
     has_entity = False

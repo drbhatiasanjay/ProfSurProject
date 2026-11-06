@@ -225,7 +225,8 @@ with tab2:
     st.caption(
         "Upload any panel dataset (.csv, .xlsx, .dta). The engine auto-detects columns, "
         "standardizes names, optionally classifies life stages, and stores the dataset "
-        "for use across all analysis pages."
+        "for use in the Statistical Workbench during this session. Company Financing "
+        "has a separate persistent treasury-register template; Board Deck uses its stated source dataset."
     )
 
     # ── Step 1: File uploader ──

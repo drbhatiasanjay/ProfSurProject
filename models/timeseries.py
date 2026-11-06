@@ -36,6 +36,8 @@ def prepare_sequences(df, features, target="leverage", seq_len=5,
         target_vals = firm_df[target].values
 
         for i in range(len(firm_df) - seq_len):
+            if not np.all(np.diff(firm_df[time].values[i:i+seq_len+1]) == 1):
+                continue
             X_seqs.append(feat_vals[i:i+seq_len])
             y_seqs.append(target_vals[i+seq_len])
             firms.append(firm_id)
@@ -166,6 +168,8 @@ if HAS_TORCH:
 
     def forecast_firm(model, firm_df, features, seq_len=5, n_steps=3):
         """Given a firm's historical data, forecast leverage n_steps ahead."""
+        if "leverage" not in features:
+            raise ValueError("Recursive forecasting requires leverage in the feature list.")
         clean = firm_df.sort_values("year").dropna(subset=features + ["leverage"])
         if len(clean) < seq_len:
             return []
@@ -174,6 +178,8 @@ if HAS_TORCH:
         predictions = []
         last_year = int(clean.iloc[-1]["year"])
         window = clean[features].values[-seq_len:].copy()
+        if not np.all(np.diff(clean["year"].values[-seq_len:]) == 1):
+            return []
 
         for step in range(n_steps):
             x = torch.FloatTensor(window).unsqueeze(0)
@@ -182,7 +188,7 @@ if HAS_TORCH:
             pred = max(0, pred)
             predictions.append({"year": last_year + step + 1, "predicted_leverage": round(pred, 2)})
             new_row = window[-1].copy()
-            new_row[0] = pred
+            new_row[features.index("leverage")] = pred
             window = np.vstack([window[1:], new_row])
 
         return predictions

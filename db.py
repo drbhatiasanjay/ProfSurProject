@@ -639,8 +639,8 @@ def _deserialize_filters(filters_tuple):
     for key in ("company_codes", "life_stages", "industry_groups"):
         if filters.get(key):
             filters[key] = list(filters[key])
-    if filters.get("events"):
-        filters["events"] = dict(filters["events"])
+    if "events" in filters:
+        filters["events"] = dict(filters["events"] or ())
     return filters
 
 
