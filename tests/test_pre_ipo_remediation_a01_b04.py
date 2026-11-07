@@ -8,6 +8,7 @@ import dataclasses
 from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock
 import pytest
+pypdf = pytest.importorskip('pypdf')
 from pypdf import PdfWriter
 from pypdf.generic import DictionaryObject, NameObject, DecodedStreamObject
 from pptx import Presentation
