@@ -49,7 +49,15 @@ st.set_page_config(
 )
 
 # Independent additive workflow; the existing terminal remains the default.
-if st.radio("Pre-IPO workspace", ["Existing Pre-IPO terminal", "Decision-depth workbench"], horizontal=True, key="pre_ipo_workspace") == "Decision-depth workbench":
+with st.container(key="pre_ipo_workspace_switch"):
+    if st.session_state.get("theme") == "light":
+        render_html('''<style>
+        .st-key-pre_ipo_workspace_switch label,
+        .st-key-pre_ipo_workspace_switch label p,
+        .st-key-pre_ipo_workspace_switch [data-testid="stWidgetLabel"] p { color: #0f172a !important; }
+        </style>''')
+    workspace = st.radio("Pre-IPO workspace", ["Existing Pre-IPO terminal", "Decision-depth workbench"], horizontal=True, key="pre_ipo_workspace")
+if workspace == "Decision-depth workbench":
     from components.pre_ipo_decision_workbench import render
     render()
     st.stop()
@@ -340,12 +348,19 @@ else:
 
 intake_gaps = [item for item in dossier.limitations if item.gap_id.startswith(("GAP-OCR-", "GAP-INTAKE-"))]
 if intake_gaps or not dossier.history:
-    st.warning("Document intake is incomplete. Ratio calculations, underwriting conclusions and analytical deck export are blocked.")
-    st.dataframe([{"Gap ID": item.gap_id, "Status": item.current_status,
-                   "Required action": item.recommended_diligence_request} for item in intake_gaps], hide_index=True)
-    with st.expander("Document intake diagnostics", expanded=True):
-        st.dataframe([{"Field": item.field_name, "Status": item.status,
-                       "Detail": item.raw_extracted_value} for item in dossier.audit_report], hide_index=True)
+    with st.container(key="pre_ipo_intake_gate"):
+        if st.session_state.get("theme") == "light":
+            render_html('''<style>
+            .st-key-pre_ipo_intake_gate [data-testid="stAlert"] p { color: #0f172a !important; }
+            .st-key-pre_ipo_intake_gate summary { background: #fff !important; color: #0f172a !important; }
+            .st-key-pre_ipo_intake_gate summary p { color: #0f172a !important; }
+            </style>''')
+        st.warning("Document intake is incomplete. Ratio calculations, underwriting conclusions and analytical deck export are blocked.")
+        st.dataframe([{"Gap ID": item.gap_id, "Status": item.current_status,
+                       "Required action": item.recommended_diligence_request} for item in intake_gaps], hide_index=True)
+        with st.expander("Document intake diagnostics", expanded=True):
+            st.dataframe([{"Field": item.field_name, "Status": item.status,
+                           "Detail": item.raw_extracted_value} for item in dossier.audit_report], hide_index=True)
     st.stop()
 
 latest = dossier.latest_financials
