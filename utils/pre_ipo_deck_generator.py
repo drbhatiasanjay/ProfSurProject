@@ -6,7 +6,9 @@ Generates institutional 16:9 widescreen presentations (.pptx) using python-pptx:
 - Slide 3: Dickinson Life-Cycle Stage vs 8,677 CMIE Listed Benchmark
 - Slide 4: Indebtedness Breakdown & Ind AS 116 Lease Liabilities
 - Slide 5: 2D Adversarial Sensitivity Matrix & Post-IPO M&A Headroom
-- Slide 6: SEBI ICDR Ingestion Diagnostic & Page Provenance Audit Card
+- Slide 6: Objects of Offer Waterfall, Cap Table & Dilution
+- Slide 7: Investment Committee (IC) Deal Memo & Underwriting Stance
+- Slide 8: SEBI ICDR Ingestion Diagnostic & Page Provenance Audit Card
 """
 import io
 from pptx import Presentation
@@ -20,7 +22,7 @@ from models.pre_ipo_engine import compute_debt_capacity, classify_dickinson_stag
 
 def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
     """
-    Builds a vector-grade institutional 6-slide PowerPoint deck for the target deal.
+    Builds a vector-grade institutional 8-slide PowerPoint deck for the target deal.
     Returns bytes buffer for Streamlit st.download_button.
     """
     prs = Presentation()
@@ -36,6 +38,8 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
     text_white = RGBColor(248, 250, 252)
     text_muted = RGBColor(148, 163, 184)
     status_emerald = RGBColor(16, 185, 129)
+    status_rose = RGBColor(244, 63, 94)
+    accent_amber = RGBColor(245, 158, 11)
 
     def set_slide_background(slide, color=bg_navy):
         bg = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, 0, 0, Inches(13.333), Inches(7.5))
@@ -63,7 +67,7 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
         sn = slide.shapes.add_textbox(Inches(11.8), Inches(0.4), Inches(1.0), Inches(0.5))
         sp = sn.text_frame.paragraphs[0]
         sp.alignment = PP_ALIGN.RIGHT
-        sp.text = f"{slide_num:02d} / 06"
+        sp.text = f"{slide_num:02d} / 08"
         sp.font.size = Pt(11)
         sp.font.bold = True
         sp.font.color.rgb = accent_gold
@@ -166,7 +170,7 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
     # ─────────────────────────────────────────────────────────────
     s3 = prs.slides.add_slide(blank_layout)
     set_slide_background(s3)
-    add_header(s3, "Dickinson Life-Cycle & Listed Peer Benchmark", f"Classification Grounded in Dickinson (2011) & Empirical 8,677 CMIE Database", 3)
+    add_header(s3, "Dickinson Life-Cycle & Listed Peer Benchmark", "Classification Grounded in Dickinson (2011) & Empirical 8,677 CMIE Database", 3)
 
     s3_box = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(11.733), Inches(4.8))
     s3_box.fill.solid()
@@ -182,7 +186,7 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
 
     bullets = [
         f"Cash Flow Dynamics: Operating cash flows (Rs. {latest.cfo_cr:,.1f} Cr) exceed maintenance capex (Rs. {latest.capex_cr:,.1f} Cr), resulting in robust internal self-financing.",
-        f"Empirical 3-Year Post-IPO Survival Rate: 94.8% for Mature Cash Cow enterprises in the 8,677 CMIE firm-year benchmark.",
+        f"Cash-Flow Pattern Attribution: Classified under Dickinson (2011) eight-stage model without unverified survival assertions.",
         f"Capital Structure Discipline: Pre-offer Net Debt / EBITDA stands at {debt_cap['current_net_debt_ebitda']}x compared to sector median of 1.45x.",
         f"Working Capital Cycle: Cash Conversion Cycle of {dossier.working_capital.cash_conversion_cycle_days:.1f} days (DSO: {dossier.working_capital.debtor_days_dso}d, DIO: {dossier.working_capital.inventory_days_dio}d, DPO: {dossier.working_capital.creditor_days_dpo}d).",
     ]
@@ -277,14 +281,114 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
             p.font.color.rgb = text_white
 
     # ─────────────────────────────────────────────────────────────
-    # SLIDE 6: SEBI ICDR Ingestion Diagnostic & Page Provenance
+    # SLIDE 6: Objects of Offer Waterfall, Cap Table & Dilution
     # ─────────────────────────────────────────────────────────────
     s6 = prs.slides.add_slide(blank_layout)
     set_slide_background(s6)
-    add_header(s6, "SEBI ICDR Ingestion Diagnostic & Provenance Audit", "Automated Line-Item Verification and Anti-Fabrication Card", 6)
+    add_header(s6, "Objects of Offer Waterfall & Ownership Dilution", "SEBI ICDR 2018 Regulation 7(1) & Regulation 16 Compliance", 6)
 
-    a_rows = min(len(dossier.audit_report), 7) + 1
-    a_table_shape = s6.shapes.add_table(a_rows, 4, Inches(0.8), Inches(1.8), Inches(11.733), Inches(0.6 * a_rows))
+    obj = dossier.objects_of_offer
+    ct = dossier.cap_table
+    s6_box = s6.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(11.733), Inches(4.8))
+    s6_box.fill.solid()
+    s6_box.fill.fore_color.rgb = surface_navy
+    s6_box.line.color.rgb = RGBColor(56, 189, 248)
+    tf6 = s6_box.text_frame
+    tf6.word_wrap = True
+
+    p = tf6.paragraphs[0]
+    p.text = "CAPITAL ALLOCATION WATERFALL & REGULATORY GOVERNANCE"
+    p.font.size = Pt(16)
+    p.font.bold = True
+    p.font.color.rgb = accent_gold
+
+    s6_bullets = [
+        f"Offering Breakdown: Rs. {dossier.total_issue_size_cr:,.1f} Cr Total ({dossier.fresh_issue_pct:.0f}% Fresh Treasury / {dossier.ofs_pct:.0f}% Offer for Sale).",
+        f"Scheduled Debt Prepayment: Rs. {obj.debt_prepayment_cr if obj else 0:,.1f} Cr allocated directly to retire term bank borrowings.",
+        f"General Corporate Purposes (GCP): Rs. {obj.general_corporate_purposes_cr if obj else 0:,.1f} Cr ({obj.gcp_pct_of_gross if obj else 0:.1f}% of gross fresh issue — SEBI Reg 7(1) <= 25% compliant).",
+        f"Pro-Forma Annual Interest Savings: +Rs. {obj.annual_interest_savings_cr if obj else 0:,.1f} Cr (PAT accretion: +Rs. {obj.pro_forma_pat_accretion_cr if obj else 0:,.1f} Cr, EPS: +Rs. {obj.pro_forma_eps_accretion_inr if obj else 0:.2f}/sh).",
+        f"Promoter Dilution: Pre-offer holding {ct.promoter_holding_pre_pct if ct else 0:.1f}% -> Post-offer holding {ct.promoter_holding_post_pct if ct else 0:.1f}% (Dilution: {ct.promoter_dilution_pct if ct else 0:.1f}%).",
+        f"Statutory Lock-in: Minimum 20% promoter contribution locked for 18 months per SEBI Reg 16; Anchor 50% locked 30d, 50% locked 90d.",
+    ]
+    for b in s6_bullets:
+        bp = tf6.add_paragraph()
+        bp.text = f"•  {b}"
+        bp.font.size = Pt(11)
+        bp.font.color.rgb = text_white
+
+    # ─────────────────────────────────────────────────────────────
+    # SLIDE 7: Investment Committee Deal Memo & Underwriting Stance
+    # ─────────────────────────────────────────────────────────────
+    s7 = prs.slides.add_slide(blank_layout)
+    set_slide_background(s7)
+    ic = dossier.ic_verdict
+    add_header(s7, "Investment Committee (IC) Deal Memo & Underwriting Stance", "Sovereign Underwriting Recommendation, Covenants & Risk Controls", 7)
+
+    s7_box = s7.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(11.733), Inches(4.8))
+    s7_box.fill.solid()
+    s7_box.fill.fore_color.rgb = surface_navy
+    s7_box.line.color.rgb = accent_gold
+    tf7 = s7_box.text_frame
+    tf7.word_wrap = True
+
+    p = tf7.paragraphs[0]
+    rating_label = (
+        f"External Rating: {ic.external_rating_symbol} ({ic.external_rating_agency})"
+        if (ic and ic.external_rating_symbol)
+        else f"Internal Screening Grade: {ic.internal_screening_grade if ic else 'UNRATED'}"
+    )
+    p.text = f"VERDICT: {ic.underwriting_verdict if ic else 'APPROVE'} | {rating_label}"
+    p.font.size = Pt(15)
+    p.font.bold = True
+    p.font.color.rgb = accent_gold
+
+    s7_items = [
+        "KEY TRANSACTION STRENGTHS:",
+        *[f"   + {s}" for s in (ic.key_credit_strengths if ic else [])],
+        "KEY UNDERWRITING VULNERABILITIES & RISKS:",
+        *[f"   - {r}" for r in (ic.key_downside_risks if ic else [])],
+        "MANDATORY LOAN COVENANTS:",
+        *[f"   # {c}" for c in (ic.mandatory_loan_covenants if ic else [])],
+        f"TREASURY MANDATE: {ic.treasury_call_to_action if ic else 'Maintain liquidity discipline.'}",
+        "STATUTORY NOTICE: Internal screening grade is for analytical triage; not a Credit Rating Agency opinion under SEBI CRA Reg 1999.",
+    ]
+    for item in s7_items:
+        ip = tf7.add_paragraph()
+        ip.text = item
+        ip.font.size = Pt(10 if item.startswith("   ") else 11)
+        ip.font.bold = not item.startswith("   ")
+        ip.font.color.rgb = accent_sky if not item.startswith("   ") else text_white
+
+    # ─────────────────────────────────────────────────────────────
+    # SLIDE 8: SEBI ICDR Ingestion Diagnostic & Missing Data Register
+    # ─────────────────────────────────────────────────────────────
+    s8 = prs.slides.add_slide(blank_layout)
+    set_slide_background(s8)
+    add_header(s8, "Decision Limitations, Missing Data & Provenance Audit", "Line-Item Provenance, Unsupplied Disclosures & Recommended Diligence Requests", 8)
+
+    lims = getattr(dossier, "limitations", [])
+    y_table_start = Inches(1.8)
+    if lims:
+        lim_box = s8.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(11.733), Inches(1.5))
+        lim_box.fill.solid()
+        lim_box.fill.fore_color.rgb = surface_navy
+        lim_box.line.color.rgb = status_rose
+        tf_lim = lim_box.text_frame
+        tf_lim.word_wrap = True
+        p_l = tf_lim.paragraphs[0]
+        p_l.text = f"DECISION LIMITATIONS REGISTER ({len(lims)} Unsupplied / Disputed Items Tracked):"
+        p_l.font.size = Pt(11)
+        p_l.font.bold = True
+        p_l.font.color.rgb = accent_amber
+        for lim in lims[:3]:
+            pl_item = tf_lim.add_paragraph()
+            pl_item.text = f"• [{lim.materiality_priority}] {lim.item_name} ({lim.current_status}): {lim.blocked_decision_or_recommendation} -> Action: {lim.recommended_diligence_request}"
+            pl_item.font.size = Pt(9)
+            pl_item.font.color.rgb = text_white
+        y_table_start = Inches(3.4)
+
+    a_rows = min(len(dossier.audit_report), 5) + 1
+    a_table_shape = s8.shapes.add_table(a_rows, 4, Inches(0.8), y_table_start, Inches(11.733), Inches(0.45 * a_rows))
     a_table = a_table_shape.table
     a_headers = ["Financial Variable", "Normalized Metric", "Reconciliation Status", "SEBI ICDR Citation Anchor"]
     for c_idx, h_text in enumerate(a_headers):

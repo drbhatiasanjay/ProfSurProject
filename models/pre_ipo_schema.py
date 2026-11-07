@@ -1,7 +1,9 @@
 """
 Pre-IPO DRHP Intelligence Data Schemas & Provenance Contracts.
 Defines structured dataclasses for SEBI ICDR 2018 Restated Financials,
-Funded vs Economic Indebtedness, Non-Financial Governance, and Auditable Ingestion.
+Funded vs Economic Indebtedness, Non-Financial Governance, Auditable Ingestion,
+Cap Table Dilution, Objects of Offer Waterfall, Beneish Forensics, Debt Maturity Ladder,
+Valuation Peer Comps, Structured Decision Limitations, and Investment Committee Stance.
 """
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
@@ -27,6 +29,9 @@ class FinancialYearMetric:
     capex_cr: float
     fcf_cr: float
     net_worth_cr: float
+    total_assets_cr: Optional[float] = None
+    receivables_cr: Optional[float] = None
+    gross_margin_pct: Optional[float] = None
     provenance: Optional[ProvenanceRef] = None
 
 
@@ -41,6 +46,8 @@ class IndebtednessSchedule:
     weighted_avg_interest_rate_pct: Optional[float] = None
     floating_benchmark_spread: Optional[str] = None
     sanctioned_limits_cr: Optional[float] = None
+    fixed_rate_portion_pct: float = 20.0
+    floating_rate_portion_pct: float = 80.0
     provenance: Optional[ProvenanceRef] = None
 
     @property
@@ -90,6 +97,281 @@ class NonFinancialGovernance:
 
 
 @dataclass
+class AnchorLockinMilestone:
+    milestone_name: str  # e.g. "Listing Day (T0)", "Day 30 Unlock (50% Anchor)", "Day 90 Unlock (100% Anchor)", "Day 180 Promoter Excess"
+    days_from_listing: int  # 0, 30, 90, 180
+    calendar_date: str  # YYYY-MM-DD or projected
+    unlocked_pct: float  # % of anchor or excess tranche unlocked
+    unlocked_shares_cr: float  # Estimated shares (Cr)
+    unlocked_value_cr: float  # Estimated value (₹ Cr)
+    cumulative_free_float_pct: float  # Resulting free float %
+    supply_risk_level: str  # LOW, MEDIUM, ELEVATED, HIGH
+    status: str  # EXPIRED, ACTIVE_WINDOW, UPCOMING
+    exchange_notice_ref: str = "SEBI ICDR Reg 17 / NSE Circular"
+
+
+@dataclass
+class CapTableDilution:
+    promoter_holding_pre_pct: float
+    promoter_holding_post_pct: float
+    public_holding_post_pct: float
+    anchor_portion_pct: float = 30.0
+    promoter_min_contribution_lock_months: int = 18
+    promoter_excess_holding_lock_months: int = 6
+    anchor_lock_30d_pct: float = 50.0
+    anchor_lock_90d_pct: float = 50.0
+    employee_reservation_cr: float = 0.0
+    anchor_lockin_schedule: List[AnchorLockinMilestone] = field(default_factory=list)
+    provenance: Optional[ProvenanceRef] = None
+
+    @property
+    def promoter_dilution_pct(self) -> float:
+        return max(0.0, self.promoter_holding_pre_pct - self.promoter_holding_post_pct)
+
+
+@dataclass
+class ObjectsOfOfferWaterfall:
+    gross_fresh_issue_cr: float
+    issue_expenses_cr: float
+    debt_prepayment_cr: float
+    capex_expansion_cr: float
+    inorganic_acquisition_cr: float
+    general_corporate_purposes_cr: float
+    interest_rate_on_retired_debt_pct: float = 9.0
+    shares_pre_issue_cr: float = 36.0
+    shares_post_issue_cr: float = 40.0
+    pre_issue_pat_cr: float = 0.0
+    provenance: Optional[ProvenanceRef] = None
+
+    @property
+    def net_fresh_proceeds_cr(self) -> float:
+        return max(0.0, self.gross_fresh_issue_cr - self.issue_expenses_cr)
+
+    @property
+    def gcp_pct_of_gross(self) -> float:
+        if self.gross_fresh_issue_cr <= 0:
+            return 0.0
+        return (self.general_corporate_purposes_cr / self.gross_fresh_issue_cr) * 100.0
+
+    @property
+    def sebi_gcp_compliant(self) -> bool:
+        # SEBI ICDR 2018 Reg 7(1): GCP shall not exceed 25% of gross fresh issue
+        return self.gcp_pct_of_gross <= 25.01
+
+    @property
+    def annual_interest_savings_cr(self) -> float:
+        return round(self.debt_prepayment_cr * (self.interest_rate_on_retired_debt_pct / 100.0), 2)
+
+    @property
+    def pro_forma_pat_accretion_cr(self) -> float:
+        # Corporate tax rate: 25.17% (Section 115BAA)
+        return round(self.annual_interest_savings_cr * (1.0 - 0.2517), 2)
+
+    @property
+    def pre_issue_eps_inr(self) -> Optional[float]:
+        if self.shares_pre_issue_cr <= 0:
+            return None
+        return round(self.pre_issue_pat_cr / self.shares_pre_issue_cr, 2)
+
+    @property
+    def post_issue_pro_forma_eps_inr(self) -> Optional[float]:
+        if self.shares_post_issue_cr <= 0:
+            return None
+        post_pat = self.pre_issue_pat_cr + self.pro_forma_pat_accretion_cr
+        return round(post_pat / self.shares_post_issue_cr, 2)
+
+    @property
+    def eps_accretion_dilution_inr(self) -> Optional[float]:
+        pre = self.pre_issue_eps_inr
+        post = self.post_issue_pro_forma_eps_inr
+        if pre is None or post is None:
+            return None
+        return round(post - pre, 2)
+
+    @property
+    def is_dilutive(self) -> Optional[bool]:
+        diff = self.eps_accretion_dilution_inr
+        if diff is None:
+            return None
+        return diff < 0
+
+    @property
+    def pro_forma_eps_accretion_inr(self) -> float:
+        val = self.eps_accretion_dilution_inr
+        return val if val is not None else 0.0
+
+
+@dataclass
+class BeneishMScoreRatios:
+    dsri: Optional[float] = None   # Days Sales in Receivables Index
+    gmi: Optional[float] = None    # Gross Margin Index
+    aqi: Optional[float] = None    # Asset Quality Index
+    sgi: Optional[float] = None    # Sales Growth Index
+    depi: Optional[float] = None   # Depreciation Index
+    sgai: Optional[float] = None   # SGA Expenses Index
+    lvgi: Optional[float] = None   # Leverage Index
+    tata: Optional[float] = None   # Total Accruals to Total Assets
+    abnormal_cfo_proxy: float = 0.0
+    provenance: Optional[ProvenanceRef] = None
+
+    @property
+    def is_computable(self) -> bool:
+        # All 8 indices must be valid floats
+        return all(
+            x is not None
+            for x in (self.dsri, self.gmi, self.aqi, self.sgi, self.depi, self.sgai, self.lvgi, self.tata)
+        )
+
+    @property
+    def m_score(self) -> Optional[float]:
+        if not self.is_computable:
+            return None
+        return round(
+            -4.84
+            + 0.920 * self.dsri
+            + 0.528 * self.gmi
+            + 0.404 * self.aqi
+            + 0.892 * self.sgi
+            + 0.115 * self.depi
+            - 0.172 * self.sgai
+            + 4.037 * self.tata
+            + 0.0327 * self.lvgi,
+            2,
+        )
+
+    @property
+    def is_manipulation_risk(self) -> Optional[bool]:
+        # Threshold: -1.78 per Beneish (1999)
+        ms = self.m_score
+        if ms is None:
+            return None
+        return ms > -1.78
+
+
+@dataclass
+class DebtMaturityLadder:
+    repayment_due_year_1_cr: float  # Current maturities
+    repayment_due_year_2_cr: float
+    repayment_due_year_3_cr: float
+    repayment_due_year_4_cr: float
+    repayment_due_year_5_plus_cr: float
+    fixed_rate_debt_pct: float
+    floating_rate_debt_pct: float
+    weighted_average_maturity_years: float = 3.2
+    refinancing_risk_rating: str = "MODERATE"  # LOW, MODERATE, ELEVATED
+    provenance: Optional[ProvenanceRef] = None
+
+    @property
+    def total_repayment_profile_cr(self) -> float:
+        return (
+            self.repayment_due_year_1_cr
+            + self.repayment_due_year_2_cr
+            + self.repayment_due_year_3_cr
+            + self.repayment_due_year_4_cr
+            + self.repayment_due_year_5_plus_cr
+        )
+
+
+@dataclass
+class ListedPeerComp:
+    peer_name: str
+    ticker: str
+    mcap_cr: float
+    pe_ratio: Optional[float]
+    ev_ebitda: Optional[float]
+    ev_sales: float
+    pb_ratio: float
+    pat_margin_pct: float
+    roe_pct: float
+    dickinson_stage: str
+
+
+@dataclass
+class ValuationPeerBenchmarking:
+    price_band_lower_inr: float
+    price_band_upper_inr: float
+    implied_mcap_cr: float
+    implied_ev_cr: float
+    implied_pe_ratio: float
+    implied_ev_ebitda: float
+    implied_ev_sales: float
+    implied_pb_ratio: float
+    sector_peer_group: str
+    peers: List[ListedPeerComp]
+    valuation_verdict: str  # ATTRACTIVE_DISCOUNT, FAIR_VALUE, EXPENSIVE_PREMIUM
+    provenance: Optional[ProvenanceRef] = None
+
+    @property
+    def peer_median_pe(self) -> Optional[float]:
+        if not self.peers:
+            return None
+        vals = sorted([p.pe_ratio for p in self.peers if p.pe_ratio is not None and p.pe_ratio > 0])
+        if not vals:
+            return None
+        n = len(vals)
+        if n % 2 == 1:
+            return vals[n // 2]
+        return round((vals[n // 2 - 1] + vals[n // 2]) / 2.0, 2)
+
+    @property
+    def peer_median_ev_ebitda(self) -> Optional[float]:
+        if not self.peers:
+            return None
+        vals = sorted([p.ev_ebitda for p in self.peers if p.ev_ebitda is not None and p.ev_ebitda > 0])
+        if not vals:
+            return None
+        n = len(vals)
+        if n % 2 == 1:
+            return vals[n // 2]
+        return round((vals[n // 2 - 1] + vals[n // 2]) / 2.0, 2)
+
+    @property
+    def pe_discount_to_peers_pct(self) -> Optional[float]:
+        med = self.peer_median_pe
+        if med is None or med <= 0 or self.implied_pe_ratio <= 0:
+            return None
+        return round(((med - self.implied_pe_ratio) / med) * 100.0, 1)
+
+
+@dataclass
+class DecisionLimitationItem:
+    gap_id: str
+    item_name: str
+    affected_dimension: str
+    current_status: str  # NOT_SUPPLIED, PARSE_FAILED, INCONSISTENT, AWAITING_AUDIT, UNDISCLOSED, NOT_APPLICABLE
+    why_it_matters: str
+    blocked_decision_or_recommendation: str
+    materiality_priority: str  # HIGH, MEDIUM, LOW
+    recommended_diligence_request: str
+    provisional_assumption_applied: Optional[str] = None
+
+
+@dataclass
+class InvestmentCommitteeVerdict:
+    underwriting_verdict: str  # APPROVE WITH COVENANTS, RESTRICTED LEVERAGE, DELEVERAGING MANDATE, UNLEVERAGED M&A ACCRETION
+    internal_screening_grade: str  # TIER_1_STRONG_CUSHION, TIER_2_MODERATE_LEVERAGE, TIER_3_ELEVATED_MONITORING
+    max_recommended_leverage_ratio: float
+    key_credit_strengths: List[str]
+    key_downside_risks: List[str]
+    mandatory_loan_covenants: List[str]
+    treasury_call_to_action: str
+    external_rating_agency: Optional[str] = None
+    external_rating_symbol: Optional[str] = None
+    rating_disclaimer: str = (
+        "Internal quantitative screening grade only — does not constitute a statutory credit rating "
+        "issued by a SEBI-registered Credit Rating Agency (SEBI CRA Regulations 1999)."
+    )
+    provenance: Optional[ProvenanceRef] = None
+
+    @property
+    def credit_rating_equivalent(self) -> str:
+        # Backward-compatible property for existing consumers
+        if self.external_rating_symbol:
+            return f"{self.external_rating_symbol} (Official Agency)"
+        return self.internal_screening_grade
+
+
+@dataclass
 class IngestionAuditItem:
     field_name: str
     raw_extracted_value: str
@@ -116,7 +398,17 @@ class PreIPODealDossier:
     indebtedness: IndebtednessSchedule
     working_capital: WorkingCapitalDynamics
     governance: NonFinancialGovernance
+    cap_table: Optional[CapTableDilution] = None
+    objects_of_offer: Optional[ObjectsOfOfferWaterfall] = None
+    beneish_forensics: Optional[BeneishMScoreRatios] = None
+    debt_maturity: Optional[DebtMaturityLadder] = None
+    valuation_comps: Optional[ValuationPeerBenchmarking] = None
+    ic_verdict: Optional[InvestmentCommitteeVerdict] = None
+    limitations: List[DecisionLimitationItem] = field(default_factory=list)
     audit_report: List[IngestionAuditItem] = field(default_factory=list)
+    listing_date: Optional[str] = None
+    issue_status: str = "COMPLETED"  # COMPLETED, RUNNING_PIPELINE, AWAITING_LISTING, PRE_IPO_DRHP
+    anchor_calendar_active: bool = True
 
     @property
     def latest_financials(self) -> FinancialYearMetric:
