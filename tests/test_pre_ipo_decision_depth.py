@@ -64,6 +64,10 @@ def test_raise_cash_equity_conservation():
     after = f.equity_bridge(200,80,10,primary_net=30,repayment=25)
     assert before.data["aggregate_equity_value"] == after.data["aggregate_equity_value"]
     assert f.equity_bridge(200,80,10,repayment=20).state == "INFEASIBLE"
+    insolvent=f.equity_bridge(50,80,0)
+    assert insolvent.state == "CLAIMS_EXCEED_VALUE"
+    assert insolvent.data["aggregate_equity_value"] is None
+    assert insolvent.data["residual_after_claims"] == -30
 
 def test_valuation_domain_and_solver_residual():
     assert f.terminal_cash(100,.03,.15).data["next_fcff"] == pytest.approx(80)

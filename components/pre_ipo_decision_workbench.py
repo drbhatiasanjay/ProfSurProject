@@ -17,7 +17,7 @@ def _clear_model_fields():
         if key.startswith("ipo_arg_"):
             del st.session_state[key]
 
-def render():
+def _render_content():
     user = st.session_state.get("user", {})
     owner, role = user.get("username", ""), user.get("role", "")
     st.title("Pre-IPO decision workbench")
@@ -239,3 +239,46 @@ def render():
     from utils.pre_ipo_decision_export import export_json, export_pptx
     st.download_button("Download evidence and results JSON", export_json(report), "pre_ipo_decision.json", "application/json", on_click="ignore")
     st.download_button("Download decision deck", export_pptx(report), "pre_ipo_decision.pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation", on_click="ignore")
+
+def render():
+    with st.container(key="ipo_depth_surface"):
+        if st.session_state.get("theme") == "light":
+            st.markdown("""
+            <style>
+            .st-key-ipo_depth_surface [data-testid="stForm"] {
+                background: #fff !important; border: 1px solid #cbd5e1 !important;
+                border-radius: 12px !important; padding: 16px !important;
+            }
+            .st-key-ipo_depth_surface [data-testid="stForm"] label,
+            .st-key-ipo_depth_surface [data-testid="stForm"] label p,
+            .st-key-ipo_depth_surface [data-testid="stForm"] h3,
+            .st-key-ipo_depth_surface [data-testid="stForm"] [data-testid="stCaptionContainer"] p {
+                color: #0f172a !important;
+            }
+            .st-key-ipo_depth_surface button {
+                background: #fff !important; color: #0f172a !important;
+                border-color: #94a3b8 !important;
+            }
+            .st-key-ipo_depth_surface button p,
+            .st-key-ipo_depth_surface button span { color: inherit !important; }
+            .st-key-ipo_depth_surface button[kind="primary"],
+            .st-key-ipo_depth_surface button[kind="primaryFormSubmit"] {
+                background: #4338ca !important; color: #fff !important;
+            }
+            .st-key-ipo_depth_surface button:disabled { opacity: .55 !important; }
+            .st-key-ipo_depth_surface input,
+            .st-key-ipo_depth_surface textarea,
+            .st-key-ipo_depth_surface [data-baseweb="select"] > div {
+                background: #fff !important; color: #0f172a !important;
+                border-color: #94a3b8 !important;
+            }
+            .st-key-ipo_depth_surface [data-baseweb="select"] span,
+            .st-key-ipo_depth_surface [data-baseweb="select"] div {
+                color: #0f172a !important;
+            }
+            .st-key-ipo_depth_surface [data-testid="stAlert"] p {
+                color: #0f172a !important;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+        _render_content()

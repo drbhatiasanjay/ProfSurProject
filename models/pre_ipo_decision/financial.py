@@ -118,8 +118,13 @@ def equity_bridge(operating_ev, debt, unrestricted_excess_cash, *, primary_net=0
     if repayment > debt or repayment + uses > cash + primary:
         return Result("INFEASIBLE", reasons=("Repayment exceeds principal or available sources",))
     post_cash, post_debt = cash + primary - repayment - uses, debt - repayment
+    residual = ev + post_cash - post_debt - claims
+    if residual < 0:
+        return Result("CLAIMS_EXCEED_VALUE", {"post_cash": post_cash, "post_debt": post_debt,
+                      "residual_after_claims": residual, "aggregate_equity_value": None},
+                      reasons=("Negative claim residual is not a negative limited-liability shareholder price; restructuring/option value is outside this bridge.",))
     return Result("CONDITIONAL_MODEL", {"post_cash": post_cash, "post_debt": post_debt,
-        "aggregate_equity_value": ev + post_cash - post_debt - claims},
+        "aggregate_equity_value": residual},
         assumptions=("Operating EV already reflects modeled investment uses; aggregate value is not old-holder value",))
 
 def terminal_cash(next_nopat, growth, marginal_roic) -> Result:
