@@ -2,7 +2,10 @@
 import ast
 from pathlib import Path
 
-from markdown_it import MarkdownIt
+import pytest
+
+markdown_it = pytest.importorskip("markdown_it")
+MarkdownIt = markdown_it.MarkdownIt
 
 from utils import html_blocks
 
