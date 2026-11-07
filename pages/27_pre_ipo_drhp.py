@@ -14,6 +14,7 @@ Comprehensive Institutional Architecture adhering to:
 - One-Click 16:9 Vector Board Pitch Deck Generator
 """
 import streamlit as st
+from utils.html_blocks import render_html
 import pandas as pd
 import plotly.graph_objects as go
 from models.pre_ipo_data import PRE_IPO_REGISTRY
@@ -49,7 +50,7 @@ if st.radio("Pre-IPO workspace", ["Existing Pre-IPO terminal", "Decision-depth w
     st.stop()
 
 # Apply Sovereign Financial Terminal Glassmorphic Theme CSS
-st.markdown(
+render_html(
     """
     <style>
     /* Monospace Financial Numbers & Tabular Alignment */
@@ -156,7 +157,7 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
     """
     Renders institutional 6-point structured findings for analytical depth & evidence-backed action.
     """
-    st.markdown(
+    render_html(
         f"""
         <div class="narrative-card" style="margin-top: 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -270,7 +271,7 @@ if selected_deal_key == "custom_upload":
     with col_up2:
         from models.runtime_config import get_gemini_api_key
         has_gemini = bool(get_gemini_api_key())
-        st.markdown(
+        render_html(
             """
             <div class="bento-card" style="padding:12px; margin-top:24px;">
                 <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;">🤖 Multimodal Vision OCR Engine</div>
@@ -294,7 +295,7 @@ if selected_deal_key == "custom_upload":
         )
     else:
         st.info("ℹ️ Upload a Draft Red Herring Prospectus (DRHP) or Red Herring Prospectus (RHP) PDF above, or select a Golden Exemplar from the dropdown to inspect the financial terminal.")
-        st.markdown(
+        render_html(
             """
             <div class="bento-card" style="border: 1px dashed rgba(56, 189, 248, 0.4); text-align:center; padding: 40px 20px;">
                 <div style="font-size:2.2rem; margin-bottom:8px;">📄</div>
@@ -331,7 +332,7 @@ with col_act:
 # ─────────────────────────────────────────────────────────────────────────────
 badge_class = "badge-emerald" if "Mature" in stage_name else "badge-amber" if "Growth" in stage_name else "badge-rose"
 
-st.markdown(
+render_html(
     f"""
     <div class="bento-card" style="border-left: 4px solid #38bdf8;">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
@@ -380,7 +381,7 @@ metric_cards_html = "".join([
     for m in p_view['key_metrics']
 ])
 
-st.markdown(
+render_html(
     f"""
     <div class="bento-card" style="margin-top:14px; border: 1px solid rgba(56, 189, 248, 0.3); background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
@@ -460,8 +461,8 @@ st.markdown(
 with tab_fin:
     col_f1, col_f2 = st.columns([3, 2])
     with col_f1:
-        st.markdown('<div class="bento-subtitle">Section V Disclosures · Restated Consolidated Ind AS</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">3-to-4 Year Restated Performance</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-subtitle">Section V Disclosures · Restated Consolidated Ind AS</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">3-to-4 Year Restated Performance</div>', unsafe_allow_html=True)
         
         fin_rows = []
         for f_item in dossier.history:
@@ -494,10 +495,10 @@ with tab_fin:
         st.plotly_chart(fig_trend, use_container_width=True)
 
     with col_f2:
-        st.markdown('<div class="bento-subtitle">Empirical Benchmark (N=8,677 CMIE Database)</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Dickinson Life-Cycle Radar</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-subtitle">Empirical Benchmark (N=8,677 CMIE Database)</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">Dickinson Life-Cycle Radar</div>', unsafe_allow_html=True)
         
-        st.markdown(
+        render_html(
             f"""
             <div class="bento-card">
                 <div style="font-size:0.85rem; color:#94a3b8;">Classified Stage:</div>
@@ -522,8 +523,8 @@ with tab_fin:
 # ── TAB 2: OBJECTS OF THE OFFER & PROCEEDS WATERFALL ──
 with tab_objects:
     obj = dossier.objects_of_offer
-    st.markdown('<div class="bento-subtitle">SEBI ICDR 2018 Regulation 7 & 41 Compliance</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Use of Proceeds Waterfall & Statutory Limits</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">SEBI ICDR 2018 Regulation 7 & 41 Compliance</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Use of Proceeds Waterfall & Statutory Limits</div>', unsafe_allow_html=True)
 
     if obj and obj.gross_fresh_issue_cr > 0:
         c_obj1, c_obj2, c_obj3, c_obj4 = st.columns(4)
@@ -562,7 +563,7 @@ with tab_objects:
 
         # Pro-Forma Accretion Summary
         if obj.debt_prepayment_cr > 0:
-            st.markdown(
+            render_html(
                 f"""
                 <div class="bento-card" style="border:1px solid #10b981;">
                     <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Pro-Forma Debt Retirement & Financial Accretion</div>
@@ -594,8 +595,8 @@ with tab_objects:
 
 # ── TAB 3: INDEBTEDNESS & LEASES ──
 with tab_debt:
-    st.markdown('<div class="bento-subtitle">Section VI Disclosures · Ind AS 116 Lease Analysis</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Capital Structure & Indebtedness Breakdown</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">Section VI Disclosures · Ind AS 116 Lease Analysis</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Capital Structure & Indebtedness Breakdown</div>', unsafe_allow_html=True)
 
     include_leases = st.toggle("Include Ind AS 116 Lease Liabilities in Total Leverage", value=True)
     
@@ -645,8 +646,8 @@ with tab_debt:
 with tab_stress:
     col_s1, col_s2 = st.columns([3, 2])
     with col_s1:
-        st.markdown('<div class="bento-subtitle">Quantitative Stress Testing</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">2D Interest Coverage Ratio (ICR) Sensitivity</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-subtitle">Quantitative Stress Testing</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">2D Interest Coverage Ratio (ICR) Sensitivity</div>', unsafe_allow_html=True)
         
         floating_pct = getattr(dossier.indebtedness, "floating_rate_debt_pct", 75.0)
         sens = generate_2d_sensitivity_matrix(
@@ -667,8 +668,8 @@ with tab_stress:
         st.dataframe(s_df, use_container_width=True, hide_index=True)
 
     with col_s2:
-        st.markdown('<div class="bento-subtitle">OakNorth Treasury Standard Sizing</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Post-IPO M&A Headroom</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-subtitle">OakNorth Treasury Standard Sizing</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">Post-IPO M&A Headroom</div>', unsafe_allow_html=True)
         
         target_lev = st.slider("Target Max Leverage Ceiling (Net Debt / EBITDA)", min_value=1.5, max_value=4.0, value=2.5, step=0.25)
         debt_cap = compute_debt_capacity(
@@ -681,7 +682,7 @@ with tab_stress:
             target_leverage_ceiling=target_lev,
         )
         
-        st.markdown(
+        render_html(
             f"""
             <div class="bento-card" style="border:1px solid #10b981;">
                 <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Unutilized Incremental M&A Headroom</div>
@@ -705,8 +706,8 @@ with tab_stress:
 # ── TAB 5: CAP TABLE & DILUTION ──
 with tab_captable:
     ct = dossier.cap_table
-    st.markdown('<div class="bento-subtitle">SEBI ICDR 2018 Regulation 14 & 16 Disclosures</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Cap Table, Ownership Dilution & Lock-in Schedule</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">SEBI ICDR 2018 Regulation 14 & 16 Disclosures</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Cap Table, Ownership Dilution & Lock-in Schedule</div>', unsafe_allow_html=True)
 
     if ct:
         col_c1, col_c2, col_c3, col_c4 = st.columns(4)
@@ -744,8 +745,8 @@ with tab_captable:
         st.plotly_chart(fig_cap, use_container_width=True)
 
         # Statutory Lock-In & Secondary Floating Supply Calendar
-        st.markdown('<div class="bento-subtitle" style="margin-top:20px;">NSE / BSE Secondary Float Dynamics & Lock-In Timeline</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Anchor Lock-in Expiry & Supply Overhang Calendar</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-subtitle" style="margin-top:20px;">NSE / BSE Secondary Float Dynamics & Lock-In Timeline</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">Anchor Lock-in Expiry & Supply Overhang Calendar</div>', unsafe_allow_html=True)
 
         lock_schedule = generate_anchor_lockin_calendar(dossier)
         if lock_schedule:
@@ -797,15 +798,15 @@ with tab_captable:
 # ── TAB 6: FORENSIC ACCRUALS (BENEISH M-SCORE) ──
 with tab_forensics:
     b = dossier.beneish_forensics
-    st.markdown('<div class="bento-subtitle">Beneish (1999) & Roychowdhury (2006) Forensic Econometrics</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Forensic Accruals & Window-Dressing Audit</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">Beneish (1999) & Roychowdhury (2006) Forensic Econometrics</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Forensic Accruals & Window-Dressing Audit</div>', unsafe_allow_html=True)
 
     if b and b.is_computable and b.m_score is not None:
         col_b1, col_b2 = st.columns([1, 2])
         with col_b1:
             risk_color = "#10b981" if not b.is_manipulation_risk else "#f43f5e"
             risk_badge = "LOW PROBABILITY" if not b.is_manipulation_risk else "ELEVATED RISK FLAG"
-            st.markdown(
+            render_html(
                 f"""
                 <div class="bento-card" style="border:2px solid {risk_color}; text-align:center;">
                     <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Beneish Aggregate M-Score</div>
@@ -824,7 +825,7 @@ with tab_forensics:
                 unsafe_allow_html=True,
             )
         with col_b2:
-            st.markdown('<div class="bento-subtitle">8-Ratio Forensic Diagnostic Breakdown</div>', unsafe_allow_html=True)
+            render_html('<div class="bento-subtitle">8-Ratio Forensic Diagnostic Breakdown</div>', unsafe_allow_html=True)
             ratio_breakdown = [
                 {"Ratio Variable": "Days Sales in Receivables (DSRI)", "Formula": "Receivables_t / Receivables_{t-1}", "Observed": f"{b.dsri:.2f}", "Normal Range": "< 1.25", "Status": "PASS" if b.dsri < 1.25 else "FLAG"},
                 {"Ratio Variable": "Gross Margin Index (GMI)", "Formula": "GM_{t-1} / GM_t", "Observed": f"{b.gmi:.2f}", "Normal Range": "< 1.20", "Status": "PASS" if b.gmi < 1.20 else "FLAG"},
@@ -845,8 +846,8 @@ with tab_forensics:
 # ── TAB 7: DEBT MATURITY LADDER ──
 with tab_maturity:
     dm = dossier.debt_maturity
-    st.markdown('<div class="bento-subtitle">Ind AS 107 Disclosures · Contractual Principal Cash Flows</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Debt Maturity Ladder & Refinancing Profile</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">Ind AS 107 Disclosures · Contractual Principal Cash Flows</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Debt Maturity Ladder & Refinancing Profile</div>', unsafe_allow_html=True)
 
     if dm:
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
@@ -886,7 +887,7 @@ with tab_maturity:
         )
         st.plotly_chart(fig_ladder, use_container_width=True)
 
-    st.markdown(
+    render_html(
         f"""
         <div class="narrative-card">
             <div style="font-size:0.80rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-bottom:4px;">
@@ -916,8 +917,8 @@ with tab_maturity:
 # ── TAB 8: VALUATION & LISTED PEER COMPS ──
 with tab_valuation:
     val = dossier.valuation_comps
-    st.markdown('<div class="bento-subtitle">CMIE Database Peer Calibration at Identical Dickinson Stage</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Valuation Multiples & Listed Sector Comps</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">CMIE Database Peer Calibration at Identical Dickinson Stage</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Valuation Multiples & Listed Sector Comps</div>', unsafe_allow_html=True)
 
     if val:
         col_v1, col_v2, col_v3, col_v4 = st.columns(4)
@@ -930,7 +931,7 @@ with tab_valuation:
         with col_v4:
             st.metric("Implied EV / EBITDA", f"{val.implied_ev_ebitda:.1f}x" if val.implied_ev_ebitda > 0 else "Negative")
 
-        st.markdown(f'<div class="bento-subtitle">Peer Universe: {val.sector_peer_group}</div>', unsafe_allow_html=True)
+        render_html(f'<div class="bento-subtitle">Peer Universe: {val.sector_peer_group}</div>', unsafe_allow_html=True)
         peer_rows = []
         for p in val.peers:
             peer_rows.append({
@@ -954,11 +955,11 @@ with tab_valuation:
 with tab_governance:
     col_g1, col_g2 = st.columns(2)
     with col_g1:
-        st.markdown('<div class="bento-subtitle">SEBI LODR & ICDR Governance Disclosures</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Non-Financial Risk Profile</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-subtitle">SEBI LODR & ICDR Governance Disclosures</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">Non-Financial Risk Profile</div>', unsafe_allow_html=True)
         gov = dossier.governance
         
-        st.markdown(
+        render_html(
             f"""
             <div class="bento-card">
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
@@ -987,11 +988,11 @@ with tab_governance:
         )
 
     with col_g2:
-        st.markdown('<div class="bento-subtitle">Cash Conversion Dynamics</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Working Capital Cycle</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-subtitle">Cash Conversion Dynamics</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">Working Capital Cycle</div>', unsafe_allow_html=True)
         wc = dossier.working_capital
         
-        st.markdown(
+        render_html(
             f"""
             <div class="bento-card">
                 <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Net Cash Conversion Cycle (CCC)</div>
@@ -1009,7 +1010,7 @@ with tab_governance:
             unsafe_allow_html=True,
         )
 
-    st.markdown(
+    render_html(
         f"""
         <div class="narrative-card">
             <div style="font-size:0.80rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-bottom:4px;">
@@ -1040,8 +1041,8 @@ with tab_governance:
 # ── TAB 10: INVESTMENT COMMITTEE (IC) DEAL MEMO & VERDICT ──
 with tab_ic:
     ic = dossier.ic_verdict
-    st.markdown('<div class="bento-subtitle">Sovereign Credit Underwriting Standard</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Investment Committee (IC) Deal Memo & Underwriting Stance</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">Sovereign Credit Underwriting Standard</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Investment Committee (IC) Deal Memo & Underwriting Stance</div>', unsafe_allow_html=True)
 
     if ic:
         col_ic1, col_ic2 = st.columns([1, 2])
@@ -1058,7 +1059,7 @@ with tab_ic:
                 if (ic.external_rating_symbol and ic.external_rating_agency)
                 else f"Internal Screening Grade: <strong style='color:#ffffff;'>{ic.internal_screening_grade or 'UNRATED'}</strong>"
             )
-            st.markdown(
+            render_html(
                 f"""
                 <div class="bento-card" style="border:2px solid {v_color}; text-align:center;">
                     <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">IC Underwriting Verdict</div>
@@ -1077,7 +1078,7 @@ with tab_ic:
                 unsafe_allow_html=True,
             )
         with col_ic2:
-            st.markdown(
+            render_html(
                 f"""
                 <div class="bento-card">
                     <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:6px;">
@@ -1098,7 +1099,7 @@ with tab_ic:
                 unsafe_allow_html=True,
             )
 
-        st.markdown(
+        render_html(
             f"""
             <div class="bento-card" style="border-left:4px solid #38bdf8;">
                 <div style="font-size:0.80rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-bottom:6px;">
@@ -1121,8 +1122,8 @@ with tab_ic:
 
 # ── TAB 11: MISSING DATA & DECISION LIMITATIONS ──
 with tab_limitations:
-    st.markdown('<div class="bento-subtitle">SEBI DRHP Information Gaps & Diligence Worklist</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Decision Limitations & Unsupplied Disclosures Register</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">SEBI DRHP Information Gaps & Diligence Worklist</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Decision Limitations & Unsupplied Disclosures Register</div>', unsafe_allow_html=True)
     
     lims = getattr(dossier, "limitations", [])
     if not lims:
@@ -1151,7 +1152,7 @@ with tab_limitations:
             })
         st.dataframe(pd.DataFrame(lim_rows), use_container_width=True, hide_index=True)
 
-        st.markdown(
+        render_html(
             """
             <div class="narrative-card" style="margin-top:14px; border-left:4px solid #f59e0b;">
                 <div style="font-size:0.80rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-bottom:4px;">
@@ -1169,8 +1170,8 @@ with tab_limitations:
 
 # ── TAB 12: ONLINE INGESTION DIAGNOSTIC ──
 with tab_audit:
-    st.markdown('<div class="bento-subtitle">Automated Provenance & Anti-Fabrication Verification</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Online Ingestion Diagnostic Card</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">Automated Provenance & Anti-Fabrication Verification</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Online Ingestion Diagnostic Card</div>', unsafe_allow_html=True)
 
     audit_rows = []
     for item in dossier.audit_report:

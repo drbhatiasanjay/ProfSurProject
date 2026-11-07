@@ -1,5 +1,13 @@
 # ProfSurProject — Session Log
 
+## CHECKPOINT — Pre-IPO Narrative HTML Rendering Fix (2026-11-07)
+
+- Compared Antigravity's canonical-page HTML normalization fix and reused its line-stripping/blank-line removal in utils/html_blocks.py.
+- Routed all 52 terminal HTML calls through the shared renderer, fixing seven six-point narrative cards, persona cockpit and other affected cards without changing calculations or narrative values.
+- Regression tests: 30 targeted tests passed; project_ops fast suite 6 passed.
+- Authenticated browser checks: four profiles, both themes, seven complete narrative cards per session, zero raw HTML code blocks. Evidence: scratch/terminal_html_evidence/matrix.json and eight verified screenshots.
+- Isolated preview restarted at localhost:8510; no merge, push or deployment.
+
 ## CHECKPOINT — Isolated Pre-IPO Decision Depth (2026-11-07)
 
 - Branch: codex/pre-ipo-decision-depth; base 5687478; separate managed worktree profsur-decision-depth.
