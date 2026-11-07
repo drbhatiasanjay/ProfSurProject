@@ -641,6 +641,43 @@ with tab_equity_thesis:
             if q_obj.inflection_triggers:
                 st.markdown(f"**⚡ Thesis-Breaking Inflection Trigger:** `{q_obj.inflection_triggers[0]}`")
 
+    # ── DECISION-DEPTH ADVANCED ALGORITHM LAB (ALG01 - ALG14) ──
+    st.markdown('<hr style="border-color:rgba(255,255,255,0.08); margin:24px 0 16px 0;">', unsafe_allow_html=True)
+    with st.expander("🔬 Decision-Depth Quantitative Algorithm Lab (ALG01–ALG14)", expanded=False):
+        st.markdown('<div style="font-size:0.80rem; color:#94a3b8; margin-bottom:12px;">Authoritative mathematical evaluation engines implemented per <code>PRE_IPO_DECISION_DEPTH_ALGORITHM_PRD_2026-11-07.md</code>.</div>', unsafe_allow_html=True)
+        from models.pre_ipo_algorithms import (
+            alg02_falsifiable_thesis,
+            alg03_sector_operating_drivers,
+            alg04_dated_financing_feasibility,
+            alg06_reverse_underwriting_valuation,
+            alg07_reverse_stress_failure_frontier,
+            alg12_investor_returns_attribution,
+            alg13_private_security_waterfall,
+        )
+        c_alg1, c_alg2 = st.columns(2)
+        with c_alg1:
+            st.markdown("**ALG02: Falsifiable Proposition Engine**")
+            f_res = alg02_falsifiable_thesis(dossier)
+            for p in f_res.get("propositions", []):
+                p_badge = "badge-emerald" if p["status"] == "SUPPORTED" else "badge-amber" if p["status"] == "PARTIAL" else "badge-rose"
+                st.markdown(f"• **{p['claim']}** <span class='badge-pill {p_badge}'>{p['status']}</span><br><span style='font-size:0.75rem; color:#94a3b8;'>Mechanism: {p['economic_mechanism']}</span>", unsafe_allow_html=True)
+
+            st.markdown("<br>**ALG03: Sector Driver Reconciled Tree**", unsafe_allow_html=True)
+            d_res = alg03_sector_operating_drivers(dossier)
+            st.json(d_res.get("driver_tree", {}))
+
+        with c_alg2:
+            st.markdown("**ALG07: Reverse Stress Failure Frontier (Minimal Shock Distance)**")
+            ff_res = alg07_reverse_stress_failure_frontier(dossier)
+            if ff_res.get("status") == "FRONTIER_FOUND":
+                st.markdown(f"• **Vulnerability Rating:** `{ff_res['vulnerability_assessment']}`<br>• Minimal Revenue Contraction: **{ff_res['minimal_revenue_shock_pct']:.0f}%**<br>• Minimal Rate Hike: **+{ff_res['minimal_rate_shock_bps']:.0f} bps**<br>• Quadratic Distance: `{ff_res['severity_distance']}`", unsafe_allow_html=True)
+            else:
+                st.info("Issuer has negligible debt; failure frontier is exempt.")
+
+            st.markdown("<br>**ALG12: Two-Factor Price Return Midpoint Decomposition**", unsafe_allow_html=True)
+            attr_res = alg12_investor_returns_attribution(entry_price_inr=108.0, exit_price_inr=155.0, entry_eps_inr=1.20, exit_eps_inr=1.55)
+            st.markdown(f"• Total Return: **+{attr_res['total_return_pct']:.1f}%** (₹{attr_res['total_price_delta_inr']:.1f})<br>• Earnings Growth Share: **{attr_res['earnings_growth_share_pct']:.1f}%**<br>• Multiple Expansion Share: **{attr_res['multiple_expansion_share_pct']:.1f}%**<br>• Conservation Error: `{attr_res['conservation_error_inr']} INR`", unsafe_allow_html=True)
+
 # ═════════════════════════════════════════════════════════════════════════════
 # LEVEL 1 - TAB 3: DETAILED ANALYTICAL WORKPAPERS (4 SUB-TABS)
 # ═════════════════════════════════════════════════════════════════════════════
@@ -936,6 +973,17 @@ with tab_workpapers:
 
         with c_bf2:
             from datetime import datetime, timezone
+            from models.pre_ipo_exchange_feed import ExchangeFeedClient
+            recon = ExchangeFeedClient.reconcile_with_prospectus(dossier.listing_date, dossier.company_name)
+            if recon.get("is_reconciled"):
+                st.markdown(
+                    f"""
+                    <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:0.78rem; color:#10b981;">
+                        🟢 <strong>{recon['exchange']} Circular {recon['circular_ref']}</strong> · Listing: <strong>{recon['exchange_listing_date']}</strong> ({recon['drift_status']})
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
             as_of_today = datetime.now(timezone.utc).date()
             lockin_sched = generate_anchor_lockin_calendar(dossier, as_of_date=as_of_today)
             if lockin_sched:
@@ -948,6 +996,7 @@ with tab_workpapers:
                         "Free Float (%)": f"{l.cumulative_free_float_pct:.1f}%",
                         "Risk Level": l.supply_risk_level,
                         "Status": l.status,
+                        "Exchange Circular": l.exchange_notice_ref,
                     })
                 st.dataframe(pd.DataFrame(l_rows), use_container_width=True, hide_index=True)
 

@@ -112,6 +112,105 @@ class PreIPOIngestionEngine:
         return b""
 
     @classmethod
+    def detect_mime_type(cls, data: bytes, filename: Optional[str] = None) -> str:
+        """Dynamically identifies mime type from magic bytes or file extension."""
+        if data.startswith(b"%PDF"):
+            return "application/pdf"
+        elif data.startswith(b"\x89PNG\r\n\x1a\n"):
+            return "image/png"
+        elif data.startswith(b"\xff\xd8\xff"):
+            return "image/jpeg"
+        elif data.startswith(b"RIFF") and len(data) > 12 and data[8:12] == b"WEBP":
+            return "image/webp"
+        elif filename:
+            fn = filename.lower()
+            if fn.endswith(".png"):
+                return "image/png"
+            if fn.endswith(".jpg") or fn.endswith(".jpeg"):
+                return "image/jpeg"
+            if fn.endswith(".webp"):
+                return "image/webp"
+            if fn.endswith(".pdf"):
+                return "application/pdf"
+        return "application/pdf"
+
+    @classmethod
+    def extract_scanned_drhp_annexures(
+        cls,
+        document_source: Any,
+        annexure_type: str = "ALL",
+        company_name_hint: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Targeted multimodal vision extraction for specific scanned DRHP financial annexures.
+        Supports Annexure VI (Borrowings), Annexure III (Objects of the Offer), 
+        and Annexure V (Restated Standalone/Consolidated Financial Schedules).
+        """
+        api_key = get_gemini_api_key()
+        if not api_key:
+            return {
+                "status": "SUSPENDED_AWAITING_KEY",
+                "error": "GEMINI_API_KEY_REQUIRED",
+                "tables": {},
+                "gap_id": "GAP-OCR-01",
+                "message": "Configure GEMINI_API_KEY to run multimodal vision extraction on scanned annexures.",
+            }
+
+        data_bytes = cls.get_source_bytes(document_source)
+        if len(data_bytes) < 100:
+            return {"status": "FAILED", "error": "EMPTY_BYTE_STREAM", "tables": {}}
+        if len(data_bytes) > 25 * 1024 * 1024:
+            return {"status": "FAILED", "error": "FILE_TOO_LARGE", "tables": {}}
+
+        filename = getattr(document_source, "name", None)
+        mime = cls.detect_mime_type(data_bytes, filename)
+
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=api_key)
+            media_part = types.Part.from_bytes(data=data_bytes, mime_type=mime)
+
+            prompt = (
+                f"You are a forensic auditor reviewing scanned SEBI DRHP annexures for {company_name_hint or 'the issuer'}. "
+                f"Extract structured tables for target annexure category: {annexure_type}.\n"
+                "Return valid JSON only matching this schema:\n"
+                "{\n"
+                '  "annexure_borrowings": [{"lender_name": "string", "facility_type": "string", "sanctioned_amount_cr": float, "outstanding_amount_cr": float, "interest_rate_pct": float, "repayment_terms": "string"}],\n'
+                '  "annexure_objects_of_offer": [{"object_category": "string", "proposed_utilization_cr": float, "deployment_fy25_cr": float, "deployment_fy26_cr": float}],\n'
+                '  "annexure_restated_pnl": [{"fiscal_year": "string", "revenue_from_ops_cr": float, "ebitda_cr": float, "finance_costs_cr": float, "pat_cr": float}],\n'
+                '  "confidence_score": float,\n'
+                '  "source_annexure_citation": "string"\n'
+                "}\n"
+                "Return raw valid JSON without markdown wrapping."
+            )
+
+            active_model = cls.get_vision_model_name()
+            resp = client.models.generate_content(
+                model=active_model,
+                contents=[media_part, prompt],
+            )
+            raw = resp.text.strip()
+            if raw.startswith("```"):
+                raw = re.sub(r"^```(?:json)?\s*", "", raw)
+                raw = re.sub(r"\s*```$", "", raw)
+            parsed = json.loads(raw)
+            return {
+                "status": "SUCCESS",
+                "tables": parsed,
+                "model_used": active_model,
+                "mime_type": mime,
+            }
+        except Exception as exc:
+            return {
+                "status": "FAILED",
+                "error": f"VISION_ANNEXURE_ERROR: {str(exc)}",
+                "tables": {},
+                "gap_id": "GAP-OCR-01",
+            }
+
+    @classmethod
     def parse_scanned_pdf_with_vision(
         cls,
         document_source: Any,
@@ -141,8 +240,11 @@ class PreIPOIngestionEngine:
             from google import genai
             from google.genai import types
 
+            doc_filename = getattr(document_source, "name", None)
+            mime = cls.detect_mime_type(pdf_bytes, doc_filename)
+
             client = genai.Client(api_key=api_key)
-            pdf_part = types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
+            pdf_part = types.Part.from_bytes(data=pdf_bytes, mime_type=mime)
 
             prompt = (
                 "You are an expert SEBI ICDR Draft Red Herring Prospectus (DRHP) auditor. "
