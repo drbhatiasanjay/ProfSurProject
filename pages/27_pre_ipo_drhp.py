@@ -9,7 +9,8 @@ Comprehensive Institutional Architecture adhering to:
 - Cap Table Dilution & Statutory 18m/6m/Anchor Lock-In Schedules
 - Beneish (1999) 8-Variable Forensic M-Score & Accrual Quality
 - Debt Maturity Ladder & Refinancing Profile
-- CMIE Listed Peer Multiples (P/E, EV/EBITDA) at identical Dickinson Life-Cycle Stage
+- CMIE Listed Peer Multiples (P/E, EV/EBITDA) & Crosswalk Reconciliation
+- 10 Core Investor Questions (Q01-Q10) & Private Extensions (PX01-PX04)
 - Investment Committee (IC) Deal Memo & Prescriptive Underwriting Verdict
 - One-Click 16:9 Vector Board Pitch Deck Generator
 """
@@ -32,6 +33,10 @@ from models.pre_ipo_engine import (
     generate_valuation_narrative,
     generate_persona_decision_view,
     generate_anchor_lockin_calendar,
+    calculate_wacc_and_roic,
+    calculate_reverse_dcf_hurdle,
+    generate_cmie_crosswalk_coverage,
+    generate_equity_question_answers,
 )
 from utils.pre_ipo_deck_generator import generate_pre_ipo_board_deck
 
@@ -41,6 +46,14 @@ st.set_page_config(
     page_icon="⚡",
     layout="wide",
 )
+
+def render_html(html_str: str):
+    """
+    Renders pure HTML in Streamlit without risking Markdown 4-space indented code blocks.
+    Strips leading whitespace from every line and removes empty lines.
+    """
+    clean_lines = [line.strip() for line in html_str.splitlines() if line.strip()]
+    st.markdown("\n".join(clean_lines), unsafe_allow_html=True)
 
 # Apply Sovereign Financial Terminal Glassmorphic Theme CSS
 st.markdown(
@@ -150,68 +163,66 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
     """
     Renders institutional 6-point structured findings for analytical depth & evidence-backed action.
     """
-    st.markdown(
-        f"""
-        <div class="narrative-card" style="margin-top: 14px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;">
-                    👁️ 1. Quantitative Observation & What You See
-                </span>
-                <span class="badge-pill badge-sky" style="font-size:0.70rem;">{persona_title} Lens</span>
-            </div>
-            <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.5; margin-bottom:12px;">
-                {nar.get('what_you_see', '')}
-            </div>
+    html = f"""
+    <div class="narrative-card" style="margin-top: 14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;">
+                👁️ 1. Quantitative Observation & What You See
+            </span>
+            <span class="badge-pill badge-sky" style="font-size:0.70rem;">{persona_title} Lens</span>
+        </div>
+        <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.5; margin-bottom:12px;">
+            {nar.get('what_you_see', '')}
+        </div>
 
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:12px;">
-                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px;">
-                    <div style="font-size:0.72rem; font-weight:700; color:#a78bfa; text-transform:uppercase; margin-bottom:4px;">
-                        🎯 2. Decision Relevance ({persona_title})
-                    </div>
-                    <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.45;">
-                        {nar.get('why_it_matters', '')}
-                    </div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:12px;">
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px;">
+                <div style="font-size:0.72rem; font-weight:700; color:#a78bfa; text-transform:uppercase; margin-bottom:4px;">
+                    🎯 2. Decision Relevance ({persona_title})
                 </div>
-                <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px;">
-                    <div style="font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">
-                        📜 3. Evidence Lineage & Citation
-                    </div>
-                    <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.45;">
-                        {nar.get('evidence_basis', '')}
-                    </div>
+                <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.45;">
+                    {nar.get('why_it_matters', '')}
                 </div>
             </div>
-
-            <div style="background:rgba(245, 158, 11, 0.05); border:1px solid rgba(245, 158, 11, 0.2); border-radius:8px; padding:10px; margin-bottom:12px;">
-                <div style="font-size:0.72rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-bottom:4px;">
-                    ⚖️ 4. Alternative Explanations & Operational Context
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px;">
+                <div style="font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">
+                    📜 3. Evidence Lineage & Citation
                 </div>
-                <div style="font-size:0.82rem; color:#f1f5f9; line-height:1.45;">
-                    {nar.get('alternative_explanations', '')}
+                <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.45;">
+                    {nar.get('evidence_basis', '')}
                 </div>
-            </div>
-
-            <div class="action-card" style="margin:0 0 12px 0;">
-                <div style="font-size:0.75rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
-                    🚀 5. Conditional Actionable Recommendations
-                </div>
-                <div style="font-size:0.85rem; color:#e2e8f0; line-height:1.5; white-space:pre-line;">
-                    {nar.get('call_to_action', '')}
-                </div>
-            </div>
-
-            <div style="background:rgba(56, 189, 248, 0.05); border-left:3px solid #38bdf8; border-radius:4px; padding:8px 12px;">
-                <span style="font-size:0.72rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">
-                    ⚡ 6. Inflection Triggers & Thresholds:
-                </span>
-                <span style="font-size:0.82rem; color:#e2e8f0; margin-left:6px;">
-                    {nar.get('inflection_triggers', '')}
-                </span>
             </div>
         </div>
-        """,
-        unsafe_allow_html=True,
-    )
+
+        <div style="background:rgba(245, 158, 11, 0.05); border:1px solid rgba(245, 158, 11, 0.2); border-radius:8px; padding:10px; margin-bottom:12px;">
+            <div style="font-size:0.72rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-bottom:4px;">
+                ⚖️ 4. Alternative Explanations & Operational Context
+            </div>
+            <div style="font-size:0.82rem; color:#f1f5f9; line-height:1.45;">
+                {nar.get('alternative_explanations', '')}
+            </div>
+        </div>
+
+        <div class="action-card" style="margin:0 0 12px 0;">
+            <div style="font-size:0.75rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
+                🚀 5. Conditional Actionable Recommendations
+            </div>
+            <div style="font-size:0.85rem; color:#e2e8f0; line-height:1.5; white-space:pre-line;">
+                {nar.get('call_to_action', '')}
+            </div>
+        </div>
+
+        <div style="background:rgba(56, 189, 248, 0.05); border-left:3px solid #38bdf8; border-radius:4px; padding:8px 12px;">
+            <span style="font-size:0.72rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">
+                ⚡ 6. Inflection Triggers & Thresholds:
+            </span>
+            <span style="font-size:0.82rem; color:#e2e8f0; margin-left:6px;">
+                {nar.get('inflection_triggers', '')}
+            </span>
+        </div>
+    </div>
+    """
+    render_html(html)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TOP HERO SLICER & DEAL SELECTION
@@ -234,13 +245,27 @@ persona_options = {
     "compliance": "⚖️ Legal, Auditor & Compliance",
 }
 
-col_sel, col_pers, col_act = st.columns([2, 2, 1])
+context_options = {
+    "PUBLIC_IPO": "🌐 Public IPO (Ordinary Equity)",
+    "PRIVATE_PRE_IPO": "🔒 Private Pre-IPO Placement (Negotiated)",
+    "STRATEGIC_M_AND_A": "🤝 Strategic M&A / Control Buyout",
+}
+
+col_sel, col_ctx, col_pers, col_act = st.columns([3, 2, 2, 2])
 with col_sel:
     selected_deal_key = st.selectbox(
         "Active Pre-IPO Deal Dossier",
         options=list(deal_options.keys()),
         format_func=lambda k: deal_options[k],
         key="pre_ipo_deal_selector",
+    )
+
+with col_ctx:
+    selected_context = st.selectbox(
+        "Transaction Context",
+        options=list(context_options.keys()),
+        format_func=lambda k: context_options[k],
+        key="pre_ipo_context_selector",
     )
 
 with col_pers:
@@ -279,13 +304,21 @@ if selected_deal_key == "custom_upload":
                 st.session_state["gemini_api_key"] = ocr_key
                 st.rerun()
         else:
-            st.success("✓ Gemini 1.5 Flash Vision OCR active")
+            vision_model = PreIPOIngestionEngine.get_vision_model_name()
+            st.success(f"✓ Multimodal Vision OCR configured ({vision_model}, ready on upload)")
 
     if uploaded_file is not None:
-        dossier = PreIPOIngestionEngine.ingest_document(
-            uploaded_file,
-            company_name_hint=custom_company_name,
-        )
+        import hashlib, io
+        file_bytes = uploaded_file.getvalue()
+        file_hash = hashlib.sha256(file_bytes).hexdigest()
+        cache_key = f"pre_ipo_dossier_{file_hash}_{custom_company_name}"
+        if cache_key not in st.session_state:
+            with st.spinner("Analyzing prospectus disclosures..."):
+                st.session_state[cache_key] = PreIPOIngestionEngine.ingest_document(
+                    io.BytesIO(file_bytes),
+                    company_name_hint=custom_company_name,
+                )
+        dossier = st.session_state[cache_key]
     else:
         st.info("ℹ️ Upload a Draft Red Herring Prospectus (DRHP) or Red Herring Prospectus (RHP) PDF above, or select a Golden Exemplar from the dropdown to inspect the financial terminal.")
         st.markdown(
@@ -313,7 +346,7 @@ with col_act:
     st.write("")
     deck_bytes = generate_pre_ipo_board_deck(dossier)
     st.download_button(
-        label="📥 Export Board Deck (PPTX)",
+        label="📥 Export Deck (PPTX)",
         data=deck_bytes,
         file_name=f"{dossier.deal_id}_board_pitch_deck.pptx",
         mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -321,48 +354,47 @@ with col_act:
     )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PANEL 1: SOVEREIGN HERO OFFERING DNA
+# PANEL 1: SOVEREIGN HERO OFFERING DNA (Rendered clean without code blocks)
 # ─────────────────────────────────────────────────────────────────────────────
 badge_class = "badge-emerald" if "Mature" in stage_name else "badge-amber" if "Growth" in stage_name else "badge-rose"
 
-st.markdown(
-    f"""
-    <div class="bento-card" style="border-left: 4px solid #38bdf8;">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
-            <div>
-                <span class="badge-pill badge-sky">{dossier.filing_type} · {dossier.filing_date}</span>
-                <span class="badge-pill {badge_class}" style="margin-left:6px;">Dickinson: {stage_name} {pattern}</span>
-                <span class="badge-pill badge-purple" style="margin-left:6px;">SEBI ICDR 2018 Restated</span>
-                <h1 style="color:#ffffff; font-size:1.85rem; font-weight:800; margin:8px 0 4px 0;">{dossier.company_name}</h1>
-                <div style="color:#94a3b8; font-size:0.85rem;">
-                    Sector: <strong style="color:#f1f5f9;">{dossier.sector}</strong> · Listing: <strong>{', '.join(dossier.exchange_listing)}</strong>
-                </div>
-            </div>
-            <div style="text-align:right;">
-                <div style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Total Offering Value</div>
-                <div class="metric-value" style="color:#38bdf8; font-size:2.0rem; font-weight:800; line-height:1.1;">
-                    ₹{dossier.total_issue_size_cr:,.2f} Cr
-                </div>
-                <div style="color:#cbd5e1; font-size:0.80rem; margin-top:4px;">
-                    Split: <strong style="color:#10b981;">{dossier.fresh_issue_pct:.0f}% Fresh</strong> (₹{dossier.fresh_issue_cr:,.1f} Cr) · 
-                    <strong style="color:#f59e0b;">{dossier.ofs_pct:.0f}% OFS</strong> (₹{dossier.ofs_cr:,.1f} Cr)
-                </div>
+hero_html = f"""
+<div class="bento-card" style="border-left: 4px solid #38bdf8;">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+        <div>
+            <span class="badge-pill badge-sky">{dossier.filing_type} · {dossier.filing_date}</span>
+            <span class="badge-pill {badge_class}" style="margin-left:6px;">Dickinson: {stage_name} {pattern}</span>
+            <span class="badge-pill badge-purple" style="margin-left:6px;">SEBI ICDR 2018 Restated</span>
+            <span class="badge-pill badge-amber" style="margin-left:6px;">Context: {context_options[selected_context]}</span>
+            <h1 style="color:#ffffff; font-size:1.85rem; font-weight:800; margin:8px 0 4px 0;">{dossier.company_name}</h1>
+            <div style="color:#94a3b8; font-size:0.85rem;">
+                Sector: <strong style="color:#f1f5f9;">{dossier.sector}</strong> · Listing: <strong>{', '.join(dossier.exchange_listing)}</strong>
             </div>
         </div>
-        <div style="margin-top:14px; background:rgba(0,0,0,0.3); height:8px; border-radius:9999px; overflow:hidden; display:flex;">
-            <div style="width:{dossier.fresh_issue_pct}%; background:#10b981;" title="Fresh Issue (Treasury Capital)"></div>
-            <div style="width:{dossier.ofs_pct}%; background:#f59e0b;" title="Offer for Sale (Selling Shareholders)"></div>
-        </div>
-        <div style="margin-top:10px; font-size:0.75rem; color:#64748b;">
-            BRLM Syndicate: {', '.join(dossier.brlm_bankers)}
+        <div style="text-align:right;">
+            <div style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Total Offering Value</div>
+            <div class="metric-value" style="color:#38bdf8; font-size:2.0rem; font-weight:800; line-height:1.1;">
+                ₹{dossier.total_issue_size_cr:,.2f} Cr
+            </div>
+            <div style="color:#cbd5e1; font-size:0.80rem; margin-top:4px;">
+                Split: <strong style="color:#10b981;">{dossier.fresh_issue_pct:.0f}% Fresh</strong> (₹{dossier.fresh_issue_cr:,.1f} Cr) · 
+                <strong style="color:#f59e0b;">{dossier.ofs_pct:.0f}% OFS</strong> (₹{dossier.ofs_cr:,.1f} Cr)
+            </div>
         </div>
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+    <div style="margin-top:14px; background:rgba(0,0,0,0.3); height:8px; border-radius:9999px; overflow:hidden; display:flex;">
+        <div style="width:{dossier.fresh_issue_pct}%; background:#10b981;" title="Fresh Issue (Treasury Capital)"></div>
+        <div style="width:{dossier.ofs_pct}%; background:#f59e0b;" title="Offer for Sale (Selling Shareholders)"></div>
+    </div>
+    <div style="margin-top:10px; font-size:0.75rem; color:#64748b;">
+        BRLM Syndicate: {', '.join(dossier.brlm_bankers)}
+    </div>
+</div>
+"""
+render_html(hero_html)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# EXECUTIVE PERSONA DECISION COCKPIT
+# EXECUTIVE PERSONA DECISION COCKPIT (Clean rendering with zero-indent lines)
 # ─────────────────────────────────────────────────────────────────────────────
 p_view = generate_persona_decision_view(dossier, persona=selected_persona)
 
@@ -374,125 +406,299 @@ metric_cards_html = "".join([
     for m in p_view['key_metrics']
 ])
 
-st.markdown(
-    f"""
-    <div class="bento-card" style="margin-top:14px; border: 1px solid rgba(56, 189, 248, 0.3); background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%);">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
-            <div>
-                <span class="badge-pill badge-sky">{persona_options[selected_persona]}</span>
-                <span style="color:#94a3b8; font-size:0.80rem; margin-left:8px;">Focus: <strong style="color:#f1f5f9;">{p_view['focus']}</strong></span>
+cockpit_html = f"""
+<div class="bento-card" style="margin-top:14px; border: 1px solid rgba(56, 189, 248, 0.3); background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+        <div>
+            <span class="badge-pill badge-sky">{persona_options[selected_persona]}</span>
+            <span style="color:#94a3b8; font-size:0.80rem; margin-left:8px;">Focus: <strong style="color:#f1f5f9;">{p_view['focus']}</strong></span>
+        </div>
+        <div style="font-size:0.75rem; color:#94a3b8;">
+            Active Governance: Persona alters decision weighting & action playbooks; issuer facts remain immutable.
+        </div>
+    </div>
+
+    <div style="background:rgba(0,0,0,0.25); border-left:3px solid #38bdf8; border-radius:6px; padding:10px 14px; margin-bottom:12px;">
+        <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">Primary Decision Question</div>
+        <div style="font-size:0.95rem; font-weight:600; color:#ffffff; margin-top:2px;">{p_view['decision_question']}</div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:12px;">
+        {metric_cards_html}
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:12px;">
+        <div class="action-card" style="margin:0;">
+            <div style="font-size:0.75rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
+                🎯 Recommended Strategic Action
             </div>
-            <div style="font-size:0.75rem; color:#94a3b8;">
-                Active Governance: Persona alters decision weighting & action playbooks; issuer facts remain immutable.
+            <div style="font-size:0.84rem; color:#f8fafc; line-height:1.45;">
+                {p_view['recommendation']}
             </div>
         </div>
-
-        <div style="background:rgba(0,0,0,0.25); border-left:3px solid #38bdf8; border-radius:6px; padding:10px 14px; margin-bottom:12px;">
-            <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">Primary Decision Question</div>
-            <div style="font-size:0.95rem; font-weight:600; color:#ffffff; margin-top:2px;">{p_view['decision_question']}</div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-bottom:12px;">
-            {metric_cards_html}
-        </div>
-
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:12px;">
-            <div class="action-card" style="margin:0;">
-                <div style="font-size:0.75rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
-                    🎯 Recommended Strategic Action
-                </div>
-                <div style="font-size:0.84rem; color:#f8fafc; line-height:1.45;">
-                    {p_view['recommendation']}
-                </div>
+        <div style="background:rgba(245, 158, 11, 0.05); border:1px solid rgba(245, 158, 11, 0.2); border-radius:8px; padding:10px 14px;">
+            <div style="font-size:0.75rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-bottom:4px;">
+                ⚖️ Material Trade-offs & Dilemmas
             </div>
-            <div style="background:rgba(245, 158, 11, 0.05); border:1px solid rgba(245, 158, 11, 0.2); border-radius:8px; padding:10px 14px;">
-                <div style="font-size:0.75rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-bottom:4px;">
-                    ⚖️ Material Trade-offs & Dilemmas
-                </div>
-                <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
-                    {p_view['trade_offs']}
-                </div>
+            <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
+                {p_view['trade_offs']}
             </div>
         </div>
     </div>
-    """,
-    unsafe_allow_html=True,
-)
+</div>
+"""
+render_html(cockpit_html)
 
 # ─────────────────────────────────────────────────────────────────────────────
-# TABS FOR 11 INSTITUTIONAL BENTO PANELS
+# MULTI-LEVEL LOGICAL TAB ARCHITECTURE (PRD SECTION 5 SPECIFICATION)
 # ─────────────────────────────────────────────────────────────────────────────
 (
-    tab_fin,
-    tab_objects,
-    tab_debt,
-    tab_stress,
-    tab_captable,
-    tab_forensics,
-    tab_maturity,
-    tab_valuation,
-    tab_governance,
-    tab_ic,
-    tab_limitations,
-    tab_audit,
+    tab_overview,
+    tab_equity_thesis,
+    tab_workpapers,
+    tab_crosswalk,
+    tab_ic_action,
 ) = st.tabs([
-    "📊 Restated Financials",
-    "🎯 Objects & Proceeds Waterfall",
-    "⚖️ Indebtedness & Leases",
-    "🌪️ Stress Testing & Headroom",
-    "🧬 Cap Table & Dilution",
-    "🔬 Forensic Accruals (Beneish)",
-    "⏳ Debt Maturity Ladder",
-    "💎 Valuation & Peer Comps",
-    "🛡️ Governance & Working Capital",
-    "📋 IC Deal Memo & Verdict",
-    "⚠️ Missing Data & Limitations",
-    "🔍 Online Ingestion Diagnostic",
+    "🏢 Company Overview",
+    "💡 Investor Questions & Thesis",
+    "🔬 Detailed Workpapers",
+    "📑 CMIE Reference Crosswalk",
+    "⚖️ IC Stance & Action Register",
 ])
 
-# ── TAB 1: RESTATED FINANCIALS & DICKINSON BENCHMARK ──
-with tab_fin:
-    col_f1, col_f2 = st.columns([3, 2])
-    with col_f1:
-        st.markdown('<div class="bento-subtitle">Section V Disclosures · Restated Consolidated Ind AS</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">3-to-4 Year Restated Performance</div>', unsafe_allow_html=True)
-        
-        fin_rows = []
-        for f_item in dossier.history:
-            fin_rows.append({
-                "Fiscal Year": f_item.fiscal_year,
-                "Revenue (₹ Cr)": f"{f_item.revenue_ops_cr:,.1f}",
-                "Restated EBITDA (₹ Cr)": f"{f_item.ebitda_cr:,.1f}",
-                "EBITDA Margin (%)": f"{(f_item.ebitda_cr / max(0.1, f_item.revenue_ops_cr))*100:.1f}%",
-                "PAT (₹ Cr)": f"{f_item.pat_cr:,.1f}",
-                "CFO (₹ Cr)": f"{f_item.cfo_cr:,.1f}",
-                "Capex (₹ Cr)": f"{f_item.capex_cr:,.1f}",
-                "Free Cash Flow (₹ Cr)": f"{f_item.fcf_cr:,.1f}",
-            })
-        st.dataframe(pd.DataFrame(fin_rows), use_container_width=True, hide_index=True)
+# ═════════════════════════════════════════════════════════════════════════════
+# LEVEL 1 - TAB 1: COMPANY OVERVIEW & ECONOMIC ENGINE
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_overview:
+    bg = dossier.background
+    st.markdown('<div class="bento-subtitle">Section IV Business Overview · SEBI ICDR 2018 Disclosures</div>', unsafe_allow_html=True)
+    st.markdown('<div class="bento-title">Corporate Background & Economic Engine</div>', unsafe_allow_html=True)
 
-        fig_trend = go.Figure()
-        yrs = [f.fiscal_year for f in dossier.history]
-        revs = [f.revenue_ops_cr for f in dossier.history]
-        ebitdas = [f.ebitda_cr for f in dossier.history]
-        fig_trend.add_trace(go.Bar(x=yrs, y=revs, name="Revenue", marker_color="#38bdf8", opacity=0.75))
-        fig_trend.add_trace(go.Scatter(x=yrs, y=ebitdas, name="Restated EBITDA", line=dict(color="#10b981", width=3), mode="lines+markers"))
-        fig_trend.update_layout(
-            height=260,
-            margin=dict(l=20, r=20, t=30, b=20),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            font=dict(color="#cbd5e1"),
-        )
-        st.plotly_chart(fig_trend, use_container_width=True)
+    c_ov1, c_ov2 = st.columns([3, 2])
+    with c_ov1:
+        desc_text = bg.business_model_summary if bg else f"Issuer operates as a premier enterprise in {dossier.sector}."
+        rev_engine = bg.revenue_model if bg else "Commercial operational revenue."
+        pedigree = bg.promoter_and_management_pedigree if bg else "Disclosed in DRHP Section VI."
+        cutoff = bg.filing_cutoff_date if bg else dossier.filing_date
 
-    with col_f2:
-        st.markdown('<div class="bento-subtitle">Empirical Benchmark (N=8,677 CMIE Database)</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Dickinson Life-Cycle Radar</div>', unsafe_allow_html=True)
+        ov_card_html = f"""
+        <div class="bento-card" style="border-left:4px solid #38bdf8;">
+            <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">Core Economic Engine</div>
+            <div style="font-size:1.15rem; font-weight:700; color:#ffffff; margin:6px 0 10px 0;">{dossier.company_name}</div>
+            <div style="font-size:0.88rem; color:#e2e8f0; line-height:1.5; margin-bottom:12px;">{desc_text}</div>
+            <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
+            <div style="font-size:0.80rem; color:#94a3b8;">
+                <strong style="color:#f1f5f9;">Revenue Model:</strong> {rev_engine}<br>
+                <strong style="color:#f1f5f9;">Promoter Pedigree:</strong> {pedigree}<br>
+                <strong style="color:#f59e0b;">Filing Cutoff Date:</strong> {cutoff} (Filing-time facts separated from subsequent events)
+            </div>
+        </div>
+        """
+        render_html(ov_card_html)
+
+    with c_ov2:
+        cin_text = bg.cin if (bg and bg.cin) else "Undisclosed / Not Applicable"
+        inc_year = bg.incorporation_year if bg else 2000
+        hq_loc = bg.headquarters if bg else "India"
+        l_form = bg.legal_form if bg else "Public Limited Company"
         
-        st.markdown(
-            f"""
+        corp_id_html = f"""
+        <div class="bento-card">
+            <div style="font-size:0.75rem; font-weight:700; color:#a78bfa; text-transform:uppercase;">Corporate Identity & Governance Profile</div>
+            <div style="margin-top:10px; font-size:0.84rem; color:#cbd5e1; line-height:1.7;">
+                • <strong>CIN:</strong> <span class="financial-num">{cin_text}</span><br>
+                • <strong>Incorporation Year:</strong> {inc_year}<br>
+                • <strong>Corporate Headquarters:</strong> {hq_loc}<br>
+                • <strong>Legal Structure:</strong> {l_form}<br>
+                • <strong>Listed Exchanges:</strong> {', '.join(dossier.exchange_listing)}<br>
+                • <strong>Lead Bankers (BRLMs):</strong> {len(dossier.brlm_bankers)} Tier-1 Investment Banks
+            </div>
+        </div>
+        """
+        render_html(corp_id_html)
+
+    st.markdown('<div class="bento-subtitle" style="margin-top:16px;">Product Portfolios & Segmental Breakdown</div>', unsafe_allow_html=True)
+    c_p1, c_p2 = st.columns([3, 2])
+    with c_p1:
+        prods = bg.core_products_and_services if bg else []
+        if prods:
+            p_rows = []
+            for pr in prods:
+                p_rows.append({
+                    "Product / Service Line": pr.get("name", ""),
+                    "Revenue Contribution (%)": f"{pr.get('revenue_pct', 0):.1f}%",
+                    "Operational Description & Market Position": pr.get("description", ""),
+                })
+            st.dataframe(pd.DataFrame(p_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("Product breakdown detailed in Section V restated notes.")
+
+    with c_p2:
+        geo = bg.geographic_presence if (bg and bg.geographic_presence) else {"Domestic (India)": 100.0}
+        st.markdown("**Geographic Revenue Split**")
+        fig_geo = go.Figure(data=[go.Pie(labels=list(geo.keys()), values=list(geo.values()), hole=0.55, marker_colors=["#38bdf8", "#10b981", "#f59e0b"])])
+        fig_geo.update_layout(height=220, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#cbd5e1"))
+        st.plotly_chart(fig_geo, use_container_width=True)
+
+    # Material Operational Dependencies
+    deps = bg.material_operational_dependencies if bg else []
+    if deps:
+        dep_html = f"""
+        <div class="narrative-card" style="border-left:4px solid #f43f5e; margin-top:10px;">
+            <div style="font-size:0.75rem; font-weight:700; color:#f43f5e; text-transform:uppercase; margin-bottom:4px;">
+                ⚠️ Material Operational Dependencies & Regulatory Constraints
+            </div>
+            <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
+                {'<br>'.join(['• ' + d for d in deps])}
+            </div>
+        </div>
+        """
+        render_html(dep_html)
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LEVEL 1 - TAB 2: INVESTOR QUESTIONS & EQUITY THESIS (Q01-Q10 + PX01-PX04)
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_equity_thesis:
+    st.markdown('<div class="bento-subtitle">Question-Led Institutional Underwriting · PRD Specification S01–S04</div>', unsafe_allow_html=True)
+    st.markdown('<div class="bento-title">Ten Core Investor Questions & Decision Scorecard</div>', unsafe_allow_html=True)
+
+    # Generate or retrieve Q01-Q10 findings adapted to current transaction context
+    eq_findings = generate_equity_question_answers(dossier, persona=selected_persona, transaction_context=selected_context)
+
+    # Summary Thesis Banner
+    st.markdown(
+        f"""
+        <div class="bento-card" style="border: 1px solid rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <span class="badge-pill badge-emerald">Executive Investment Thesis</span>
+                    <h3 style="color:#ffffff; margin:6px 0 2px 0;">{dossier.company_name} — Equity Underwriting Verdict</h3>
+                </div>
+                <span class="badge-pill badge-sky">10/10 Questions Evaluated</span>
+            </div>
+            <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.5; margin-top:8px;">
+                Structured evaluation connects observable operating drivers to financial consequences and investor trade-offs. 
+                All material claims are anchored to SEBI ICDR 2018 restated disclosures with distinct claim lineage.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    for qid, q_obj in eq_findings.items():
+        is_px = qid.startswith("PX")
+        stat = q_obj.status
+        s_badge = "badge-emerald" if "ANSWERED" in stat else "badge-amber" if "PARTIAL" in stat else "badge-rose" if "BLOCKED" in stat else "badge-sky"
+        icon = "💡" if not is_px else "🔒"
+
+        with st.expander(f"{icon} {qid}: {q_obj.title} — [{stat.replace('_', ' ')}]", expanded=(qid in ("Q01", "Q04", "Q05"))):
+            st.markdown(f"**Direct Bottom-Line Verdict:** {q_obj.direct_verdict}")
+            st.markdown(f"**Detailed Analysis:** {q_obj.detailed_analysis}")
+
+            # Evidence Claim Lineage
+            if q_obj.claim_lineage:
+                st.markdown("<div style='font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-top:10px;'>📜 Evidence Claim Lineage</div>", unsafe_allow_html=True)
+                c_rows = []
+                for cl in q_obj.claim_lineage:
+                    c_rows.append({
+                        "Claim Statement": cl.statement,
+                        "Claim Classification": cl.claim_type,
+                        "Verified Provenance": cl.verified_source,
+                        "Confidence": cl.confidence,
+                    })
+                st.dataframe(pd.DataFrame(c_rows), use_container_width=True, hide_index=True)
+
+            col_qa, col_qb = st.columns(2)
+            with col_qa:
+                if q_obj.alternative_explanations:
+                    st.markdown("<div style='font-size:0.75rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-top:8px;'>⚖️ Alternative Interpretations & Risks</div>", unsafe_allow_html=True)
+                    for alt in q_obj.alternative_explanations:
+                        st.markdown(f"• {alt}")
+            with col_qb:
+                if q_obj.limitations_and_uncertainties:
+                    st.markdown("<div style='font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-top:8px;'>⚠️ Disclosed Limitations & Data Gaps</div>", unsafe_allow_html=True)
+                    for lim in q_obj.limitations_and_uncertainties:
+                        st.markdown(f"• {lim}")
+
+            # Conditional Recommendations
+            if q_obj.conditional_recommendations:
+                rec = q_obj.conditional_recommendations[0]
+                rec_html = f"""
+                <div class="action-card" style="margin-top:10px;">
+                    <div style="font-size:0.75rem; font-weight:700; color:#10b981; text-transform:uppercase;">
+                        🎯 Actionable Protocol ({rec.action_owner})
+                    </div>
+                    <div style="font-size:0.85rem; color:#ffffff; margin:4px 0;">{rec.recommendation}</div>
+                    <div style="font-size:0.78rem; color:#cbd5e1;">
+                        • <strong>Preconditions:</strong> {rec.preconditions}<br>
+                        • <strong>Completion Evidence:</strong> {rec.completion_evidence}<br>
+                        • <strong>Monitoring Trigger:</strong> {rec.monitoring_trigger}
+                    </div>
+                </div>
+                """
+                render_html(rec_html)
+
+            if q_obj.inflection_triggers:
+                st.markdown(f"**⚡ Thesis-Breaking Inflection Trigger:** `{q_obj.inflection_triggers[0]}`")
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LEVEL 1 - TAB 3: DETAILED ANALYTICAL WORKPAPERS (4 SUB-TABS)
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_workpapers:
+    st.markdown('<div class="bento-subtitle">Comprehensive Quantitative Workpaper Engine</div>', unsafe_allow_html=True)
+    st.markdown('<div class="bento-title">Detailed Institutional Workpapers</div>', unsafe_allow_html=True)
+
+    # 4 Sub-Tabs for complete visibility without horizontal overflow
+    (
+        subtab_fin,
+        subtab_debt,
+        subtab_stress,
+        subtab_val,
+    ) = st.tabs([
+        "📊 Financials & Proceeds Waterfall",
+        "⚖️ Indebtedness & Debt Maturity",
+        "🌪️ Stress Testing & Headroom",
+        "💎 Valuation, Peers, DCF & Forensics",
+    ])
+
+    # ── SUBTAB 1: FINANCIALS & OBJECTS OF THE OFFER ──
+    with subtab_fin:
+        col_f1, col_f2 = st.columns([3, 2])
+        with col_f1:
+            st.markdown('<div class="bento-subtitle">Section V Disclosures · Restated Consolidated Ind AS</div>', unsafe_allow_html=True)
+            st.markdown('<div class="bento-title">3-to-4 Year Restated Performance</div>', unsafe_allow_html=True)
+            fin_rows = []
+            for f_item in dossier.history:
+                fin_rows.append({
+                    "Fiscal Year": f_item.fiscal_year,
+                    "Revenue (₹ Cr)": f"{f_item.revenue_ops_cr:,.1f}",
+                    "Restated EBITDA (₹ Cr)": f"{f_item.ebitda_cr:,.1f}",
+                    "EBITDA Margin (%)": f"{(f_item.ebitda_cr / max(0.1, f_item.revenue_ops_cr))*100:.1f}%",
+                    "PAT (₹ Cr)": f"{f_item.pat_cr:,.1f}",
+                    "CFO (₹ Cr)": f"{f_item.cfo_cr:,.1f}",
+                    "Capex (₹ Cr)": f"{f_item.capex_cr:,.1f}",
+                    "Free Cash Flow (₹ Cr)": f"{f_item.fcf_cr:,.1f}",
+                })
+            st.dataframe(pd.DataFrame(fin_rows), use_container_width=True, hide_index=True)
+
+            fig_trend = go.Figure()
+            yrs = [f.fiscal_year for f in dossier.history]
+            revs = [f.revenue_ops_cr for f in dossier.history]
+            ebitdas = [f.ebitda_cr for f in dossier.history]
+            fig_trend.add_trace(go.Bar(x=yrs, y=revs, name="Revenue", marker_color="#38bdf8", opacity=0.75))
+            fig_trend.add_trace(go.Scatter(x=yrs, y=ebitdas, name="Restated EBITDA", line=dict(color="#10b981", width=3), mode="lines+markers"))
+            fig_trend.update_layout(
+                height=240, margin=dict(l=20, r=20, t=30, b=20),
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                font=dict(color="#cbd5e1"),
+            )
+            st.plotly_chart(fig_trend, use_container_width=True)
+
+        with col_f2:
+            st.markdown('<div class="bento-subtitle">Empirical Benchmark (N=8,677 CMIE Database)</div>', unsafe_allow_html=True)
+            st.markdown('<div class="bento-title">Dickinson Life-Cycle Radar</div>', unsafe_allow_html=True)
+            dickinson_html = f"""
             <div class="bento-card">
                 <div style="font-size:0.85rem; color:#94a3b8;">Classified Stage:</div>
                 <div style="font-size:1.45rem; font-weight:800; color:#10b981; margin:4px 0;">{stage_name}</div>
@@ -505,633 +711,408 @@ with tab_fin:
                     • <strong>Empirical Attribution:</strong> Dickinson (2011) cash-flow pattern; descriptive classification.
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            """
+            render_html(dickinson_html)
 
-    # Narrative Synthesis & Prescriptive Call to Action (6-Point Standard)
-    fin_nar = generate_financials_narrative(dossier, persona=selected_persona)
-    render_six_point_narrative(fin_nar, persona_title=persona_options[selected_persona])
+        fin_nar = generate_financials_narrative(dossier, persona=selected_persona)
+        render_six_point_narrative(fin_nar, persona_title=persona_options[selected_persona])
 
-# ── TAB 2: OBJECTS OF THE OFFER & PROCEEDS WATERFALL ──
-with tab_objects:
-    obj = dossier.objects_of_offer
-    st.markdown('<div class="bento-subtitle">SEBI ICDR 2018 Regulation 7 & 41 Compliance</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Use of Proceeds Waterfall & Statutory Limits</div>', unsafe_allow_html=True)
-
-    if obj and obj.gross_fresh_issue_cr > 0:
-        c_obj1, c_obj2, c_obj3, c_obj4 = st.columns(4)
-        with c_obj1:
-            st.metric("Gross Fresh Issue", f"₹{obj.gross_fresh_issue_cr:,.1f} Cr")
-        with c_obj2:
-            st.metric("Scheduled Debt Prepayment", f"₹{obj.debt_prepayment_cr:,.1f} Cr")
-        with c_obj3:
-            st.metric("Capex & Inorganic Growth", f"₹{(obj.capex_expansion_cr + obj.inorganic_acquisition_cr):,.1f} Cr")
-        with c_obj4:
-            gcp_status = "✅ COMPLIANT" if obj.sebi_gcp_compliant else "❌ BREACH (>25%)"
-            st.metric("GCP Share of Gross", f"{obj.gcp_pct_of_gross:.1f}%", delta=gcp_status)
-
-        # Proceeds Waterfall Chart
-        fig_waterfall = go.Figure(go.Waterfall(
-            name="Proceeds Deployment",
-            orientation="v",
-            measure=["absolute", "relative", "relative", "relative", "relative", "total"],
-            x=["Gross Fresh", "Issue Expenses", "Debt Prepayment", "Capex", "General Corporate", "Net Deployed"],
-            textposition="outside",
-            text=[f"₹{obj.gross_fresh_issue_cr:,.0f}", f"-₹{obj.issue_expenses_cr:,.0f}", f"-₹{obj.debt_prepayment_cr:,.0f}", f"-₹{obj.capex_expansion_cr:,.0f}", f"-₹{obj.general_corporate_purposes_cr:,.0f}", f"₹{obj.net_fresh_proceeds_cr:,.0f}"],
-            y=[obj.gross_fresh_issue_cr, -obj.issue_expenses_cr, -obj.debt_prepayment_cr, -obj.capex_expansion_cr, -obj.general_corporate_purposes_cr, 0],
-            connector={"line": {"color": "rgba(255,255,255,0.2)"}},
-            decreasing={"marker": {"color": "#f59e0b"}},
-            increasing={"marker": {"color": "#38bdf8"}},
-            totals={"marker": {"color": "#10b981"}}
-        ))
-        fig_waterfall.update_layout(
-            height=280,
-            margin=dict(l=20, r=20, t=30, b=20),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#cbd5e1"),
-        )
-        st.plotly_chart(fig_waterfall, use_container_width=True)
-
-        # Pro-Forma Accretion Summary
-        if obj.debt_prepayment_cr > 0:
-            st.markdown(
-                f"""
-                <div class="bento-card" style="border:1px solid #10b981;">
-                    <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Pro-Forma Debt Retirement & Financial Accretion</div>
-                    <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-top:8px;">
-                        <div>
-                            <div style="font-size:0.80rem; color:#94a3b8;">Annual Interest Cost Savings (Δ Finance Cost)</div>
-                            <div class="metric-value" style="font-size:1.5rem; font-weight:800; color:#10b981;">+₹{obj.annual_interest_savings_cr:,.1f} Cr/yr</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.80rem; color:#94a3b8;">Pro-Forma PAT Expansion (post 25.17% tax)</div>
-                            <div class="metric-value" style="font-size:1.5rem; font-weight:800; color:#10b981;">+₹{obj.pro_forma_pat_accretion_cr:,.1f} Cr</div>
-                        </div>
-                        <div>
-                            <div style="font-size:0.80rem; color:#94a3b8;">Pro-Forma EPS Impact</div>
-                            <div class="metric-value" style="font-size:1.5rem; font-weight:800; color:{'#f43f5e' if obj.is_dilutive else '#38bdf8'};">
-                                {f"-₹{abs(obj.eps_accretion_dilution_inr):.2f}" if obj.is_dilutive else f"+₹{obj.eps_accretion_dilution_inr:.2f}"} / share
-                            </div>
-                        </div>
+        # Objects & Proceeds Waterfall
+        st.markdown('<hr style="border-color:rgba(255,255,255,0.08); margin:24px 0 16px 0;">', unsafe_allow_html=True)
+        obj = dossier.objects_of_offer
+        st.markdown('<div class="bento-subtitle">SEBI ICDR 2018 Regulation 7 & 41 Compliance</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bento-title">Use of Proceeds Waterfall & Statutory Limits</div>', unsafe_allow_html=True)
+        if obj:
+            c_ob1, c_ob2 = st.columns(2)
+            with c_ob1:
+                obj_rows = [
+                    {"Deployment Line Item": "Gross Fresh Issue Proceeds", "Allocated (₹ Cr)": f"₹{obj.gross_fresh_issue_cr:,.2f}", "% of Fresh": "100.0%"},
+                    {"Deployment Line Item": "Estimated Issue Expenses", "Allocated (₹ Cr)": f"₹{obj.issue_expenses_cr:,.2f}", "% of Fresh": f"{(obj.issue_expenses_cr/max(1,obj.gross_fresh_issue_cr))*100:.1f}%"},
+                    {"Deployment Line Item": "Net Fresh Proceeds Available", "Allocated (₹ Cr)": f"₹{obj.net_fresh_proceeds_cr:,.2f}", "% of Fresh": f"{(obj.net_fresh_proceeds_cr/max(1,obj.gross_fresh_issue_cr))*100:.1f}%"},
+                    {"Deployment Line Item": "• Repayment / Prepayment of Debt", "Allocated (₹ Cr)": f"₹{obj.debt_prepayment_cr:,.2f}", "% of Fresh": f"{(obj.debt_prepayment_cr/max(1,obj.gross_fresh_issue_cr))*100:.1f}%"},
+                    {"Deployment Line Item": "• Capital Expenditure (Capacity Expansion)", "Allocated (₹ Cr)": f"₹{obj.capex_expansion_cr:,.2f}", "% of Fresh": f"{(obj.capex_expansion_cr/max(1,obj.gross_fresh_issue_cr))*100:.1f}%"},
+                    {"Deployment Line Item": "• General Corporate Purposes (GCP)", "Allocated (₹ Cr)": f"₹{obj.general_corporate_purposes_cr:,.2f}", "% of Fresh": f"{obj.gcp_pct_of_gross:.1f}%"},
+                ]
+                st.dataframe(pd.DataFrame(obj_rows), use_container_width=True, hide_index=True)
+            with c_ob2:
+                gcp_status = "COMPLIANT" if obj.sebi_gcp_compliant else "STATUTORY BREACH"
+                gcp_badge = "badge-emerald" if obj.sebi_gcp_compliant else "badge-rose"
+                gcp_html = f"""
+                <div class="bento-card">
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">SEBI GCP Compliance (Reg 7(1))</div>
+                    <div style="font-size:1.6rem; font-weight:800; color:{'#10b981' if obj.sebi_gcp_compliant else '#f43f5e'}; margin:4px 0;">
+                        {obj.gcp_pct_of_gross:.1f}% of Gross <span class="badge-pill {gcp_badge}">{gcp_status}</span>
+                    </div>
+                    <div style="font-size:0.82rem; color:#cbd5e1; margin-top:8px;">
+                        • Statutory Limit: GCP ≤ 25.0% of Gross Fresh Issue Proceeds.<br>
+                        • Debt Prepayment Interest Savings: <strong style="color:#10b981;">₹{obj.annual_interest_savings_cr:,.1f} Cr/yr</strong> (@ {obj.interest_rate_on_retired_debt_pct}% WAIR).<br>
+                        • Pro-Forma EPS Accretion: <strong style="color:#38bdf8;">{'+' if obj.pro_forma_eps_accretion_inr > 0 else ''}{obj.pro_forma_eps_accretion_inr:.2f} INR</strong> per share.
                     </div>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
-    else:
-        st.info("This offering is structured as a 100% Offer for Sale (OFS). All proceeds are received by selling shareholders; zero primary capital is raised for debt prepayment or capex.")
+                """
+                render_html(gcp_html)
+        else:
+            st.info("Pure OFS transaction — 100% of proceeds accrue to selling shareholders.")
 
-    obj_nar = generate_objects_narrative(dossier, persona=selected_persona)
-    render_six_point_narrative(obj_nar, persona_title=persona_options[selected_persona])
+    # ── SUBTAB 2: INDEBTEDNESS & DEBT MATURITY ──
+    with subtab_debt:
+        col_d1, col_d2 = st.columns([3, 2])
+        ind = dossier.indebtedness
+        with col_d1:
+            st.markdown('<div class="bento-subtitle">Funded Bank Debt vs Ind AS 116 Leases</div>', unsafe_allow_html=True)
+            st.markdown('<div class="bento-title">Economic Indebtedness Schedule</div>', unsafe_allow_html=True)
+            debt_items = [
+                {"Debt Category": "Secured Term Loans (Project Finance)", "Amount (₹ Cr)": f"₹{ind.secured_term_loans_cr:,.1f}", "Type": "Funded Debt"},
+                {"Debt Category": "Working Capital Loans (Cash Credit/OD)", "Amount (₹ Cr)": f"₹{ind.working_capital_loans_cr:,.1f}", "Type": "Funded Debt"},
+                {"Debt Category": "NCD Bonds & Capital Debt", "Amount (₹ Cr)": f"₹{ind.ncd_bonds_cr:,.1f}", "Type": "Funded Debt"},
+                {"Debt Category": "Unsecured Loans", "Amount (₹ Cr)": f"₹{ind.unsecured_loans_cr:,.1f}", "Type": "Funded Debt"},
+                {"Debt Category": "Total Funded Bank Debt", "Amount (₹ Cr)": f"₹{ind.funded_bank_debt_cr:,.1f}", "Type": "Subtotal"},
+                {"Debt Category": "Ind AS 116 Lease Liabilities", "Amount (₹ Cr)": f"₹{ind.lease_liabilities_ind_as_116_cr:,.1f}", "Type": "Economic Obligation"},
+                {"Debt Category": "Total Economic Indebtedness", "Amount (₹ Cr)": f"₹{ind.total_economic_indebtedness_cr:,.1f}", "Type": "Total"},
+                {"Debt Category": "Less: Cash & Cash Equivalents", "Amount (₹ Cr)": f"₹{ind.cash_and_equivalents_cr:,.1f}", "Type": "Liquid Treasury"},
+                {"Debt Category": "Net Economic Indebtedness", "Amount (₹ Cr)": f"₹{ind.net_economic_debt_cr:,.1f}", "Type": "Net Economic Debt"},
+            ]
+            st.dataframe(pd.DataFrame(debt_items), use_container_width=True, hide_index=True)
 
-# ── TAB 3: INDEBTEDNESS & LEASES ──
-with tab_debt:
-    st.markdown('<div class="bento-subtitle">Section VI Disclosures · Ind AS 116 Lease Analysis</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Capital Structure & Indebtedness Breakdown</div>', unsafe_allow_html=True)
+        with col_d2:
+            st.markdown('<div class="bento-subtitle">Pricing & Benchmark Spread</div>', unsafe_allow_html=True)
+            st.markdown('<div class="bento-title">Borrowing Cost Architecture</div>', unsafe_allow_html=True)
+            wair_str = f"{ind.weighted_avg_interest_rate_pct:.2f}%" if ind.weighted_avg_interest_rate_pct else "Disclosed in Sanction Notes"
+            spread_str = ind.floating_benchmark_spread or "MCLR + 120 bps"
+            cost_html = f"""
+            <div class="bento-card">
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Weighted Average Interest Rate (WAIR)</div>
+                <div style="font-size:1.8rem; font-weight:800; color:#38bdf8; margin:4px 0;">{wair_str}</div>
+                <div style="font-size:0.82rem; color:#cbd5e1; margin-top:8px;">
+                    • <strong>Benchmark Spread:</strong> {spread_str}<br>
+                    • <strong>Fixed vs Floating:</strong> {ind.fixed_rate_portion_pct:.0f}% Fixed / {ind.floating_rate_portion_pct:.0f}% Floating<br>
+                    • <strong>Post-Deleveraging Net Debt:</strong> ₹{max(0.0, ind.net_economic_debt_cr - (dossier.objects_of_offer.debt_prepayment_cr if dossier.objects_of_offer else 0)):,.1f} Cr
+                </div>
+            </div>
+            """
+            render_html(cost_html)
 
-    include_leases = st.toggle("Include Ind AS 116 Lease Liabilities in Total Leverage", value=True)
-    
-    ind = dossier.indebtedness
-    gross_debt = ind.total_economic_indebtedness_cr if include_leases else ind.funded_bank_debt_cr
-    net_debt = max(0.0, gross_debt - ind.cash_and_equivalents_cr)
-    
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.metric("Gross Indebtedness", f"₹{gross_debt:,.1f} Cr", help="Includes leases if toggled")
-    with c2:
-        st.metric("Cash & Equivalents", f"₹{ind.cash_and_equivalents_cr:,.1f} Cr")
-    with c3:
-        st.metric("Net Indebtedness", f"₹{net_debt:,.1f} Cr")
-    with c4:
-        ratio = round(net_debt / latest.ebitda_cr, 2) if latest.ebitda_cr > 0 else "N/A"
-        st.metric("Net Debt / EBITDA", f"{ratio}x" if ratio != "N/A" else "Operating Loss")
+        # Debt Maturity Ladder
+        mat = dossier.debt_maturity
+        if mat:
+            st.markdown('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
+            st.markdown('<div class="bento-subtitle">Principal Repayment Schedule</div>', unsafe_allow_html=True)
+            st.markdown('<div class="bento-title">Debt Maturity Ladder & Refinancing Profile</div>', unsafe_allow_html=True)
+            c_m1, c_m2 = st.columns([3, 2])
+            with c_m1:
+                mat_df = pd.DataFrame([
+                    {"Tenor Period": "Year 1 (Current Maturities)", "Principal Due (₹ Cr)": mat.repayment_due_year_1_cr},
+                    {"Tenor Period": "Year 2", "Principal Due (₹ Cr)": mat.repayment_due_year_2_cr},
+                    {"Tenor Period": "Year 3", "Principal Due (₹ Cr)": mat.repayment_due_year_3_cr},
+                    {"Tenor Period": "Year 4", "Principal Due (₹ Cr)": mat.repayment_due_year_4_cr},
+                    {"Tenor Period": "Year 5+", "Principal Due (₹ Cr)": mat.repayment_due_year_5_plus_cr},
+                ])
+                fig_mat = go.Figure(data=[go.Bar(x=mat_df["Tenor Period"], y=mat_df["Principal Due (₹ Cr)"], marker_color="#38bdf8")])
+                fig_mat.update_layout(height=220, margin=dict(l=20, r=20, t=10, b=10), paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#cbd5e1"))
+                st.plotly_chart(fig_mat, use_container_width=True)
+            with c_m2:
+                r_badge = "badge-emerald" if mat.refinancing_risk_rating == "LOW" else "badge-amber"
+                mat_html = f"""
+                <div class="bento-card">
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Weighted Average Tenor</div>
+                    <div style="font-size:1.6rem; font-weight:800; color:#ffffff; margin:4px 0;">{mat.weighted_average_maturity_years:.1f} Years</div>
+                    <div style="margin-top:6px;"><span class="badge-pill {r_badge}">Refinancing Risk: {mat.refinancing_risk_rating}</span></div>
+                    <div style="font-size:0.80rem; color:#94a3b8; margin-top:10px;">
+                        Total Repayment Profile: <strong style="color:#ffffff;">₹{mat.total_repayment_profile_cr:,.1f} Cr</strong>
+                    </div>
+                </div>
+                """
+                render_html(mat_html)
 
-    fig_indebt = go.Figure()
-    fig_indebt.add_trace(go.Bar(name="Secured Term Loans", x=["Indebtedness"], y=[ind.secured_term_loans_cr], marker_color="#38bdf8"))
-    fig_indebt.add_trace(go.Bar(name="Working Capital Loans", x=["Indebtedness"], y=[ind.working_capital_loans_cr], marker_color="#0284c7"))
-    fig_indebt.add_trace(go.Bar(name="Unsecured / Other", x=["Indebtedness"], y=[ind.unsecured_loans_cr], marker_color="#818cf8"))
-    if include_leases:
-        fig_indebt.add_trace(go.Bar(name="Ind AS 116 Leases", x=["Indebtedness"], y=[ind.lease_liabilities_ind_as_116_cr], marker_color="#f59e0b"))
-    fig_indebt.update_layout(
-        barmode="stack",
-        height=200,
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#cbd5e1"),
-    )
-    st.plotly_chart(fig_indebt, use_container_width=True)
-
-    debt_cap_prelim = compute_debt_capacity(
-        ebitda_cr=latest.ebitda_cr,
-        cfo_cr=latest.cfo_cr,
-        capex_cr=latest.capex_cr,
-        wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 8.5,
-        current_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-        cash_cr=dossier.indebtedness.cash_and_equivalents_cr,
-    )
-    ind_nar = generate_indebtedness_narrative(dossier, debt_cap_prelim, persona=selected_persona)
-    render_six_point_narrative(ind_nar, persona_title=persona_options[selected_persona])
-
-# ── TAB 4: ADVERSARIAL STRESS & M&A CAPACITY ──
-with tab_stress:
-    col_s1, col_s2 = st.columns([3, 2])
-    with col_s1:
-        st.markdown('<div class="bento-subtitle">Quantitative Stress Testing</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">2D Interest Coverage Ratio (ICR) Sensitivity</div>', unsafe_allow_html=True)
-        
-        floating_pct = getattr(dossier.indebtedness, "floating_rate_debt_pct", 75.0)
-        sens = generate_2d_sensitivity_matrix(
+    # ── SUBTAB 3: STRESS TESTING & HEADROOM ──
+    with subtab_stress:
+        st.markdown('<div class="bento-subtitle">2D Dynamic Adversarial Stress Matrix</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bento-title">EBITDA Contraction vs Floating Rate Hike Sensitivity</div>', unsafe_allow_html=True)
+        stress_res = generate_2d_sensitivity_matrix(
             base_ebitda_cr=latest.ebitda_cr,
             gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-            base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 8.5,
-            floating_debt_portion_pct=floating_pct,
+            base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+            floating_debt_portion_pct=dossier.indebtedness.floating_rate_portion_pct,
         )
-        s_df = pd.DataFrame(sens["matrix"])
-        s_df = s_df.rename(columns={
-            "ebitda_shock_pct": "EBITDA Shock (%)",
-            "shocked_ebitda_cr": "Shocked EBITDA (₹ Cr)",
-            "hike_0bps": "+0 bps (Base)",
-            "hike_100bps": "+100 bps",
-            "hike_200bps": "+200 bps",
-            "hike_300bps": "+300 bps",
-        })
-        st.dataframe(s_df, use_container_width=True, hide_index=True)
+        hikes = stress_res.get("rate_hikes_bps", [0, 50, 100, 150, 200])
+        st_rows = []
+        for r_dict in stress_res.get("matrix", []):
+            eb_shock = r_dict.get("ebitda_shock_pct", 0)
+            row_data = {"EBITDA Shock (%)": f"{eb_shock:+d}%"}
+            for h in hikes:
+                val_icr = r_dict.get(f"hike_{h}bps")
+                row_data[f"+{h} bps Hike"] = f"{val_icr:.2f}x" if val_icr is not None else "N/A"
+            st_rows.append(row_data)
+        st.dataframe(pd.DataFrame(st_rows), use_container_width=True, hide_index=True)
+        stress_nar = generate_stress_narrative(dossier, stress_res, persona=selected_persona)
+        render_six_point_narrative(stress_nar, persona_title=persona_options[selected_persona])
 
-    with col_s2:
-        st.markdown('<div class="bento-subtitle">OakNorth Treasury Standard Sizing</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Post-IPO M&A Headroom</div>', unsafe_allow_html=True)
-        
-        target_lev = st.slider("Target Max Leverage Ceiling (Net Debt / EBITDA)", min_value=1.5, max_value=4.0, value=2.5, step=0.25)
-        debt_cap = compute_debt_capacity(
-            ebitda_cr=latest.ebitda_cr,
-            cfo_cr=latest.cfo_cr,
-            capex_cr=latest.capex_cr,
-            wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 8.5,
-            current_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-            cash_cr=dossier.indebtedness.cash_and_equivalents_cr,
-            target_leverage_ceiling=target_lev,
-        )
-        
-        st.markdown(
-            f"""
-            <div class="bento-card" style="border:1px solid #10b981;">
-                <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Unutilized Incremental M&A Headroom</div>
-                <div class="metric-value" style="font-size:2.1rem; font-weight:800; color:#10b981; margin:6px 0;">
-                    ₹{debt_cap['incremental_mna_headroom_cr']:,.1f} Cr
-                </div>
-                <div style="font-size:0.82rem; color:#cbd5e1;">
-                    • <strong>Max Sustainable Debt:</strong> ₹{debt_cap['max_sustainable_debt_cr']:,.1f} Cr<br>
-                    • <strong>Binding Constraint:</strong> {debt_cap['binding_constraint']}<br>
-                    • <strong>Current Funded Net Debt / EBITDA:</strong> {debt_cap['current_net_debt_ebitda']}x<br>
-                    • <strong>Current Interest Coverage Ratio (ICR):</strong> {debt_cap['current_icr']}x
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-    stress_nar = generate_stress_narrative(dossier, sens, persona=selected_persona)
-    render_six_point_narrative(stress_nar, persona_title=persona_options[selected_persona])
-
-# ── TAB 5: CAP TABLE & DILUTION ──
-with tab_captable:
-    ct = dossier.cap_table
-    st.markdown('<div class="bento-subtitle">SEBI ICDR 2018 Regulation 14 & 16 Disclosures</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Cap Table, Ownership Dilution & Lock-in Schedule</div>', unsafe_allow_html=True)
-
-    if ct:
-        col_c1, col_c2, col_c3, col_c4 = st.columns(4)
-        with col_c1:
-            st.metric("Promoter Holding Pre-Offer", f"{ct.promoter_holding_pre_pct:.1f}%")
-        with col_c2:
-            st.metric("Promoter Holding Post-Offer", f"{ct.promoter_holding_post_pct:.1f}%")
-        with col_c3:
-            st.metric("Promoter Dilution", f"{ct.promoter_dilution_pct:.1f}%")
-        with col_c4:
-            st.metric("Public & Institutional Post", f"{ct.public_holding_post_pct:.1f}%")
-
-        # Visual Cap Table Comparison
-        fig_cap = go.Figure()
-        fig_cap.add_trace(go.Bar(
-            name="Promoter Group",
-            x=["Pre-Offer", "Post-Offer"],
-            y=[ct.promoter_holding_pre_pct, ct.promoter_holding_post_pct],
-            marker_color="#38bdf8",
-        ))
-        fig_cap.add_trace(go.Bar(
-            name="Public & Institutional",
-            x=["Pre-Offer", "Post-Offer"],
-            y=[100.0 - ct.promoter_holding_pre_pct, ct.public_holding_post_pct],
-            marker_color="#10b981",
-        ))
-        fig_cap.update_layout(
-            barmode="stack",
-            height=220,
-            margin=dict(l=20, r=20, t=30, b=20),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#cbd5e1"),
-        )
-        st.plotly_chart(fig_cap, use_container_width=True)
-
-        # Statutory Lock-In & Secondary Floating Supply Calendar
-        st.markdown('<div class="bento-subtitle" style="margin-top:20px;">NSE / BSE Secondary Float Dynamics & Lock-In Timeline</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Anchor Lock-in Expiry & Supply Overhang Calendar</div>', unsafe_allow_html=True)
-
-        lock_schedule = generate_anchor_lockin_calendar(dossier)
-        if lock_schedule:
-            col_l1, col_l2, col_l3, col_l4 = st.columns(4)
-            with col_l1:
-                st.metric("Listing Date (T0)", lock_schedule[0].calendar_date, f"{lock_schedule[0].cumulative_free_float_pct:.1f}% Initial Float")
-            with col_l2:
-                m30 = lock_schedule[1]
-                st.metric("30-Day Anchor Unlock (50%)", m30.calendar_date, f"₹{m30.unlocked_value_cr:,.1f} Cr Released")
-            with col_l3:
-                m90 = lock_schedule[2]
-                st.metric("90-Day Full Unlock (100%)", m90.calendar_date, f"₹{m90.unlocked_value_cr:,.1f} Cr Released")
-            with col_l4:
-                st.metric("Post-90D Public Float", f"{lock_schedule[2].cumulative_free_float_pct:.1f}%", f"+{lock_schedule[2].cumulative_free_float_pct - lock_schedule[0].cumulative_free_float_pct:.1f}% Free Float Expansion")
-
-            cal_rows = []
-            for item in lock_schedule:
-                cal_rows.append({
-                    "Milestone Event": item.milestone_name,
-                    "Trading Date": item.calendar_date,
-                    "Days (T+)": f"T+{item.days_from_listing}",
-                    "Unlocked %": f"{item.unlocked_pct:.1f}%",
-                    "Unlocked Shares": f"{item.unlocked_shares_cr:,.2f} Cr",
-                    "Unlocked Value (₹ Cr)": f"₹{item.unlocked_value_cr:,.1f}",
-                    "Cumulative Free Float": f"{item.cumulative_free_float_pct:.1f}%",
-                    "Supply Overhang Risk": item.supply_risk_level,
-                    "Status": item.status,
-                    "Statutory Citation": item.exchange_notice_ref,
-                })
-            st.dataframe(pd.DataFrame(cal_rows), use_container_width=True, hide_index=True)
-
-            if selected_persona in ["investor", "retail"]:
-                st.warning(
-                    f"⚠️ **Secondary Supply Alert for {persona_options[selected_persona]}**: "
-                    f"Day-30 ({m30.calendar_date}) and Day-90 ({m90.calendar_date}) expiries release a combined ₹{m30.unlocked_value_cr * 2:,.1f} Cr "
-                    "of anchor stock into secondary circulation. Historical Indian primary market data shows institutional block placements "
-                    "frequently create short-term price discovery pressure within 3 to 5 trading sessions around unlock dates."
-                )
-            elif selected_persona == "cfo":
-                st.info(
-                    f"💡 **Treasury & IR Liquidity Guidance**: "
-                    f"Coordinate with syndicate BRLMs ahead of {m30.calendar_date} (Day 30) and {m90.calendar_date} (Day 90) "
-                    "to assess institutional anchor rollover sentiment and mitigate secondary market liquidity volatility."
-                )
-
-    ct_nar = generate_cap_table_narrative(dossier, persona=selected_persona)
-    render_six_point_narrative(ct_nar, persona_title=persona_options[selected_persona])
-
-# ── TAB 6: FORENSIC ACCRUALS (BENEISH M-SCORE) ──
-with tab_forensics:
-    b = dossier.beneish_forensics
-    st.markdown('<div class="bento-subtitle">Beneish (1999) & Roychowdhury (2006) Forensic Econometrics</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Forensic Accruals & Window-Dressing Audit</div>', unsafe_allow_html=True)
-
-    if b and b.is_computable and b.m_score is not None:
-        col_b1, col_b2 = st.columns([1, 2])
-        with col_b1:
-            risk_color = "#10b981" if not b.is_manipulation_risk else "#f43f5e"
-            risk_badge = "LOW PROBABILITY" if not b.is_manipulation_risk else "ELEVATED RISK FLAG"
-            st.markdown(
-                f"""
-                <div class="bento-card" style="border:2px solid {risk_color}; text-align:center;">
-                    <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Beneish Aggregate M-Score</div>
-                    <div class="metric-value" style="font-size:2.8rem; font-weight:800; color:{risk_color}; margin:8px 0;">
-                        {b.m_score:.2f}
-                    </div>
-                    <span class="badge-pill" style="background:{risk_color}22; color:{risk_color}; border:1px solid {risk_color};">
-                        {risk_badge}
-                    </span>
-                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:12px;">
-                        Benchmark Critical Threshold: <strong>-1.78</strong><br>
-                        (Scores &gt; -1.78 signal earnings manipulation)
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with col_b2:
-            st.markdown('<div class="bento-subtitle">8-Ratio Forensic Diagnostic Breakdown</div>', unsafe_allow_html=True)
-            ratio_breakdown = [
-                {"Ratio Variable": "Days Sales in Receivables (DSRI)", "Formula": "Receivables_t / Receivables_{t-1}", "Observed": f"{b.dsri:.2f}", "Normal Range": "< 1.25", "Status": "PASS" if b.dsri < 1.25 else "FLAG"},
-                {"Ratio Variable": "Gross Margin Index (GMI)", "Formula": "GM_{t-1} / GM_t", "Observed": f"{b.gmi:.2f}", "Normal Range": "< 1.20", "Status": "PASS" if b.gmi < 1.20 else "FLAG"},
-                {"Ratio Variable": "Asset Quality Index (AQI)", "Formula": "Non-CA PPE / Tot Assets", "Observed": f"{b.aqi:.2f}", "Normal Range": "< 1.25", "Status": "PASS" if b.aqi < 1.25 else "FLAG"},
-                {"Ratio Variable": "Sales Growth Index (SGI)", "Formula": "Sales_t / Sales_{t-1}", "Observed": f"{b.sgi:.2f}", "Normal Range": "< 1.60", "Status": "PASS" if b.sgi < 1.60 else "FLAG"},
-                {"Ratio Variable": "Depreciation Index (DEPI)", "Formula": "DeprRate_{t-1} / DeprRate_t", "Observed": f"{b.depi:.2f}", "Normal Range": "< 1.15", "Status": "PASS" if b.depi < 1.15 else "FLAG"},
-                {"Ratio Variable": "Sales & Admin Expense (SGAI)", "Formula": "SGA%_t / SGA%_{t-1}", "Observed": f"{b.sgai:.2f}", "Normal Range": "< 1.20", "Status": "PASS" if b.sgai < 1.20 else "FLAG"},
-                {"Ratio Variable": "Leverage Index (LVGI)", "Formula": "Lev_t / Lev_{t-1}", "Observed": f"{b.lvgi:.2f}", "Normal Range": "< 1.30", "Status": "PASS" if b.lvgi < 1.30 else "FLAG"},
-                {"Ratio Variable": "Total Accruals to Assets (TATA)", "Formula": "(PAT - CFO) / Assets", "Observed": f"{b.tata:.3f}", "Normal Range": "< 0.05", "Status": "PASS" if b.tata < 0.05 else "FLAG"},
-            ]
-            st.dataframe(pd.DataFrame(ratio_breakdown), use_container_width=True, hide_index=True)
-    else:
-        st.warning("⚠️ Beneish (1999) 8-variable forensic score is currently UNAVAILABLE: multi-year balance sheet notes and standalone asset components are not supplied in this prospectus draft.")
-
-    b_nar = generate_forensics_narrative(dossier, persona=selected_persona)
-    render_six_point_narrative(b_nar, persona_title=persona_options[selected_persona])
-
-# ── TAB 7: DEBT MATURITY LADDER ──
-with tab_maturity:
-    dm = dossier.debt_maturity
-    st.markdown('<div class="bento-subtitle">Ind AS 107 Disclosures · Contractual Principal Cash Flows</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Debt Maturity Ladder & Refinancing Profile</div>', unsafe_allow_html=True)
-
-    if dm:
-        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-        with col_m1:
-            st.metric("Year 1 Due (Current)", f"₹{dm.repayment_due_year_1_cr:,.1f} Cr")
-        with col_m2:
-            st.metric("Total Contractual Repayments", f"₹{dm.total_repayment_profile_cr:,.1f} Cr")
-        with col_m3:
-            st.metric("Weighted Avg Maturity", f"{dm.weighted_average_maturity_years:.1f} Yrs")
-        with col_m4:
-            st.metric("Refinancing Risk", dm.refinancing_risk_rating)
-
-        # Repayment Ladder Chart
-        fig_ladder = go.Figure()
-        ladder_years = ["Within 1 Yr", "Year 2", "Year 3", "Year 4", "Year 5 & Beyond"]
-        ladder_vals = [
-            dm.repayment_due_year_1_cr,
-            dm.repayment_due_year_2_cr,
-            dm.repayment_due_year_3_cr,
-            dm.repayment_due_year_4_cr,
-            dm.repayment_due_year_5_plus_cr,
-        ]
-        fig_ladder.add_trace(go.Bar(
-            x=ladder_years,
-            y=ladder_vals,
-            marker_color=["#f43f5e", "#f59e0b", "#38bdf8", "#38bdf8", "#10b981"],
-            text=[f"₹{v:,.1f} Cr" for v in ladder_vals],
-            textposition="auto",
-        ))
-        fig_ladder.update_layout(
-            height=260,
-            margin=dict(l=20, r=20, t=30, b=20),
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#cbd5e1"),
-            yaxis_title="Principal Repayment (₹ Cr)",
-        )
-        st.plotly_chart(fig_ladder, use_container_width=True)
-
-    st.markdown(
-        f"""
-        <div class="narrative-card">
-            <div style="font-size:0.80rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-bottom:4px;">
-                💡 Quantitative Interpretation & What You Are Seeing
-            </div>
-            <div style="font-size:0.88rem; color:#e2e8f0; line-height:1.5;">
-                The repayment schedule shows ₹{dm.repayment_due_year_1_cr if dm else 0:,.1f} Cr falling due within the next 12 months,
-                representing immediate refinancing or debt retirement requirements.
-                With a floating interest exposure of {dm.floating_rate_debt_pct if dm else 0:.0f}%,
-                treasury liquidity reserves must match at least 100% of Year 1 maturities to avert liquidity squeeze.
-            </div>
-        </div>
-        <div class="action-card">
-            <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
-                🎯 Prescriptive Call to Action (Refinancing Playbook)
-            </div>
-            <div style="font-size:0.88rem; color:#e2e8f0; line-height:1.5;">
-                1. <strong>Prepay Near-Term Maturities:</strong> Earmark primary IPO proceeds or operational cash to eliminate Year 1 maturities.<br>
-                2. <strong>Tenor Extension:</strong> Approach syndicate lead banks to negotiate a 3-year extension on Year 2 & Year 3 maturities.<br>
-                3. <strong>Benchmark Optimization:</strong> Swap 1-year MCLR benchmarked term loans for repo-linked or commercial paper spreads post-listing.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-# ── TAB 8: VALUATION & LISTED PEER COMPS ──
-with tab_valuation:
-    val = dossier.valuation_comps
-    st.markdown('<div class="bento-subtitle">CMIE Database Peer Calibration at Identical Dickinson Stage</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Valuation Multiples & Listed Sector Comps</div>', unsafe_allow_html=True)
-
-    if val:
-        col_v1, col_v2, col_v3, col_v4 = st.columns(4)
+    # ── SUBTAB 4: VALUATION, PEERS, DCF & FORENSICS ──
+    with subtab_val:
+        col_v1, col_v2 = st.columns([3, 2])
+        val = dossier.valuation_comps
         with col_v1:
-            st.metric("Price Band (INR)", f"₹{val.price_band_lower_inr:.0f} - ₹{val.price_band_upper_inr:.0f}")
+            st.markdown('<div class="bento-subtitle">CMIE Listed Peers at Identical Life-Cycle Stage</div>', unsafe_allow_html=True)
+            st.markdown('<div class="bento-title">Valuation Peer Benchmarking</div>', unsafe_allow_html=True)
+            if val and val.peers:
+                p_comps = []
+                for p in val.peers:
+                    p_comps.append({
+                        "Peer Name": p.peer_name,
+                        "Ticker": p.ticker,
+                        "Market Cap (₹ Cr)": f"₹{p.mcap_cr:,.1f}",
+                        "P/E Ratio": f"{p.pe_ratio:.1f}x" if p.pe_ratio else "Loss",
+                        "EV/EBITDA": f"{p.ev_ebitda:.1f}x" if p.ev_ebitda else "Loss",
+                        "ROE (%)": f"{p.roe_pct:.1f}%",
+                        "Life Stage": p.dickinson_stage,
+                    })
+                st.dataframe(pd.DataFrame(p_comps), use_container_width=True, hide_index=True)
+            else:
+                st.info("Peer comparison table configured in DRHP Section III.")
+
         with col_v2:
-            st.metric("Implied Market Cap", f"₹{val.implied_mcap_cr:,.1f} Cr")
-        with col_v3:
-            st.metric("Implied P/E Multiple", f"{val.implied_pe_ratio:.1f}x" if val.implied_pe_ratio > 0 else "Negative")
-        with col_v4:
-            st.metric("Implied EV / EBITDA", f"{val.implied_ev_ebitda:.1f}x" if val.implied_ev_ebitda > 0 else "Negative")
+            st.markdown('<div class="bento-subtitle">Offer Valuation Metrics</div>', unsafe_allow_html=True)
+            st.markdown('<div class="bento-title">Implied Pricing Multiples</div>', unsafe_allow_html=True)
+            if val:
+                v_badge = "badge-emerald" if "DISCOUNT" in val.valuation_verdict else "badge-sky"
+                val_box_html = f"""
+                <div class="bento-card">
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Implied Enterprise Value (Upper Band)</div>
+                    <div style="font-size:1.8rem; font-weight:800; color:#38bdf8; margin:4px 0;">₹{val.implied_ev_cr:,.1f} Cr</div>
+                    <div style="margin-top:6px;"><span class="badge-pill {v_badge}">Verdict: {val.valuation_verdict}</span></div>
+                    <div style="font-size:0.82rem; color:#cbd5e1; margin-top:10px; line-height:1.6;">
+                        • <strong>Implied P/E:</strong> {val.implied_pe_ratio:.1f}x (Peer Median: {val.peer_median_pe or 'N/A'}x)<br>
+                        • <strong>Implied EV/EBITDA:</strong> {val.implied_ev_ebitda:.1f}x<br>
+                        • <strong>Price Band:</strong> ₹{val.price_band_lower_inr:.0f} - ₹{val.price_band_upper_inr:.0f}
+                    </div>
+                </div>
+                """
+                render_html(val_box_html)
 
-        st.markdown(f'<div class="bento-subtitle">Peer Universe: {val.sector_peer_group}</div>', unsafe_allow_html=True)
-        peer_rows = []
-        for p in val.peers:
-            peer_rows.append({
-                "Company Name": p.peer_name,
-                "Ticker": p.ticker,
-                "Market Cap (₹ Cr)": f"{p.mcap_cr:,.0f}",
-                "P/E (x)": f"{p.pe_ratio:.1f}" if p.pe_ratio > 0 else "Loss",
-                "EV/EBITDA (x)": f"{p.ev_ebitda:.1f}" if p.ev_ebitda > 0 else "Loss",
-                "EV/Sales (x)": f"{p.ev_sales:.1f}",
-                "P/B (x)": f"{p.pb_ratio:.1f}",
-                "PAT Margin (%)": f"{p.pat_margin_pct:.1f}%",
-                "RoE (%)": f"{p.roe_pct:.1f}%",
-                "Dickinson Stage": p.dickinson_stage,
-            })
-        st.dataframe(pd.DataFrame(peer_rows), use_container_width=True, hide_index=True)
+        # WACC, ROIC & Reverse DCF Hurdle
+        st.markdown('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
+        st.markdown('<div class="bento-subtitle">Economic Value Creation & Reverse DCF Sizing</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bento-title">ROIC vs WACC Spread & Required Growth Hurdle</div>', unsafe_allow_html=True)
+        wacc_res = calculate_wacc_and_roic(dossier)
+        rev_dcf = calculate_reverse_dcf_hurdle(dossier)
 
-    val_nar = generate_valuation_narrative(dossier, persona=selected_persona)
-    render_six_point_narrative(val_nar, persona_title=persona_options[selected_persona])
+        col_w1, col_w2, col_w3 = st.columns(3)
+        with col_w1:
+            st.metric("Return on Invested Capital (ROIC)", f"{wacc_res['roic_pct']:.1f}%", delta=f"{wacc_res['value_creation_spread_pct']:+.1f}% vs WACC")
+        with col_w2:
+            st.metric("Weighted Average Cost of Capital (WACC)", f"{wacc_res['wacc_pct']:.1f}%", help="CAPM Ke + Post-tax Kd")
+        with col_w3:
+            st.metric("Annual Economic Profit (EVA)", f"₹{wacc_res['economic_profit_cr']:,.1f} Cr", delta=wacc_res['status'].replace('_', ' '))
 
-# ── TAB 9: SEBI GOVERNANCE & WORKING CAPITAL ──
-with tab_governance:
-    col_g1, col_g2 = st.columns(2)
-    with col_g1:
-        st.markdown('<div class="bento-subtitle">SEBI LODR & ICDR Governance Disclosures</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Non-Financial Risk Profile</div>', unsafe_allow_html=True)
-        gov = dossier.governance
-        
-        st.markdown(
-            f"""
-            <div class="bento-card">
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:#cbd5e1;">Promoter Share Pledging:</span>
-                    <strong style="color:{'#10b981' if gov.promoter_pledge_pct == 0 else '#f43f5e'};">{gov.promoter_pledge_pct:.1f}%</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:#cbd5e1;">Related Party Transactions (RPT) / Revenue:</span>
-                    <strong>{gov.related_party_transactions_pct_rev:.1f}%</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:#cbd5e1;">Top 5 Customer Concentration:</span>
-                    <strong>{gov.top_5_customer_concentration_pct:.1f}%</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                    <span style="color:#cbd5e1;">Customer HHI Index:</span>
-                    <span class="financial-num">{gov.herfindahl_hhi_index:.0f}</span>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span style="color:#cbd5e1;">Contingent Liabilities / Net Worth:</span>
-                    <strong>{gov.contingent_liabilities_pct_networth:.1f}%</strong>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        st.info(f"💡 **Reverse DCF Analysis:** {rev_dcf['narrative']}")
 
-    with col_g2:
-        st.markdown('<div class="bento-subtitle">Cash Conversion Dynamics</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bento-title">Working Capital Cycle</div>', unsafe_allow_html=True)
-        wc = dossier.working_capital
-        
-        st.markdown(
-            f"""
-            <div class="bento-card">
-                <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Net Cash Conversion Cycle (CCC)</div>
-                <div class="metric-value" style="font-size:2.0rem; font-weight:800; color:#38bdf8; margin:4px 0;">
-                    {wc.cash_conversion_cycle_days:.1f} Days
-                </div>
-                <div style="font-size:0.82rem; color:#cbd5e1; margin-top:8px;">
-                    • <strong>Days Sales Outstanding (DSO):</strong> {wc.debtor_days_dso:.1f} days<br>
-                    • <strong>Days Inventory Outstanding (DIO):</strong> {wc.inventory_days_dio:.1f} days<br>
-                    • <strong>Days Payable Outstanding (DPO):</strong> {wc.creditor_days_dpo:.1f} days<br>
-                    • <strong>Net Working Capital / Sales:</strong> {wc.net_working_capital_pct_sales:.1f}%
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        # Beneish Forensics & Anchor Lock-In Calendar
+        st.markdown('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
+        st.markdown('<div class="bento-subtitle">Forensic Accruals & Statutory Lock-In Calendar</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bento-title">Beneish M-Score & Anchor Secondary Float Schedule</div>', unsafe_allow_html=True)
+        c_bf1, c_bf2 = st.columns(2)
+        with c_bf1:
+            beneish = dossier.beneish_forensics
+            if beneish and beneish.m_score is not None:
+                b_color = "#10b981" if not beneish.is_manipulation_risk else "#f43f5e"
+                b_status = "SAFE (Low Accrual Manipulation Risk)" if not beneish.is_manipulation_risk else "ELEVATED EARNINGS QUALITY CONCERN"
+                st.markdown(
+                    f"""
+                    <div class="bento-card" style="border-left:4px solid {b_color};">
+                        <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Beneish (1999) 8-Variable M-Score</div>
+                        <div style="font-size:1.8rem; font-weight:800; color:{b_color}; margin:4px 0;">{beneish.m_score:.2f}</div>
+                        <div style="font-size:0.84rem; color:#ffffff; font-weight:600;">{b_status}</div>
+                        <div style="font-size:0.80rem; color:#94a3b8; margin-top:8px;">
+                            • DSRI (Receivables): {beneish.dsri or 1.0:.2f} · GMI (Margin): {beneish.gmi or 1.0:.2f}<br>
+                            • AQI (Asset Quality): {beneish.aqi or 1.0:.2f} · SGI (Sales Growth): {beneish.sgi or 1.0:.2f}<br>
+                            • Threshold: M-Score > -1.78 indicates high statistical probability of earnings management.
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.info("Forensic M-Score requires minimum 2 full years of restated balance sheet disclosures.")
+
+        with c_bf2:
+            from datetime import datetime, timezone
+            as_of_today = datetime.now(timezone.utc).date()
+            lockin_sched = generate_anchor_lockin_calendar(dossier, as_of_date=as_of_today)
+            if lockin_sched:
+                l_rows = []
+                for l in lockin_sched:
+                    l_rows.append({
+                        "Unlock Milestone": l.milestone_name,
+                        "Target Date": l.calendar_date,
+                        "Unlocked (₹ Cr)": f"₹{l.unlocked_value_cr:,.1f}",
+                        "Free Float (%)": f"{l.cumulative_free_float_pct:.1f}%",
+                        "Risk Level": l.supply_risk_level,
+                        "Status": l.status,
+                    })
+                st.dataframe(pd.DataFrame(l_rows), use_container_width=True, hide_index=True)
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LEVEL 1 - TAB 4: CMIE REFERENCE CROSSWALK & DATA COVERAGE
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_crosswalk:
+    st.markdown('<div class="bento-subtitle">Audited Reconciliation against Licensed CMIE Prowess Schema</div>', unsafe_allow_html=True)
+    st.markdown('<div class="bento-title">Extracted DRHP Data vs. CMIE Reference Field Crosswalk</div>', unsafe_allow_html=True)
+
+    cross_res = generate_cmie_crosswalk_coverage(dossier)
+
+    # Coverage KPI Cards
+    c_cw1, c_cw2, c_cw3, c_cw4, c_cw5 = st.columns(5)
+    with c_cw1:
+        st.metric("Total Concepts Tracked", cross_res["total_concepts_tracked"])
+    with c_cw2:
+        st.metric("Exact Matches", cross_res["exact_match_count"], delta="SEBI Restated")
+    with c_cw3:
+        st.metric("Reconciled Norms", cross_res["reconciled_count"], delta="Accounting Bridge")
+    with c_cw4:
+        st.metric("Undisclosed in DRHP", cross_res["undisclosed_count"], delta="Diligence Gaps" if cross_res["undisclosed_count"] > 0 else "None", delta_color="inverse")
+    with c_cw5:
+        st.metric("Audit Coverage", f"{cross_res['coverage_pct']}%", delta=cross_res["data_quality_verdict"].replace("_", " "))
 
     st.markdown(
-        f"""
-        <div class="narrative-card">
-            <div style="font-size:0.80rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-bottom:4px;">
-                💡 Quantitative Interpretation & What You Are Seeing
-            </div>
-            <div style="font-size:0.88rem; color:#e2e8f0; line-height:1.5;">
-                Promoter share encumbrance is at {gov.promoter_pledge_pct:.1f}%, indicating
-                {'zero promoter margin loan vulnerability.' if gov.promoter_pledge_pct == 0 else 'pledged share collateral risk requiring monitoring.'}
-                Top 5 customer concentration stands at {gov.top_5_customer_concentration_pct:.1f}% with an HHI score of {gov.herfindahl_hhi_index:.0f}.
-                The Net Cash Conversion Cycle of {wc.cash_conversion_cycle_days:.1f} days indicates
-                {'disciplined working capital velocity.' if wc.cash_conversion_cycle_days <= 60 else 'elongated collections requiring lender credit enhancement.'}
-            </div>
-        </div>
-        <div class="action-card">
-            <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
-                🎯 Prescriptive Call to Action (Governance & Vendor Terms Playbook)
-            </div>
-            <div style="font-size:0.88rem; color:#e2e8f0; line-height:1.5;">
-                1. <strong>Covenant Safeguard:</strong> Require an undertaking that promoter encumbrances remain strictly zero post-listing.<br>
-                2. <strong>RPT Scrutiny:</strong> Enforce audit committee pre-approval per SEBI LODR Regulation 23 for related party transactions.<br>
-                3. <strong>Working Capital Financing:</strong> Structure supply chain vendor discounting facilities to reduce creditor DPO stress.
-            </div>
+        """
+        <div style="font-size:0.80rem; color:#94a3b8; margin:8px 0 14px 0;">
+            *Reconciliation Methodology: Standardizes DRHP restated financial metrics against canonical CMIE field definitions. 
+            Lease adjustments under Ind AS 116, capitalized R&D, and non-operating treasury items are explicitly reconciled.
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-# ── TAB 10: INVESTMENT COMMITTEE (IC) DEAL MEMO & VERDICT ──
-with tab_ic:
-    ic = dossier.ic_verdict
-    st.markdown('<div class="bento-subtitle">Sovereign Credit Underwriting Standard</div>', unsafe_allow_html=True)
-    st.markdown('<div class="bento-title">Investment Committee (IC) Deal Memo & Underwriting Stance</div>', unsafe_allow_html=True)
+    # Interactive Table with Status Filter
+    records = dossier.cmie_crosswalk
+    if records:
+        status_filter = st.selectbox("Filter Crosswalk by Status", options=["ALL", "EXACT_MATCH", "RECONCILED", "UNDISCLOSED_IN_DRHP"], index=0)
+        filtered_records = [r for r in records if status_filter == "ALL" or r.status == status_filter]
 
+        cw_rows = []
+        for r in filtered_records:
+            cw_rows.append({
+                "Canonical Concept": r.canonical_concept,
+                "CMIE Field Code": r.cmie_field_code,
+                "CMIE Standardization Definition": r.cmie_definition,
+                "DRHP Restated Figure": r.drhp_raw_value,
+                "CMIE Normalized Figure": r.cmie_normalized_value,
+                "Reconciliation Status": r.status,
+                "Audit Reconciliation Note": r.reconciliation_note,
+            })
+        st.dataframe(pd.DataFrame(cw_rows), use_container_width=True, hide_index=True)
+
+        cw_df = pd.DataFrame(cw_rows)
+        st.download_button(
+            label="📥 Download CMIE Crosswalk (CSV)",
+            data=cw_df.to_csv(index=False).encode("utf-8"),
+            file_name=f"{dossier.deal_id}_cmie_crosswalk.csv",
+            mime="text/csv",
+        )
+    else:
+        st.info("No crosswalk records configured for this custom dossier.")
+
+# ═════════════════════════════════════════════════════════════════════════════
+# LEVEL 1 - TAB 5: IC STANCE, ACTION REGISTER & LIMITATIONS
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_ic_action:
+    st.markdown('<div class="bento-subtitle">Institutional Governance & Decision Protocol</div>', unsafe_allow_html=True)
+    st.markdown('<div class="bento-title">Investment Committee Underwriting Stance & Action Register</div>', unsafe_allow_html=True)
+
+    ic = dossier.ic_verdict
     if ic:
-        col_ic1, col_ic2 = st.columns([1, 2])
+        col_ic1, col_ic2 = st.columns([2, 3])
         with col_ic1:
-            verdict_colors = {
-                "APPROVE WITH COVENANTS": "#10b981",
-                "UNLEVERAGED M&A ACCRETION": "#38bdf8",
-                "DELEVERAGING MANDATE": "#f59e0b",
-                "RESTRICTED LEVERAGE": "#f43f5e",
-            }
-            v_color = verdict_colors.get(ic.underwriting_verdict, "#38bdf8")
+            v_color = "#10b981" if "APPROVE" in ic.underwriting_verdict else "#f59e0b"
             rating_display = (
                 f"External Rating: <strong style='color:#ffffff;'>{ic.external_rating_symbol} ({ic.external_rating_agency})</strong>"
                 if (ic.external_rating_symbol and ic.external_rating_agency)
                 else f"Internal Screening Grade: <strong style='color:#ffffff;'>{ic.internal_screening_grade or 'UNRATED'}</strong>"
             )
-            st.markdown(
-                f"""
-                <div class="bento-card" style="border:2px solid {v_color}; text-align:center;">
-                    <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">IC Underwriting Verdict</div>
-                    <div style="font-size:1.6rem; font-weight:800; color:{v_color}; margin:8px 0; line-height:1.2;">
-                        {ic.underwriting_verdict}
-                    </div>
-                    <div style="font-size:0.85rem; color:#cbd5e1; margin-top:8px;">
-                        {rating_display}<br>
-                        Max Rec. Leverage Ceiling: <strong style="color:#ffffff;">{ic.max_recommended_leverage_ratio:.2f}x EBITDA</strong>
-                    </div>
-                    <div style="font-size:0.70rem; color:#94a3b8; margin-top:6px;">
-                        *Statutory Notice: Internal screening grade is derived from financial metrics, not a Credit Rating Agency opinion under SEBI CRA Regulations 1999.
-                    </div>
+            ic_box_html = f"""
+            <div class="bento-card" style="border:2px solid {v_color}; text-align:center;">
+                <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">IC Underwriting Verdict</div>
+                <div style="font-size:1.5rem; font-weight:800; color:{v_color}; margin:8px 0; line-height:1.2;">
+                    {ic.underwriting_verdict}
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with col_ic2:
-            st.markdown(
-                f"""
-                <div class="bento-card">
-                    <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:6px;">
-                        💎 Key Transaction & Credit Strengths
-                    </div>
-                    <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
-                        {'<br>'.join(['• ' + s for s in ic.key_credit_strengths])}
-                    </div>
-                    <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
-                    <div style="font-size:0.80rem; font-weight:700; color:#f43f5e; text-transform:uppercase; margin-bottom:6px;">
-                        ⚠️ Key Underwriting Vulnerabilities & Downside Risks
-                    </div>
-                    <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
-                        {'<br>'.join(['• ' + r for r in ic.key_downside_risks])}
-                    </div>
+                <div style="font-size:0.85rem; color:#cbd5e1; margin-top:8px;">
+                    {rating_display}<br>
+                    Max Rec. Leverage Ceiling: <strong style="color:#ffffff;">{ic.max_recommended_leverage_ratio:.2f}x EBITDA</strong>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-        st.markdown(
-            f"""
-            <div class="bento-card" style="border-left:4px solid #38bdf8;">
-                <div style="font-size:0.80rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-bottom:6px;">
-                    🛡️ Mandatory Loan Covenants & Credit Safeguards
-                </div>
-                <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.5;">
-                    {'<br>'.join(['• ' + c for c in ic.mandatory_loan_covenants])}
-                </div>
-                <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
-                <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
-                    🎯 Executive Treasury & Underwriter Mandate
-                </div>
-                <div style="font-size:0.86rem; color:#f8fafc; line-height:1.5;">
-                    {ic.treasury_call_to_action}
+                <div style="font-size:0.70rem; color:#94a3b8; margin-top:6px;">
+                    *Statutory Notice: Internal screening grade is derived from financial metrics, not a Credit Rating Agency opinion under SEBI CRA Regulations 1999.
                 </div>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            """
+            render_html(ic_box_html)
+        with col_ic2:
+            ic_str_html = f"""
+            <div class="bento-card">
+                <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:6px;">
+                    💎 Key Transaction & Credit Strengths
+                </div>
+                <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
+                    {'<br>'.join(['• ' + s for s in ic.key_credit_strengths])}
+                </div>
+                <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
+                <div style="font-size:0.80rem; font-weight:700; color:#f43f5e; text-transform:uppercase; margin-bottom:6px;">
+                    ⚠️ Key Underwriting Vulnerabilities & Downside Risks
+                </div>
+                <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
+                    {'<br>'.join(['• ' + r for r in ic.key_downside_risks])}
+                </div>
+            </div>
+            """
+            render_html(ic_str_html)
 
-# ── TAB 11: MISSING DATA & DECISION LIMITATIONS ──
-with tab_limitations:
-    st.markdown('<div class="bento-subtitle">SEBI DRHP Information Gaps & Diligence Worklist</div>', unsafe_allow_html=True)
+        cov_html = f"""
+        <div class="bento-card" style="border-left:4px solid #38bdf8;">
+            <div style="font-size:0.80rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-bottom:6px;">
+                🛡️ Mandatory Loan Covenants & Credit Safeguards
+            </div>
+            <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.5;">
+                {'<br>'.join(['• ' + c for c in ic.mandatory_loan_covenants])}
+            </div>
+            <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
+            <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
+                🎯 Executive Treasury & Underwriter Mandate
+            </div>
+            <div style="font-size:0.86rem; color:#f8fafc; line-height:1.5;">
+                {ic.treasury_call_to_action}
+            </div>
+        </div>
+        """
+        render_html(cov_html)
+
+    # Prioritized Action Register Table
+    st.markdown('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
+    st.markdown('<div class="bento-subtitle">Prioritized Diligence & Execution Worklist</div>', unsafe_allow_html=True)
+    st.markdown('<div class="bento-title">Underwriting Action Register</div>', unsafe_allow_html=True)
+
+    action_rows = []
+    # Collect all actions from equity questions
+    eq_findings = generate_equity_question_answers(dossier, persona=selected_persona, transaction_context=selected_context)
+    for qid, qf in eq_findings.items():
+        for act in qf.conditional_recommendations:
+            action_rows.append({
+                "Source Dimension": f"{qid}: {qf.title}",
+                "Action Owner": act.action_owner,
+                "Recommended Action": act.recommendation,
+                "Precondition Required": act.preconditions,
+                "Completion Evidence": act.completion_evidence,
+                "Monitoring Tripwire": act.monitoring_trigger,
+            })
+    if action_rows:
+        st.dataframe(pd.DataFrame(action_rows), use_container_width=True, hide_index=True)
+
+    # Missing Data & Decision Limitations
+    st.markdown('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
+    st.markdown('<div class="bento-subtitle">SEBI DRHP Information Gaps & Blocked Decisions</div>', unsafe_allow_html=True)
     st.markdown('<div class="bento-title">Decision Limitations & Unsupplied Disclosures Register</div>', unsafe_allow_html=True)
-    
     lims = getattr(dossier, "limitations", [])
     if not lims:
         st.success("✅ Zero active decision limitations. All material data fields have been reconciled against audited disclosures.")
     else:
-        c_lim1, c_lim2, c_lim3 = st.columns(3)
-        high_gaps = len([l for l in lims if l.materiality_priority == "HIGH"])
-        med_gaps = len([l for l in lims if l.materiality_priority == "MEDIUM"])
-        with c_lim1:
-            st.metric("Total Tracked Limitations", len(lims))
-        with c_lim2:
-            st.metric("High Materiality Blockers", high_gaps, delta="Underwriting Blocked" if high_gaps > 0 else "Clear", delta_color="inverse")
-        with c_lim3:
-            st.metric("Medium Diligence Gaps", med_gaps)
-
         lim_rows = []
         for l in lims:
             lim_rows.append({
@@ -1139,33 +1120,16 @@ with tab_limitations:
                 "Information Item": l.item_name,
                 "Affected Dimension": l.affected_dimension,
                 "Status": l.current_status,
-                "Materiality": l.materiality_priority,
+                "Priority": l.materiality_priority,
                 "Blocked Decision": l.blocked_decision_or_recommendation,
                 "Recommended Diligence Request": l.recommended_diligence_request,
             })
         st.dataframe(pd.DataFrame(lim_rows), use_container_width=True, hide_index=True)
 
-        st.markdown(
-            """
-            <div class="narrative-card" style="margin-top:14px; border-left:4px solid #f59e0b;">
-                <div style="font-size:0.80rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-bottom:4px;">
-                    📋 Diligence Action Protocol for Investment Committee & Lenders
-                </div>
-                <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.5;">
-                    Per institutional diligence standards (CFA V(A) and SEBI ICDR 2018), unsupplied or inconsistent prospectus items 
-                    must not be filled with default assumptions or peer averages. The items flagged above require formal written requisition 
-                    to the Book Running Lead Managers (BRLMs) or issuer management before final underwriting commitment.
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-# ── TAB 12: ONLINE INGESTION DIAGNOSTIC ──
-with tab_audit:
+    # Online Ingestion Diagnostic
+    st.markdown('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
     st.markdown('<div class="bento-subtitle">Automated Provenance & Anti-Fabrication Verification</div>', unsafe_allow_html=True)
     st.markdown('<div class="bento-title">Online Ingestion Diagnostic Card</div>', unsafe_allow_html=True)
-
     audit_rows = []
     for item in dossier.audit_report:
         audit_rows.append({

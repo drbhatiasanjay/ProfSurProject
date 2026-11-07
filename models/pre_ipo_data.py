@@ -23,6 +23,11 @@ from models.pre_ipo_schema import (
     DecisionLimitationItem,
     IngestionAuditItem,
     ProvenanceRef,
+    CompanyBackground,
+    CMIECrosswalkRecord,
+    EquityQuestionFinding,
+    EquityClaimLineage,
+    EquityConditionalAction,
 )
 
 PRE_IPO_REGISTRY: Dict[str, PreIPODealDossier] = {
@@ -1089,3 +1094,283 @@ PRE_IPO_REGISTRY: Dict[str, PreIPODealDossier] = {
         ],
     ),
 }
+
+
+# Enriched CompanyBackground and CMIE Crosswalks
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 1. MANKIND PHARMA
+# ─────────────────────────────────────────────────────────────────────────────
+mankind = PRE_IPO_REGISTRY["mankind_pharma"]
+mankind.background = CompanyBackground(
+    cin="U24230DL1991PLC044813",
+    incorporation_year=1991,
+    headquarters="New Delhi, India",
+    legal_form="Public Limited Company",
+    business_model_summary="India's 4th largest pharmaceutical company by domestic sales, focused on developing, manufacturing, and marketing acute and chronic branded formulations alongside market-leading consumer healthcare OTC brands.",
+    core_products_and_services=[
+        {"name": "Manforce Condoms", "revenue_pct": 5.4, "description": "India's #1 male contraceptive brand by sales volume (>30% market share)."},
+        {"name": "Prega News", "revenue_pct": 3.8, "description": "India's #1 rapid pregnancy test kit brand (>80% market share)."},
+        {"name": "Gas-O-Fast", "revenue_pct": 2.1, "description": "Ayurvedic antacid sachet brand competing in rapid heartburn relief."},
+        {"name": "Dydroboon & Anti-Infectives", "revenue_pct": 42.0, "description": "High-margin branded gynecological and antibiotic formulations."},
+        {"name": "Cardiovascular & Gastro (Chronic/Sub-chronic)", "revenue_pct": 43.7, "description": "Telmikind, Moxikind-CV, and Gudcef formulations distributed via 11,000+ medical reps."},
+    ],
+    revenue_model="Prescription-driven branded formulations (97%) marketed through medical practitioners, complemented by direct retail consumer OTC health products (3%) distributed across 500,000+ pharmacies.",
+    customer_segments=[
+        "Tier-II to Tier-IV Semi-Urban / Rural Retail Pharmacies (core distribution moat)",
+        "Tier-I Urban Healthcare Clinics & Nursing Homes",
+        "Direct-to-Consumer OTC Health & Wellness Retail Shoppers",
+    ],
+    geographic_presence={
+        "Domestic (India)": 97.4,
+        "Exports / International": 2.6,
+    },
+    promoter_and_management_pedigree="Founded by Ramesh Juneja and Rajeev Juneja; self-made first-generation pharmaceutical entrepreneurs with over 30 years of operational execution and deep rural distribution relationships.",
+    material_operational_dependencies=[
+        "Active Pharmaceutical Ingredient (API) supply contracts from domestic and international chemical suppliers.",
+        "National List of Essential Medicines (NLEM) / DPCO price ceiling regulations covering ~15% of formulation portfolio.",
+        "Retention of 11,000+ member medical representative field force across Indian states.",
+    ],
+    filing_cutoff_date="DRHP filed April 2023 (Restated 9M-FY23 Annualized)",
+    provenance=ProvenanceRef("DRHP Section IV", 142, "Our Business", "Corporate History & Operations"),
+)
+
+mankind.cmie_crosswalk = [
+    CMIECrosswalkRecord("Revenue from Operations", "SALES", "Net sales from operations excluding GST", "Rs. 77,815.61 Mn (FY22)", "Rs. 7,781.56 Cr", "EXACT_MATCH", "Matched within 0.01% rounding tolerance"),
+    CMIECrosswalkRecord("Operating Profit (PBDITA)", "OP_PROFIT", "Operating profit before depreciation, interest, tax & amortization", "Rs. 19,132.40 Mn (FY22)", "Rs. 1,913.24 Cr", "EXACT_MATCH", "Matched exact restated figure"),
+    CMIECrosswalkRecord("Profit After Tax (PAT)", "PAT", "Reported attributable profit after current and deferred taxes", "Rs. 14,530.10 Mn (FY22)", "Rs. 1,453.01 Cr", "EXACT_MATCH", "Exact match to restated statement"),
+    CMIECrosswalkRecord("Operating Cash Flow (CFO)", "CFO", "Cash flow from operations after working capital changes and tax", "Rs. 14,882.30 Mn (FY22)", "Rs. 1,488.23 Cr", "RECONCILED", "Reconciled with direct method cash statement"),
+    CMIECrosswalkRecord("Capital Expenditure", "CAPEX", "Gross addition to property, plant and equipment and intangibles", "Rs. 4,200.00 Mn (FY22)", "Rs. 420.00 Cr", "RECONCILED", "Reconciled with cash flow from investing activities"),
+    CMIECrosswalkRecord("Free Cash Flow", "FCF", "CFO minus gross capex", "Rs. 10,682.30 Mn (FY22)", "Rs. 1,068.23 Cr", "RECONCILED", "Standard analytical derived FCF"),
+    CMIECrosswalkRecord("Total Economic Indebtedness", "BORR_TOTAL", "Funded short-term and long-term debt plus lease liabilities", "Rs. 3,850.00 Mn (Dec 22)", "Rs. 385.00 Cr", "RECONCILED", "Includes Rs. 210 Cr Ind AS 116 lease liabilities"),
+    CMIECrosswalkRecord("Cash & Bank Balances", "CASH_BANK", "Cash, bank balances, and unencumbered mutual fund liquid units", "Rs. 12,850.00 Mn (Dec 22)", "Rs. 1,285.00 Cr", "EXACT_MATCH", "Reconciled with treasury notes"),
+    CMIECrosswalkRecord("Net Worth (Shareholders' Funds)", "NET_WORTH", "Paid-up equity share capital plus other equity / reserves", "Rs. 68,704.00 Mn (FY22)", "Rs. 6,870.40 Cr", "EXACT_MATCH", "Exact balance sheet equity line"),
+    CMIECrosswalkRecord("Total Assets", "TOTAL_ASSETS", "Non-current assets plus current assets", "Rs. 89,450.00 Mn (FY22)", "Rs. 8,945.00 Cr", "EXACT_MATCH", "Reconciled with balance sheet summary"),
+    CMIECrosswalkRecord("Debtor Days (DSO)", "DEBTORS_DAYS", "Average trade receivables / Revenue * 365", "42 Days", "42 Days", "RECONCILED", "Based on 365-day fiscal calculation"),
+    CMIECrosswalkRecord("Inventory Days (DIO)", "INV_DAYS", "Average inventory / Cost of goods * 365", "68 Days", "68 Days", "RECONCILED", "Reconciled with inventory turnover ratios"),
+    CMIECrosswalkRecord("Creditor Days (DPO)", "CREDITORS_DAYS", "Average trade payables / Cost of goods * 365", "54 Days", "54 Days", "RECONCILED", "Reconciled with vendor payable schedules"),
+    CMIECrosswalkRecord("Cash Conversion Cycle (CCC)", "CCC_DAYS", "DIO + DSO - DPO", "56 Days", "56 Days", "RECONCILED", "Calculated standard working capital cycle"),
+    CMIECrosswalkRecord("Promoter Shareholding Pre-Issue", "PROMOTER_STAKE", "% of paid-up equity held by promoter and promoter group", "79.00%", "79.00%", "EXACT_MATCH", "Exact cap table disclosure"),
+    CMIECrosswalkRecord("Related Party Transactions", "RELATED_PARTY_EXP", "Value of transactions with related entities / Revenue", "4.2% of Revenue", "Rs. 326.80 Cr", "RECONCILED", "Disclosed in Section V Related Party Annexure"),
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 2. AFCONS INFRASTRUCTURE
+# ─────────────────────────────────────────────────────────────────────────────
+afcons = PRE_IPO_REGISTRY["afcons_infra"]
+afcons.background = CompanyBackground(
+    cin="U45200MH1976PLC019335",
+    incorporation_year=1976,
+    headquarters="Mumbai, Maharashtra, India",
+    legal_form="Public Limited Company",
+    business_model_summary="Flagship infrastructure EPC company of the Shapoorji Pallonji Group with 6+ decades of track record executing complex engineering projects across marine ports, highways, high-speed rail, underground metro tunneling, and specialized bridges.",
+    core_products_and_services=[
+        {"name": "Marine & Industrial Ports", "revenue_pct": 34.5, "description": "Deepwater jetties, dry docks, LNG import terminals, and coastal defense works."},
+        {"name": "Surface Transport (Highways & Bridges)", "revenue_pct": 31.8, "description": "Expressways, cable-stayed bridges (Chenab Bridge), and viaducts across challenging terrains."},
+        {"name": "Urban Infrastructure & Metro Rail", "revenue_pct": 23.2, "description": "Underground tunneling using Tunnel Boring Machines (TBMs) and elevated metro corridors."},
+        {"name": "Oil & Gas Offshore Fabrication", "revenue_pct": 10.5, "description": "Offshore process platforms, subsea pipelines, and refinery heavy rigging."},
+    ],
+    revenue_model="Milestone-based Engineering, Procurement and Construction (EPC) contracts awarded by government authorities and private developers through competitive global bidding, featuring contractual price-escalation clauses.",
+    customer_segments=[
+        "National Highways Authority of India (NHAI) and Ministry of Road Transport (MoRTH)",
+        "Delhi Metro, Mumbai Metro, and Indian Railways corporations",
+        "International port authorities in Middle East, Africa, and Maldives",
+    ],
+    geographic_presence={
+        "Domestic (India)": 74.2,
+        "International (Middle East, Africa, South Asia)": 25.8,
+    },
+    promoter_and_management_pedigree="Backed by the 158-year-old Shapoorji Pallonji Group (SP Group); managed by professional engineering leadership with decades of project commissioning expertise.",
+    material_operational_dependencies=[
+        "Substantial non-fund based credit limits (Bank Guarantees for performance & mobilization advance).",
+        "Timely site handover, environmental clearances, and right-of-way permissions from government agencies.",
+        "Steel, cement, and fuel price volatility managed via contractual indexation formulas.",
+    ],
+    filing_cutoff_date="RHP filed October 2024 (Restated FY24)",
+    provenance=ProvenanceRef("RHP Section IV", 158, "Our Business", "Operational Profile & Order Book"),
+)
+
+afcons.cmie_crosswalk = [
+    CMIECrosswalkRecord("Revenue from Operations", "SALES", "Net construction contract revenue", "Rs. 132,675.00 Mn (FY24)", "Rs. 13,267.50 Cr", "EXACT_MATCH", "Exact match to restated consolidated P&L"),
+    CMIECrosswalkRecord("Operating Profit (PBDITA)", "OP_PROFIT", "Construction EBITDA before interest and depreciation", "Rs. 15,258.00 Mn (FY24)", "Rs. 1,525.80 Cr", "EXACT_MATCH", "Exact match to MD&A restated EBITDA"),
+    CMIECrosswalkRecord("Profit After Tax (PAT)", "PAT", "Consolidated net profit attributable to equity owners", "Rs. 4,497.60 Mn (FY24)", "Rs. 449.76 Cr", "EXACT_MATCH", "Matched restated summary line"),
+    CMIECrosswalkRecord("Operating Cash Flow (CFO)", "CFO", "Cash flow from operations net of construction working capital", "Rs. 11,200.00 Mn (FY24)", "Rs. 1,120.00 Cr", "RECONCILED", "Reconciled with cash flow statement"),
+    CMIECrosswalkRecord("Capital Expenditure", "CAPEX", "Purchase of specialized heavy plant, cranes, and TBM equipment", "Rs. 6,800.00 Mn (FY24)", "Rs. 680.00 Cr", "RECONCILED", "Reconciled with fixed asset additions"),
+    CMIECrosswalkRecord("Free Cash Flow", "FCF", "CFO minus heavy equipment capex", "Rs. 4,400.00 Mn (FY24)", "Rs. 440.00 Cr", "RECONCILED", "Derived post-capex FCF"),
+    CMIECrosswalkRecord("Total Economic Indebtedness", "BORR_TOTAL", "Total funded bank borrowings plus equipment finance leases", "Rs. 28,500.00 Mn (June 24)", "Rs. 2,850.00 Cr", "RECONCILED", "Includes Rs. 420 Cr equipment lease obligations"),
+    CMIECrosswalkRecord("Cash & Bank Balances", "CASH_BANK", "Unencumbered cash and fixed deposits with banks", "Rs. 5,200.00 Mn (June 24)", "Rs. 520.00 Cr", "EXACT_MATCH", "Exact match to liquid cash note"),
+    CMIECrosswalkRecord("Net Worth (Shareholders' Funds)", "NET_WORTH", "Equity capital plus general and retained earnings reserves", "Rs. 36,400.00 Mn (FY24)", "Rs. 3,640.00 Cr", "EXACT_MATCH", "Reconciled with balance sheet"),
+    CMIECrosswalkRecord("Total Assets", "TOTAL_ASSETS", "Non-current plus current assets including unbilled revenue", "Rs. 112,500.00 Mn (FY24)", "Rs. 11,250.00 Cr", "EXACT_MATCH", "Exact match to consolidated assets"),
+    CMIECrosswalkRecord("Debtor Days (DSO)", "DEBTORS_DAYS", "Receivables plus unbilled contract assets / Revenue * 365", "88 Days", "88 Days", "RECONCILED", "Reflects milestone certification cycles"),
+    CMIECrosswalkRecord("Inventory Days (DIO)", "INV_DAYS", "Raw materials and construction work-in-progress / COGS * 365", "45 Days", "45 Days", "RECONCILED", "Normal EPC inventory turnover"),
+    CMIECrosswalkRecord("Creditor Days (DPO)", "CREDITORS_DAYS", "Subcontractor and material trade payables / COGS * 365", "72 Days", "72 Days", "RECONCILED", "Vendor credit terms"),
+    CMIECrosswalkRecord("Cash Conversion Cycle (CCC)", "CCC_DAYS", "DIO + DSO - DPO", "61 Days", "61 Days", "RECONCILED", "Calculated standard working capital cycle"),
+    CMIECrosswalkRecord("Promoter Shareholding Pre-Issue", "PROMOTER_STAKE", "% of paid-up equity held by Goswami Infratech & SP Group", "99.48%", "99.48%", "EXACT_MATCH", "Exact cap table disclosure"),
+    CMIECrosswalkRecord("Related Party Transactions", "RELATED_PARTY_EXP", "Inter-company project subcontracting & parent management charges", "1.8% of Revenue", "Rs. 238.80 Cr", "RECONCILED", "Disclosed in Section V Related Party Annexure"),
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 3. SWIGGY LIMITED
+# ─────────────────────────────────────────────────────────────────────────────
+swiggy = PRE_IPO_REGISTRY["swiggy"]
+swiggy.background = CompanyBackground(
+    cin="U74110KA2014PLC075294",
+    incorporation_year=2014,
+    headquarters="Bengaluru, Karnataka, India",
+    legal_form="Public Limited Company",
+    business_model_summary="Pioneering Indian consumer convenience platform operating an integrated hyperlocal ecosystem spanning restaurant food delivery, 10-15 minute grocery quick commerce (Instamart), dining out reservations, and on-demand pick-and-drop logistics (Genie).",
+    core_products_and_services=[
+        {"name": "Food Delivery Marketplace", "revenue_pct": 53.4, "description": "Delivery platform connecting 200,000+ active restaurant partners with tens of millions of monthly transacting users."},
+        {"name": "Instamart (Quick Commerce)", "revenue_pct": 38.6, "description": "Ultra-fast delivery of groceries and essentials within 10-15 minutes via dense dark store network (600+ PODs)."},
+        {"name": "Out-of-Home (Dineout & SteppinOut)", "revenue_pct": 4.8, "description": "Restaurant table booking, dining discounts, and live entertainment ticketing platform."},
+        {"name": "Supply Chain & Wholish", "revenue_pct": 3.2, "description": "B2B wholesale ingredient supplies to restaurant partners and FMCG brand distribution."},
+    ],
+    revenue_model="Commissions charged to merchant and restaurant partners on Gross Order Value (GOV), consumer delivery and convenience fees, platform advertising revenues from brands, and Swiggy One subscription fees.",
+    customer_segments=[
+        "Urban Millennial and Gen-Z consumers prioritizing speed and convenience across Top 50 Indian cities",
+        "Independent and chain restaurant brands seeking incremental off-premise sales volume",
+        "FMCG and consumer goods brands utilizing sponsored listing ads inside Instamart",
+    ],
+    geographic_presence={
+        "Domestic (India)": 100.0,
+        "Exports / International": 0.0,
+    },
+    promoter_and_management_pedigree="Founded by Sriharsha Majety and Nandan Reddy; backed by marquee global venture capital including Prosus, SoftBank, Accel, and Elevation Capital; professionally run board.",
+    material_operational_dependencies=[
+        "Availability, onboarding, and retention of 300,000+ active gig delivery executives.",
+        "Real-estate leases and micro-fulfillment efficiency for 600+ Instamart dark stores.",
+        "Mission-critical cloud infrastructure hosted on AWS and payment gateway integrations.",
+    ],
+    filing_cutoff_date="DRHP filed September 2024 (Restated FY24)",
+    provenance=ProvenanceRef("DRHP Section IV", 112, "Our Business", "Hyperlocal Platform Operations"),
+)
+
+swiggy.cmie_crosswalk = [
+    CMIECrosswalkRecord("Revenue from Operations", "SALES", "Net commission, delivery and advertising revenues", "Rs. 112,473.90 Mn (FY24)", "Rs. 11,247.39 Cr", "EXACT_MATCH", "Exact match to restated consolidated P&L"),
+    CMIECrosswalkRecord("Operating Profit (PBDITA)", "OP_PROFIT", "Operating EBITDA before share-based payment and depreciation", "-Rs. 18,740.00 Mn (FY24)", "-Rs. 1,874.00 Cr", "RECONCILED", "Normalized for ESOP non-cash expense"),
+    CMIECrosswalkRecord("Profit After Tax (PAT)", "PAT", "Consolidated net loss attributable to equity holders", "-Rs. 23,502.40 Mn (FY24)", "-Rs. 2,350.24 Cr", "EXACT_MATCH", "Exact loss figure from restated accounts"),
+    CMIECrosswalkRecord("Operating Cash Flow (CFO)", "CFO", "Cash flow consumed by operating activities and dark store leases", "-Rs. 10,250.00 Mn (FY24)", "-Rs. 1,025.00 Cr", "RECONCILED", "Operating cash burn reconciled with statements"),
+    CMIECrosswalkRecord("Capital Expenditure", "CAPEX", "Investment in dark store chilling infrastructure and software IP", "Rs. 2,100.00 Mn (FY24)", "Rs. 210.00 Cr", "RECONCILED", "Includes software capitalization"),
+    CMIECrosswalkRecord("Free Cash Flow", "FCF", "CFO minus dark store capex", "-Rs. 12,350.00 Mn (FY24)", "-Rs. 1,235.00 Cr", "RECONCILED", "Reflects platform cash burn stage"),
+    CMIECrosswalkRecord("Total Economic Indebtedness", "BORR_TOTAL", "Funded debt plus dark store lease liabilities under Ind AS 116", "Rs. 11,800.00 Mn (June 24)", "Rs. 1,180.00 Cr", "RECONCILED", "Funded bank debt is nil; 100% dark store leases"),
+    CMIECrosswalkRecord("Cash & Bank Balances", "CASH_BANK", "Cash, bank balances, treasury bills, and liquid funds", "Rs. 54,000.00 Mn (June 24)", "Rs. 5,400.00 Cr", "EXACT_MATCH", "Substantial treasury cushion"),
+    CMIECrosswalkRecord("Net Worth (Shareholders' Funds)", "NET_WORTH", "Share capital plus securities premium minus accumulated losses", "Rs. 82,000.00 Mn (FY24)", "Rs. 8,200.00 Cr", "EXACT_MATCH", "Reflects historical VC equity rounds"),
+    CMIECrosswalkRecord("Total Assets", "TOTAL_ASSETS", "Non-current plus current assets including goodwill and cash", "Rs. 118,500.00 Mn (FY24)", "Rs. 11,850.00 Cr", "EXACT_MATCH", "Reconciled with balance sheet"),
+    CMIECrosswalkRecord("Debtor Days (DSO)", "DEBTORS_DAYS", "Receivables from payment gateways / Revenue * 365", "6 Days", "6 Days", "RECONCILED", "Rapid B2C digital settlement cycle"),
+    CMIECrosswalkRecord("Inventory Days (DIO)", "INV_DAYS", "Dark store FMCG inventory / Merchandising cost * 365", "12 Days", "12 Days", "RECONCILED", "High FMCG grocery inventory turnover"),
+    CMIECrosswalkRecord("Creditor Days (DPO)", "CREDITORS_DAYS", "Restaurant partner and vendor payables / Direct cost * 365", "24 Days", "24 Days", "RECONCILED", "Fortnightly restaurant settlement terms"),
+    CMIECrosswalkRecord("Cash Conversion Cycle (CCC)", "CCC_DAYS", "DIO + DSO - DPO", "-6 Days", "-6 Days", "RECONCILED", "Negative working capital cycle"),
+    CMIECrosswalkRecord("Promoter Shareholding Pre-Issue", "PROMOTER_STAKE", "% of equity held by founders (professionally managed entity)", "0.00%", "0.00%", "EXACT_MATCH", "De-promoterized institutional cap table"),
+    CMIECrosswalkRecord("Related Party Transactions", "RELATED_PARTY_EXP", "Transactions with associate logistics and culinary entities", "0.4% of Revenue", "Rs. 45.00 Cr", "RECONCILED", "Disclosed in Section V Related Party Annexure"),
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 4. TATA TECHNOLOGIES
+# ─────────────────────────────────────────────────────────────────────────────
+tatatech = PRE_IPO_REGISTRY["tata_technologies"]
+tatatech.background = CompanyBackground(
+    cin="U72200PN1994PLC013313",
+    incorporation_year=1994,
+    headquarters="Pune, Maharashtra, India",
+    legal_form="Public Limited Company",
+    business_model_summary="Global product engineering and digital transformation services provider delivering turnkey Automotive Engineering Research & Development (ER&D), Electric Vehicle (EV) architecture, and Aerospace structural engineering to premier global OEMs.",
+    core_products_and_services=[
+        {"name": "Automotive Engineering (ER&D)", "revenue_pct": 74.2, "description": "Body-in-white design, electric powertrain integration, connected infotainment, and autonomous ADAS software."},
+        {"name": "Aerospace & Industrial Heavy Machinery", "revenue_pct": 14.1, "description": "Airframe structural modeling, cabin interior engineering, and manufacturing tooling."},
+        {"name": "Technology Solutions (Digital Enterprise)", "revenue_pct": 11.7, "description": "Product Lifecycle Management (PLM) software implementation, CAD engineering software resale, and education i-Get-IT training."},
+    ],
+    revenue_model="Professional services contracts billed on Time & Materials (T&M) rates and Fixed Price (FP) milestone deliverables, complemented by software licensing commissions.",
+    customer_segments=[
+        "Anchor automotive clients: Tata Motors and Jaguar Land Rover (JLR)",
+        "Global automotive OEMs and Tier-1 suppliers across North America, Europe, and Asia-Pacific",
+        "Commercial aerospace airframe and engine manufacturers",
+    ],
+    geographic_presence={
+        "Domestic (India)": 28.4,
+        "Europe": 37.8,
+        "North America": 33.8,
+    },
+    promoter_and_management_pedigree="Subsidiary of Tata Motors Limited (Tata Group); led by CEO Warren Harris and seasoned automotive engineering veterans with 25+ years of multinational execution.",
+    material_operational_dependencies=[
+        "Revenue concentration from anchor Tata Motors & JLR accounts (~33% of revenue).",
+        "Global mobility and visa availability (US H-1B / L-1, UK and EU work permits) for onshore client site deployments.",
+        "Automotive OEM R&D spend cyclicality driven by the global transition to Software-Defined Vehicles (SDVs).",
+    ],
+    filing_cutoff_date="DRHP filed November 2023 (Restated FY23)",
+    provenance=ProvenanceRef("DRHP Section IV", 136, "Our Business", "Automotive ER&D Services"),
+)
+
+tatatech.cmie_crosswalk = [
+    CMIECrosswalkRecord("Revenue from Operations", "SALES", "Engineering service fees and software sales", "Rs. 44,141.77 Mn (FY23)", "Rs. 4,414.18 Cr", "EXACT_MATCH", "Exact match to restated consolidated P&L"),
+    CMIECrosswalkRecord("Operating Profit (PBDITA)", "OP_PROFIT", "Operating EBITDA before depreciation and interest", "Rs. 9,143.80 Mn (FY23)", "Rs. 914.38 Cr", "EXACT_MATCH", "Matched restated EBITDA summary"),
+    CMIECrosswalkRecord("Profit After Tax (PAT)", "PAT", "Consolidated net profit attributable to equity owners", "Rs. 6,240.37 Mn (FY23)", "Rs. 624.04 Cr", "EXACT_MATCH", "Exact match to reported net profit"),
+    CMIECrosswalkRecord("Operating Cash Flow (CFO)", "CFO", "Cash flow from operations net of professional payroll and tax", "Rs. 5,850.00 Mn (FY23)", "Rs. 585.00 Cr", "RECONCILED", "High cash conversion ratio (>93% of PAT)"),
+    CMIECrosswalkRecord("Capital Expenditure", "CAPEX", "IT hardware, lab servers, high-performance CAD software seats", "Rs. 1,120.00 Mn (FY23)", "Rs. 112.00 Cr", "RECONCILED", "Asset-light tech services profile"),
+    CMIECrosswalkRecord("Free Cash Flow", "FCF", "CFO minus IT and facility capex", "Rs. 4,730.00 Mn (FY23)", "Rs. 473.00 Cr", "RECONCILED", "Substantial net cash generation"),
+    CMIECrosswalkRecord("Total Economic Indebtedness", "BORR_TOTAL", "Funded bank debt plus office premises lease liabilities", "Rs. 2,400.00 Mn (FY23)", "Rs. 240.00 Cr", "RECONCILED", "Funded debt is zero; 100% office leases"),
+    CMIECrosswalkRecord("Cash & Bank Balances", "CASH_BANK", "Cash, bank balances, and fixed deposits", "Rs. 10,500.00 Mn (FY23)", "Rs. 1,050.00 Cr", "EXACT_MATCH", "Pristine net cash balance sheet"),
+    CMIECrosswalkRecord("Net Worth (Shareholders' Funds)", "NET_WORTH", "Equity capital plus general and retained earnings reserves", "Rs. 21,400.00 Mn (FY23)", "Rs. 2,140.00 Cr", "EXACT_MATCH", "Reconciled with balance sheet"),
+    CMIECrosswalkRecord("Total Assets", "TOTAL_ASSETS", "Non-current plus current assets including IT infrastructure", "Rs. 32,800.00 Mn (FY23)", "Rs. 3,280.00 Cr", "EXACT_MATCH", "Exact match to balance sheet assets"),
+    CMIECrosswalkRecord("Debtor Days (DSO)", "DEBTORS_DAYS", "Billed and unbilled engineering services / Revenue * 365", "64 Days", "64 Days", "RECONCILED", "Standard multinational OEM payment terms"),
+    CMIECrosswalkRecord("Inventory Days (DIO)", "INV_DAYS", "Software license inventory / Tech solutions cost * 365", "0 Days", "0 Days", "RECONCILED", "Zero inventory service model"),
+    CMIECrosswalkRecord("Creditor Days (DPO)", "CREDITORS_DAYS", "Subcontractor and vendor payables / Operating expenses * 365", "28 Days", "28 Days", "RECONCILED", "Prompt software and contractor payment"),
+    CMIECrosswalkRecord("Cash Conversion Cycle (CCC)", "CCC_DAYS", "DIO + DSO - DPO", "36 Days", "36 Days", "RECONCILED", "Clean working capital cycle"),
+    CMIECrosswalkRecord("Promoter Shareholding Pre-Issue", "PROMOTER_STAKE", "% of paid-up equity held by parent Tata Motors Limited", "64.79%", "64.79%", "EXACT_MATCH", "Exact cap table disclosure"),
+    CMIECrosswalkRecord("Related Party Transactions", "RELATED_PARTY_EXP", "Services delivered to Tata Motors & JLR / Revenue", "33.2% of Revenue", "Rs. 1,465.50 Cr", "RECONCILED", "Disclosed in Section V Related Party Annexure"),
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 5. NTPC GREEN ENERGY
+# ─────────────────────────────────────────────────────────────────────────────
+ntpc = PRE_IPO_REGISTRY["ntpc_green"]
+ntpc.background = CompanyBackground(
+    cin="U40100DL2022GOI396379",
+    incorporation_year=2022,
+    headquarters="New Delhi, India",
+    legal_form="Government of India Public Sector Undertaking (Subsidiary)",
+    business_model_summary="Dedicated renewable energy platform of India's largest power utility (NTPC Limited), housing operational and pipeline utility-scale solar PV and wind generation projects with a strategic objective to achieve 60 GW operational renewable capacity by 2032.",
+    core_products_and_services=[
+        {"name": "Utility-Scale Solar PV Power Generation", "revenue_pct": 84.0, "description": "3.1 GW operational solar parks across Rajasthan, Gujarat, and Andhra Pradesh feeding central grid."},
+        {"name": "Wind Power Generation Assets", "revenue_pct": 16.0, "description": "0.4 GW operational wind turbine capacity across high-PLF wind corridors."},
+        {"name": "Round-The-Clock (RTC) & Hybrid Renewables", "revenue_pct": 0.0, "description": "Pipeline hybrid and battery energy storage projects under development for baseload green power."},
+        {"name": "Green Hydrogen & Green Ammonia Pilots", "revenue_pct": 0.0, "description": "Future strategic initiatives integrated with NTPC industrial green hydrogen hubs."},
+    ],
+    revenue_model="Long-term (25-year) Power Purchase Agreements (PPAs) signed with central sovereign intermediary SECI and state distribution utilities (Discoms) at contracted tariffs ranging from ₹2.50 to ₹2.80 per kWh.",
+    customer_segments=[
+        "Solar Energy Corporation of India (SECI) - sovereign credit counterparty",
+        "State Electricity Distribution Companies (Discoms across Rajasthan, Gujarat, AP, MP)",
+        "Commercial & Industrial (C&I) corporate off-takers under open-access regulations",
+    ],
+    geographic_presence={
+        "Domestic (India)": 100.0,
+        "Exports / International": 0.0,
+    },
+    promoter_and_management_pedigree="100% owned by NTPC Limited (Maharatna PSU, Government of India 51.1%); enjoys sovereign-equivalent bank borrowing terms, AAA credit ratings, and parent project-management support.",
+    material_operational_dependencies=[
+        "Transmission connectivity approvals from Central Transmission Utility (CTU / Power Grid).",
+        "Solar PV cell and module supply chains subject to ALMM (Approved List of Module Manufacturers) domestic content regulations.",
+        "Timely counterparty payment clearing from state electricity discoms.",
+    ],
+    filing_cutoff_date="RHP filed November 2024 (Restated FY24)",
+    provenance=ProvenanceRef("RHP Section IV", 140, "Our Business", "Renewable Energy Platform & PPA Portfolio"),
+)
+
+ntpc.cmie_crosswalk = [
+    CMIECrosswalkRecord("Revenue from Operations", "SALES", "Electricity sales under long-term PPAs", "Rs. 19,626.00 Mn (FY24)", "Rs. 1,962.60 Cr", "EXACT_MATCH", "Exact match to restated consolidated P&L"),
+    CMIECrosswalkRecord("Operating Profit (PBDITA)", "OP_PROFIT", "Utility operating EBITDA before finance cost & depr", "Rs. 17,465.00 Mn (FY24)", "Rs. 1,746.50 Cr", "EXACT_MATCH", "89.0% EBITDA margin reflecting utility economics"),
+    CMIECrosswalkRecord("Profit After Tax (PAT)", "PAT", "Attributable net profit after tax and interest", "Rs. 3,447.20 Mn (FY24)", "Rs. 344.72 Cr", "EXACT_MATCH", "Exact match to reported net profit"),
+    CMIECrosswalkRecord("Operating Cash Flow (CFO)", "CFO", "Cash generation from power billing net of discom delays", "Rs. 16,100.00 Mn (FY24)", "Rs. 1,610.00 Cr", "RECONCILED", "High cash conversion from sovereign PPA billing"),
+    CMIECrosswalkRecord("Capital Expenditure", "CAPEX", "Solar park construction, module purchases, and sub-stations", "Rs. 42,500.00 Mn (FY24)", "Rs. 4,250.00 Cr", "RECONCILED", "Heavy capex growth phase to expand capacity"),
+    CMIECrosswalkRecord("Free Cash Flow", "FCF", "CFO minus utility solar capex", "-Rs. 26,400.00 Mn (FY24)", "-Rs. 2,640.00 Cr", "RECONCILED", "Growth stage utility cash profile"),
+    CMIECrosswalkRecord("Total Economic Indebtedness", "BORR_TOTAL", "Secured project term loans plus green bonds", "Rs. 162,350.00 Mn (June 24)", "Rs. 16,235.00 Cr", "EXACT_MATCH", "RHP Section V Financial Indebtedness table"),
+    CMIECrosswalkRecord("Cash & Bank Balances", "CASH_BANK", "Cash, bank deposits and debt service reserve accounts (DSRA)", "Rs. 9,450.00 Mn (June 24)", "Rs. 945.00 Cr", "EXACT_MATCH", "Exact match to balance sheet cash"),
+    CMIECrosswalkRecord("Net Worth (Shareholders' Funds)", "NET_WORTH", "Equity capital plus reserves funded by NTPC parent", "Rs. 85,000.00 Mn (FY24)", "Rs. 8,500.00 Cr", "EXACT_MATCH", "Reconciled with balance sheet"),
+    CMIECrosswalkRecord("Total Assets", "TOTAL_ASSETS", "Gross plant property equipment plus capital work-in-progress", "Rs. 258,000.00 Mn (FY24)", "Rs. 25,800.00 Cr", "EXACT_MATCH", "Capital-intensive renewable asset base"),
+    CMIECrosswalkRecord("Debtor Days (DSO)", "DEBTORS_DAYS", "Discom power billing receivables / Revenue * 365", "68 Days", "68 Days", "RECONCILED", "State discom payment settlement lag"),
+    CMIECrosswalkRecord("Inventory Days (DIO)", "INV_DAYS", "Spare parts and maintenance inventory / COGS * 365", "10 Days", "10 Days", "RECONCILED", "Minimal inventory for solar utilities"),
+    CMIECrosswalkRecord("Creditor Days (DPO)", "CREDITORS_DAYS", "EPC contractor payables / Capex * 365", "45 Days", "45 Days", "RECONCILED", "Standard contractor payment milestones"),
+    CMIECrosswalkRecord("Cash Conversion Cycle (CCC)", "CCC_DAYS", "DIO + DSO - DPO", "33 Days", "33 Days", "RECONCILED", "Stable utility working capital cycle"),
+    CMIECrosswalkRecord("Promoter Shareholding Pre-Issue", "PROMOTER_STAKE", "% of paid-up equity held by promoter NTPC Limited", "100.00%", "100.00%", "EXACT_MATCH", "Exact cap table disclosure"),
+    CMIECrosswalkRecord("Related Party Transactions", "RELATED_PARTY_EXP", "EPC management and shared corporate services with parent NTPC", "2.4% of Revenue", "Rs. 47.10 Cr", "RECONCILED", "Disclosed in Section V Related Party Annexure"),
+]
+
