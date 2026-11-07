@@ -1,75 +1,72 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 06 November 2026 (CI/CD Acceleration & E2E Tooling Checkpoint)  
-**Active Baseline Commit:** `162fafd` on `master`  
-**Release Tag:** `v2.2.0` (Synced to `origin/master`)  
+**Last Updated:** 07 November 2026 (Pre-IPO Intelligence & Decision-Depth Algorithm Suite Production Release)  
+**Active Baseline Commit:** `ff01761` on `master`  
+**Release Tag:** `v2.3.0` (Synced to `origin/master`)  
 **Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  
 **GCP Project:** `tempproject-462219` (Region: `us-east1`)  
-**Active CI Run:** `42217086937` (Test and Deploy: 100% Passed)  
+**Active CI Run:** `42367810655` (Test and Deploy: 100% Passed)  
 **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
 
 ---
 
-## 1. Executive Summary & Release v2.1.0 Milestone
-Release `v2.1.0` consolidates the full-stack stability, high-contrast theme interoperability (seamless Dark/Light modes), econometric rigor, and automated CI/CD continuous deployment on Google Cloud Run.
+## 1. Executive Summary & Release v2.3.0 Milestone
+Release `v2.3.0` integrates the complete **Pre-IPO DRHP Intelligence Suite**, including SEBI ICDR forensic ingestion, multi-persona underwriting cockpits, a 2-tier multi-level tab hierarchy, the full 14-algorithm Quantitative Decision-Depth Suite (ALG01–ALG14), live exchange feed circular tracking with anchor lock-in drift, and comprehensive remediation of Code Review findings A01–A10 & B01–B04.
 
 ### Core Release Deliverables:
-1. **Automated CI/CD Deployment:** GitHub Actions workflow `Test and Deploy` (Run `42068823114`) executed cleanly with 100% pass rate:
-   - `Run pytest (Python 3.11)`: 820 tests passed in 2m41s.
-   - `OCaml build + tests (lifecycle-ontology)`: 100% build & verification passed in 3m49s.
-   - `Deploy to Cloud Run`: Deployed revision `lifecycle-leverage-00222-wsw` in 4m35s with zero manual gates.
-2. **First-Time-Right Authentication Matrix (100% Verified):**
-   - `drbhatia` (Role `admin`): Authenticated via bcrypt against SQLite `auth_users`.
-   - `skumar` (Role `researcher`): Authenticated via bcrypt against SQLite `auth_users`.
-   - `profsurkumar` (Role `researcher`): Authenticated via bcrypt against SQLite `auth_users`.
-   - `sbhatia` (Role `viewer`): Authenticated via bcrypt against SQLite `auth_users`.
-   - `guest` (Role `viewer`): Authenticated via bcrypt against SQLite `auth_users`.
-3. **UI/UX & Layout Hardening:**
-   - **Sidebar Hierarchy:** Navigation links (`st.Page`) are strictly anchored at the **top** of the left panel above dataset and year-range filters.
-   - **Theme Interoperability:** High-contrast Dark and Light modes validated across all dashboard views, charts, and tables without unreadable contrasts or styling bleeding.
-   - **Auth Card Sanitization:** Eliminated raw HTML tag artifacts (`<div class="auth-brand-badge">`) and removed stray CSS code block displays.
-4. **Econometric & Calculation Integrity (Red-Team Certified):**
-   - Ground truth company primary keys verified (`Tata Motors = 248093`, $N=8,677$ panel sample size, $N=9,031$ extended universe).
-   - Fixed Effects within-estimator fallback with `.cov` covariance matrix preservation for Hausman specification test (`hausman fe re`).
-   - Fail-closed error handling for runtime estimator anomalies.
-   - Dynamic 95% Confidence Intervals and variance-covariance standard errors.
-5. **CI/CD & Developer Experience Optimization (6 Nov 2026):**
-   - **Path Filtering in CI:** Docs/media commits bypass redundant Cloud Run test/deploy rebuilds.
-   - **Pip Dependency Caching:** Fast CI wheel reuse via `actions/cache@v4`.
-   - **Selective OCaml Execution:** OCaml compiler setup skips automatically when `lifecycle-ontology/` is untouched.
-   - **Smart Doc-Aware Hook:** `scripts/test_fast.ps1` fast-paths documentation commits in <2s.
-   - **Standardized E2E Auth Helper:** `scripts/e2e_auth_helper.py` guarantees deterministic Playwright automation without Streamlit radio-button locator timeouts.
+1. **Automated CI/CD Deployment:** GitHub Actions workflow `Test and Deploy` (Run `42367810655`) executed cleanly with 100% pass rate:
+   - `Run pytest (Python 3.11)`: Passed in 2m47s.
+   - `OCaml build + tests (lifecycle-ontology)`: 100% build & verification passed in 6s.
+   - `Deploy to Cloud Run`: Deployed container to `lifecycle-leverage` in `us-east1` in 3m54s.
+2. **Pre-IPO Incremental Equity PRD Implementation**:
+   - Multi-persona decision cockpits (Equity/Growth, Lender/Credit, BRLM/Syndicate, CFO/Treasury).
+   - Reconciled Restated Financials, Objects of the Offer, and Proceeds Waterfall directly to prospectus citations.
+   - Indebtedness & Ind AS 116 Lease obligations with macro rate shock (+150 bps) and DSCR stress testing.
+   - Peer comparison and reverse-DCF implied growth hurdle feasibility ($w > g$).
+   - Export to board-ready PowerPoint pitch decks (`verified_ntpc_green_pitch_deck.pptx`).
+3. **UI/UX Multi-Level Tab Architecture & Sanitization**:
+   - Eliminated single-row horizontal scrollbar (< >) by structuring tabs into a 2-tier hierarchy:
+     - **Level-1 Top Tabs (5)**: `🏢 Company Overview & Economic Engine`, `🎯 Investor Questions & Thesis`, `📑 Detailed Workpapers`, `🔀 CMIE Reference Crosswalk`, `🏛️ IC Stance & Action Register`.
+     - **Level-2 Workpapers Sub-Tabs (4)**: `📊 Financials & Proceeds Waterfall`, `⚖️ Indebtedness & Debt Maturity`, `🌪️ Stress Testing & Headroom`, `💎 Valuation, Peers, DCF & Forensics`.
+   - Replaced un-dedented card strings with `utils.html_blocks.render_html` to prevent raw HTML code block leaks.
+4. **Gap Area Completions (Gaps 1, 2, 4)**:
+   - **Gap 1 (Scanned DRHPs & OCR Annexures)**: Magic-byte MIME type detection (`detect_mime_type`) and extraction for Annexures III, V, and VI with strict `GAP-OCR-01` gating in `models/pre_ipo_ingest.py`.
+   - **Gap 2 (Exchange Circular Registry & Drift Tracking)**: Built `ExchangeFeedClient` in `models/pre_ipo_exchange_feed.py` with official NSE/BSE circular tracking, listing date drift calculation, and Day 30/Day 90 secondary supply release schedules.
+   - **Gap 4 (Decision-Depth Quantitative Algorithm Suite ALG01–ALG14)**: Implemented all 14 quantitative algorithms in `models/pre_ipo_algorithms.py` covering temporal evidence graphs, sector driver trees, dated debt service feasibility, reverse stress failure frontiers, non-probabilistic VOI hierarchy, Pareto dominance, and uncertainty governance.
+5. **Code Review Findings A01–A10 & B01–B04 Remediated**:
+   - Searchable-PDF crashes and fabricated fallback data prevented (A01).
+   - Strict OCR availability checks (`GAP-OCR-01`) and output validation enforced (A02).
+   - Screen and deck calculation semantics harmonized (A03).
+   - Anchor lock-in dates and offer allocation constraints validated (A04).
+   - Unsupported commentary and reassuring default assumptions eliminated (A05).
+   - Reverse-DCF feasibility gates and proper ROIC/WACC definitions enforced (A06).
+   - Redundant processing and invalid PDF byte truncation prevented (A07).
 
 ---
 
 ## 2. Live Deployment & Visual Evidence Gate (AGENTS.md Rule 5)
-Browser subagent verification conducted on the live Google Cloud Run instance (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`):
-- **Verified Dark Mode Rendering:** `verified_gcp_v2_1_live_dark.png` (44,351 bytes, verified on disk).
-  - Confirmed top banner branding: `LifeCycle Leverage v2.1.0`, vintage `bf2001-25_Sept26`, `drbhatia · Admin`.
-  - Confirmed navigation list positioned at top of sidebar.
-  - Confirmed core thesis metrics: $N=9,031$ Firm-Years, 400 Enterprises (2001–2025).
+Browser verification conducted directly on the live Google Cloud Run instance (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`) authenticated as `drbhatia` (Admin):
+- **Verified Persona Cockpit & Multi-Level Tabs:** `verified_gcp_live_top_tabs_and_cockpit.png` (282,391 bytes on disk).
+  - Confirmed zero raw HTML tag leaks in the Persona Cockpit.
+  - Confirmed 5 Level-1 top tabs cleanly visible and functional.
+- **Verified Algorithm Lab (ALG01–ALG14):** `verified_gcp_live_merged_algos.png` (380,645 bytes on disk).
+  - Confirmed interactive quantitative algorithm expander renders live calculations on Cloud Run.
+- **Verified Exchange Feed & Lock-In Governance:** `verified_gcp_live_merged_feed.png` (191,549 bytes on disk).
+  - Confirmed Anchor Secondary Float Schedule and unverified feed governance banner.
 
 ---
 
 ## 3. Knowledge Graph & Architecture Index
-- **Graphify Knowledge Graph:** Re-extracted and clustered via `graphify extract .` and `graphify cluster-only .`.
-- **Node Count:** 7,450 nodes.
-- **Edge Count:** 12,204 edges.
-- **Communities:** 850 communities indexed in `graphify-out/GRAPH_REPORT.md` and `graphify-out/graph.json`.
+- **Graphify Knowledge Graph:** Untracked in git per architecture rules; re-extractable via `graphify extract .` and `graphify cluster-only .`.
 - **Stata Capabilities:** Fully synchronized in `docs/COMMAND_CAPABILITIES.md` via `scripts/sync_command_registry_docs.py`.
+- **Pre-IPO Test Suites:** 73 passing unit and regression tests across `tests/test_pre_ipo*.py`.
 
 ---
 
 ## 4. Operational Invariants for Future Sessions
-
-### Local integration checkpoint (6 November 2026)
-
-- The user authorized local integration of Company Financing while Antigravity works on a separate PPT. Candidate branch `codex/integrate-company-financing` combines existing master `e73cb5b` with financing commits `cc96dba` and `52b6e45`; promotion uses only a guarded fast-forward.
-- Combined verification: 173 focused tests and six project fast checks passed; financial response compatibility conflict resolved with a regression test. Existing theme, board-deck UI, PPT generator and master Stata changes are preserved.
-- Prior four-profile/light-dark browser evidence belongs to the feature branch. A fresh integrated check was blocked by Computer Use URL-policy enforcement and is not claimed complete. This is local code integration, not a new production release; no push or deployment performed.
-
 1. **Exclusive Workspace Boundary:** Strictly confined to `c:\Users\hemas\Downloads\ProfSurProject`. Never touch external repositories or `paper/iimcfrc-2026-lifestagedebtai`.
 2. **Canonical Entrypoint:** Launch only `app.py` from repository root.
-3. **Test Execution Protocol:** Always run fast tests via `py -3.12 scripts/project_ops.py test --fast` or `pytest -q --tb=line`.
+3. **Test Execution Protocol:** Run fast tests via `py -3.12 scripts/project_ops.py test --fast` or `pytest -q --tb=line`.
 4. **Automated Deployment:** Pushes to `master` automatically trigger `.github/workflows/deploy.yml` and deploy directly to Cloud Run without manual intervention.
+5. **Deployment Evidence Gate:** Never declare a deployment done without authenticated browser screenshots verified on disk.

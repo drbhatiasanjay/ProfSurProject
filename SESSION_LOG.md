@@ -981,3 +981,46 @@ Authenticated browser checks passed for drbhatia, profsurkumar and skumar: intak
 - Combined integration passed 173 focused tests and six project fast checks. Whitespace validation passed. Master Stata changes, existing theme files, PPT generator and accepted financing/deck UI source were preserved without modifications relative to their appropriate parent.
 - Fresh browser verification was attempted by the browser subagent, but IAB was unavailable and Computer Use stopped native Edge input because it could not determine the current browser URL confidently. No bypass attempted. No fresh integrated four-profile or PPTX-download claim. Blocker: ignored `scratch/financing_evidence/integration_browser_acceptance.json`; prior feature-branch browser evidence remains separately identified.
 - Local master promotion is restricted to a guarded fast-forward after rechecking its HEAD, branch and tracked cleanliness. No push, deployment, server restart, stash, reset or cleanup is authorized by this integration step.
+
+
+## 2026-11-07 - Pre-IPO DRHP Intelligence, Decision-Depth Suite (ALG01-14) & Cloud Run Release
+
+- **Pre-IPO Incremental Equity PRD Full Completion**:
+  - Implemented multi-persona underwriting cockpits (Equity/Growth, Lender/Credit, BRLM/Syndicate, CFO/Treasury) with dynamic primary decision questions, metric badges, and conditional recommendations.
+  - Built restated consolidated financial history, objects of the offer, and proceeds waterfall directly reconciled with prospectus disclosures.
+  - Implemented Indebtedness & Ind AS 116 Lease schedules with macro interest rate shocks (+150 bps) and DSCR stress testing.
+  - Integrated peer comparisons and reverse-DCF implied growth hurdle validation ($w > g$).
+  - Generated verified board-ready PowerPoint pitch deck (`verified_ntpc_green_pitch_deck.pptx`).
+- **Code Review Remediation (Findings A01-A10 & B01-B04)**:
+  - Remediated searchable-PDF extraction crashes and fabricated fallback data (A01).
+  - Enforced strict OCR availability checks (`GAP-OCR-01`) and output validation (A02).
+  - Harmonized screen and deck calculation semantics (A03).
+  - Validated anchor lock-in dates and offer allocation constraints (A04).
+  - Eliminated unsupported commentary and reassuring default assumptions (A05).
+  - Enforced reverse-DCF feasibility gates and proper ROIC/WACC definitions (A06).
+  - Prevented redundant processing and invalid PDF byte truncation (A07).
+  - 47 focused regression tests passed.
+- **UI/UX Multi-Level Tab Architecture & Cockpit Sanitization**:
+  - Reorganized single-row horizontal scrolling bar into a 2-tier hierarchy:
+    - **Level-1 Top Tabs (5)**: `🏢 Company Overview & Economic Engine`, `🎯 Investor Questions & Thesis`, `📑 Detailed Workpapers`, `🔀 CMIE Reference Crosswalk`, `🏛️ IC Stance & Action Register`.
+    - **Level-2 Workpapers Sub-Tabs (4)**: `📊 Financials & Proceeds Waterfall`, `⚖️ Indebtedness & Debt Maturity`, `🌪️ Stress Testing & Headroom`, `💎 Valuation, Peers, DCF & Forensics`.
+  - Replaced un-dedented card strings with `utils.html_blocks.render_html` to prevent raw HTML code block leaks.
+- **Gap Area Deliverables**:
+  - **Gap 1 (Scanned DRHP OCR)**: Added `detect_mime_type` and extraction pipeline for Annexures III, V, VI with `GAP-OCR-01` limitation fallback in `models/pre_ipo_ingest.py`.
+  - **Gap 2 (Exchange Circular Feed)**: Added `ExchangeFeedClient` in `models/pre_ipo_exchange_feed.py` tracking official NSE/BSE circulars, listing date drift, and secondary supply release dates.
+  - **Gap 4 (Decision-Depth Algorithm Suite ALG01-ALG14)**: Implemented all 14 quantitative algorithms in `models/pre_ipo_algorithms.py` covering temporal evidence graphs, sector driver trees, dated debt service feasibility, reverse stress failure frontiers, non-probabilistic VOI hierarchy, Pareto dominance, and uncertainty governance.
+- **CI/CD Fix & Automated Google Cloud Run Production Deployment**:
+  - Added `markdown-it-py>=3.0.0` to `requirements.txt` and guarded `tests/test_pre_ipo_html_rendering.py`.
+  - Pushed commit `ff01761` to `origin/master`.
+  - GitHub Actions Run `42367810655` succeeded 100%:
+    - `✓ Run pytest (Python 3.11)` in 2m47s.
+    - `✓ OCaml build + tests (lifecycle-ontology)` in 6s.
+    - `✓ Deploy to Cloud Run` in 3m54s.
+- **Live Production Browser Verification**:
+  - Authenticated browser verification on live Cloud Run (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`) as `drbhatia` (Admin).
+  - Captured and verified 3 live production screenshots on disk:
+    - `verified_gcp_live_top_tabs_and_cockpit.png` (282,391 bytes)
+    - `verified_gcp_live_merged_algos.png` (380,645 bytes)
+    - `verified_gcp_live_merged_feed.png` (191,549 bytes)
+  - Zero raw HTML code blocks leaked; multi-level tabs stacked and fully accessible; algorithm lab interactive; exchange lock-in governance operational.
+- **Production Baseline Commit**: `ff01761` on `master` (100% in sync with `origin/master`). Local dev server healthy on port 8501.
