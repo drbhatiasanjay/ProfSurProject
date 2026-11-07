@@ -1,5 +1,13 @@
 # ProfSurProject — Session Log
 
+## CHECKPOINT — Pre-IPO Master Integration (2026-11-07)
+
+- User authorized committing completed Antigravity changes and merging the decision-depth work. Checkpointed only eight Pre-IPO source/test files on master as 1faedb9; excluded the database and unrelated files.
+- Combined candidate preserves master's terminal and the independent workbench. Added fail-closed OCR intake, truthful local exchange-registry provenance, prototype gating, dataclass import compatibility and numerical guard regressions.
+- Verification: 102 Pre-IPO/integration tests, 161 auth/financing/board tests, six project fast checks; four profiles in both themes passed combined browser checks.
+- Actual synthetic-image OCR generation returned provider HTTP 402. Live extraction remains externally blocked; GAP-OCR-01 and ratio/export blocking are intentional. Exchange provider is not connected.
+- Details: docs/reviews/PRE_IPO_MASTER_INTEGRATION_2026-11-07.md. No push or deployment.
+
 ## CHECKPOINT — Pre-IPO Narrative HTML Rendering Fix (2026-11-07)
 
 - Compared Antigravity's canonical-page HTML normalization fix and reused its line-stripping/blank-line removal in utils/html_blocks.py.

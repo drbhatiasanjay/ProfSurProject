@@ -831,7 +831,7 @@ def generate_anchor_lockin_calendar(
     else:
         now_d = datetime.now(timezone.utc).date()
 
-    # Parse or anchor listing date
+    # Parse or anchor listing date, reconciling against live exchange circular feed
     raw_date = dossier.listing_date or dossier.filing_date
     base_dt = None
     if raw_date and "-" in raw_date and len(raw_date.split("-")[0]) == 4:
@@ -839,6 +839,14 @@ def generate_anchor_lockin_calendar(
             base_dt = datetime.strptime(raw_date[:10], "%Y-%m-%d")
         except Exception:
             base_dt = None
+
+    try:
+        from models.pre_ipo_exchange_feed import ExchangeFeedClient
+        exchange_recon = ExchangeFeedClient.reconcile_with_prospectus(dossier.listing_date, dossier.company_name)
+        if exchange_recon.get("is_reconciled") and exchange_recon.get("exchange_listing_date"):
+            base_dt = datetime.strptime(exchange_recon["exchange_listing_date"][:10], "%Y-%m-%d")
+    except Exception:
+        exchange_recon = {"is_reconciled": False, "circular_ref": "PENDING_EXCHANGE_CIRCULAR", "exchange": "NSE"}
 
     total_issue_cr = dossier.total_issue_size_cr
     cap = dossier.cap_table
@@ -890,7 +898,7 @@ def generate_anchor_lockin_calendar(
             cumulative_free_float_pct=day0_float_pct,
             supply_risk_level="LOW",
             status=_eval_status(base_dt),
-            exchange_notice_ref="SEBI ICDR Reg 16 / NSE Listing Notice",
+            exchange_notice_ref=f"{exchange_recon.get('exchange', 'NSE')} Notice {exchange_recon.get('circular_ref', 'Listing Notice')}" if exchange_recon.get("is_reconciled") else "SEBI ICDR Reg 16 / NSE Listing Notice",
         ),
         AnchorLockinMilestone(
             milestone_name="Day 30 Anchor Unlock (50%)",
@@ -902,7 +910,7 @@ def generate_anchor_lockin_calendar(
             cumulative_free_float_pct=day30_float_pct,
             supply_risk_level="HIGH" if total_anchor_val_cr * 0.5 > 1000.0 else "ELEVATED",
             status=_eval_status(t30_dt),
-            exchange_notice_ref="SEBI ICDR Reg 17(1) 30-Day Tranche",
+            exchange_notice_ref=f"SEBI ICDR Reg 17(1) / {exchange_recon.get('circular_ref', '30-Day Tranche')}" if exchange_recon.get("is_reconciled") else "SEBI ICDR Reg 17(1) 30-Day Tranche",
         ),
         AnchorLockinMilestone(
             milestone_name="Day 90 Anchor Unlock (Remaining 50%)",
@@ -914,7 +922,7 @@ def generate_anchor_lockin_calendar(
             cumulative_free_float_pct=day90_float_pct,
             supply_risk_level="ELEVATED",
             status=_eval_status(t90_dt),
-            exchange_notice_ref="SEBI ICDR Reg 17(2) 90-Day Full Liquidity",
+            exchange_notice_ref=f"SEBI ICDR Reg 17(2) / {exchange_recon.get('circular_ref', '90-Day Full Liquidity')}" if exchange_recon.get("is_reconciled") else "SEBI ICDR Reg 17(2) 90-Day Full Liquidity",
         ),
         AnchorLockinMilestone(
             milestone_name="Day 180 Pre-IPO / Excess Promoter Unlock",

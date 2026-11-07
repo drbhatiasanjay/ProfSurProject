@@ -28,7 +28,8 @@ def attribute_inventory(reference, extracted):
 
 def dossier_attributes(dossier):
     """Flatten an existing dossier without upgrading its provenance."""
-    payload = dossier.model_dump(mode="json") if hasattr(dossier, "model_dump") else dossier
+    from dataclasses import asdict, is_dataclass
+    payload = asdict(dossier) if is_dataclass(dossier) else dossier.model_dump(mode="json") if hasattr(dossier, "model_dump") else dossier
     rows = []
     def visit(value, path):
         if isinstance(value, dict):
