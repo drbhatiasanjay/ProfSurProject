@@ -42,6 +42,12 @@ st.set_page_config(
     layout="wide",
 )
 
+# Independent additive workflow; legacy terminal remains the default.
+if st.radio("Pre-IPO workspace", ["Existing Pre-IPO terminal", "Decision-depth workbench"], horizontal=True, key="pre_ipo_workspace") == "Decision-depth workbench":
+    from components.pre_ipo_decision_workbench import render
+    render()
+    st.stop()
+
 # Apply Sovereign Financial Terminal Glassmorphic Theme CSS
 st.markdown(
     """

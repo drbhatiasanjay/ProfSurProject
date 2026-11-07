@@ -1,5 +1,14 @@
 # ProfSurProject — Session Log
 
+## CHECKPOINT — Isolated Pre-IPO Decision Depth (2026-11-07)
+
+- Branch: codex/pre-ipo-decision-depth; base 5687478; separate managed worktree profsur-decision-depth.
+- Added independent deterministic evidence, financial and decision-process modules, owner-scoped append-only cases/actions, optional-input forms, legacy dossier attribute inspection and snapshot JSON/PPTX exports.
+- Existing Pre-IPO terminal remains default; additive integration only. Antigravity's active checkout remains untouched.
+- Validation: 18 new tests; new plus existing Pre-IPO suites 45 passed; project_ops fast suite 6 passed. Four approved profiles authenticated on isolated 8510 app, both themes, conditional financing results and exports checked. No credentials printed.
+- Supported-domain limits and remaining production/data requirements: docs/plans/PRE_IPO_DECISION_DEPTH_IMPLEMENTATION_HANDOFF_2026-11-07.md.
+- No merge, push or deployment.
+
 ## CHECKPOINT — Test Automation & CI/CD Pipeline Acceleration (2026-11-06 12:10 IST)
 
 **Branch:** `master` · **HEAD:** Pending Commit  
