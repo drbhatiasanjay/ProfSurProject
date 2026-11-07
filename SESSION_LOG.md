@@ -1024,3 +1024,22 @@ Authenticated browser checks passed for drbhatia, profsurkumar and skumar: intak
     - `verified_gcp_live_merged_feed.png` (191,549 bytes)
   - Zero raw HTML code blocks leaked; multi-level tabs stacked and fully accessible; algorithm lab interactive; exchange lock-in governance operational.
 - **Production Baseline Commit**: `ff01761` on `master` (100% in sync with `origin/master`). Local dev server healthy on port 8501.
+
+
+## 2026-11-07 — Multi-Quarter Bank Covenant & Debt Headroom Engine (Page 28)
+- **Feature Built**: Built `pages/28_covenant_headroom.py` covering all 5 mandatory sections:
+  1. *The Problem*: Static ratios vs. dynamic 12-quarter cash flow, Ind AS 116 capitalization distortion.
+  2. *The Background*: CFADS formula, ICR/DSCR formulas, 60-iteration bisection headroom solver.
+  3. *The Analysis*: Interactive archetypes (Tata Steel vs. IndiGo), rate/margin shock sliders, capex raise, 2 Plotly charts, 12-quarter schedule.
+  4. *Dynamic Interpretation*: Automated analytical narrative citing exact breach quarters, binding constraints, and verified sources.
+  5. *Call for Action*: CFO / Credit Committee decision playbooks, mitigation levers, and JSON audit export.
+- **Navigation & Tests**:
+  - Registered `covenant_headroom` in `app.py` under both Pre-IPO Deal Workflow and default sidebar navigation.
+  - Authored `tests/test_covenant_headroom_page.py` (4 tests passed in 1.75s).
+  - Full suite verified: 27 passed, 1 skipped (OCR), 0 failures.
+- **Git & GCP Deployment**:
+  - Committed as `8444af8` on branch `master` and pushed to GitHub.
+  - GitHub Actions run `42393751326` passed 100% (pytest in 2m4s, OCaml in 6s, Cloud Run deploy in 3m40s).
+- **Dual-Environment Evidence Gate**:
+  - Local verification: `verified_local_covenant_headroom_dark.png`, `verified_local_covenant_analysis.png`, `verified_local_covenant_playbook.png`.
+  - GCP Cloud Run live verification: `verified_gcp_live_covenant_headroom_dark.png`, `verified_gcp_live_covenant_analysis.png`, `verified_gcp_live_covenant_playbook.png`.
