@@ -47,7 +47,7 @@ class PreIPOIngestionEngine:
         Returns active multimodal vision model name.
         Uses GEMINI_VISION_MODEL env var or falls back to standard gemini-2.0-flash.
         """
-        return os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash")
+        return os.getenv("GEMINI_VISION_MODEL", "gemini-3.1-flash-lite")
 
     @staticmethod
     def extract_text_from_pdf(source: Any, max_pages: int = 60) -> Tuple[str, int]:

@@ -1331,7 +1331,7 @@ def _remove_repeated_sections(text: str) -> str:
 def stream_gemini_agent(
     messages: List[Dict[str, Any]],
     system: str = "",
-    model: str = "gemini-2.5-flash",
+    model: str = "gemini-3.1-flash-lite",
     max_tokens: int = 2048,
     *,
     role: str = "researcher",
