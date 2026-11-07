@@ -41,6 +41,14 @@ class PreIPOIngestionEngine:
       return explicit unverified review states, NEVER invented financial metrics.
     """
 
+    @classmethod
+    def get_vision_model_name(cls) -> str:
+        """
+        Returns active multimodal vision model name.
+        Uses GEMINI_VISION_MODEL env var or falls back to standard gemini-2.0-flash.
+        """
+        return os.getenv("GEMINI_VISION_MODEL", "gemini-2.0-flash")
+
     @staticmethod
     def extract_text_from_pdf(source: Any, max_pages: int = 60) -> Tuple[str, int]:
         """
@@ -122,13 +130,19 @@ class PreIPOIngestionEngine:
         if len(pdf_bytes) < 100:
             return None, "EMPTY_BYTE_STREAM"
 
+        # Check file size limit without arbitrary byte slicing
+        if len(pdf_bytes) > 25 * 1024 * 1024:
+            return None, "FILE_TOO_LARGE"
+
+        if len(pdf_bytes) == 0:
+            return None, "EMPTY_BYTE_STREAM"
+
         try:
             from google import genai
             from google.genai import types
 
             client = genai.Client(api_key=api_key)
-            sample_bytes = pdf_bytes[:12_000_000]
-            pdf_part = types.Part.from_bytes(data=sample_bytes, mime_type="application/pdf")
+            pdf_part = types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")
 
             prompt = (
                 "You are an expert SEBI ICDR Draft Red Herring Prospectus (DRHP) auditor. "
@@ -181,8 +195,9 @@ class PreIPOIngestionEngine:
                 "Return raw valid JSON only without markdown or code fencing."
             )
 
+            active_model = cls.get_vision_model_name()
             resp = client.models.generate_content(
-                model="gemini-1.5-flash",
+                model=active_model,
                 contents=[pdf_part, prompt],
             )
             raw_text = resp.text.strip()
@@ -193,6 +208,71 @@ class PreIPOIngestionEngine:
             data = json.loads(raw_text)
             comp_name = data.get("company_name") or company_name_hint or "Scanned DRHP Issuer"
             deal_slug = re.sub(r"[^a-zA-Z0-9]+", "_", comp_name.lower()).strip("_")
+
+            # Check if extracted JSON is empty or lacks core financials
+            has_financial_data = bool(data.get("history") or data.get("total_issue_size_cr") or data.get("revenue_ops_cr"))
+            if not has_financial_data:
+                # Return explicit unverified dossier with zero confidence and limitations
+                empty_audit = [
+                    IngestionAuditItem(
+                        field_name="Document Intake Pipeline",
+                        raw_extracted_value="Multimodal Vision OCR returned empty financial structure",
+                        normalized_metric="EXTRACTION_EMPTY",
+                        status="MISSING_UNDISCLOSED",
+                        citation="Vision Pipeline",
+                        confidence_score=0.0,
+                    ),
+                    IngestionAuditItem(
+                        field_name="Section V Restated Financials",
+                        raw_extracted_value="No financial line items detected in OCR scan",
+                        normalized_metric="UNAVAILABLE",
+                        status="MISSING_UNDISCLOSED",
+                        citation="DRHP Section V",
+                        confidence_score=0.0,
+                    ),
+                ]
+                empty_limits = [
+                    DecisionLimitationItem(
+                        gap_id="GAP-OCR-01",
+                        item_name="Multimodal OCR Empty Extraction",
+                        affected_dimension="All Financial Dimensions",
+                        current_status="EXTRACTION_FAILED",
+                        why_it_matters="Multimodal AI vision model could not identify quantitative financial schedules in the scanned pages.",
+                        blocked_decision_or_recommendation="All valuation, leverage, and underwriting recommendations are blocked.",
+                        materiality_priority="HIGH",
+                        recommended_diligence_request="Upload higher-resolution scan or electronic searchable PDF.",
+                    )
+                ]
+                return PreIPODealDossier(
+                    deal_id=f"vision_empty_{deal_slug}",
+                    company_name=f"{comp_name} [Unverified OCR Intake]",
+                    sector="Unverified",
+                    filing_type="DRHP (Vision Parsed - Incomplete)",
+                    filing_date="Undisclosed",
+                    total_issue_size_cr=0.0,
+                    fresh_issue_cr=0.0,
+                    ofs_cr=0.0,
+                    face_value_inr=10.0,
+                    brlm_bankers=["Unverified"],
+                    exchange_listing=["BSE", "NSE"],
+                    history=[FinancialYearMetric("FY--", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)],
+                    indebtedness=IndebtednessSchedule(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                    working_capital=WorkingCapitalDynamics(0.0, 0.0, 0.0, 0.0),
+                    governance=NonFinancialGovernance(0.0, 0.0, 0.0, 0.0, 0.0, 50.0),
+                    objects_of_offer=ObjectsOfOfferWaterfall(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                    ic_verdict=InvestmentCommitteeVerdict(
+                        underwriting_verdict="INSUFFICIENT_DISCLOSURES_UNRATED",
+                        internal_screening_grade="UNRATED",
+                        max_recommended_leverage_ratio=0.0,
+                        key_credit_strengths=[],
+                        key_downside_risks=["OCR extraction yielded no recognized quantitative metrics."],
+                        mandatory_loan_covenants=["Provide audited prospectus disclosures."],
+                        treasury_call_to_action="Underwriting suspended pending readable filing disclosures.",
+                    ),
+                    limitations=empty_limits,
+                    audit_report=empty_audit,
+                    issue_status="RUNNING_PIPELINE",
+                ), "EXTRACTION_EMPTY_OR_INVALID" 
 
             hist = []
             for h in data.get("history", []):
@@ -477,9 +557,100 @@ class PreIPOIngestionEngine:
             )
 
         # If text is present, extract known header/summary fields or return provisional intake
-        # For demonstration when text has recognizable content:
+        # Check if the extracted text contains genuine financial tables/disclosures
+        has_financials_in_text = bool(
+            re.search(r"(?:restated|revenue from operations|ebitda|profit after tax|borrowings|total debt|net worth)", extracted_text, re.IGNORECASE)
+            and re.search(r"\d{1,3}(?:,\d{3})*(?:\.\d+)?", extracted_text)
+        )
+
         inferred_name = company_name_hint.strip() if company_name_hint else "Provisional Uploaded Issuer"
-        
+
+        if not has_financials_in_text:
+            # Genuine non-financial or unparsed PDF: Return explicit provisional dossier without fabricated metrics
+            audit_items = [
+                IngestionAuditItem(
+                    field_name="Document Text Intake",
+                    raw_extracted_value=f"{page_count} pages read ({len(extracted_text):,} characters)",
+                    normalized_metric="TEXT_CONFIRMED_NO_FINANCIALS",
+                    status="MISSING_UNDISCLOSED",
+                    citation="PDF Text Parser",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Section V Restated Financials",
+                    raw_extracted_value="No restated P&L or cash flow statements identified",
+                    normalized_metric="UNAVAILABLE",
+                    status="MISSING_UNDISCLOSED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Section III Objects of the Offer",
+                    raw_extracted_value="No use-of-proceeds waterfall identified",
+                    normalized_metric="UNAVAILABLE",
+                    status="MISSING_UNDISCLOSED",
+                    citation="DRHP Section III",
+                    confidence_score=0.0,
+                ),
+            ]
+            limitations = [
+                DecisionLimitationItem(
+                    gap_id="GAP-INTAKE-TEXT-01",
+                    item_name="Audited Restated Financial Statements",
+                    affected_dimension="Section V Financial Information",
+                    current_status="NOT_SUPPLIED",
+                    why_it_matters="Document contains searchable text but lacks recognizable Section V audited financial statements.",
+                    blocked_decision_or_recommendation="All earnings, margin, cash flow conversion, and Dickinson life-cycle assessments are blocked.",
+                    materiality_priority="HIGH",
+                    recommended_diligence_request="Upload the complete Draft Red Herring Prospectus including Section V.",
+                ),
+                DecisionLimitationItem(
+                    gap_id="GAP-INTAKE-TEXT-02",
+                    item_name="Capital Structure & Offer Objects",
+                    affected_dimension="Section III Objects of Offer",
+                    current_status="NOT_SUPPLIED",
+                    why_it_matters="Offer size, fresh issue vs OFS breakdown, and debt prepayment allocations are undisclosed.",
+                    blocked_decision_or_recommendation="SEBI Reg 7 GCP compliance, interest savings, and EPS accretion cannot be computed.",
+                    materiality_priority="HIGH",
+                    recommended_diligence_request="Supply Section III (Objects of the Offer) from the prospectus.",
+                ),
+            ]
+            return PreIPODealDossier(
+                deal_id="provisional_upload",
+                company_name=f"{inferred_name} [Provisional Intake - Incomplete Disclosures]",
+                sector="Awaiting Financials",
+                filing_type="DRHP (Provisional Intake)",
+                filing_date="Current Year",
+                total_issue_size_cr=0.0,
+                fresh_issue_cr=0.0,
+                ofs_cr=0.0,
+                face_value_inr=10.0,
+                brlm_bankers=["Unverified"],
+                exchange_listing=["BSE", "NSE"],
+                history=[
+                    FinancialYearMetric("FY--", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+                ],
+                indebtedness=IndebtednessSchedule(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                working_capital=WorkingCapitalDynamics(0.0, 0.0, 0.0, 0.0),
+                governance=NonFinancialGovernance(0.0, 0.0, 0.0, 0.0, 0.0, 50.0),
+                objects_of_offer=ObjectsOfOfferWaterfall(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                beneish_forensics=BeneishMScoreRatios(),
+                debt_maturity=DebtMaturityLadder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                valuation_comps=ValuationPeerBenchmarking(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "None", [], "DATA_UNAVAILABLE"),
+                ic_verdict=InvestmentCommitteeVerdict(
+                    underwriting_verdict="INSUFFICIENT_DISCLOSURES_UNRATED",
+                    internal_screening_grade="UNRATED",
+                    max_recommended_leverage_ratio=0.0,
+                    key_credit_strengths=[],
+                    key_downside_risks=["No audited financial statements or indebtedness disclosures identified in document text."],
+                    mandatory_loan_covenants=["Supply Section V and VI disclosures prior to credit committee review."],
+                    treasury_call_to_action="Underwriting suspended pending verifiable statutory filing intake.",
+                ),
+                limitations=limitations,
+                audit_report=audit_items,
+            )
+
+        # When genuine financial content is parsed:
         audit_items = [
             IngestionAuditItem(
                 field_name="Document Text Intake",
@@ -489,180 +660,36 @@ class PreIPOIngestionEngine:
                 citation="PDF Parser",
                 confidence_score=0.95,
             ),
-            IngestionAuditItem(
-                field_name="SEBI ICDR Structure Check",
-                raw_extracted_value="Draft Prospectus Header",
-                normalized_metric="DRHP Header Identified",
-                status="FOUND_AND_RECONCILED",
-                citation="Cover Page",
-                confidence_score=0.85,
-            ),
-            IngestionAuditItem(
-                field_name="Floating Benchmark Spread",
-                raw_extracted_value="Not explicitly parsed in automated scan",
-                normalized_metric="MISSING_UNDISCLOSED",
-                status="MISSING_UNDISCLOSED",
-                citation="Section VI Borrowings",
-                confidence_score=1.0,
-            ),
         ]
-
-        limitations = [
-            DecisionLimitationItem(
-                gap_id="GAP-INTAKE-03",
-                item_name="Floating Benchmark Interest Spread",
-                affected_dimension="Indebtedness & Stress Sensitivity",
-                current_status="UNDISCLOSED",
-                why_it_matters="Exact margin over benchmark rate (e.g. MCLR + 125 bps) is required for precise interest rate shock simulation.",
-                blocked_decision_or_recommendation="Blocks exact determination of post-shock interest burden.",
-                materiality_priority="MEDIUM",
-                recommended_diligence_request="Obtain sanction letters for term loan facilities.",
-                provisional_assumption_applied="Provisional benchmark margin assumed at 8.75% based on sector median.",
-            ),
-        ]
-
+        limitations = []
         return PreIPODealDossier(
             deal_id="provisional_upload",
             company_name=f"{inferred_name} [Provisional Intake]",
             sector="General Commercial & Industrial",
             filing_type="DRHP (Provisional Intake)",
             filing_date="Current Year",
-            total_issue_size_cr=1000.0,
-            fresh_issue_cr=500.0,
-            ofs_cr=500.0,
+            total_issue_size_cr=0.0,
+            fresh_issue_cr=0.0,
+            ofs_cr=0.0,
             face_value_inr=10.0,
             brlm_bankers=["Syndicate Lead Managers"],
             exchange_listing=["BSE", "NSE"],
-            history=[
-                FinancialYearMetric(
-                    fiscal_year="FY23",
-                    revenue_ops_cr=1200.0,
-                    ebitda_cr=240.0,
-                    pat_cr=130.0,
-                    cfo_cr=180.0,
-                    cfi_cr=-60.0,
-                    cff_cr=-80.0,
-                    capex_cr=70.0,
-                    fcf_cr=110.0,
-                    net_worth_cr=850.0,
-                ),
-                FinancialYearMetric(
-                    fiscal_year="FY24",
-                    revenue_ops_cr=1500.0,
-                    ebitda_cr=310.0,
-                    pat_cr=180.0,
-                    cfo_cr=240.0,
-                    cfi_cr=-75.0,
-                    cff_cr=-110.0,
-                    capex_cr=80.0,
-                    fcf_cr=160.0,
-                    net_worth_cr=1030.0,
-                ),
-            ],
-            indebtedness=IndebtednessSchedule(
-                secured_term_loans_cr=250.0,
-                working_capital_loans_cr=100.0,
-                ncd_bonds_cr=0.0,
-                unsecured_loans_cr=20.0,
-                lease_liabilities_ind_as_116_cr=45.0,
-                cash_and_equivalents_cr=120.0,
-                weighted_avg_interest_rate_pct=8.75,
-                floating_benchmark_spread="Repo + 2.25%",
-                sanctioned_limits_cr=450.0,
-                fixed_rate_portion_pct=25.0,
-                floating_rate_portion_pct=75.0,
-            ),
-            working_capital=WorkingCapitalDynamics(
-                inventory_days_dio=45.0,
-                debtor_days_dso=55.0,
-                creditor_days_dpo=35.0,
-                net_working_capital_pct_sales=18.0,
-            ),
-            governance=NonFinancialGovernance(
-                promoter_pledge_pct=0.0,
-                related_party_transactions_pct_rev=5.0,
-                top_5_customer_concentration_pct=25.0,
-                herfindahl_hhi_index=650.0,
-                contingent_liabilities_pct_networth=12.0,
-                independent_directors_pct=50.0,
-            ),
-            cap_table=CapTableDilution(
-                promoter_holding_pre_pct=80.0,
-                promoter_holding_post_pct=65.0,
-                public_holding_post_pct=35.0,
-                anchor_portion_pct=30.0,
-                promoter_min_contribution_lock_months=18,
-                promoter_excess_holding_lock_months=6,
-                anchor_lock_30d_pct=50.0,
-                anchor_lock_90d_pct=50.0,
-            ),
-            objects_of_offer=ObjectsOfOfferWaterfall(
-                gross_fresh_issue_cr=500.0,
-                issue_expenses_cr=25.0,
-                debt_prepayment_cr=250.0,
-                capex_expansion_cr=125.0,
-                inorganic_acquisition_cr=0.0,
-                general_corporate_purposes_cr=100.0,
-                interest_rate_on_retired_debt_pct=9.0,
-                shares_pre_issue_cr=9.0,
-                shares_post_issue_cr=10.0,
-                pre_issue_pat_cr=180.0,
-            ),
-            beneish_forensics=BeneishMScoreRatios(
-                dsri=1.05,
-                gmi=0.98,
-                aqi=1.02,
-                sgi=1.12,
-                depi=0.96,
-                sgai=0.98,
-                lvgi=0.95,
-                tata=-0.012,
-            ),
-            debt_maturity=DebtMaturityLadder(
-                repayment_due_year_1_cr=90.0,
-                repayment_due_year_2_cr=85.0,
-                repayment_due_year_3_cr=75.0,
-                repayment_due_year_4_cr=60.0,
-                repayment_due_year_5_plus_cr=60.0,
-                fixed_rate_debt_pct=25.0,
-                floating_rate_debt_pct=75.0,
-            ),
-            valuation_comps=ValuationPeerBenchmarking(
-                price_band_lower_inr=220.0,
-                price_band_upper_inr=235.0,
-                implied_mcap_cr=2350.0,
-                implied_ev_cr=2540.0,
-                implied_pe_ratio=21.4,
-                implied_ev_ebitda=11.5,
-                implied_ev_sales=2.1,
-                implied_pb_ratio=3.4,
-                sector_peer_group="Commercial & Industrial Peers (CMIE)",
-                peers=[
-                    ListedPeerComp("Generic Sector Peer Ltd.", "PEER1", 15000.0, 26.5, 14.2, 2.8, 4.2, 11.2, 18.5, "Mature (Cash Cow)"),
-                    ListedPeerComp("Second Sector Peer Ltd.", "PEER2", 12000.0, 23.5, 12.8, 2.2, 3.8, 10.5, 16.2, "Mature (Cash Cow)"),
-                ],
-                valuation_verdict="ATTRACTIVE_DISCOUNT",
-            ),
+            history=[FinancialYearMetric("FY24", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)],
+            indebtedness=IndebtednessSchedule(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+            working_capital=WorkingCapitalDynamics(0.0, 0.0, 0.0, 0.0),
+            governance=NonFinancialGovernance(0.0, 0.0, 0.0, 0.0, 0.0, 50.0),
+            objects_of_offer=ObjectsOfOfferWaterfall(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+            beneish_forensics=BeneishMScoreRatios(),
+            debt_maturity=DebtMaturityLadder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+            valuation_comps=ValuationPeerBenchmarking(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "None", [], "DATA_UNAVAILABLE"),
             ic_verdict=InvestmentCommitteeVerdict(
-                underwriting_verdict="APPROVE WITH COVENANTS",
-                internal_screening_grade="TIER_2_MODERATE_LEVERAGE",
-                max_recommended_leverage_ratio=2.25,
-                key_credit_strengths=[
-                    "Positive operating cash flow and disciplined working capital conversion.",
-                    "Manageable debt profile with balanced term loan schedule.",
-                    "Credible capital expenditure and expansion roadmap.",
-                ],
-                key_downside_risks=[
-                    "Exposure to macro benchmark interest rate fluctuations.",
-                    "Execution risks associated with post-IPO capex ramp-up.",
-                    "Customer concentration among top revenue contributors.",
-                ],
-                mandatory_loan_covenants=[
-                    "Net Debt to EBITDA maintenance ceiling of 2.25x.",
-                    "Minimum Interest Coverage Ratio (ICR) of 3.50x.",
-                    "Periodic audit of working capital utilization by lender syndicate.",
-                ],
-                treasury_call_to_action="Treasury Mandate: Deploy debt prepayment proceeds immediately to retire high-cost term facilities and negotiate post-listing bank credit line margin compressions.",
+                underwriting_verdict="INSUFFICIENT_DISCLOSURES_UNRATED",
+                internal_screening_grade="UNRATED",
+                max_recommended_leverage_ratio=0.0,
+                key_credit_strengths=[],
+                key_downside_risks=["Automated extraction requires manual reconciliation of non-standard disclosures."],
+                mandatory_loan_covenants=["Obtain signed auditor restated summaries."],
+                treasury_call_to_action="Underwriting suspended pending manual reconciliation.",
             ),
             limitations=limitations,
             audit_report=audit_items,

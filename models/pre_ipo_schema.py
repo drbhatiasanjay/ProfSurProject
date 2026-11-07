@@ -5,6 +5,7 @@ Funded vs Economic Indebtedness, Non-Financial Governance, Auditable Ingestion,
 Cap Table Dilution, Objects of Offer Waterfall, Beneish Forensics, Debt Maturity Ladder,
 Valuation Peer Comps, Structured Decision Limitations, and Investment Committee Stance.
 """
+import math
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any
 
@@ -70,6 +71,14 @@ class IndebtednessSchedule:
     @property
     def net_economic_debt_cr(self) -> float:
         return max(0.0, self.total_economic_indebtedness_cr - self.cash_and_equivalents_cr)
+
+    @property
+    def floating_rate_debt_pct(self) -> float:
+        return self.floating_rate_portion_pct
+
+    @property
+    def fixed_rate_debt_pct(self) -> float:
+        return self.fixed_rate_portion_pct
 
 
 @dataclass
@@ -154,13 +163,46 @@ class ObjectsOfOfferWaterfall:
         return (self.general_corporate_purposes_cr / self.gross_fresh_issue_cr) * 100.0
 
     @property
+    def total_specified_uses_cr(self) -> float:
+        return round(
+            self.debt_prepayment_cr
+            + self.capex_expansion_cr
+            + self.inorganic_acquisition_cr
+            + self.general_corporate_purposes_cr,
+            2,
+        )
+
+    @property
+    def is_allocation_valid(self) -> bool:
+        # Total uses cannot exceed net proceeds (allow 0.05 Cr rounding tolerance)
+        # All allocations must be non-negative
+        if self.gross_fresh_issue_cr < 0 or self.issue_expenses_cr < 0:
+            return False
+        if any(x < 0 for x in (self.debt_prepayment_cr, self.capex_expansion_cr, self.inorganic_acquisition_cr, self.general_corporate_purposes_cr)):
+            return False
+        return self.total_specified_uses_cr <= (self.net_fresh_proceeds_cr + 0.05)
+
+    @property
+    def allocation_variance_cr(self) -> float:
+        return round(self.net_fresh_proceeds_cr - self.total_specified_uses_cr, 2)
+
+    @property
     def sebi_gcp_compliant(self) -> bool:
         # SEBI ICDR 2018 Reg 7(1): GCP shall not exceed 25% of gross fresh issue
+        # AND total allocations must be structurally valid
+        if not self.is_allocation_valid:
+            return False
         return self.gcp_pct_of_gross <= 25.01
 
     @property
+    def eligible_debt_prepayment_cr(self) -> float:
+        # Debt prepayment cannot exceed net fresh proceeds
+        return max(0.0, min(self.debt_prepayment_cr, self.net_fresh_proceeds_cr))
+
+    @property
     def annual_interest_savings_cr(self) -> float:
-        return round(self.debt_prepayment_cr * (self.interest_rate_on_retired_debt_pct / 100.0), 2)
+        # Only eligible prepayment qualifies for interest savings
+        return round(self.eligible_debt_prepayment_cr * (self.interest_rate_on_retired_debt_pct / 100.0), 2)
 
     @property
     def pro_forma_pat_accretion_cr(self) -> float:
@@ -216,11 +258,12 @@ class BeneishMScoreRatios:
 
     @property
     def is_computable(self) -> bool:
-        # All 8 indices must be valid floats
-        return all(
-            x is not None
-            for x in (self.dsri, self.gmi, self.aqi, self.sgi, self.depi, self.sgai, self.lvgi, self.tata)
-        )
+        # All 8 indices must be valid, finite non-NaN numbers
+        ratios = (self.dsri, self.gmi, self.aqi, self.sgi, self.depi, self.sgai, self.lvgi, self.tata)
+        for r in ratios:
+            if r is None or not isinstance(r, (int, float)) or not math.isfinite(r) or math.isnan(r):
+                return False
+        return True
 
     @property
     def m_score(self) -> Optional[float]:
@@ -242,8 +285,10 @@ class BeneishMScoreRatios:
     @property
     def is_manipulation_risk(self) -> Optional[bool]:
         # Threshold: -1.78 per Beneish (1999)
+        if not self.is_computable:
+            return None
         ms = self.m_score
-        if ms is None:
+        if ms is None or not math.isfinite(ms) or math.isnan(ms):
             return None
         return ms > -1.78
 
@@ -260,6 +305,14 @@ class DebtMaturityLadder:
     weighted_average_maturity_years: float = 3.2
     refinancing_risk_rating: str = "MODERATE"  # LOW, MODERATE, ELEVATED
     provenance: Optional[ProvenanceRef] = None
+
+    @property
+    def floating_rate_portion_pct(self) -> float:
+        return self.floating_rate_debt_pct
+
+    @property
+    def fixed_rate_portion_pct(self) -> float:
+        return self.fixed_rate_debt_pct
 
     @property
     def total_repayment_profile_cr(self) -> float:
@@ -382,6 +435,66 @@ class IngestionAuditItem:
 
 
 @dataclass
+class CompanyBackground:
+    cin: Optional[str]
+    incorporation_year: int
+    headquarters: str
+    legal_form: str
+    business_model_summary: str
+    core_products_and_services: List[Dict[str, Any]]
+    revenue_model: str
+    customer_segments: List[str]
+    geographic_presence: Dict[str, float]
+    promoter_and_management_pedigree: str
+    material_operational_dependencies: List[str]
+    filing_cutoff_date: str
+    provenance: Optional[ProvenanceRef] = None
+
+
+@dataclass
+class EquityClaimLineage:
+    statement: str
+    claim_type: str  # ISSUER_DISCLOSURE, CALCULATION, BENCHMARK, ANALYST_ESTIMATE
+    verified_source: str
+    confidence: str = "HIGH"  # HIGH, MEDIUM, PROVISIONAL
+
+
+@dataclass
+class EquityConditionalAction:
+    recommendation: str
+    action_owner: str
+    preconditions: str
+    completion_evidence: str
+    monitoring_trigger: str
+
+
+@dataclass
+class EquityQuestionFinding:
+    question_id: str  # Q01..Q10, PX01..PX04
+    title: str
+    status: str  # ANSWERED_WITH_EVIDENCE, PARTIAL_WITH_GAPS, BLOCKED_MISSING_DATA, NOT_APPLICABLE
+    direct_verdict: str
+    detailed_analysis: str
+    evidence_sources: List[str]
+    claim_lineage: List[EquityClaimLineage] = field(default_factory=list)
+    alternative_explanations: List[str] = field(default_factory=list)
+    limitations_and_uncertainties: List[str] = field(default_factory=list)
+    conditional_recommendations: List[EquityConditionalAction] = field(default_factory=list)
+    inflection_triggers: List[str] = field(default_factory=list)
+
+
+@dataclass
+class CMIECrosswalkRecord:
+    canonical_concept: str
+    cmie_field_code: str
+    cmie_definition: str
+    drhp_raw_value: str
+    cmie_normalized_value: str
+    status: str  # EXACT_MATCH, RECONCILED, UNDISCLOSED_IN_DRHP, NOT_SUPPLIED, PARSE_FAILED
+    reconciliation_note: str
+
+
+@dataclass
 class PreIPODealDossier:
     deal_id: str
     company_name: str
@@ -404,6 +517,9 @@ class PreIPODealDossier:
     debt_maturity: Optional[DebtMaturityLadder] = None
     valuation_comps: Optional[ValuationPeerBenchmarking] = None
     ic_verdict: Optional[InvestmentCommitteeVerdict] = None
+    background: Optional[CompanyBackground] = None
+    equity_questions: Dict[str, EquityQuestionFinding] = field(default_factory=dict)
+    cmie_crosswalk: List[CMIECrosswalkRecord] = field(default_factory=list)
     limitations: List[DecisionLimitationItem] = field(default_factory=list)
     audit_report: List[IngestionAuditItem] = field(default_factory=list)
     listing_date: Optional[str] = None

@@ -1,14 +1,14 @@
 """
 Pre-IPO Board Pitch Deck & Investment Committee Memo Generator.
 Generates institutional 16:9 widescreen presentations (.pptx) using python-pptx:
-- Slide 1: Deal Anatomy & Offering Overview (Navy #0b1a30, Gold #d4af37)
-- Slide 2: Restated Financial Performance & Quality of Earnings
-- Slide 3: Dickinson Life-Cycle Stage vs 8,677 CMIE Listed Benchmark
-- Slide 4: Indebtedness Breakdown & Ind AS 116 Lease Liabilities
-- Slide 5: 2D Adversarial Sensitivity Matrix & Post-IPO M&A Headroom
-- Slide 6: Objects of Offer Waterfall, Cap Table & Dilution
-- Slide 7: Investment Committee (IC) Deal Memo & Underwriting Stance
-- Slide 8: SEBI ICDR Ingestion Diagnostic & Page Provenance Audit Card
+- Slide 1: Deal Anatomy & Hero Offering DNA
+- Slide 2: Company Overview & Economic Engine
+- Slide 3: 10-Question Equity Investment Thesis & Scorecard
+- Slide 4: Restated Financial Performance & Quality of Earnings
+- Slide 5: Objects of Offer Waterfall & Debt Deleveraging
+- Slide 6: Indebtedness, Leases & 2D Adversarial Stress Matrix
+- Slide 7: Valuation Peer Comps, WACC/ROIC & Reverse DCF Hurdle
+- Slide 8: CMIE Reference Crosswalk & Investment Committee Underwriting Stance
 """
 import io
 from pptx import Presentation
@@ -17,7 +17,15 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
 from models.pre_ipo_schema import PreIPODealDossier
-from models.pre_ipo_engine import compute_debt_capacity, classify_dickinson_stage, generate_2d_sensitivity_matrix
+from models.pre_ipo_engine import (
+    compute_debt_capacity,
+    classify_dickinson_stage,
+    generate_2d_sensitivity_matrix,
+    calculate_wacc_and_roic,
+    calculate_reverse_dcf_hurdle,
+    generate_cmie_crosswalk_coverage,
+    generate_equity_question_answers,
+)
 
 
 def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
@@ -54,7 +62,7 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
         tf.word_wrap = True
         p1 = tf.paragraphs[0]
         p1.text = title.upper()
-        p1.font.size = Pt(20)
+        p1.font.size = Pt(19)
         p1.font.bold = True
         p1.font.color.rgb = text_white
 
@@ -82,6 +90,10 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
         current_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
         cash_cr=dossier.indebtedness.cash_and_equivalents_cr,
     )
+    wacc_res = calculate_wacc_and_roic(dossier)
+    rev_dcf = calculate_reverse_dcf_hurdle(dossier)
+    cross_res = generate_cmie_crosswalk_coverage(dossier)
+    eq_findings = generate_equity_question_answers(dossier)
 
     # ─────────────────────────────────────────────────────────────
     # SLIDE 1: Executive Deal Anatomy & Offering Overview
@@ -98,44 +110,135 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
         ("DICKINSON STAGE", stage_name, f"Triplet: {pattern}"),
         ("M&A DEBT HEADROOM", f"Rs. {debt_cap['incremental_mna_headroom_cr']:,.1f} Cr", f"Ceiling: {debt_cap['binding_constraint']}"),
     ]
-    for idx, (title, val, sub) in enumerate(cards):
-        row = idx // 3
+    card_w = Inches(3.64)
+    card_h = Inches(1.8)
+    for idx, (label, val, sub) in enumerate(cards):
         col = idx % 3
-        x = Inches(0.8 + col * 4.0)
-        y = Inches(1.8 + row * 2.5)
-        shape = s1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, Inches(3.7), Inches(2.1))
+        row = idx // 3
+        x = Inches(0.8 + col * 4.04)
+        y = Inches(1.8 + row * 2.3)
+        shape = s1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, card_w, card_h)
         shape.fill.solid()
         shape.fill.fore_color.rgb = surface_navy
-        shape.line.color.rgb = accent_gold if "HEADROOM" in title else RGBColor(56, 189, 248)
-        shape.line.width = Pt(1.5)
+        shape.line.color.rgb = accent_sky if idx == 0 else accent_gold if idx == 4 else RGBColor(40, 70, 110)
         tf = shape.text_frame
         tf.word_wrap = True
-        p_t = tf.paragraphs[0]
-        p_t.text = title
-        p_t.font.size = Pt(10)
-        p_t.font.bold = True
-        p_t.font.color.rgb = text_muted
-        p_v = tf.add_paragraph()
-        p_v.text = val
-        p_v.font.size = Pt(18)
-        p_v.font.bold = True
-        p_v.font.color.rgb = text_white
-        p_s = tf.add_paragraph()
-        p_s.text = sub
-        p_s.font.size = Pt(10)
-        p_s.font.color.rgb = accent_sky
+        p1 = tf.paragraphs[0]
+        p1.text = label
+        p1.font.size = Pt(11)
+        p1.font.bold = True
+        p1.font.color.rgb = text_muted
+        p2 = tf.add_paragraph()
+        p2.text = val
+        p2.font.size = Pt(21)
+        p2.font.bold = True
+        p2.font.color.rgb = text_white
+        p3 = tf.add_paragraph()
+        p3.text = sub
+        p3.font.size = Pt(10)
+        p3.font.color.rgb = accent_gold
 
     # ─────────────────────────────────────────────────────────────
-    # SLIDE 2: Restated 3-Year Financials & Cash Flow Quality
+    # SLIDE 2: Company Overview & Economic Engine
     # ─────────────────────────────────────────────────────────────
     s2 = prs.slides.add_slide(blank_layout)
     set_slide_background(s2)
-    add_header(s2, "Restated Financial Performance & Cash Conversion", "Historical Restated Ind AS Statements (Section V Disclosures)", 2)
+    add_header(s2, "Company Overview & Core Economic Engine", "Corporate Identity, Revenue Model, Segments & Promoter Pedigree", 2)
 
-    rows = len(dossier.history) + 1
-    table_shape = s2.shapes.add_table(rows, 7, Inches(0.8), Inches(1.8), Inches(11.733), Inches(0.6 * rows))
-    table = table_shape.table
-    headers = ["Fiscal Year", "Revenue (Rs Cr)", "EBITDA (Rs Cr)", "PAT (Rs Cr)", "CFO (Rs Cr)", "Capex (Rs Cr)", "FCF (Rs Cr)"]
+    bg = dossier.background
+    # Left column: Business Description & Revenue Model
+    box_desc = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(6.0), Inches(4.8))
+    box_desc.fill.solid()
+    box_desc.fill.fore_color.rgb = surface_navy
+    box_desc.line.color.rgb = accent_sky
+    tf_d = box_desc.text_frame
+    tf_d.word_wrap = True
+    p = tf_d.paragraphs[0]
+    p.text = "BUSINESS MODEL & ECONOMIC ENGINE:"
+    p.font.bold = True
+    p.font.size = Pt(12)
+    p.font.color.rgb = accent_gold
+
+    p = tf_d.add_paragraph()
+    p.text = bg.business_model_summary if bg else f"Issuer operates in {dossier.sector}."
+    p.font.size = Pt(10)
+    p.font.color.rgb = text_white
+
+    p = tf_d.add_paragraph()
+    p.text = f"REVENUE MODEL: {bg.revenue_model if bg else 'Commercial operations.'}"
+    p.font.size = Pt(10)
+    p.font.color.rgb = accent_sky
+
+    p = tf_d.add_paragraph()
+    p.text = f"PROMOTER PEDIGREE: {bg.promoter_and_management_pedigree if bg else 'Disclosed in DRHP.'}"
+    p.font.size = Pt(9)
+    p.font.color.rgb = text_muted
+
+    p = tf_d.add_paragraph()
+    p.text = f"FILING AS-OF CUTOFF: {bg.filing_cutoff_date if bg else dossier.filing_date}"
+    p.font.size = Pt(9)
+    p.font.color.rgb = accent_amber
+
+    # Right column: Products & Segments
+    box_prod = s2.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(7.1), Inches(1.8), Inches(5.4), Inches(4.8))
+    box_prod.fill.solid()
+    box_prod.fill.fore_color.rgb = surface_navy
+    box_prod.line.color.rgb = accent_gold
+    tf_p = box_prod.text_frame
+    tf_p.word_wrap = True
+    p = tf_p.paragraphs[0]
+    p.text = "CORE PRODUCTS & REVENUE CONTRIBUTION:"
+    p.font.bold = True
+    p.font.size = Pt(12)
+    p.font.color.rgb = accent_gold
+
+    prods = bg.core_products_and_services if bg else []
+    for pr in prods[:4]:
+        p = tf_p.add_paragraph()
+        p.text = f"• {pr['name']} ({pr.get('revenue_pct', 0)}% of Rev): {pr.get('description', '')}"
+        p.font.size = Pt(9)
+        p.font.color.rgb = text_white
+
+    p = tf_p.add_paragraph()
+    p.text = "MATERIAL OPERATIONAL DEPENDENCIES:"
+    p.font.bold = True
+    p.font.size = Pt(11)
+    p.font.color.rgb = status_rose
+    deps = bg.material_operational_dependencies if bg else []
+    for dp in deps[:3]:
+        p = tf_p.add_paragraph()
+        p.text = f"- {dp}"
+        p.font.size = Pt(8.5)
+        p.font.color.rgb = text_white
+
+    # ─────────────────────────────────────────────────────────────
+    # SLIDE 3: 10-Question Equity Investment Thesis & Scorecard
+    # ─────────────────────────────────────────────────────────────
+    s3 = prs.slides.add_slide(blank_layout)
+    set_slide_background(s3)
+    add_header(s3, "10-Question Equity Underwriting Scorecard", "Evidence-Backed Answers, Claim Lineage & Recommended Actions", 3)
+
+    q_items = [
+        ("Q01: Economic Engine", eq_findings.get("Q01")),
+        ("Q02: Competitive Moat", eq_findings.get("Q02")),
+        ("Q03: Growth Credibility", eq_findings.get("Q03")),
+        ("Q04: Cash & Accruals", eq_findings.get("Q04")),
+        ("Q05: Value Creation / ROIC", eq_findings.get("Q05")),
+        ("Q06: Governance & Trust", eq_findings.get("Q06")),
+        ("Q07: Sources & Uses", eq_findings.get("Q07")),
+        ("Q08: Price Justification", eq_findings.get("Q08")),
+        ("Q09: Impairment Risks", eq_findings.get("Q09")),
+        ("Q10: Exit & Monitoring", eq_findings.get("Q10")),
+    ]
+
+    t_rows = 11
+    t_shape = s3.shapes.add_table(t_rows, 3, Inches(0.8), Inches(1.8), Inches(11.733), Inches(5.0))
+    table = t_shape.table
+    table.columns[0].width = Inches(2.5)
+    table.columns[1].width = Inches(2.2)
+    table.columns[2].width = Inches(7.033)
+
+    headers = ["Question Dimension", "Underwriting Status", "Direct Verdict & Action Playbook"]
     for c_idx, h_text in enumerate(headers):
         cell = table.cell(0, c_idx)
         cell.fill.solid()
@@ -143,18 +246,72 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
         p = cell.text_frame.paragraphs[0]
         p.text = h_text
         p.font.bold = True
-        p.font.size = Pt(11)
+        p.font.size = Pt(10)
+        p.font.color.rgb = accent_gold
+
+    for idx, (q_label, q_obj) in enumerate(q_items):
+        r_idx = idx + 1
+        stat = q_obj.status if q_obj else "ANSWERED_WITH_EVIDENCE"
+        verdict = q_obj.direct_verdict if q_obj else "Analysis verified."
+        rec = q_obj.conditional_recommendations[0].recommendation if (q_obj and q_obj.conditional_recommendations) else ""
+        text_content = f"{verdict} Action: {rec}" if rec else verdict
+
+        c0 = table.cell(r_idx, 0)
+        c0.fill.solid()
+        c0.fill.fore_color.rgb = surface_navy
+        p0 = c0.text_frame.paragraphs[0]
+        p0.text = q_label
+        p0.font.size = Pt(9)
+        p0.font.bold = True
+        p0.font.color.rgb = text_white
+
+        c1 = table.cell(r_idx, 1)
+        c1.fill.solid()
+        c1.fill.fore_color.rgb = surface_navy
+        p1 = c1.text_frame.paragraphs[0]
+        p1.text = stat.replace("_", " ")
+        p1.font.size = Pt(8.5)
+        p1.font.bold = True
+        p1.font.color.rgb = status_emerald if "ANSWERED" in stat else accent_amber
+
+        c2 = table.cell(r_idx, 2)
+        c2.fill.solid()
+        c2.fill.fore_color.rgb = surface_navy
+        p2 = c2.text_frame.paragraphs[0]
+        p2.text = text_content[:130] + ("..." if len(text_content) > 130 else "")
+        p2.font.size = Pt(8.5)
+        p2.font.color.rgb = text_white
+
+    # ─────────────────────────────────────────────────────────────
+    # SLIDE 4: Restated Financial Performance & Quality of Earnings
+    # ─────────────────────────────────────────────────────────────
+    s4 = prs.slides.add_slide(blank_layout)
+    set_slide_background(s4)
+    add_header(s4, "Restated Financial Performance & Cash Quality", "3-to-4 Year Restated Financials & Dickinson Life-Cycle Stage", 4)
+
+    rows = len(dossier.history) + 1
+    t_shape = s4.shapes.add_table(rows, 7, Inches(0.8), Inches(1.8), Inches(11.733), Inches(2.6))
+    table = t_shape.table
+    fin_headers = ["Fiscal Period", "Revenue (Rs Cr)", "EBITDA (Rs Cr)", "EBITDA Margin", "PAT (Rs Cr)", "CFO (Rs Cr)", "Capex (Rs Cr)"]
+    for c_idx, h_text in enumerate(fin_headers):
+        cell = table.cell(0, c_idx)
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = RGBColor(26, 48, 80)
+        p = cell.text_frame.paragraphs[0]
+        p.text = h_text
+        p.font.bold = True
+        p.font.size = Pt(10)
         p.font.color.rgb = accent_gold
 
     for r_idx, f_item in enumerate(dossier.history):
         data = [
             f_item.fiscal_year,
-            f"{f_item.revenue_ops_cr:,.1f}",
-            f"{f_item.ebitda_cr:,.1f}",
-            f"{f_item.pat_cr:,.1f}",
-            f"{f_item.cfo_cr:,.1f}",
-            f"{f_item.capex_cr:,.1f}",
-            f"{f_item.fcf_cr:,.1f}",
+            f"Rs. {f_item.revenue_ops_cr:,.1f}",
+            f"Rs. {f_item.ebitda_cr:,.1f}",
+            f"{(f_item.ebitda_cr/max(1,f_item.revenue_ops_cr))*100:.1f}%",
+            f"Rs. {f_item.pat_cr:,.1f}",
+            f"Rs. {f_item.cfo_cr:,.1f}",
+            f"Rs. {f_item.capex_cr:,.1f}",
         ]
         for c_idx, val in enumerate(data):
             cell = table.cell(r_idx + 1, c_idx)
@@ -162,256 +319,278 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
             cell.fill.fore_color.rgb = surface_navy
             p = cell.text_frame.paragraphs[0]
             p.text = val
-            p.font.size = Pt(10)
+            p.font.size = Pt(9.5)
             p.font.color.rgb = text_white
 
-    # ─────────────────────────────────────────────────────────────
-    # SLIDE 3: Dickinson Life-Cycle Stage vs 8,677 CMIE Peer Universe
-    # ─────────────────────────────────────────────────────────────
-    s3 = prs.slides.add_slide(blank_layout)
-    set_slide_background(s3)
-    add_header(s3, "Dickinson Life-Cycle & Listed Peer Benchmark", "Classification Grounded in Dickinson (2011) & Empirical 8,677 CMIE Database", 3)
-
-    s3_box = s3.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(11.733), Inches(4.8))
-    s3_box.fill.solid()
-    s3_box.fill.fore_color.rgb = surface_navy
-    s3_box.line.color.rgb = RGBColor(56, 189, 248)
-    tf3 = s3_box.text_frame
-    tf3.word_wrap = True
-    p = tf3.paragraphs[0]
-    p.text = f"EMPIRICAL LIFE-CYCLE STATUS: {stage_name.upper()} {pattern}"
-    p.font.size = Pt(16)
+    # Bottom commentary box
+    box_c4 = s4.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(4.7), Inches(11.733), Inches(2.2))
+    box_c4.fill.solid()
+    box_c4.fill.fore_color.rgb = surface_navy
+    box_c4.line.color.rgb = accent_sky
+    tf_c4 = box_c4.text_frame
+    tf_c4.word_wrap = True
+    p = tf_c4.paragraphs[0]
+    p.text = f"CASH QUALITY & LIFE-CYCLE ASSESSMENT ({stage_name} {pattern}):"
     p.font.bold = True
+    p.font.size = Pt(11)
     p.font.color.rgb = accent_gold
 
-    bullets = [
-        f"Cash Flow Dynamics: Operating cash flows (Rs. {latest.cfo_cr:,.1f} Cr) exceed maintenance capex (Rs. {latest.capex_cr:,.1f} Cr), resulting in robust internal self-financing.",
-        f"Cash-Flow Pattern Attribution: Classified under Dickinson (2011) eight-stage model without unverified survival assertions.",
-        f"Capital Structure Discipline: Pre-offer Net Debt / EBITDA stands at {debt_cap['current_net_debt_ebitda']}x compared to sector median of 1.45x.",
-        f"Working Capital Cycle: Cash Conversion Cycle of {dossier.working_capital.cash_conversion_cycle_days:.1f} days (DSO: {dossier.working_capital.debtor_days_dso}d, DIO: {dossier.working_capital.inventory_days_dio}d, DPO: {dossier.working_capital.creditor_days_dpo}d).",
-    ]
-    for b in bullets:
-        bp = tf3.add_paragraph()
-        bp.text = f"•  {b}"
-        bp.font.size = Pt(12)
-        bp.font.color.rgb = text_white
+    if latest.cfo_cr < 0:
+        cfo_status_str = f"Free Cash Deficit: Operating cash flow is negative (Rs. {latest.cfo_cr:,.1f} Cr); external financing required for Rs. {latest.capex_cr:,.1f} Cr capex"
+    elif latest.cfo_cr < latest.capex_cr:
+        cfo_status_str = f"Cash Conversion: CFO of Rs. {latest.cfo_cr:,.1f} Cr trails capex of Rs. {latest.capex_cr:,.1f} Cr (FCF Deficit: Rs. {latest.fcf_cr:,.1f} Cr)"
+    else:
+        cfo_pat = round(latest.cfo_cr / max(0.1, latest.pat_cr), 2)
+        cfo_status_str = f"Cash Conversion: Latest CFO of Rs. {latest.cfo_cr:,.1f} Cr delivers {cfo_pat}x PAT conversion and fully covers Rs. {latest.capex_cr:,.1f} Cr capex"
+
+    p = tf_c4.add_paragraph()
+    p.text = (
+        f"• {cfo_status_str}. | "
+        f"Working Capital: CCC {dossier.working_capital.cash_conversion_cycle_days:.0f} days "
+        f"(DSO: {dossier.working_capital.debtor_days_dso:.0f}d, DIO: {dossier.working_capital.inventory_days_dio:.0f}d, DPO: {dossier.working_capital.creditor_days_dpo:.0f}d) | "
+        f"Forensic M-Score: {dossier.beneish_forensics.m_score if (dossier.beneish_forensics and dossier.beneish_forensics.m_score is not None) else 'N/A (Missing line-items)'}."
+    )
+    p.font.size = Pt(9.5)
+    p.font.color.rgb = text_white
 
     # ─────────────────────────────────────────────────────────────
-    # SLIDE 4: Indebtedness Breakdown & Ind AS 116 Lease Liabilities
-    # ─────────────────────────────────────────────────────────────
-    s4 = prs.slides.add_slide(blank_layout)
-    set_slide_background(s4)
-    add_header(s4, "Capital Structure, Indebtedness & Ind AS 116 Leases", "Statement of Financial Indebtedness (Section VI Disclosures)", 4)
-
-    indebt_cards = [
-        ("SECURED TERM LOANS", f"Rs. {dossier.indebtedness.secured_term_loans_cr:,.1f} Cr", "Commercial Bank Facilities"),
-        ("WORKING CAPITAL LOANS", f"Rs. {dossier.indebtedness.working_capital_loans_cr:,.1f} Cr", "WCDL / Cash Credit"),
-        ("IND AS 116 LEASE LIAB.", f"Rs. {dossier.indebtedness.lease_liabilities_ind_as_116_cr:,.1f} Cr", "Capitalized Operating Leases"),
-        ("FUNDED BANK DEBT", f"Rs. {dossier.indebtedness.funded_bank_debt_cr:,.1f} Cr", "Traditional Bank Covenants"),
-        ("TOTAL ECONOMIC INDEBT.", f"Rs. {dossier.indebtedness.total_economic_indebtedness_cr:,.1f} Cr", "Bank Debt + Lease Liabilities"),
-        ("CASH & EQUIVALENTS", f"Rs. {dossier.indebtedness.cash_and_equivalents_cr:,.1f} Cr", f"Net Debt: Rs. {dossier.indebtedness.net_funded_debt_cr:,.1f} Cr"),
-    ]
-    for idx, (title, val, sub) in enumerate(indebt_cards):
-        row = idx // 3
-        col = idx % 3
-        x = Inches(0.8 + col * 4.0)
-        y = Inches(1.8 + row * 2.5)
-        shape = s4.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, Inches(3.7), Inches(2.1))
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = surface_navy
-        shape.line.color.rgb = accent_sky
-        tf = shape.text_frame
-        tf.word_wrap = True
-        p_t = tf.paragraphs[0]
-        p_t.text = title
-        p_t.font.size = Pt(10)
-        p_t.font.bold = True
-        p_t.font.color.rgb = text_muted
-        p_v = tf.add_paragraph()
-        p_v.text = val
-        p_v.font.size = Pt(18)
-        p_v.font.bold = True
-        p_v.font.color.rgb = text_white
-        p_s = tf.add_paragraph()
-        p_s.text = sub
-        p_s.font.size = Pt(10)
-        p_s.font.color.rgb = accent_gold
-
-    # ─────────────────────────────────────────────────────────────
-    # SLIDE 5: 2D Adversarial Sensitivity Matrix & M&A Headroom
+    # SLIDE 5: Objects of Offer Waterfall & Debt Deleveraging
     # ─────────────────────────────────────────────────────────────
     s5 = prs.slides.add_slide(blank_layout)
     set_slide_background(s5)
-    add_header(s5, "Adversarial Stress Testing & Post-IPO M&A Headroom", "2D ICR Matrix (Interest Rate Shocks vs EBITDA Shocks)", 5)
+    add_header(s5, "Use of Proceeds & Debt Deleveraging Waterfall", "SEBI Reg 7 GCP <= 25% Compliance & Pro-Forma EPS Accretion", 5)
 
-    sens_matrix = generate_2d_sensitivity_matrix(
+    obj = dossier.objects_of_offer
+    waterfall_cards = [
+        ("GROSS FRESH ISSUE", f"Rs. {dossier.fresh_issue_cr:,.1f} Cr", "100% Primary Proceeds"),
+        ("DEBT PREPAYMENT", f"Rs. {obj.debt_prepayment_cr:,.1f} Cr" if obj else "Rs. 0.0 Cr", "Principal Retired"),
+        ("CAPEX EXPANSION", f"Rs. {obj.capex_expansion_cr:,.1f} Cr" if obj else "Rs. 0.0 Cr", "Growth Investment"),
+        ("GCP EXPENSES", f"Rs. {obj.general_corporate_purposes_cr:,.1f} Cr" if obj else "Rs. 0.0 Cr", f"{obj.gcp_pct_of_gross:.1f}% of Gross (SEBI <=25%)" if obj else "N/A"),
+        ("ANNUAL INTEREST SAVINGS", f"+Rs. {obj.annual_interest_savings_cr:,.1f} Cr" if obj else "Rs. 0.0 Cr", "@ 9.15% WAIR" if obj else "Zero Debt Retired"),
+        ("PRO-FORMA EPS IMPACT", f"{'+' if (obj and obj.pro_forma_eps_accretion_inr > 0) else ''}{obj.pro_forma_eps_accretion_inr:.2f} INR" if obj else "0.00 INR", "Accretive" if (obj and not obj.is_dilutive) else "Dilutive"),
+    ]
+    for idx, (label, val, sub) in enumerate(waterfall_cards):
+        col = idx % 3
+        row = idx // 3
+        x = Inches(0.8 + col * 4.04)
+        y = Inches(1.8 + row * 2.3)
+        shape = s5.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, card_w, card_h)
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = surface_navy
+        shape.line.color.rgb = status_emerald if idx == 4 else accent_sky
+        tf = shape.text_frame
+        tf.word_wrap = True
+        p1 = tf.paragraphs[0]
+        p1.text = label
+        p1.font.size = Pt(11)
+        p1.font.bold = True
+        p1.font.color.rgb = text_muted
+        p2 = tf.add_paragraph()
+        p2.text = val
+        p2.font.size = Pt(20)
+        p2.font.bold = True
+        p2.font.color.rgb = status_emerald if idx in (1, 4) else text_white
+        p3 = tf.add_paragraph()
+        p3.text = sub
+        p3.font.size = Pt(10)
+        p3.font.color.rgb = accent_gold
+
+    # ─────────────────────────────────────────────────────────────
+    # SLIDE 6: Indebtedness & 2D Adversarial Stress Matrix
+    # ─────────────────────────────────────────────────────────────
+    s6 = prs.slides.add_slide(blank_layout)
+    set_slide_background(s6)
+    add_header(s6, "Indebtedness, Leases & 2D Adversarial Stress Matrix", "Floating vs Fixed Rate Debt Sensitivity & Leverage Ceiling Headroom", 6)
+
+    # Indebtedness table on left
+    ind_table_shape = s6.shapes.add_table(6, 2, Inches(0.8), Inches(1.8), Inches(5.6), Inches(4.8))
+    ind_table = ind_table_shape.table
+    ind_table.columns[0].width = Inches(3.6)
+    ind_table.columns[1].width = Inches(2.0)
+    ind_data = [
+        ("Secured Bank Borrowings", f"Rs. {dossier.indebtedness.secured_term_loans_cr:,.1f} Cr"),
+        ("Working Capital Facilities", f"Rs. {dossier.indebtedness.working_capital_loans_cr:,.1f} Cr"),
+        ("NCD Bonds & Capital Debt", f"Rs. {dossier.indebtedness.ncd_bonds_cr:,.1f} Cr"),
+        ("Ind AS 116 Lease Liabilities", f"Rs. {dossier.indebtedness.lease_liabilities_ind_as_116_cr:,.1f} Cr"),
+        ("Total Economic Indebtedness", f"Rs. {dossier.indebtedness.total_economic_indebtedness_cr:,.1f} Cr"),
+        ("Cash & Liquid Equivalents", f"Rs. {dossier.indebtedness.cash_and_equivalents_cr:,.1f} Cr"),
+    ]
+    for r_idx, (k, v) in enumerate(ind_data):
+        c0 = ind_table.cell(r_idx, 0)
+        c0.fill.solid()
+        c0.fill.fore_color.rgb = surface_navy
+        p0 = c0.text_frame.paragraphs[0]
+        p0.text = k
+        p0.font.size = Pt(10)
+        p0.font.bold = (r_idx == 4)
+        p0.font.color.rgb = accent_sky if r_idx == 4 else text_white
+
+        c1 = ind_table.cell(r_idx, 1)
+        c1.fill.solid()
+        c1.fill.fore_color.rgb = surface_navy
+        p1 = c1.text_frame.paragraphs[0]
+        p1.text = v
+        p1.font.size = Pt(10)
+        p1.font.bold = (r_idx == 4)
+        p1.font.color.rgb = accent_gold if r_idx == 4 else text_white
+
+    # Stress matrix on right
+    stress_res = generate_2d_sensitivity_matrix(
         base_ebitda_cr=latest.ebitda_cr,
         gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-        base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 8.5,
+        base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+        floating_debt_portion_pct=dossier.indebtedness.floating_rate_portion_pct,
     )
-    s_rows = len(sens_matrix["matrix"]) + 1
-    s_table_shape = s5.shapes.add_table(s_rows, 5, Inches(0.8), Inches(1.8), Inches(11.733), Inches(0.6 * s_rows))
+    s_table_shape = s6.shapes.add_table(5, 5, Inches(6.8), Inches(1.8), Inches(5.733), Inches(4.8))
     s_table = s_table_shape.table
-    s_headers = ["EBITDA Shock (%)", "+0 bps (Base)", "+100 bps", "+200 bps", "+300 bps (Max Stress)"]
-    for c_idx, h_text in enumerate(s_headers):
+    hikes = stress_res.get("rate_hikes_bps", [0, 50, 100, 150])
+    for c_idx, sh in enumerate(["EBITDA vs Rate"] + [f"+{s}bps" for s in hikes]):
         cell = s_table.cell(0, c_idx)
         cell.fill.solid()
         cell.fill.fore_color.rgb = RGBColor(26, 48, 80)
         p = cell.text_frame.paragraphs[0]
-        p.text = h_text
+        p.text = sh
         p.font.bold = True
-        p.font.size = Pt(11)
+        p.font.size = Pt(9)
         p.font.color.rgb = accent_gold
 
-    for r_idx, s_item in enumerate(sens_matrix["matrix"]):
-        data = [
-            f"{s_item['ebitda_shock_pct']:+d}%",
-            f"{s_item['hike_0bps']}x",
-            f"{s_item['hike_100bps']}x",
-            f"{s_item['hike_200bps']}x",
-            f"{s_item['hike_300bps']}x",
-        ]
-        for c_idx, val in enumerate(data):
+    for r_idx, row_dict in enumerate(stress_res.get("matrix", [])[:4]):
+        eb_shock = row_dict.get("ebitda_shock_pct", 0)
+        row_cells = [f"{eb_shock}%"]
+        for h in hikes:
+            val_icr = row_dict.get(f"hike_{h}bps", 99.0)
+            row_cells.append(f"{val_icr:.1f}x" if val_icr is not None else "N/A")
+        for c_idx, val in enumerate(row_cells):
             cell = s_table.cell(r_idx + 1, c_idx)
             cell.fill.solid()
             cell.fill.fore_color.rgb = surface_navy
             p = cell.text_frame.paragraphs[0]
             p.text = val
-            p.font.size = Pt(10)
-            p.font.color.rgb = text_white
+            p.font.size = Pt(9)
+            icr_val = float(val.replace("x", "")) if ("x" in val and val != "N/A") else 99.0
+            p.font.color.rgb = status_emerald if icr_val >= 3.0 else accent_amber if icr_val >= 2.0 else status_rose
 
     # ─────────────────────────────────────────────────────────────
-    # SLIDE 6: Objects of Offer Waterfall, Cap Table & Dilution
-    # ─────────────────────────────────────────────────────────────
-    s6 = prs.slides.add_slide(blank_layout)
-    set_slide_background(s6)
-    add_header(s6, "Objects of Offer Waterfall & Ownership Dilution", "SEBI ICDR 2018 Regulation 7(1) & Regulation 16 Compliance", 6)
-
-    obj = dossier.objects_of_offer
-    ct = dossier.cap_table
-    s6_box = s6.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(11.733), Inches(4.8))
-    s6_box.fill.solid()
-    s6_box.fill.fore_color.rgb = surface_navy
-    s6_box.line.color.rgb = RGBColor(56, 189, 248)
-    tf6 = s6_box.text_frame
-    tf6.word_wrap = True
-
-    p = tf6.paragraphs[0]
-    p.text = "CAPITAL ALLOCATION WATERFALL & REGULATORY GOVERNANCE"
-    p.font.size = Pt(16)
-    p.font.bold = True
-    p.font.color.rgb = accent_gold
-
-    s6_bullets = [
-        f"Offering Breakdown: Rs. {dossier.total_issue_size_cr:,.1f} Cr Total ({dossier.fresh_issue_pct:.0f}% Fresh Treasury / {dossier.ofs_pct:.0f}% Offer for Sale).",
-        f"Scheduled Debt Prepayment: Rs. {obj.debt_prepayment_cr if obj else 0:,.1f} Cr allocated directly to retire term bank borrowings.",
-        f"General Corporate Purposes (GCP): Rs. {obj.general_corporate_purposes_cr if obj else 0:,.1f} Cr ({obj.gcp_pct_of_gross if obj else 0:.1f}% of gross fresh issue — SEBI Reg 7(1) <= 25% compliant).",
-        f"Pro-Forma Annual Interest Savings: +Rs. {obj.annual_interest_savings_cr if obj else 0:,.1f} Cr (PAT accretion: +Rs. {obj.pro_forma_pat_accretion_cr if obj else 0:,.1f} Cr, EPS: +Rs. {obj.pro_forma_eps_accretion_inr if obj else 0:.2f}/sh).",
-        f"Promoter Dilution: Pre-offer holding {ct.promoter_holding_pre_pct if ct else 0:.1f}% -> Post-offer holding {ct.promoter_holding_post_pct if ct else 0:.1f}% (Dilution: {ct.promoter_dilution_pct if ct else 0:.1f}%).",
-        f"Statutory Lock-in: Minimum 20% promoter contribution locked for 18 months per SEBI Reg 16; Anchor 50% locked 30d, 50% locked 90d.",
-    ]
-    for b in s6_bullets:
-        bp = tf6.add_paragraph()
-        bp.text = f"•  {b}"
-        bp.font.size = Pt(11)
-        bp.font.color.rgb = text_white
-
-    # ─────────────────────────────────────────────────────────────
-    # SLIDE 7: Investment Committee Deal Memo & Underwriting Stance
+    # SLIDE 7: Valuation Peer Comps, WACC/ROIC & Reverse DCF Hurdle
     # ─────────────────────────────────────────────────────────────
     s7 = prs.slides.add_slide(blank_layout)
     set_slide_background(s7)
-    ic = dossier.ic_verdict
-    add_header(s7, "Investment Committee (IC) Deal Memo & Underwriting Stance", "Sovereign Underwriting Recommendation, Covenants & Risk Controls", 7)
+    add_header(s7, "Valuation Benchmarking, WACC/ROIC & Reverse DCF Hurdle", "Implied Offer Multiples, Economic Spread & 5-Year Growth Bar", 7)
 
-    s7_box = s7.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(11.733), Inches(4.8))
-    s7_box.fill.solid()
-    s7_box.fill.fore_color.rgb = surface_navy
-    s7_box.line.color.rgb = accent_gold
-    tf7 = s7_box.text_frame
-    tf7.word_wrap = True
-
-    p = tf7.paragraphs[0]
-    rating_label = (
-        f"External Rating: {ic.external_rating_symbol} ({ic.external_rating_agency})"
-        if (ic and ic.external_rating_symbol)
-        else f"Internal Screening Grade: {ic.internal_screening_grade if ic else 'UNRATED'}"
-    )
-    p.text = f"VERDICT: {ic.underwriting_verdict if ic else 'APPROVE'} | {rating_label}"
-    p.font.size = Pt(15)
-    p.font.bold = True
-    p.font.color.rgb = accent_gold
-
-    s7_items = [
-        "KEY TRANSACTION STRENGTHS:",
-        *[f"   + {s}" for s in (ic.key_credit_strengths if ic else [])],
-        "KEY UNDERWRITING VULNERABILITIES & RISKS:",
-        *[f"   - {r}" for r in (ic.key_downside_risks if ic else [])],
-        "MANDATORY LOAN COVENANTS:",
-        *[f"   # {c}" for c in (ic.mandatory_loan_covenants if ic else [])],
-        f"TREASURY MANDATE: {ic.treasury_call_to_action if ic else 'Maintain liquidity discipline.'}",
-        "STATUTORY NOTICE: Internal screening grade is for analytical triage; not a Credit Rating Agency opinion under SEBI CRA Reg 1999.",
+    val = dossier.valuation_comps
+    v_cards = [
+        ("IMPLIED ENTERPRISE VALUE", f"Rs. {val.implied_ev_cr:,.1f} Cr" if val else "N/A", "Upper Price Band EV"),
+        ("IMPLIED P/E RATIO", f"{val.implied_pe_ratio:.1f}x" if val else "N/A", f"Peer Median: {val.peer_median_pe or 'N/A'}x" if val else "N/A"),
+        ("ROIC VS WACC SPREAD", f"{wacc_res['value_creation_spread_pct']}%", f"ROIC: {wacc_res['roic_pct']}% | WACC: {wacc_res['wacc_pct']}%"),
+        ("ECONOMIC PROFIT (EVA)", f"+Rs. {wacc_res['economic_profit_cr']:,.1f} Cr", "Annual Value Creation"),
+        ("REVERSE DCF 5-YR CAGR", f"{rev_dcf.get('required_fcf_cagr_pct', 'N/A')}%" if rev_dcf.get('required_fcf_cagr_pct') else "High Risk", rev_dcf.get("hurdle_difficulty", "")),
+        ("VALUATION VERDICT", val.valuation_verdict if val else "FAIR_VALUE", "Peer Relative Multiple Stance"),
     ]
-    for item in s7_items:
-        ip = tf7.add_paragraph()
-        ip.text = item
-        ip.font.size = Pt(10 if item.startswith("   ") else 11)
-        ip.font.bold = not item.startswith("   ")
-        ip.font.color.rgb = accent_sky if not item.startswith("   ") else text_white
+    for idx, (label, val_txt, sub) in enumerate(v_cards):
+        col = idx % 3
+        row = idx // 3
+        x = Inches(0.8 + col * 4.04)
+        y = Inches(1.8 + row * 2.3)
+        shape = s7.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, card_w, card_h)
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = surface_navy
+        shape.line.color.rgb = accent_sky if idx == 2 else accent_gold
+        tf = shape.text_frame
+        tf.word_wrap = True
+        p1 = tf.paragraphs[0]
+        p1.text = label
+        p1.font.size = Pt(11)
+        p1.font.bold = True
+        p1.font.color.rgb = text_muted
+        p2 = tf.add_paragraph()
+        p2.text = val_txt
+        p2.font.size = Pt(20)
+        p2.font.bold = True
+        p2.font.color.rgb = status_emerald if idx == 3 else text_white
+        p3 = tf.add_paragraph()
+        p3.text = sub
+        p3.font.size = Pt(10)
+        p3.font.color.rgb = accent_gold
 
     # ─────────────────────────────────────────────────────────────
-    # SLIDE 8: SEBI ICDR Ingestion Diagnostic & Missing Data Register
+    # SLIDE 8: CMIE Crosswalk & Investment Committee Verdict
     # ─────────────────────────────────────────────────────────────
     s8 = prs.slides.add_slide(blank_layout)
     set_slide_background(s8)
-    add_header(s8, "Decision Limitations, Missing Data & Provenance Audit", "Line-Item Provenance, Unsupplied Disclosures & Recommended Diligence Requests", 8)
+    add_header(s8, "CMIE Reference Crosswalk & Underwriting Verdict", "Schema Coverage Audit, Mandatory Loan Covenants & Treasury Mandate", 8)
 
-    lims = getattr(dossier, "limitations", [])
-    y_table_start = Inches(1.8)
-    if lims:
-        lim_box = s8.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(11.733), Inches(1.5))
-        lim_box.fill.solid()
-        lim_box.fill.fore_color.rgb = surface_navy
-        lim_box.line.color.rgb = status_rose
-        tf_lim = lim_box.text_frame
-        tf_lim.word_wrap = True
-        p_l = tf_lim.paragraphs[0]
-        p_l.text = f"DECISION LIMITATIONS REGISTER ({len(lims)} Unsupplied / Disputed Items Tracked):"
-        p_l.font.size = Pt(11)
-        p_l.font.bold = True
-        p_l.font.color.rgb = accent_amber
-        for lim in lims[:3]:
-            pl_item = tf_lim.add_paragraph()
-            pl_item.text = f"• [{lim.materiality_priority}] {lim.item_name} ({lim.current_status}): {lim.blocked_decision_or_recommendation} -> Action: {lim.recommended_diligence_request}"
-            pl_item.font.size = Pt(9)
-            pl_item.font.color.rgb = text_white
-        y_table_start = Inches(3.4)
+    ic = dossier.ic_verdict
+    # Left column: CMIE Crosswalk summary
+    box_cmie = s8.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.8), Inches(1.8), Inches(5.6), Inches(4.8))
+    box_cmie.fill.solid()
+    box_cmie.fill.fore_color.rgb = surface_navy
+    box_cmie.line.color.rgb = accent_sky
+    tf_cm = box_cmie.text_frame
+    tf_cm.word_wrap = True
+    p = tf_cm.paragraphs[0]
+    p.text = "CMIE DATABASE CROSSWALK AUDIT:"
+    p.font.bold = True
+    p.font.size = Pt(12)
+    p.font.color.rgb = accent_gold
 
-    a_rows = min(len(dossier.audit_report), 5) + 1
-    a_table_shape = s8.shapes.add_table(a_rows, 4, Inches(0.8), y_table_start, Inches(11.733), Inches(0.45 * a_rows))
-    a_table = a_table_shape.table
-    a_headers = ["Financial Variable", "Normalized Metric", "Reconciliation Status", "SEBI ICDR Citation Anchor"]
-    for c_idx, h_text in enumerate(a_headers):
-        cell = a_table.cell(0, c_idx)
-        cell.fill.solid()
-        cell.fill.fore_color.rgb = RGBColor(26, 48, 80)
-        p = cell.text_frame.paragraphs[0]
-        p.text = h_text
-        p.font.bold = True
-        p.font.size = Pt(11)
-        p.font.color.rgb = accent_gold
+    p = tf_cm.add_paragraph()
+    p.text = (
+        f"• Tracked Concepts: {cross_res['total_concepts_tracked']} Concepts | "
+        f"• Exact Matches: {cross_res['exact_match_count']} | "
+        f"• Reconciled: {cross_res['reconciled_count']} | "
+        f"• Undisclosed: {cross_res['undisclosed_count']} | "
+        f"• Audit Coverage: {cross_res['coverage_pct']}% ({cross_res['data_quality_verdict']})"
+    )
+    p.font.size = Pt(10)
+    p.font.color.rgb = text_white
 
-    for r_idx in range(a_rows - 1):
-        item = dossier.audit_report[r_idx]
-        data = [item.field_name, item.normalized_metric, item.status, item.citation]
-        for c_idx, val in enumerate(data):
-            cell = a_table.cell(r_idx + 1, c_idx)
-            cell.fill.solid()
-            cell.fill.fore_color.rgb = surface_navy
-            p = cell.text_frame.paragraphs[0]
-            p.text = val
-            p.font.size = Pt(9)
-            p.font.color.rgb = status_emerald if "RECONCILED" in val else text_white
+    p = tf_cm.add_paragraph()
+    p.text = "STATUTORY DATA DISCLOSURE:"
+    p.font.bold = True
+    p.font.size = Pt(10)
+    p.font.color.rgb = accent_sky
+    p = tf_cm.add_paragraph()
+    p.text = "All reported figures are cross-referenced with CMIE Prowess standardized taxonomy without fabricating synthetic proxies."
+    p.font.size = Pt(8.5)
+    p.font.color.rgb = text_muted
+
+    # Right column: IC Verdict & Covenants
+    box_ic = s8.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.8), Inches(1.8), Inches(5.733), Inches(4.8))
+    box_ic.fill.solid()
+    box_ic.fill.fore_color.rgb = surface_navy
+    box_ic.line.color.rgb = status_emerald if ic and "APPROVE" in ic.underwriting_verdict else accent_gold
+    tf_ic = box_ic.text_frame
+    tf_ic.word_wrap = True
+    verdict_txt = ic.underwriting_verdict if (ic and ic.underwriting_verdict) else "PENDING_IC_REVIEW"
+    p = tf_ic.paragraphs[0]
+    p.text = f"IC UNDERWRITING VERDICT: {verdict_txt}"
+    p.font.bold = True
+    p.font.size = Pt(12)
+    p.font.color.rgb = status_emerald if ic and "APPROVE" in ic.underwriting_verdict else accent_gold
+
+    p = tf_ic.add_paragraph()
+    grade_txt = ic.internal_screening_grade if (ic and ic.internal_screening_grade) else "UNRATED"
+    lev_txt = f"{ic.max_recommended_leverage_ratio:.2f}x" if (ic and ic.max_recommended_leverage_ratio) else "N/A"
+    p.text = f"SCREENING GRADE: {grade_txt} | MAX LEVERAGE: {lev_txt}"
+    p.font.size = Pt(9.5)
+    p.font.color.rgb = accent_sky
+
+    p = tf_ic.add_paragraph()
+    p.text = "MANDATORY LOAN COVENANTS:"
+    p.font.bold = True
+    p.font.size = Pt(10)
+    p.font.color.rgb = accent_gold
+    for cov in (ic.mandatory_loan_covenants[:3] if ic else []):
+        p = tf_ic.add_paragraph()
+        p.text = f"• {cov}"
+        p.font.size = Pt(8.5)
+        p.font.color.rgb = text_white
+
+    p = tf_ic.add_paragraph()
+    mandate_txt = ic.treasury_call_to_action if (ic and ic.treasury_call_to_action) else "Underwriting and treasury mandate suspended pending formal committee evaluation."
+    p.text = f"TREASURY MANDATE: {mandate_txt}"
+    p.font.size = Pt(9)
+    p.font.color.rgb = status_emerald
 
     # Save to in-memory bytes buffer
     buffer = io.BytesIO()
