@@ -18,8 +18,8 @@ def attribute_inventory(reference, extracted):
         state = "MISSING" if not item or item.get("value") is None else "DISPUTED" if item.get("disputed") else "EXTRACTED_UNVERIFIED"
         if item and item.get("not_applicable") is True:
             state = "NOT_APPLICABLE_REVIEW_REQUIRED"
-        elif item and item.get("reviewed") is True and item.get("source_id") and item.get("locator") and state == "EXTRACTED_UNVERIFIED":
-            state = "REVIEWED"
+        elif item and item.get("reviewed") is True and state == "EXTRACTED_UNVERIFIED":
+            state = "SOURCE_REVIEW_REQUIRED"
         rows.append({"attribute_id": attribute["id"], "label": attribute.get("label", attribute["id"]), "state": state,
                      "extraction": item, "next_action": "Resolve or source missing attribute" if state != "REVIEWED" else "Verify semantic basis against model requirement"})
     return Result("MAPPED", {"reference_version": reference["version"], "attributes": rows,

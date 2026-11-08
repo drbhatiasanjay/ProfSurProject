@@ -37,6 +37,16 @@ def _render_content():
     persona = st.selectbox("Your decision perspective", list(PERSONAS))
     st.write(PERSONAS[persona])
     editable = role in {"admin", "researcher"}
+    handoff=st.session_state.get("ipo_evidence_handoff")
+    if handoff and handoff.get("owner")==owner:
+        st.info("A source-review snapshot is ready. Applying it starts a new unsaved case; existing saved cases remain available.")
+        if st.button("Apply prepared evidence case",disabled=not editable):
+            _clear_model_fields()
+            st.session_state.ipo_depth_bundle=handoff["context"]
+            st.session_state.pop("ipo_depth_report",None)
+            st.session_state.pop("ipo_depth_saved",None)
+            st.session_state.pop("ipo_evidence_handoff",None)
+            st.rerun()
     if st.button("New private case", disabled=not editable):
         _clear_model_fields()
         st.session_state.ipo_depth_bundle = template()
@@ -137,6 +147,9 @@ def _render_content():
         st.caption("Why these inputs: " + followup)
         st.caption("Enter only the named inputs for this method. Rates use decimals (0.10 = 10%). Structured lists preserve dated events, security rights and scenarios; absent inputs remain missing.")
         current = bundle.get("models", {}).get(method, {"inputs": {}, "evidence_ids": []})
+        binding=bundle.get("model_fact_bindings",{}).get(method)
+        if binding:
+            st.caption("Prefilled from reviewed snapshot "+binding["snapshot_id"][:12]+" · "+json.dumps(binding["context"],ensure_ascii=False)+". Review this period and definition before adding assumptions.")
         with st.form("ipo_depth_model_" + method):
             fields = {}
             st.caption("Enter numbers as decimals. Text fields need no quotation marks. Structured events, scenarios and classes use JSON lists/objects. Leave optional inputs blank to use the displayed method default.")

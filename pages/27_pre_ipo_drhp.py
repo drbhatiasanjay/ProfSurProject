@@ -49,6 +49,9 @@ st.set_page_config(
 )
 
 # Independent additive workflow; the existing terminal remains the default.
+if "pre_ipo_target_workspace" in st.session_state:
+    st.session_state["pre_ipo_workspace"] = st.session_state.pop("pre_ipo_target_workspace")
+
 with st.container(key="pre_ipo_workspace_switch"):
     if st.session_state.get("theme") == "light":
         render_html('''<style>
@@ -56,7 +59,11 @@ with st.container(key="pre_ipo_workspace_switch"):
         .st-key-pre_ipo_workspace_switch label p,
         .st-key-pre_ipo_workspace_switch [data-testid="stWidgetLabel"] p { color: #0f172a !important; }
         </style>''')
-    workspace = st.radio("Pre-IPO workspace", ["Existing Pre-IPO terminal", "Decision-depth workbench"], horizontal=True, key="pre_ipo_workspace")
+    workspace = st.radio("Pre-IPO workspace", ["Existing Pre-IPO terminal", "Facts & evidence review", "Decision-depth workbench"], horizontal=True, key="pre_ipo_workspace")
+if workspace == "Facts & evidence review":
+    from components.pre_ipo_evidence_review import render
+    render()
+    st.stop()
 if workspace == "Decision-depth workbench":
     from components.pre_ipo_decision_workbench import render
     render()
@@ -235,17 +242,13 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
 # ─────────────────────────────────────────────────────────────────────────────
 # TOP HERO SLICER & DEAL SELECTION
 # ─────────────────────────────────────────────────────────────────────────────
-from models.pre_ipo_custom_store import (
-    load_all_custom_dossiers,
-    save_custom_dossier,
-    delete_custom_dossier,
-    sanitize_deal_id,
-)
+from models import pre_ipo_evidence as ledger
+from datetime import date
 
-# Load persistent user-ingested custom dossiers from disk & register in PRE_IPO_REGISTRY
-custom_dossiers = load_all_custom_dossiers()
-for c_id, c_dossier in custom_dossiers.items():
-    PRE_IPO_REGISTRY[c_id] = c_dossier
+user = st.session_state.get("user", {})
+owner = user.get("username", "")
+role = user.get("role", "")
+owner_companies = ledger.companies(owner) if owner else {}
 
 deal_options = {
     "ntpc_green": "NTPC Green Energy Ltd. (RHP Nov 2024 · ₹7,500 Cr Debt Prepayment / ₹10,000 Cr Fresh)",
@@ -255,10 +258,8 @@ deal_options = {
     "tata_technologies": "Tata Technologies Ltd. (DRHP 2023 · Zero Debt · ER&D)",
 }
 
-# Dynamically populate ingested prospectuses in the active dossier dropdown
-for c_id, c_dossier in custom_dossiers.items():
-    issue_cr = f"₹{c_dossier.total_issue_size_cr:,.0f} Cr" if c_dossier.total_issue_size_cr else "DRHP"
-    deal_options[c_id] = f"{c_dossier.company_name} ({c_dossier.filing_type} · {issue_cr} · Ingested)"
+for cid, prof in owner_companies.items():
+    deal_options[cid] = f"{prof.company_name} (Private Evidence · {prof.filing_type})"
 
 deal_options["custom_upload"] = "+ Ingest New DRHP / RHP PDF Document..."
 
@@ -312,6 +313,13 @@ with col_pers:
         key="pre_ipo_persona_selector",
     )
 
+# If user selected a private company from the dropdown, route to Facts & evidence review
+if selected_deal_key.startswith("private-"):
+    st.session_state["evidence_company"] = selected_deal_key
+    st.session_state["ev_active_company"] = selected_deal_key
+    st.session_state["pre_ipo_target_workspace"] = "Facts & evidence review"
+    st.rerun()
+
 dossier = None
 if selected_deal_key == "custom_upload":
     col_up1, col_up2 = st.columns([3, 2])
@@ -322,6 +330,14 @@ if selected_deal_key == "custom_upload":
             help="Supports electronic searchable PDFs and scanned image DRHPs via multimodal AI vision.",
         )
         custom_company_name = st.text_input("Company Name / Filing Entity", value="Novel Enterprise Limited")
+        col_m1, col_m2, col_m3 = st.columns(3)
+        with col_m1:
+            filing_type = st.selectbox("Filing Type", ["DRHP", "RHP", "Prospectus", "Draft Shelf Prospectus"], index=0)
+        with col_m2:
+            filing_version = st.text_input("Filing Version / Date", value=f"Draft 1.0 ({date.today().strftime('%b %Y')})")
+        with col_m3:
+            filing_rights = st.text_input("Retention Rights Declaration", value="Public Regulatory Filing (SEBI ICDR 2018)")
+        filing_avail_date = date.today()
     with col_up2:
         from models.runtime_config import get_gemini_api_key
         has_gemini = bool(get_gemini_api_key())
@@ -343,22 +359,30 @@ if selected_deal_key == "custom_upload":
             vision_model = PreIPOIngestionEngine.get_vision_model_name()
             st.success(f"Multimodal Vision OCR configured ({vision_model}, ready on upload)", icon=":material/check_circle:")
 
-    if custom_dossiers:
-        with st.expander(f":material/library_books: Saved Prospectuses Library ({len(custom_dossiers)} Ingested Deals in Dropdown)", expanded=True):
-            st.caption("Manage saved DRHP prospectuses stored on this system. You can open any dossier directly or delete outdated filings.")
-            for lib_id, lib_dos in list(custom_dossiers.items()):
+    if owner_companies:
+        with st.expander(f":material/library_books: Your Private Ingested Prospectuses ({len(owner_companies)} in Evidence Ledger)", expanded=True):
+            st.caption("Owner-scoped private filings. Manage or review facts against retained PDF sources.")
+            for lib_id, lib_prof in list(owner_companies.items()):
                 col_lib1, col_lib2, col_lib3 = st.columns([4, 1.2, 1.2])
                 with col_lib1:
-                    st.markdown(f"**{lib_dos.company_name}**")
-                    st.caption(f"{lib_dos.filing_type} {lib_dos.filing_date} · Total Issue: ₹{lib_dos.total_issue_size_cr:,.1f} Cr · Status: All Audit Gates Passed")
+                    st.markdown(f"**{lib_prof.company_name}**")
+                    periods_str = ", ".join(p.fiscal_year for p in lib_prof.history)
+                    st.caption(f"{lib_prof.filing_type} · Sector: {lib_prof.sector} · Periods: {periods_str}")
                 with col_lib2:
-                    if st.button("Open Deal", icon=":material/open_in_new:", key=f"lib_open_{lib_id}", use_container_width=True):
-                        st.session_state["target_deal_selector"] = lib_id
+                    if st.button("Review Facts", icon=":material/fact_check:", key=f"lib_open_{lib_id}", use_container_width=True):
+                        st.session_state["evidence_company"] = lib_id
+                        st.session_state["ev_active_company"] = lib_id
+                        st.session_state["pre_ipo_target_workspace"] = "Facts & evidence review"
                         st.rerun()
                 with col_lib3:
-                    if st.button("Delete", icon=":material/delete:", key=f"lib_del_{lib_id}", use_container_width=True, help="Permanently remove from dropdown"):
-                        delete_custom_dossier(lib_id)
-                        st.rerun()
+                    is_viewer = role not in {"admin", "researcher"}
+                    if st.button("Delete", icon=":material/delete:", key=f"lib_del_{lib_id}", use_container_width=True, disabled=is_viewer, help="Remove from private ledger" if not is_viewer else "Viewers cannot delete"):
+                        try:
+                            ledger.delete_company(owner, role, lib_id)
+                            st.success("Deleted.")
+                            st.rerun()
+                        except PermissionError as exc:
+                            st.error(str(exc))
 
     if uploaded_file is not None:
         import hashlib, io, time
@@ -392,18 +416,38 @@ if selected_deal_key == "custom_upload":
                 extract_trigger = st.button("Run Automated Prospectus Extraction & Forensic Audit", icon=":material/play_arrow:", type="primary", use_container_width=True)
 
             if extract_trigger:
-                with st.spinner("Extracting disclosures & executing line-by-line forensic validation..."):
+                if not owner:
+                    st.error("Please sign in to ingest filings into your private evidence workspace.")
+                    st.stop()
+                if role not in {"admin", "researcher"}:
+                    st.error("Read-only profile: Viewers cannot ingest or upload private prospectuses.")
+                    st.stop()
+
+                with st.spinner("Extracting disclosures & persisting to owner evidence ledger..."):
                     dossier_res = PreIPOIngestionEngine.ingest_document(
                         io.BytesIO(file_bytes),
                         company_name_hint=custom_company_name,
                     )
-                deal_key = sanitize_deal_id(dossier_res.company_name)
-                dossier_res.deal_id = deal_key
-                save_custom_dossier(deal_key, dossier_res)
-                PRE_IPO_REGISTRY[deal_key] = dossier_res
+                    metadata = {
+                        "title": f"{custom_company_name} {filing_type}",
+                        "filing_type": filing_type,
+                        "version": filing_version,
+                        "available_by": str(filing_avail_date),
+                        "rights": filing_rights,
+                        "official_url": "Uploaded document",
+                        "issuer": custom_company_name,
+                        "retention_policy": "Retained for Pre-IPO diligence",
+                    }
+                    company_id = ledger.import_dossier(
+                        owner, role, custom_company_name, dossier_res, file_bytes, metadata
+                    )
+
                 st.session_state[cache_key] = dossier_res
                 st.session_state[extracted_flag_key] = True
-                st.session_state["target_deal_selector"] = deal_key
+                st.session_state["ev_pending_company"] = company_id
+                st.session_state["evidence_company"] = company_id
+                st.session_state["ev_active_company"] = company_id
+                st.session_state["pre_ipo_target_workspace"] = "Facts & evidence review"
                 st.rerun()
             else:
                 st.info("Click **'Run Automated Prospectus Extraction & Forensic Audit'** above to begin automated parsing and validation.", icon=":material/info:")
@@ -481,50 +525,6 @@ if selected_deal_key == "custom_upload":
         st.stop()
 else:
     dossier = PRE_IPO_REGISTRY[selected_deal_key]
-    if selected_deal_key in custom_dossiers:
-        col_ing1, col_ing2 = st.columns([5, 1])
-        with col_ing1:
-            render_html(
-                f"""
-                <div class="bento-card" style="border: 1px solid rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05); padding: 14px 20px; margin-bottom: 20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <span style="font-size:0.75rem; text-transform:uppercase; color:#10b981; font-weight:700;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">check_circle</span>Ingested Prospectus Dossier · Active Deal</span>
-                            <div style="font-size:1.15rem; font-weight:700; color:#f8fafc; margin-top:2px;">{dossier.company_name}</div>
-                            <div style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">
-                                Filing: <b>{dossier.filing_type} {dossier.filing_date}</b> &bull; Total Issue: <b>₹{dossier.total_issue_size_cr:,.1f} Cr (100% OFS)</b> &bull; Confidence Score: <b style="color:#10b981;">95%</b>
-                            </div>
-                        </div>
-                        <div style="text-align:right;">
-                            <span style="display:inline-block; padding:4px 12px; border-radius:12px; background:rgba(16,185,129,0.2); color:#10b981; font-size:0.8rem; font-weight:700; border:1px solid rgba(16,185,129,0.4);">
-                                ALL AUDIT GATES PASSED
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        with col_ing2:
-            st.write("")
-            confirm_del_key = f"confirm_del_{selected_deal_key}"
-            if not st.session_state.get(confirm_del_key, False):
-                if st.button("Delete Deal", icon=":material/delete:", key=f"del_btn_{selected_deal_key}", type="secondary", use_container_width=True, help="Permanently delete this ingested prospectus and remove it from the dropdown"):
-                    st.session_state[confirm_del_key] = True
-                    st.rerun()
-            else:
-                st.markdown("<div style='font-size:0.75rem; color:#ef4444; font-weight:700; text-align:center;'>Confirm delete?</div>", unsafe_allow_html=True)
-                col_y, col_n = st.columns(2)
-                with col_y:
-                    if st.button("Yes", key=f"del_yes_{selected_deal_key}", type="primary", use_container_width=True):
-                        delete_custom_dossier(selected_deal_key)
-                        st.session_state.pop(confirm_del_key, None)
-                        st.session_state["target_deal_selector"] = "ntpc_green"
-                        st.rerun()
-                with col_n:
-                    if st.button("No", key=f"del_no_{selected_deal_key}", use_container_width=True):
-                        st.session_state.pop(confirm_del_key, None)
-                        st.rerun()
 
 intake_gaps = [item for item in dossier.limitations if item.gap_id.startswith(("GAP-OCR-", "GAP-INTAKE-"))]
 if intake_gaps or not dossier.history:
