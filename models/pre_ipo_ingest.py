@@ -605,6 +605,11 @@ class PreIPOIngestionEngine:
             return None
 
     @classmethod
+    def extract_from_text(cls, text: str, company_name_hint: Optional[str] = None):
+        dossier = cls.ingest_document(text, company_name_hint=company_name_hint)
+        return dossier, dossier.audit_report, dossier.limitations, {}
+
+    @classmethod
     def ingest_document(
         cls,
         document_source: Any,
@@ -632,32 +637,37 @@ class PreIPOIngestionEngine:
         extracted_text, page_count = "", 0
         pages_text: List[Tuple[int, str]] = []
         if document_source is not None:
-            try:
-                import pypdf
-                stream = document_source
-                if isinstance(document_source, (str, os.PathLike)):
-                    if os.path.exists(document_source):
-                        stream = open(document_source, "rb")
-                elif hasattr(document_source, "read"):
-                    pos = document_source.tell() if hasattr(document_source, "tell") else 0
+            if isinstance(document_source, str) and not os.path.exists(document_source) and ("\n" in document_source or "\t" in document_source or len(document_source) > 20):
+                extracted_text = document_source
+                pages_text = [(1, document_source)]
+                page_count = 1
+            else:
+                try:
+                    import pypdf
                     stream = document_source
-                    if hasattr(document_source, "seek"):
-                        document_source.seek(pos)
-                elif isinstance(document_source, bytes):
-                    stream = io.BytesIO(document_source)
+                    if isinstance(document_source, (str, os.PathLike)):
+                        if os.path.exists(document_source):
+                            stream = open(document_source, "rb")
+                    elif hasattr(document_source, "read"):
+                        pos = document_source.tell() if hasattr(document_source, "tell") else 0
+                        stream = document_source
+                        if hasattr(document_source, "seek"):
+                            document_source.seek(pos)
+                    elif isinstance(document_source, bytes):
+                        stream = io.BytesIO(document_source)
 
-                reader = pypdf.PdfReader(stream)
-                page_count = len(reader.pages)
-                pages_to_read = min(page_count, 60)
-                for i in range(pages_to_read):
-                    p_text = reader.pages[i].extract_text() or ""
-                    pages_text.append((i + 1, p_text))
-                extracted_text = "\n".join([pt[1] for pt in pages_text])
+                    reader = pypdf.PdfReader(stream)
+                    page_count = len(reader.pages)
+                    pages_to_read = min(page_count, 60)
+                    for i in range(pages_to_read):
+                        p_text = reader.pages[i].extract_text() or ""
+                        pages_text.append((i + 1, p_text))
+                    extracted_text = "\n".join([pt[1] for pt in pages_text])
 
-                if isinstance(document_source, (str, os.PathLike)) and hasattr(stream, "close"):
-                    stream.close()
-            except Exception:
-                extracted_text, page_count = "", 0
+                    if isinstance(document_source, (str, os.PathLike)) and hasattr(stream, "close"):
+                        stream.close()
+                except Exception:
+                    extracted_text, page_count = "", 0
 
         # Scanned / Image-only Document Handling:
         if len(extracted_text.strip()) < 100:
@@ -976,7 +986,15 @@ class PreIPOIngestionEngine:
                                 for p_idx, p_name in enumerate(detected_periods):
                                     if p_idx < len(collected_nums):
                                         num_val, raw_str = collected_nums[p_idx]
-                                        scaled_val = round(num_val * scale, 2)
+                                        local_scale = scale
+                                        line_lower = line.lower()
+                                        if "mn" in line_lower or "million" in line_lower:
+                                            local_scale = 0.1
+                                        elif "lakh" in line_lower or "lac" in line_lower:
+                                            local_scale = 0.01
+                                        elif "cr" in line_lower or "crore" in line_lower:
+                                            local_scale = 1.0
+                                        scaled_val = round(num_val * local_scale, 2)
                                         periods_data[p_name][mkey] = scaled_val
                                         provenance_map[p_name][mkey] = (page_num, line, raw_str)
 
@@ -985,16 +1003,25 @@ class PreIPOIngestionEngine:
             lines = [l.strip() for l in ptext.split("\n") if l.strip()]
             for line in lines:
                 for mkey, mpat in METRIC_PATTERNS:
-                    m_kv = re.search(r"^" + mpat + r"[\s:\|\t]+([-\(\)\d,\.]+)\s*(?:cr|crore|mn|million|%)?$", line, re.IGNORECASE)
+                    m_kv = re.search(r"^" + mpat + r"(?:\s*\([^\)]*\))?[\s:\|\t]+([-\(\)\d,\.]+)\s*(cr|crore|mn|million|lakh|lakhs|%)?", line, re.IGNORECASE)
                     if m_kv:
                         raw_val = m_kv.group(1)
+                        local_u = (m_kv.group(2) or "").lower()
+                        local_scale = scale
+                        line_lower = line.lower()
+                        if "mn" in local_u or "million" in local_u or "mn" in line_lower or "million" in line_lower:
+                            local_scale = 0.1
+                        elif "lakh" in local_u or "lakh" in line_lower or "lac" in line_lower:
+                            local_scale = 0.01
+                        elif "cr" in local_u or "crore" in local_u or "cr" in line_lower or "crore" in line_lower:
+                            local_scale = 1.0
                         val = cls._clean_financial_number(raw_val)
                         if val is not None:
                             target_p = detected_periods[0] if detected_periods else "FY24"
                             if target_p not in periods_data:
                                 periods_data[target_p] = {}
                                 provenance_map[target_p] = {}
-                            scaled_val = round(val * scale, 2)
+                            scaled_val = round(val * local_scale, 2)
                             periods_data[target_p][mkey] = scaled_val
                             provenance_map[target_p][mkey] = (page_num, line, raw_val)
 
@@ -1014,7 +1041,7 @@ class PreIPOIngestionEngine:
             lines = [l.strip() for l in ptext.split("\n") if l.strip()]
             for i, line in enumerate(lines):
                 for dkey, dpat in DEBT_PATTERNS:
-                    m_inline = re.search(r"^" + dpat + r"[\s:\|\t]+([-\(\)\d,\.]+)", line, re.IGNORECASE)
+                    m_inline = re.search(r"^" + dpat + r"(?:\s*\([^\)]*\))?[\s:\|\t]+([-\(\)\d,\.]+)", line, re.IGNORECASE)
                     if m_inline and dkey not in debt_items:
                         raw_d = m_inline.group(1)
                         val = cls._clean_financial_number(raw_d)
@@ -1044,7 +1071,7 @@ class PreIPOIngestionEngine:
             lines = [l.strip() for l in ptext.split("\n") if l.strip()]
             for i, line in enumerate(lines):
                 for wgkey, wgpat in WC_GOV_PATTERNS:
-                    m_inline = re.search(r"^" + wgpat + r"[\s:\|\t]+([-\(\)\d,\.]+)", line, re.IGNORECASE)
+                    m_inline = re.search(r"^" + wgpat + r"(?:\s*\([^\)]*\))?[\s:\|\t]+([-\(\)\d,\.]+)", line, re.IGNORECASE)
                     if m_inline and wgkey not in wc_gov_items:
                         raw_val = m_inline.group(1)
                         val = cls._clean_financial_number(raw_val)
@@ -1101,16 +1128,16 @@ class PreIPOIngestionEngine:
                 )
             )
 
-            for m_name, m_val in [
-                ("Revenue from Operations", rev),
-                ("Operating EBITDA", eb),
-                ("Profit After Tax (PAT)", pat),
-                ("Cash Flow from Operations (CFO)", cfo),
-                ("Capital Expenditures (Capex)", capex),
-                ("Free Cash Flow (FCF)", fcf),
-                ("Tangible Net Worth", nw),
+            for m_key, m_name, m_val in [
+                ("revenue_ops_cr", "Revenue from Operations", rev),
+                ("ebitda_cr", "Operating EBITDA", eb),
+                ("pat_cr", "Profit After Tax (PAT)", pat),
+                ("cfo_cr", "Cash Flow from Operations (CFO)", cfo),
+                ("capex_cr", "Capital Expenditures (Capex)", capex),
+                ("fcf_cr", "Free Cash Flow (FCF)", fcf),
+                ("net_worth_cr", "Tangible Net Worth", nw),
             ]:
-                if m_name == "Free Cash Flow (FCF)" and "fcf_cr" not in p_dict and ("cfo_cr" in p_dict and "capex_cr" in p_dict):
+                if m_key == "fcf_cr" and "fcf_cr" not in p_dict and ("cfo_cr" in p_dict and "capex_cr" in p_dict):
                     audit_items.append(
                         IngestionAuditItem(
                             field_name=f"{m_name} ({p})",
@@ -1121,12 +1148,12 @@ class PreIPOIngestionEngine:
                             confidence_score=0.95,
                         )
                     )
-                elif m_val != 0.0 or (m_val == 0.0 and m_name in p_dict):
+                elif m_key in p_dict:
                     audit_items.append(
                         IngestionAuditItem(
                             field_name=f"{m_name} ({p})",
-                            raw_extracted_value=f"{m_val:,.2f}",
-                            normalized_metric=f"₹{m_val:,.2f} Cr",
+                            raw_extracted_value=f"{m_val:,.2f}" if m_val is not None else "0.00",
+                            normalized_metric=f"₹{m_val:,.2f} Cr" if m_val is not None else "₹0.00 Cr",
                             status="FOUND_AND_RECONCILED",
                             citation=f"Audited Statement ({p})",
                             confidence_score=1.0,
@@ -1196,9 +1223,9 @@ class PreIPOIngestionEngine:
             unsecured_loans_cr=u_loans,
             lease_liabilities_ind_as_116_cr=l_liab,
             cash_and_equivalents_cr=c_cash,
-            weighted_avg_interest_rate_pct=8.0 if t_loans > 0 else None,
-            floating_rate_portion_pct=80.0 if t_loans > 0 else 0.0,
-            fixed_rate_portion_pct=20.0 if t_loans > 0 else 0.0,
+            weighted_avg_interest_rate_pct=None,
+            floating_rate_portion_pct=None,
+            fixed_rate_portion_pct=None,
         )
 
         # Working Capital & Governance Objects
@@ -1213,14 +1240,14 @@ class PreIPOIngestionEngine:
             net_working_capital_pct_sales=0.0,
         )
 
-        pledge_val = wc_gov_items.get("pledge", (0.0,))[0]
-        rpt_val = wc_gov_items.get("rpt", (0.0,))[0]
-        top5_val = wc_gov_items.get("top5", (0.0,))[0]
-        indep_val = wc_gov_items.get("indep", (50.0,))[0]
+        pledge_val = wc_gov_items.get("pledge", (None,))[0] if "pledge" in wc_gov_items else None
+        rpt_val = wc_gov_items.get("rpt", (None,))[0] if "rpt" in wc_gov_items else None
+        top5_val = wc_gov_items.get("top5", (None,))[0] if "top5" in wc_gov_items else None
+        indep_val = wc_gov_items.get("indep", (None,))[0] if "indep" in wc_gov_items else None
         governance_obj = NonFinancialGovernance(
-            promoter_pledge_pct=pledge_val,
-            related_party_transactions_pct_rev=rpt_val,
-            top_5_customer_concentration_pct=top5_val,
+            promoter_pledge_pct=pledge_val or 0.0,
+            related_party_transactions_pct_rev=rpt_val or 0.0,
+            top_5_customer_concentration_pct=top5_val or 0.0,
             herfindahl_hhi_index=0.0,
             contingent_liabilities_pct_networth=0.0,
             independent_directors_pct=indep_val,
@@ -1242,7 +1269,8 @@ class PreIPOIngestionEngine:
             )
         else:
             latest = history[-1]
-            if latest.revenue_ops_cr == 0.0:
+            latest_dict = periods_data.get(latest.fiscal_year, {})
+            if "revenue_ops_cr" not in latest_dict:
                 limitations.append(
                     DecisionLimitationItem(
                         gap_id="GAP-INTAKE-REV-01",
@@ -1255,7 +1283,7 @@ class PreIPOIngestionEngine:
                         recommended_diligence_request="Confirm revenue line item in restated financial statements.",
                     )
                 )
-            if latest.ebitda_cr == 0.0:
+            if "ebitda_cr" not in latest_dict:
                 limitations.append(
                     DecisionLimitationItem(
                         gap_id="GAP-INTAKE-EBITDA-01",
@@ -1268,7 +1296,7 @@ class PreIPOIngestionEngine:
                         recommended_diligence_request="Confirm operating EBITDA disclosure in prospectus.",
                     )
                 )
-            if latest.cfo_cr == 0.0:
+            if "cfo_cr" not in latest_dict:
                 limitations.append(
                     DecisionLimitationItem(
                         gap_id="GAP-INTAKE-CFO-01",

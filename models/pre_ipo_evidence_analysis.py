@@ -137,7 +137,21 @@ def workbench_context(snapshot,period=None):
     if len(contexts)>1:
         raise ValueError("Use separate decision cases for incompatible currencies or monetary scales")
     currency,unit=next(iter(contexts),("INR","crore"))
-    context.update(company=snapshot["company_name"],as_of=snapshot["cutoff"],currency=currency,unit=unit,background="Imported from frozen source-review snapshot "+snapshot["id"],evidence_snapshot_id=snapshot["id"],source_review_qualification=snapshot["review_policy"])
+    canonical_cid = snapshot.get("company") or snapshot.get("company_id")
+    legal_name = snapshot.get("company_name") or canonical_cid
+    context.update(
+        company_id=canonical_cid,
+        company=canonical_cid,
+        company_name=legal_name,
+        legal_name=legal_name,
+        as_of=snapshot["cutoff"],
+        currency=currency,
+        unit=unit,
+        background="Imported from frozen source-review snapshot "+snapshot["id"],
+        snapshot_id=snapshot["id"],
+        evidence_snapshot_id=snapshot["id"],
+        source_review_qualification=snapshot["review_policy"]
+    )
     context["extracted_attributes"]=[{"attribute_id":f["id"],"value":f["value"],"reviewed":True,"source_id":f["source"]["id"],"locator":f["source"]["locator"],"fact_revision":f["revision"],"context":f["context"]} for f in selected]
     context["evidence"]=[{"id":f["id"],"citation":f["source"]["id"],"locator":f"PDF {f['source']['page']}: {f['source']['locator']}","available_by":f["available_by"],"origin_id":f["origin_id"],"review_state":"accepted"} for f in selected]
     context["gaps"]=[{"attribute":g["fact_id"],"mandatory":True,"next_action":g["next_action"]} for g in snapshot["assessment"]["gaps"]]

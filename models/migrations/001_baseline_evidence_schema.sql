@@ -65,3 +65,4 @@ CREATE TABLE IF NOT EXISTS pre_ipo_evidence_action_events (
     payload TEXT NOT NULL,
     PRIMARY KEY(owner, company, action_id, revision)
 );
+

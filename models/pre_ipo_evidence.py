@@ -1,3 +1,4 @@
+import uuid
 """Private, append-only Pre-IPO source and fact ledger. No cloud model calls."""
 from contextlib import contextmanager
 from dataclasses import dataclass, field, asdict
@@ -54,6 +55,7 @@ class EvidenceProfile:
     filing_date: str = "NOT_ESTABLISHED"
     cmie_crosswalk: list = field(default_factory=list)
     background: object = None
+    generation: int = 1
 
 
 def dump(value):
@@ -142,11 +144,15 @@ def _as_of(conn,owner,company,cutoff):
     if not cutoff:
         return _latest(conn,owner,company)
     date.fromisoformat(cutoff)
-    source_dates={r["id"]:json.loads(r["metadata"])["available_by"] for r in conn.execute("SELECT id,metadata FROM pre_ipo_sources WHERE owner=? AND company=?",(owner,company))}
+    source_dates={r[0]:json.loads(r[1])["available_by"] for r in conn.execute("SELECT id,metadata FROM pre_ipo_sources WHERE owner=? AND company=? AND status='ACTIVE'",(owner,company))}
     chosen={}
     for row in conn.execute("SELECT fact_id,payload FROM pre_ipo_fact_events WHERE owner=? AND company=? ORDER BY fact_id,revision DESC",(owner,company)):
         item=json.loads(row[1]); source_id=item.get("source",{}).get("id")
-        if item["id"] in chosen or source_id and source_dates.get(source_id,"")>cutoff:
+        if item["id"] in chosen:
+            continue
+        if source_id and (source_id not in source_dates or (cutoff and source_dates.get(source_id,"")>cutoff)):
+            continue
+        if item.get("review") == "WITHDRAWN":
             continue
         chosen[item["id"]]=item
     return list(chosen.values())
@@ -169,7 +175,13 @@ def create_company(owner,role,name,sector,periods):
     profile=EvidenceProfile(name.strip()[:300],sector.strip()[:300],[EvidencePeriod(p.strip()) for p in periods])
     key="private-"+digest({"name":name.strip(),"sector":sector.strip(),"periods":periods})[:20]
     with connection() as conn:
-        conn.execute("INSERT OR IGNORE INTO pre_ipo_company_profiles(owner,id,payload) VALUES(?,?,?)",(owner,key,dump(asdict(profile))))
+        max_tomb_gen = conn.execute(
+            "SELECT MAX(generation) FROM pre_ipo_tombstones WHERE owner=? AND company=? AND target_kind='COMPANY'",
+            (owner, key)
+        ).fetchone()[0] or 0
+        new_gen = max_tomb_gen + 1
+        conn.execute("INSERT OR REPLACE INTO pre_ipo_company_profiles(owner,id,payload,generation,status) VALUES(?,?,?,?, 'ACTIVE')",
+                     (owner,key,dump(asdict(profile)),new_gen))
     return key
 
 
@@ -188,6 +200,12 @@ def get_deletion_impact(owner, company_id):
         snaps_cnt = conn.execute("SELECT COUNT(*) FROM pre_ipo_evidence_snapshots WHERE owner=? AND company=?", (owner, company_id)).fetchone()[0]
         dec_cols = [r[1] for r in conn.execute("PRAGMA table_info(pre_ipo_decision_versions)").fetchall()]
         dec_cnt = conn.execute("SELECT COUNT(*) FROM pre_ipo_decision_versions WHERE owner=? AND company_id=?", (owner, company_id)).fetchone()[0] if "company_id" in dec_cols else 0
+        act_cnt = conn.execute("""
+            SELECT COUNT(*) FROM pre_ipo_decision_actions 
+            WHERE owner=? AND (company_id=? OR case_id IN (
+                SELECT case_id FROM pre_ipo_decision_versions WHERE owner=? AND company_id=?
+            ))
+        """, (owner, company_id, owner, company_id)).fetchone()[0] if "company_id" in dec_cols else 0
         return {
             "exists": True,
             "company_id": company_id,
@@ -201,6 +219,7 @@ def get_deletion_impact(owner, company_id):
                 "observations": obs_cnt,
                 "snapshots": snaps_cnt,
                 "saved_decisions": dec_cnt,
+                "decision_actions": act_cnt,
             }
         }
 
@@ -236,8 +255,14 @@ def delete_company(owner, role, company_id):
         conn.execute("DELETE FROM pre_ipo_evidence_snapshots WHERE owner=? AND company=?", (owner, company_id))
         conn.execute("DELETE FROM pre_ipo_dependencies WHERE owner=? AND company=?", (owner, company_id))
 
-        # Purge dependent saved decisions
+        # Purge dependent saved decisions AND decision actions
         try:
+            conn.execute("""
+                DELETE FROM pre_ipo_decision_actions 
+                WHERE owner=? AND (company_id=? OR case_id IN (
+                    SELECT case_id FROM pre_ipo_decision_versions WHERE owner=? AND company_id=?
+                ))
+            """, (owner, company_id, owner, company_id))
             conn.execute("DELETE FROM pre_ipo_decision_versions WHERE owner=? AND company_id=?", (owner, company_id))
         except Exception:
             pass
@@ -245,9 +270,12 @@ def delete_company(owner, role, company_id):
         # Purge profile itself
         conn.execute("DELETE FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company_id))
 
-        # Record non-reconstructive audit tombstone
-        conn.execute("INSERT OR REPLACE INTO pre_ipo_tombstones (owner, target_kind, target_id, generation, action, actor) VALUES (?, 'COMPANY', ?, ?, 'DELETE', ?)",
-                     (owner, company_id, curr_gen + 1, owner))
+        # Record non-reconstructive unique audit tombstone
+        tomb_id = str(uuid.uuid4())
+        conn.execute("""
+            INSERT INTO pre_ipo_tombstones (id, owner, company, target_kind, target_id, generation, action, actor)
+            VALUES (?, ?, ?, 'COMPANY', ?, ?, 'DELETE', ?)
+        """, (tomb_id, owner, company_id, company_id, curr_gen, owner))
         conn.commit()
     return True
 
@@ -268,14 +296,19 @@ def delete_source(owner, role, company_id, source_id):
         conn.execute("UPDATE pre_ipo_jobs SET status='CANCELLED' WHERE owner=? AND company=? AND source_id=? AND status IN ('QUEUED', 'RUNNING')",
                      (owner, company_id, source_id))
 
-        # Purge artifacts, observations, and source row
+        # Purge artifacts, observations, extraction runs, fact events, and source row
         conn.execute("DELETE FROM pre_ipo_artifacts WHERE owner=? AND company=? AND source_id=?", (owner, company_id, source_id))
         conn.execute("DELETE FROM pre_ipo_observations WHERE owner=? AND company=? AND source_id=?", (owner, company_id, source_id))
+        conn.execute("DELETE FROM pre_ipo_extraction_runs WHERE owner=? AND company=? AND json_extract(payload, '$.source_id')=?", (owner, company_id, source_id))
+        conn.execute("DELETE FROM pre_ipo_fact_events WHERE owner=? AND company=? AND (json_extract(payload, '$.source.id')=? OR json_extract(payload, '$.origin_id')=?)", (owner, company_id, source_id, source_id))
         conn.execute("DELETE FROM pre_ipo_sources WHERE owner=? AND company=? AND id=?", (owner, company_id, source_id))
 
-        # Record tombstone
-        conn.execute("INSERT OR REPLACE INTO pre_ipo_tombstones (owner, target_kind, target_id, generation, action, actor) VALUES (?, 'SOURCE', ?, ?, 'DELETE', ?)",
-                     (owner, source_id, curr_gen + 1, owner))
+        # Record unique company-scoped tombstone
+        tomb_id = str(uuid.uuid4())
+        conn.execute("""
+            INSERT INTO pre_ipo_tombstones (id, owner, company, target_kind, target_id, generation, action, actor)
+            VALUES (?, ?, ?, 'SOURCE', ?, ?, 'DELETE', ?)
+        """, (tomb_id, owner, company_id, source_id, curr_gen + 1, owner))
         conn.commit()
     return True
 
@@ -300,9 +333,33 @@ def withdraw_source(owner, role, company_id, source_id, reason="Superseded by up
         conn.execute("UPDATE pre_ipo_observations SET review_state='WITHDRAWN' WHERE owner=? AND company=? AND source_id=?",
                      (owner, company_id, source_id))
 
-        # Record tombstone
-        conn.execute("INSERT OR REPLACE INTO pre_ipo_tombstones (owner, target_kind, target_id, generation, action, reason, actor) VALUES (?, 'SOURCE', ?, ?, 'WITHDRAW', ?, ?)",
-                     (owner, source_id, curr_gen + 1, reason, owner))
+        # Withdraw / supersede all fact events referencing this source
+        affected_facts = conn.execute("""
+            SELECT fact_id, MAX(revision), payload FROM pre_ipo_fact_events 
+            WHERE owner=? AND company=? AND (
+                json_extract(payload, '$.source.id')=? OR json_extract(payload, '$.origin_id')=?
+            )
+            GROUP BY fact_id
+        """, (owner, company_id, source_id, source_id)).fetchall()
+
+        for fid, max_rev, p_raw in affected_facts:
+            p = json.loads(p_raw) if isinstance(p_raw, str) else p_raw
+            p["review"] = "WITHDRAWN"
+            p["presence"] = "NOT_DISCLOSED"
+            p["reason"] = f"Withdrawn with source {source_id}: {reason}"
+            p["revision"] = max_rev + 1
+            p["updated_at"] = datetime.now(timezone.utc).isoformat()
+            conn.execute(
+                "INSERT INTO pre_ipo_fact_events(owner, company, fact_id, revision, payload) VALUES(?,?,?,?,?)",
+                (owner, company_id, fid, max_rev + 1, dump(p))
+            )
+
+        # Record unique company-scoped tombstone
+        tomb_id = str(uuid.uuid4())
+        conn.execute("""
+            INSERT INTO pre_ipo_tombstones (id, owner, company, target_kind, target_id, generation, action, reason, actor)
+            VALUES (?, ?, ?, 'SOURCE', ?, ?, 'WITHDRAW', ?, ?)
+        """, (tomb_id, owner, company_id, source_id, curr_gen + 1, reason, owner))
         conn.commit()
     return True
 
@@ -311,8 +368,9 @@ def companies(owner):
     actor(owner)
     with connection() as conn:
         output={}
-        for row in conn.execute("SELECT id,payload FROM pre_ipo_company_profiles WHERE owner=? ORDER BY id",(owner,)):
+        for row in conn.execute("SELECT id,payload,generation FROM pre_ipo_company_profiles WHERE owner=? ORDER BY id",(owner,)):
             payload=json.loads(row[1]); payload["history"]=[EvidencePeriod(**p) for p in payload["history"]]
+            payload["generation"] = row[2] if row[2] is not None else 1
             output[row[0]]=EvidenceProfile(**payload)
         return output
 
@@ -385,14 +443,14 @@ def import_dossier(owner,role,legal_name,dossier,content,metadata):
             ))
         conn.execute("""
             INSERT OR REPLACE INTO pre_ipo_jobs (
-                owner, company, job_id, source_id, target_generation, pipeline, profile_hash, status, page_range
-            ) VALUES (?, ?, ?, ?, 1, 'PreIPOIngestionEngine', ?, ?, ?)
-        """, (owner, company, run_id, source_id, run_id[:16], "COMPLETED_WITH_GAPS" if gaps_list else "COMPLETED", f"1-{metadata.get('pages', 1)}"))
+                id, owner, company, source_id, job_type, status, payload_json
+            ) VALUES (?, ?, ?, ?, 'PreIPOIngestionEngine', ?, ?)
+        """, (run_id, owner, company, source_id, "COMPLETED_WITH_GAPS" if gaps_list else "COMPLETED", json.dumps({"target_generation": 1, "profile_hash": run_id[:16], "page_range": f"1-{metadata.get('pages', 1)}"})))
         conn.execute("""
             INSERT OR REPLACE INTO pre_ipo_artifacts (
-                owner, company, source_id, artifact_id, kind, digest, content
-            ) VALUES (?, ?, ?, ?, 'ORIGINAL_PDF', ?, ?)
-        """, (owner, company, source_id, f"art-pdf-{source_id[:16]}", retained["sha256"], content))
+                owner, company, source_id, artifact_id, artifact_type, mime_type, content, metadata_json
+            ) VALUES (?, ?, ?, ?, 'ORIGINAL_PDF', 'application/pdf', ?, ?)
+        """, (owner, company, source_id, f"art-pdf-{source_id[:16]}", content, json.dumps({"digest": retained["sha256"]})))
     return company
 
 
@@ -431,10 +489,12 @@ def seed_dossier(owner, role, company, dossier):
     return len(rows)
 
 
-def _source(conn, owner, company, source_id):
-    row = conn.execute("SELECT metadata,content FROM pre_ipo_sources WHERE owner=? AND company=? AND id=?", (owner,company,source_id)).fetchone()
+def _source(conn, owner, company, source_id, allow_withdrawn=False):
+    row = conn.execute("SELECT metadata, content, status FROM pre_ipo_sources WHERE owner=? AND company=? AND id=?", (owner, company, source_id)).fetchone()
     if not row:
         raise ValueError("Retained owned source required")
+    if not allow_withdrawn and len(row) > 2 and row[2] == "WITHDRAWN":
+        raise ValueError("Source has been withdrawn from reliance")
     metadata, data = json.loads(row[0]), bytes(row[1])
     if digest(data) != metadata["sha256"]:
         raise ValueError("Source hash mismatch")
@@ -479,26 +539,38 @@ def retain_pdf(owner, role, company, content, metadata):
     record = {k: str(v)[:2000] for k,v in metadata.items() if k in required or k in {"official_url", "issuer", "retention_policy"}}
     record.update(id=identity,sha256=sha,pages=pages,bytes=len(content),origin_id=sha,ingested_at=datetime.now(timezone.utc).isoformat())
     with connection() as conn:
-        prof = conn.execute("SELECT status FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company)).fetchone()
+        prof = conn.execute("SELECT status, generation FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company)).fetchone()
         if not prof:
             tomb = conn.execute(
-                "SELECT 1 FROM pre_ipo_tombstones WHERE owner=? AND target_kind='COMPANY' AND target_id=? AND action='DELETE'",
+                "SELECT 1 FROM pre_ipo_tombstones WHERE owner=? AND company=? AND target_kind='COMPANY' AND action='DELETE'",
                 (owner, company)
             ).fetchone()
             if tomb:
                 raise ValueError(f"Company {company} does not exist or has been deleted")
+            max_tomb_gen = conn.execute(
+                "SELECT MAX(generation) FROM pre_ipo_tombstones WHERE owner=? AND company=? AND target_kind='COMPANY'",
+                (owner, company)
+            ).fetchone()[0] or 0
+            new_gen = max_tomb_gen + 1
             default_payload = json.dumps({"name": company, "sector": "General", "history": []})
             conn.execute(
-                "INSERT OR IGNORE INTO pre_ipo_company_profiles(owner, id, payload, generation, status) VALUES(?, ?, ?, 1, 'ACTIVE')",
-                (owner, company, default_payload)
+                "INSERT OR IGNORE INTO pre_ipo_company_profiles(owner, id, payload, generation, status) VALUES(?, ?, ?, ?, 'ACTIVE')",
+                (owner, company, default_payload, new_gen)
             )
         elif prof[0] != "ACTIVE":
             raise ValueError(f"Company {company} is in state {prof[0]} and cannot accept new documents")
+
+        max_src_tomb = conn.execute(
+            "SELECT MAX(generation) FROM pre_ipo_tombstones WHERE owner=? AND company=? AND target_kind='SOURCE' AND target_id=?",
+            (owner, company, identity)
+        ).fetchone()[0] or 0
+        src_gen = max_src_tomb + 1
+
         fam = metadata.get("family") or ("OFFER" if metadata.get("filing_type") in ("DRHP", "RHP") else "FINANCIAL")
         conn.execute("""
-            INSERT OR IGNORE INTO pre_ipo_sources(owner, company, id, metadata, content, family, reporting_period, availability_date)
-            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
-        """, (owner, company, identity, dump(record), content, fam, metadata.get("reporting_period", "FY24"), metadata.get("available_by")))
+            INSERT OR REPLACE INTO pre_ipo_sources(owner, company, id, metadata, content, family, reporting_period, availability_date, generation, status)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE')
+        """, (owner, company, identity, dump(record), content, fam, metadata.get("reporting_period", "FY24"), metadata.get("available_by"), src_gen))
     return identity
 
 
@@ -591,21 +663,31 @@ def save_fact(owner, role, company, fact, expected_revision=0):
         candidate.update(revision=expected_revision+1,reviewer=owner,domain=candidate.get("domain",domain(fact_id)),updated_at=datetime.now(timezone.utc).isoformat())
         # No implicit sharing or second-review claims: this private workspace remains single-review.
         candidate["review_qualification"]="SINGLE_REVIEW"
-        prof = conn.execute("SELECT status FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company)).fetchone()
+        prof = conn.execute("SELECT status, generation FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company)).fetchone()
         if not prof:
             tomb = conn.execute(
-                "SELECT 1 FROM pre_ipo_tombstones WHERE owner=? AND target_kind='COMPANY' AND target_id=? AND action='DELETE'",
+                "SELECT 1 FROM pre_ipo_tombstones WHERE owner=? AND company=? AND target_kind='COMPANY' AND action='DELETE'",
                 (owner, company)
             ).fetchone()
             if tomb:
                 raise ValueError(f"Company {company} does not exist or has been deleted")
+            max_tomb_gen = conn.execute(
+                "SELECT MAX(generation) FROM pre_ipo_tombstones WHERE owner=? AND company=? AND target_kind='COMPANY'",
+                (owner, company)
+            ).fetchone()[0] or 0
+            new_gen = max_tomb_gen + 1
             default_payload = json.dumps({"name": company, "sector": "General", "history": []})
             conn.execute(
-                "INSERT OR IGNORE INTO pre_ipo_company_profiles(owner, id, payload, generation, status) VALUES(?, ?, ?, 1, 'ACTIVE')",
-                (owner, company, default_payload)
+                "INSERT OR IGNORE INTO pre_ipo_company_profiles(owner, id, payload, generation, status) VALUES(?, ?, ?, ?, 'ACTIVE')",
+                (owner, company, default_payload, new_gen)
             )
+            prof = ("ACTIVE", new_gen)
         elif prof[0] != "ACTIVE":
             raise ValueError(f"Company {company} is in state {prof[0]} and cannot accept updates")
+
+        expected_gen = candidate.get("expected_generation")
+        if expected_gen is not None and prof[1] != expected_gen:
+            raise ValueError(f"Company generation changed (expected {expected_gen}, active {prof[1]}); reload before submitting")
         conn.execute("INSERT INTO pre_ipo_fact_events(owner,company,fact_id,revision,payload) VALUES(?,?,?,?,?)",(owner,company,fact_id,candidate["revision"],dump(candidate)))
         conn.execute("""
             INSERT OR REPLACE INTO pre_ipo_observations (
@@ -772,6 +854,24 @@ def snapshot(owner,role,company,dossier,cutoff):
         payload["id"]=digest(payload)
         conn.execute("INSERT INTO pre_ipo_evidence_snapshots(owner,company,id,payload) VALUES(?,?,?,?)",(owner,company,payload["id"],dump(payload)))
     return payload
+
+
+def dossier(owner, company):
+    return companies(owner)[company]
+
+
+def freeze_snapshot(owner, role, company, cutoff):
+    actor(owner, role)
+    dossier = companies(owner)[company]
+    snap = snapshot(owner, role, company, dossier, cutoff)
+    return snap["id"]
+
+
+def get_snapshot(owner, company, snap_id):
+    actor(owner)
+    with connection() as conn:
+        row = conn.execute("SELECT payload FROM pre_ipo_evidence_snapshots WHERE owner=? AND company=? AND id=?", (owner, company, snap_id)).fetchone()
+        return json.loads(row[0]) if row else None
 
 
 def snapshots(owner,company):

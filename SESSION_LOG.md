@@ -1043,3 +1043,24 @@ Authenticated browser checks passed for drbhatia, profsurkumar and skumar: intak
 - **Dual-Environment Evidence Gate**:
   - Local verification: `verified_local_covenant_headroom_dark.png`, `verified_local_covenant_analysis.png`, `verified_local_covenant_playbook.png`.
   - GCP Cloud Run live verification: `verified_gcp_live_covenant_headroom_dark.png`, `verified_gcp_live_covenant_analysis.png`, `verified_gcp_live_covenant_playbook.png`.
+
+### 2026-11-08: Pre-IPO Red-Team In-Progress Audit Remediation (W01–W11)
+- **Branch:** `feature/pre-ipo-multi-doc-ingestion`
+- **Objective:** Fix all 11 adversarial probe defects (W01–W11) identified in `docs/reviews/PRE_IPO_IN_PROGRESS_RED_TEAM_REVIEW_2026-11-08.md`.
+- **Key Remediations:**
+  - W01: Source withdrawal appends superseding withdrawal revisions (`review='WITHDRAWN'`, `presence='NOT_DISCLOSED'`), immediately removing them from `valid_facts` and `assess`.
+  - W02: Source deletion purges all dependent artifacts, observations, extraction runs, and fact events with an immutable audit tombstone. Re-uploading an identical PDF resets facts to `UNREVIEWED`.
+  - W03: Workbench handoff standardizes `company_id=snapshot["company"]` and `snapshot_id=snapshot["id"]`. `save_case` resolves display names to canonical keys before storing.
+  - W04: Company deletion erases all associated decision actions and version records.
+  - W05: Company recreation guarantees strictly monotonic generations (`MAX(tombstone.generation) + 1`), rejecting stale background writes.
+  - W06: Additive table column checks in `models/pre_ipo_migrations.py` execute before index creation. Decision store `_schema` runs migrations automatically.
+  - W07: Bundled field registry as runtime package asset `models/data/pre_ipo_field_bindings.json`, eliminating external docs path dependency.
+  - W08: Model adapter strictly filters for `review_state in ('ACCEPTED', 'AUDITED')`, sorts periods chronologically ascending, and preserves `None` for missing disclosures.
+  - W09: Native electronic extraction reconciles disclosed 0.0 values without false intake gaps and avoids fabricating default interest rates or governance percentages. Added `extract_from_text`.
+  - W10: Projection backfill operates row-wise, uses canonical `source_id`, isolates unlinked facts into `quarantined_orphans`, and is idempotent and resumable.
+  - W11: Migration runner verifies checksum of migration files against recorded `pre_ipo_schema_migrations.checksum`, failing closed on schema drift.
+- **Verification Evidence:**
+  - `tests/test_pre_ipo_red_team_regressions.py`: 11/11 passed (100%).
+  - Pre-IPO multi-suite: 57/57 passed (100%).
+  - Fast smoke suite: 52/52 passed (100%).
+  - Closure report documented at `docs/reviews/PRE_IPO_RED_TEAM_CLOSURE_REPORT_2026-11-08.md`.

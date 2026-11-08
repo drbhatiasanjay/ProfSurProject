@@ -29,12 +29,13 @@ def test_field_registry_loaded_and_complete():
 
 def test_model_adapter_from_observations():
     sample_obs = [
-        {"metric_id": "financial.revenue_operations", "period": "FY24", "value": "1234.0"},
-        {"metric_id": "financial.ebitda_reported", "period": "FY24", "value": "234.0"},
-        {"metric_id": "financial.pat", "period": "FY24", "value": "89.0"},
-        {"metric_id": "financial.equity_and_retained_earnings", "period": "FY24", "value": "678.0"},
-        {"metric_id": "debt.facilities.secured_term_loans", "value": "200.0"},
-        {"metric_id": "debt.cash_restrictions.cash_and_equivalents", "value": "50.0"},
+        {"metric_id": "financial.revenue_operations", "period": "FY24", "value": "1234.0", "review_state": "ACCEPTED"},
+        {"metric_id": "financial.ebitda_reported", "period": "FY24", "value": "234.0", "review_state": "ACCEPTED"},
+        {"metric_id": "financial.pat", "period": "FY24", "value": "89.0", "review_state": "ACCEPTED"},
+        {"metric_id": "financial.cfo", "period": "FY24", "value": "150.0", "review_state": "ACCEPTED"},
+        {"metric_id": "financial.equity_and_retained_earnings", "period": "FY24", "value": "678.0", "review_state": "ACCEPTED"},
+        {"metric_id": "debt.facilities.secured_term_loans", "value": "200.0", "review_state": "ACCEPTED"},
+        {"metric_id": "debt.cash_restrictions.cash_and_equivalents", "value": "50.0", "review_state": "ACCEPTED"},
     ]
 
     dossier = PreIPOModelAdapter.observations_to_dossier("Acme Test Corp", sample_obs)
@@ -51,3 +52,4 @@ def test_model_adapter_from_observations():
     assert analytics["ebitda_cr"] == 234.0
     assert analytics["net_debt_cr"] == 150.0  # 200 - 50
     assert analytics["is_eligible_for_underwriting"] is True
+
