@@ -9,11 +9,14 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime, timezone
 
-def get_db_path() -> str:
-    """Return the active database path, respecting runtime PROFSUR_DB_PATH overrides."""
-    return os.environ.get("PROFSUR_DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "capital_structure.db"))
+_DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "capital_structure.db")
+DB_PATH = os.environ.get("PROFSUR_DB_PATH", _DEFAULT_DB_PATH)
 
-DB_PATH = get_db_path()
+def get_db_path() -> str:
+    """Return the active database path, respecting runtime PROFSUR_DB_PATH overrides or monkeypatched DB_PATH."""
+    if "PROFSUR_DB_PATH" in os.environ:
+        return os.environ["PROFSUR_DB_PATH"]
+    return DB_PATH
 
 
 def is_cmie_lab_enabled() -> bool:
