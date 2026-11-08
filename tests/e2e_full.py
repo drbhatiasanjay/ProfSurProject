@@ -25,14 +25,22 @@ import pytest
 from playwright.sync_api import sync_playwright, Page
 
 BASE        = os.getenv("BASE", "http://localhost:8501")
+if "run.app" in BASE and os.getenv("ALLOW_PRODUCTION_E2E") != "1":
+    raise RuntimeError(
+        "CRITICAL SECURITY GATE: E2E smoke tests are blocked from targeting production Cloud Run "
+        "unless explicitly authorized via ALLOW_PRODUCTION_E2E=1."
+    )
+
 TIMEOUT     = 90_000
 RENDER_WAIT = int(os.getenv("RENDER_WAIT", "10"))
 
+_test_pw    = os.getenv("TEST_AUTH_PASSWORD", "TestEnvPass123!")
+
 USERS = {
-    "drbhatia":     {"password": "Pass@123", "role": "admin"},
-    "profsurkumar": {"password": "Pass@123", "role": "researcher"},
-    "skumar":       {"password": "Pass@123", "role": "researcher"},
-    "sbhatia":      {"password": "Pass@123", "role": "viewer"},
+    "drbhatia":     {"password": _test_pw, "role": "admin"},
+    "profsurkumar": {"password": _test_pw, "role": "researcher"},
+    "skumar":       {"password": _test_pw, "role": "researcher"},
+    "sbhatia":      {"password": _test_pw, "role": "viewer"},
 }
 
 # (sidebar nav link title, roles for which the page is BLOCKED)

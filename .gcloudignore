@@ -48,5 +48,9 @@ docs/
 *.bak*
 NUL
 
-# Only keep secrets.toml for Cloud Run
-!.streamlit/secrets.toml
+# Secrets must NEVER be uploaded to Cloud Build or baked into images
+.streamlit/secrets*.toml
+.env
+.env.*
+*.pem
+*.key

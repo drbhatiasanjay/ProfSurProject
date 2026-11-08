@@ -12,6 +12,8 @@ import io
 import re
 import json
 from typing import Dict, Any, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from enum import Enum
 from models.runtime_config import get_gemini_api_key
 from models.pre_ipo_schema import (
     PreIPODealDossier,
@@ -30,6 +32,63 @@ from models.pre_ipo_schema import (
     ProvenanceRef,
 )
 from models.pre_ipo_data import PRE_IPO_REGISTRY
+
+
+from enum import Enum
+
+class ExtractionState(str, Enum):
+    RECEIVED = "RECEIVED"
+    TEXT_EXTRACTED = "TEXT_EXTRACTED"
+    FACTS_EXTRACTED_UNREVIEWED = "FACTS_EXTRACTED_UNREVIEWED"
+    ACCEPTED_FOR_ANALYSIS = "ACCEPTED_FOR_ANALYSIS"
+    BLOCKED = "BLOCKED"
+
+
+@dataclass(frozen=True)
+class AnalysisEligibility:
+    allowed: bool
+    state: ExtractionState
+    gaps: List[DecisionLimitationItem]
+    reasons: List[str]
+
+
+def assess_analysis_eligibility(dossier: PreIPODealDossier) -> AnalysisEligibility:
+    """
+    Evaluates whether a Pre-IPO deal dossier is eligible for downstream analytics,
+    ratios, lifecycle modeling, and presentation exports.
+    Fail-closed policy: If core financial statements are absent, unparsed, or flagged
+    with blocking intake/OCR gaps, analysis is strictly BLOCKED.
+    """
+    gaps = [item for item in (dossier.limitations or []) if item.gap_id.startswith(("GAP-OCR-", "GAP-INTAKE-"))]
+    reasons = []
+
+    if not dossier.history:
+        reasons.append("No restated financial reporting periods were recognized in the document.")
+        return AnalysisEligibility(allowed=False, state=ExtractionState.BLOCKED, gaps=gaps, reasons=reasons)
+
+    if dossier.ic_verdict.underwriting_verdict == "INSUFFICIENT_DISCLOSURES_UNRATED":
+        reasons.append("Underwriting verdict is INSUFFICIENT_DISCLOSURES_UNRATED due to unverified disclosures.")
+
+    if gaps:
+        for g in gaps:
+            reasons.append(f"[{g.gap_id}] {g.item_name}: {g.why_it_matters}")
+
+    latest = dossier.latest_financials
+    if latest.revenue_ops_cr == 0.0 and latest.ebitda_cr == 0.0 and latest.cfo_cr == 0.0:
+        reasons.append("Core operating financials (Revenue, EBITDA, CFO) are all zero / unextracted.")
+
+    if reasons or gaps:
+        return AnalysisEligibility(allowed=False, state=ExtractionState.BLOCKED, gaps=gaps, reasons=reasons)
+
+    if getattr(dossier, "deal_id", "").startswith(("unverified_", "provisional_")):
+        return AnalysisEligibility(
+            allowed=False,
+            state=ExtractionState.FACTS_EXTRACTED_UNREVIEWED,
+            gaps=gaps,
+            reasons=["Candidates extracted but await human review and sign-off in the Facts & Evidence Review workspace."],
+        )
+
+    return AnalysisEligibility(allowed=True, state=ExtractionState.ACCEPTED_FOR_ANALYSIS, gaps=[], reasons=[])
 
 
 class PreIPOIngestionEngine:
@@ -244,7 +303,15 @@ class PreIPOIngestionEngine:
         cls,
         document_source: Any,
         company_name_hint: Optional[str] = None,
+        allow_external_cloud_ocr: bool = False,
     ) -> Tuple[Optional[PreIPODealDossier], Optional[str]]:
+        """
+        Parses scanned image-only DRHP files using Gemini multimodal vision.
+        Enforces privacy / consent gate (P1-01): Returns EXTERNAL_OCR_CONSENT_REQUIRED
+        unless allow_external_cloud_ocr is explicitly True.
+        """
+        if not allow_external_cloud_ocr:
+            return None, "EXTERNAL_OCR_CONSENT_REQUIRED"
         """
         Parses scanned image-only DRHP files using Gemini 1.5 Flash multimodal vision.
         Returns (dossier, status_code).
@@ -544,6 +611,7 @@ class PreIPOIngestionEngine:
         deal_id_hint: Optional[str] = None,
         company_name_hint: Optional[str] = None,
         is_exemplar_mode: bool = False,
+        allow_external_cloud_ocr: bool = False,
     ) -> PreIPODealDossier:
         """
         Ingests a DRHP/RHP document.
@@ -593,14 +661,18 @@ class PreIPOIngestionEngine:
 
         # Scanned / Image-only Document Handling:
         if len(extracted_text.strip()) < 100:
-            vision_deal, vision_status = cls.parse_scanned_pdf_with_vision(document_source, company_name_hint)
+            vision_deal, vision_status = cls.parse_scanned_pdf_with_vision(document_source, company_name_hint, allow_external_cloud_ocr=allow_external_cloud_ocr)
             if vision_deal is not None:
                 return vision_deal
 
             doc_name = getattr(document_source, "name", "Uploaded Document")
             company_display = company_name_hint.strip() if company_name_hint and company_name_hint.strip() else "Scanned Image Document"
 
-            if vision_status == "PROVIDER_CREDITS_DEPLETED_402":
+            if vision_status == "EXTERNAL_OCR_CONSENT_REQUIRED":
+                ocr_msg = "Cloud OCR consent not authorized. External data transmission to Google Vision API blocked."
+                gap_status = "OCR_CONSENT_REQUIRED"
+                rec_action = "Authorize cloud OCR consent or upload an electronic searchable DRHP PDF."
+            elif vision_status == "PROVIDER_CREDITS_DEPLETED_402":
                 ocr_msg = "HTTP 402: Gemini API prepayment credits are depleted. Please manage project billing at ai.studio/projects or upload an electronic searchable DRHP PDF."
                 gap_status = "PROVIDER_CREDITS_DEPLETED_402"
                 rec_action = "Manage API project billing or upload an electronic searchable DRHP PDF."
@@ -618,7 +690,7 @@ class PreIPOIngestionEngine:
                     field_name="Document Intake Status",
                     raw_extracted_value=f"File: {doc_name} ({page_count} pages read - Scanned Image Layer, 0 electronic characters)",
                     normalized_metric="SCANNED_IMAGE_LAYER",
-                    status="MISSING_UNDISCLOSED",
+                    status="NOT_EXTRACTED",
                     citation="PDF Parser",
                     confidence_score=0.0,
                 ),
@@ -626,24 +698,64 @@ class PreIPOIngestionEngine:
                     field_name="Multimodal OCR Status",
                     raw_extracted_value=ocr_msg,
                     normalized_metric=gap_status,
-                    status="MISSING_UNDISCLOSED",
+                    status="NOT_EXTRACTED",
                     citation="Vision OCR Engine",
                     confidence_score=0.0,
                 ),
                 IngestionAuditItem(
-                    field_name="Section V Restated Financials",
-                    raw_extracted_value="No searchable text or tables found in document",
-                    normalized_metric="UNAVAILABLE",
-                    status="MISSING_UNDISCLOSED",
+                    field_name="Revenue from Operations (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
                     citation="DRHP Section V",
                     confidence_score=0.0,
                 ),
                 IngestionAuditItem(
-                    field_name="Section VI Indebtedness",
-                    raw_extracted_value="No loan schedules identified in document",
-                    normalized_metric="UNAVAILABLE",
-                    status="MISSING_UNDISCLOSED",
-                    citation="DRHP Section VI",
+                    field_name="Operating EBITDA (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Profit After Tax (PAT) (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Cash Flow from Operations (CFO) (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Capital Expenditures (Capex) (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Free Cash Flow (FCF) (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Net Worth (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
                     confidence_score=0.0,
                 ),
             ]
@@ -654,7 +766,7 @@ class PreIPOIngestionEngine:
                     item_name="Scanned Image DRHP / Multimodal OCR Quota",
                     affected_dimension="All Dimensions (P&L, Balance Sheet, Indebtedness, Governance)",
                     current_status=gap_status,
-                    why_it_matters="The uploaded file is a scanned image DRHP without an embedded text layer, and automated OCR is unavailable.",
+                    why_it_matters=f"The uploaded file is a scanned image without an embedded text layer ({ocr_msg}). Financial figures default to 0.0 with comments 'Not extracted'.",
                     blocked_decision_or_recommendation="All credit underwriting, leverage sizing, and valuation conclusions are blocked.",
                     materiality_priority="HIGH",
                     recommended_diligence_request=rec_action,
@@ -663,17 +775,33 @@ class PreIPOIngestionEngine:
                     gap_id="GAP-INTAKE-02",
                     item_name="Audited Financial Statements",
                     affected_dimension="Restated Consolidated Performance",
-                    current_status="NOT_SUPPLIED",
-                    why_it_matters="Historical revenue, EBITDA, and operating cash flow cannot be extracted.",
+                    current_status="NOT_EXTRACTED",
+                    why_it_matters="Historical revenue, EBITDA, and operating cash flow are not extracted and set to 0.0.",
                     blocked_decision_or_recommendation="Cash conversion assessment and Dickinson life-cycle classification cannot be performed.",
                     materiality_priority="HIGH",
-                    recommended_diligence_request="Supply Section V (Financial Information) of the Draft Red Herring Prospectus.",
+                    recommended_diligence_request="Supply Section V (Financial Information) of the Draft Red Herring Prospectus in searchable PDF format.",
                 ),
+            ]
+
+            hist_not_extracted = [
+                FinancialYearMetric(
+                    fiscal_year="FY24",
+                    revenue_ops_cr=0.0,
+                    ebitda_cr=0.0,
+                    pat_cr=0.0,
+                    cfo_cr=0.0,
+                    cfi_cr=0.0,
+                    cff_cr=0.0,
+                    capex_cr=0.0,
+                    fcf_cr=0.0,
+                    net_worth_cr=0.0,
+                    provenance=ProvenanceRef("Section V Restated Financials", 1, "Not extracted", f"Not extracted ({ocr_msg})"),
+                )
             ]
 
             return PreIPODealDossier(
                 deal_id="unverified_scanned_upload",
-                company_name=f"{company_display} [Provisional Intake - Incomplete Disclosures]",
+                company_name=f"{company_display} [Not Extracted - Scanned Image]",
                 sector="Awaiting Financials",
                 filing_type="DRHP (Scanned Image)",
                 filing_date="Current Year",
@@ -681,24 +809,36 @@ class PreIPOIngestionEngine:
                 fresh_issue_cr=0.0,
                 ofs_cr=0.0,
                 face_value_inr=10.0,
-                brlm_bankers=["Unverified"],
+                brlm_bankers=["Not extracted"],
                 exchange_listing=["BSE", "NSE"],
-                history=[],
-                indebtedness=IndebtednessSchedule(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                working_capital=WorkingCapitalDynamics(0.0, 0.0, 0.0, 0.0),
-                governance=NonFinancialGovernance(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                objects_of_offer=ObjectsOfOfferWaterfall(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                history=hist_not_extracted,
+                indebtedness=IndebtednessSchedule(
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    provenance=ProvenanceRef("Section VI Indebtedness", 1, "Not extracted", f"Not extracted ({ocr_msg})")
+                ),
+                working_capital=WorkingCapitalDynamics(
+                    0.0, 0.0, 0.0, 0.0,
+                    provenance=ProvenanceRef("Section V Working Capital", 1, "Not extracted", f"Not extracted ({ocr_msg})")
+                ),
+                governance=NonFinancialGovernance(
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    provenance=ProvenanceRef("Section IV Governance", 1, "Not extracted", f"Not extracted ({ocr_msg})")
+                ),
+                objects_of_offer=ObjectsOfOfferWaterfall(
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    provenance=ProvenanceRef("Section III Objects", 1, "Not extracted", f"Not extracted ({ocr_msg})")
+                ),
                 beneish_forensics=BeneishMScoreRatios(),
                 debt_maturity=DebtMaturityLadder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                valuation_comps=ValuationPeerBenchmarking(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "None", [], "DATA_UNAVAILABLE"),
+                valuation_comps=ValuationPeerBenchmarking(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "None", [], "NOT_EXTRACTED"),
                 ic_verdict=InvestmentCommitteeVerdict(
                     underwriting_verdict="INSUFFICIENT_DISCLOSURES_UNRATED",
                     internal_screening_grade="UNRATED",
                     max_recommended_leverage_ratio=0.0,
                     key_credit_strengths=[],
-                    key_downside_risks=["No electronic text layer found; OCR unavailable."],
+                    key_downside_risks=["No electronic text layer found; financial line items were not extracted and set to 0.0."],
                     mandatory_loan_covenants=["Supply searchable electronic DRHP filing."],
-                    treasury_call_to_action="Underwriting blocked pending verifiable financial disclosures.",
+                    treasury_call_to_action="Underwriting blocked: financial metrics not extracted; manual review or searchable PDF required.",
                 ),
                 limitations=limitations,
                 audit_report=audit_report,

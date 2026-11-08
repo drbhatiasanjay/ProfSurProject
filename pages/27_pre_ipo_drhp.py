@@ -19,7 +19,7 @@ from utils.html_blocks import render_html
 import pandas as pd
 import plotly.graph_objects as go
 from models.pre_ipo_data import PRE_IPO_REGISTRY
-from models.pre_ipo_ingest import PreIPOIngestionEngine
+from models.pre_ipo_ingest import PreIPOIngestionEngine, assess_analysis_eligibility, ExtractionState
 from models.pre_ipo_engine import (
     classify_dickinson_stage,
     compute_debt_capacity,
@@ -343,21 +343,20 @@ if selected_deal_key == "custom_upload":
         has_gemini = bool(get_gemini_api_key())
         render_html(
             """
-            <div class="bento-card" style="padding:12px; margin-top:24px;">
-                <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">document_scanner</span>Multimodal Vision OCR Engine</div>
-                <div style="font-size:0.8rem; color:#94a3b8; margin:4px 0;">For scanned image DRHPs lacking native text layer.</div>
+            <div class="bento-card" style="padding:12px; margin-top:24px; border:1px solid rgba(56,189,248,0.25);">
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">account_tree</span>Intake & Document Intelligence</div>
+                <div style="font-size:0.8rem; color:#f8fafc; margin:4px 0; font-weight:600;">1. Native Table Parser &bull; 2. IBM Docling v2.48 &bull; 3. Cloud Vision</div>
+                <div style="font-size:0.75rem; color:#94a3b8; line-height:1.4;">Zero synthetic numbers. Searchable PDFs extract natively without quotas. For non-searchable scans when cloud API quota is depleted, figures default to 0.0 with comments &apos;Not extracted&apos;.</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
         if not has_gemini:
-            ocr_key = st.text_input("Gemini API Key (for Scanned OCR)", type="password", key="gemini_api_key")
-            if ocr_key:
-                st.session_state["gemini_api_key"] = ocr_key
-                st.rerun()
+            st.caption(":material/lock: Optional Cloud OCR key not set. Local extraction active (zero external quota dependency).")
         else:
             vision_model = PreIPOIngestionEngine.get_vision_model_name()
-            st.success(f"Multimodal Vision OCR configured ({vision_model}, ready on upload)", icon=":material/check_circle:")
+            st.caption(f":material/cloud: Cloud Vision configured ({vision_model}). Quota issues (HTTP 402/429) fallback to 0.0 'Not extracted'.")
+            cloud_ocr_consent = st.checkbox("Authorize Cloud OCR for Scanned Files (External Google API Egress)", value=False, key="cloud_ocr_consent_checkbox")
 
     if owner_companies:
         with st.expander(f":material/library_books: Your Private Ingested Prospectuses ({len(owner_companies)} in Evidence Ledger)", expanded=True):
@@ -388,8 +387,10 @@ if selected_deal_key == "custom_upload":
         import hashlib, io, time
         file_bytes = uploaded_file.getvalue()
         file_hash = hashlib.sha256(file_bytes).hexdigest()
-        cache_key = f"pre_ipo_dossier_{file_hash}"
-        extracted_flag_key = f"pre_ipo_extracted_{file_hash}"
+        PARSER_VERSION = "2.2.0"
+        INTAKE_SCHEMA_VERSION = "2.1.0"
+        cache_key = f"pre_ipo_dossier_{file_hash}_{PARSER_VERSION}_{INTAKE_SCHEMA_VERSION}"
+        extracted_flag_key = f"pre_ipo_extracted_{file_hash}_v2_2"
 
         # If not yet extracted, show file readiness card and Extract button
         if not st.session_state.get(extracted_flag_key, False):
@@ -424,9 +425,11 @@ if selected_deal_key == "custom_upload":
                     st.stop()
 
                 with st.spinner("Extracting disclosures & persisting to owner evidence ledger..."):
+                    cloud_consent_val = st.session_state.get("cloud_ocr_consent_checkbox", False)
                     dossier_res = PreIPOIngestionEngine.ingest_document(
                         io.BytesIO(file_bytes),
                         company_name_hint=custom_company_name,
+                        allow_external_cloud_ocr=cloud_consent_val,
                     )
                     metadata = {
                         "title": f"{custom_company_name} {filing_type}",
@@ -526,8 +529,8 @@ if selected_deal_key == "custom_upload":
 else:
     dossier = PRE_IPO_REGISTRY[selected_deal_key]
 
-intake_gaps = [item for item in dossier.limitations if item.gap_id.startswith(("GAP-OCR-", "GAP-INTAKE-"))]
-if intake_gaps or not dossier.history:
+eligibility = assess_analysis_eligibility(dossier)
+if not eligibility.allowed:
     with st.container(key="pre_ipo_intake_gate"):
         if st.session_state.get("theme") == "light":
             render_html('''<style>
@@ -535,9 +538,12 @@ if intake_gaps or not dossier.history:
             .st-key-pre_ipo_intake_gate summary { background: #fff !important; color: #0f172a !important; }
             .st-key-pre_ipo_intake_gate summary p { color: #0f172a !important; }
             </style>''')
-        st.warning("Document intake is incomplete. Ratio calculations, underwriting conclusions and analytical deck export are blocked.")
-        st.dataframe([{"Gap ID": item.gap_id, "Status": item.current_status,
-                       "Required action": item.recommended_diligence_request} for item in intake_gaps], hide_index=True)
+        st.warning(f"Analysis Blocked ({eligibility.state.value}): Document intake is incomplete. Ratio calculations, underwriting conclusions and analytical deck export are strictly blocked.")
+        if eligibility.gaps:
+            st.dataframe([{"Gap ID": item.gap_id, "Status": item.current_status,
+                           "Required action": item.recommended_diligence_request} for item in eligibility.gaps], hide_index=True)
+        for r in eligibility.reasons:
+            st.caption(f":material/block: {r}")
         with st.expander("Document intake diagnostics", expanded=True):
             st.dataframe([{"Field": item.field_name, "Status": item.status,
                            "Detail": item.raw_extracted_value} for item in dossier.audit_report], hide_index=True)

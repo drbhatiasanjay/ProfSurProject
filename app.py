@@ -33,6 +33,11 @@ css_path = os.path.join(os.path.dirname(__file__), "assets", _css_filename)
 if os.path.exists(css_path):
     with open(css_path, "r", encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+st.markdown(
+    '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />'
+    '<style>.material-symbols-rounded { font-family: "Material Symbols Rounded"; font-weight: normal; font-style: normal; font-size: 1.1rem; line-height: 1; letter-spacing: normal; text-transform: none; display: inline-block; white-space: nowrap; word-wrap: normal; direction: ltr; -webkit-font-feature-settings: "liga"; -webkit-font-smoothing: antialiased; vertical-align: middle; }</style>',
+    unsafe_allow_html=True,
+)
 
 # ── Secure LeverageDebtAI authentication ───────────────────────────────────────
 import auth as _auth
@@ -236,7 +241,7 @@ def _login():
     st.markdown(
         """
         <div style="text-align:center;">
-            <div class="auth-brand-badge">⚡ LeverageDebtAI · Powered by EOLABS.IN</div>
+            <div class="auth-brand-badge"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">bolt</span>LeverageDebtAI · Powered by EOLABS.IN</div>
             <h1 class="auth-title">Welcome Back</h1>
             <div class="auth-subtitle">Evidence-led debt &amp; capital structure intelligence</div>
         </div>
@@ -331,22 +336,28 @@ def _login():
         return
 
 
-# Demo recording bypass — PROFSUR_DEMO_SKIP_AUTH=1 auto-authenticates as drbhatia for video production.
-# This env var is ONLY set by the production script; it is never active in normal server operation.
-if os.environ.get("PROFSUR_DEMO_SKIP_AUTH") == "1" and not st.session_state.get("authentication_status"):
-    st.session_state["authentication_status"] = True
-    st.session_state["username"] = "drbhatia"
-    st.session_state["name"] = "Dr. Sanjay Bhatia"
-    st.session_state["auth_user"] = {
-        "username": "drbhatia",
-        "name": "Dr. Sanjay Bhatia",
-        "role": "admin",
-    }
-    st.session_state["user"] = {
-        "name": "Dr. Sanjay Bhatia",
-        "username": "drbhatia",
-        "role": "admin",
-    }
+# Demo recording bypass — PROFSUR_DEMO_SKIP_AUTH=1 auto-authenticates for local offline video production ONLY.
+# Security Invariant (P1-03): Strictly rejected if running on Cloud Run or any production environment.
+if os.environ.get("PROFSUR_DEMO_SKIP_AUTH") == "1":
+    _is_cloud_run = bool(os.environ.get("K_SERVICE") or os.environ.get("K_REVISION") or os.environ.get("GAE_SERVICE"))
+    _is_prod = os.environ.get("ENVIRONMENT", "").lower() == "production"
+    if _is_cloud_run or _is_prod:
+        raise RuntimeError("SECURITY VIOLATION: PROFSUR_DEMO_SKIP_AUTH is strictly forbidden in production or Cloud Run!")
+    
+    if not st.session_state.get("authentication_status"):
+        st.session_state["authentication_status"] = True
+        st.session_state["username"] = "drbhatia"
+        st.session_state["name"] = "Dr. Sanjay Bhatia"
+        st.session_state["auth_user"] = {
+            "username": "drbhatia",
+            "name": "Dr. Sanjay Bhatia",
+            "role": "admin",
+        }
+        st.session_state["user"] = {
+            "name": "Dr. Sanjay Bhatia",
+            "username": "drbhatia",
+            "role": "admin",
+        }
 
 if st.query_params.get("logout") == "1":
     st.session_state.clear()
@@ -654,7 +665,7 @@ _arrow_color = "#4F46E5" if _theme == "light" else "#38BDF8"
 _panel_title = _panel_labels_map.get(_qp_panel, _qp_panel)
 
 _target_theme = "light" if _theme == "dark" else "dark"
-_theme_btn_icon = "☀️" if _theme == "dark" else "🌙"
+_theme_btn_icon = '<span class="material-symbols-rounded" style="font-size:16px; vertical-align:-3px; margin-right:4px;">light_mode</span>' if _theme == "dark" else '<span class="material-symbols-rounded" style="font-size:16px; vertical-align:-3px; margin-right:4px;">dark_mode</span>'
 _theme_btn_label = "Light Mode" if _theme == "dark" else "Dark Mode"
 _theme_btn_bg = "rgba(255, 255, 255, 0.08)" if _theme == "dark" else "rgba(15, 23, 42, 0.06)"
 _theme_btn_border = "rgba(255, 255, 255, 0.16)" if _theme == "dark" else "rgba(15, 23, 42, 0.15)"

@@ -137,7 +137,7 @@ def test_gate_4_non_financial_pdf_flags_missing_gaps():
 
 
 def test_gate_5_scanned_unreadable_pdf_reports_quota_status():
-    """Validates that empty/scanned PDF reports OCR status truthfully without dummy data."""
+    """Validates that empty/scanned PDF defaults to 0.0 with comments Not extracted and reports OCR status truthfully."""
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=letter)
     c.showPage()
@@ -145,11 +145,21 @@ def test_gate_5_scanned_unreadable_pdf_reports_quota_status():
     buf.seek(0)
 
     dossier = PreIPOIngestionEngine.ingest_document(buf)
-    assert len(dossier.history) == 0
+    assert len(dossier.history) == 1
+    h = dossier.history[0]
+    assert h.revenue_ops_cr == 0.0
+    assert h.ebitda_cr == 0.0
+    assert h.pat_cr == 0.0
+    assert h.cfo_cr == 0.0
+    assert h.capex_cr == 0.0
+    assert h.fcf_cr == 0.0
+    assert h.net_worth_cr == 0.0
+    assert "Not extracted" in h.provenance.anchor_text
+    assert any("Not extracted" in item.raw_extracted_value for item in dossier.audit_report)
     assert dossier.ic_verdict.underwriting_verdict == "INSUFFICIENT_DISCLOSURES_UNRATED"
     ocr_gap = next((g for g in dossier.limitations if g.gap_id == "GAP-OCR-01"), None)
     assert ocr_gap is not None
-    assert ocr_gap.current_status in ("PROVIDER_CREDITS_DEPLETED_402", "AWAITING_OCR_KEY", "PARSE_FAILED")
+    assert ocr_gap.current_status in ("PROVIDER_CREDITS_DEPLETED_402", "AWAITING_OCR_KEY", "PARSE_FAILED", "OCR_CONSENT_REQUIRED")
 
 
 def test_gate_6_board_deck_export_eligibility():
@@ -161,3 +171,4 @@ def test_gate_6_board_deck_export_eligibility():
     assert len(deck_bytes) > 20000
     # PPTX files start with PK (ZIP format)
     assert deck_bytes[:2] == b"PK"
+

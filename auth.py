@@ -150,12 +150,7 @@ def bootstrap_legacy_users(credentials: dict) -> None:
                 """
                 INSERT INTO auth_users (id, username, email, phone, password_hash, role, status, email_verified_at, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)
-                ON CONFLICT(username) DO UPDATE SET
-                    email=excluded.email,
-                    password_hash=excluded.password_hash,
-                    role=excluded.role,
-                    status='active',
-                    updated_at=excluded.updated_at
+                ON CONFLICT(username) DO NOTHING
                 """,
                 (str(uuid.uuid5(uuid.NAMESPACE_DNS, f"legacy:{normalized}")), normalized, email, phone, password_hash, record.get("role", "viewer"), now, now, now),
             )

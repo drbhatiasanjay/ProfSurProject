@@ -528,6 +528,8 @@ class PreIPODealDossier:
 
     @property
     def latest_financials(self) -> FinancialYearMetric:
+        if not self.history:
+            return FinancialYearMetric("None", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         return self.history[-1]
 
     @property
