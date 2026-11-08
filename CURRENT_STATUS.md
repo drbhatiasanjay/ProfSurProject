@@ -1,6 +1,7 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 07 November 2026 (Pre-IPO Intelligence & Decision-Depth Algorithm Suite Production Release)  
+**Last Updated:** 08 November 2026 (Pre-IPO Multi-Document Ingestion & Coca-Cola E2E Acceptance Gate Passed)  
+**Active Feature Branch:** `feature/pre-ipo-multi-doc-ingestion` (Unmerged, Verified against `e7209bc`)  
 **Active Baseline Commit:** `ff01761` on `master`  
 **Release Tag:** `v2.3.0` (Synced to `origin/master`)  
 **Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  

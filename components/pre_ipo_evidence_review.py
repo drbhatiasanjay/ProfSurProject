@@ -57,6 +57,11 @@ def render():
     user=st.session_state.get("user",{})
     owner,role=user.get("username",""),user.get("role","")
     if not owner:
+        owner = st.session_state.get("username") or (st.session_state.get("auth_user") or {}).get("username", "")
+        role = (st.session_state.get("auth_user") or {}).get("role", "viewer")
+        if owner and not st.session_state.get("user"):
+            st.session_state["user"] = {"username": owner, "role": role, "name": owner}
+    if not owner:
         st.warning("Sign in to inspect your private evidence workspace.")
         return
     editable=role in {"admin","researcher"}

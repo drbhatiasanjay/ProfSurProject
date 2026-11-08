@@ -51,7 +51,7 @@ db.log_page_visit("Stata Studio V2")
 try:
     st.set_page_config(
         page_title="Stata Studio V2 — LifeCycle Leverage",
-        page_icon="💻",
+        page_icon=":material/terminal:",
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -254,7 +254,7 @@ st.markdown(f"""
     <span style="font-size:0.72rem; font-weight:600; padding:3px 10px; border-radius:999px; background:{'rgba(30,41,59,0.5)' if is_dark else '#F1F5F9'}; border:1px solid {hdr_border}; color:{hdr_sub};">N = {n_firms} Firms</span>
     <span style="font-size:0.72rem; font-weight:600; padding:3px 10px; border-radius:999px; background:{'rgba(30,41,59,0.5)' if is_dark else '#F1F5F9'}; border:1px solid {hdr_border}; color:{hdr_sub};">T = {years[0]}–{years[1]}</span>
     <span style="font-size:0.72rem; font-weight:600; padding:3px 10px; border-radius:999px; background:{'rgba(30,41,59,0.5)' if is_dark else '#F1F5F9'}; border:1px solid {hdr_border}; color:{hdr_sub};">Obs = {n_obs:,}</span>
-    <span style="font-size:0.72rem; font-weight:600; padding:3px 10px; border-radius:999px; background:{'rgba(16,185,129,0.15)' if is_dark else '#ECFDF5'}; border:1px solid {'#065f46' if is_dark else '#A7F3D0'}; color:{accent_green};">Balanced ✓</span>
+    <span style="font-size:0.72rem; font-weight:600; padding:3px 10px; border-radius:999px; background:{'rgba(16,185,129,0.15)' if is_dark else '#ECFDF5'}; border:1px solid {'#065f46' if is_dark else '#A7F3D0'}; color:{accent_green};">Balanced</span>
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -265,17 +265,17 @@ st.markdown("---")
 _run_count = len(st.session_state.get("stata_v2_runs", []))
 _run_badge = f" [{_run_count} Run{'s' if _run_count != 1 else ''}]" if _run_count > 0 else ""
 tab_cli, tab_esttab, tab_coefplot, tab_export = st.tabs([
-    f"💻 1. Command Console & Execution Tree{_run_badge}",
-    "📑 2. Multi-Model Table (esttab)",
-    "📈 3. Coefficient Plot (coefplot)",
-    "💾 4. Replication Bundle Export",
+    f":material/terminal: 1. Command Console & Execution Tree{_run_badge}",
+    ":material/table_chart: 2. Multi-Model Table (esttab)",
+    ":material/trending_up: 3. Coefficient Plot (coefplot)",
+    ":material/archive: 4. Replication Bundle Export",
 ])
 
 # =============================================================================
 # TAB 1: COMMAND CONSOLE & MULTI-TURN TREE (DRIVER)
 # =============================================================================
 with tab_cli:
-    st.markdown("### ⚡ Interactive Stata Command Console & Workbench")
+    st.markdown("### :material/terminal: Interactive Stata Command Console & Workbench")
     st.caption("Select from supported commands or type custom syntax. Click variable chips to insert.")
 
     # 1. Categorized Variable Tray
@@ -369,7 +369,7 @@ with tab_cli:
           {_vname}
         </span>"""
     st.markdown(f"""<div style="padding:8px 4px; display:flex; flex-wrap:wrap;">{_chips_html}</div>""", unsafe_allow_html=True)
-    st.caption("⬆️ Hover chips to see descriptions — use the command box below to type variable names")
+    st.caption("Hover chips to see descriptions — use the command box below to type variable names")
 
     # Clickable chip buttons (hidden below, functional — map each chip to an insert button)
     _click_cols = st.columns(len(active_var_list))
@@ -435,7 +435,7 @@ with tab_cli:
             st.session_state["_trigger_stata_v2_run"] = True
             st.rerun()
     elif selected_cmd and selected_cmd.startswith("──"):
-        st.caption("ℹ️ *Category header selected. Please choose a specific Stata command below this header.*")
+        st.caption("*Category header selected. Please choose a specific Stata command below this header.*")
 
     # 3. Command Input Prompt & Form
     with st.form("stata_v2_command_form", clear_on_submit=False):
@@ -448,7 +448,7 @@ with tab_cli:
                 label_visibility="collapsed",
             )
         with c_in2:
-            run_clicked = st.form_submit_button("▶ Execute", use_container_width=True, type="primary")
+            run_clicked = st.form_submit_button("Execute", icon=":material/play_arrow:", use_container_width=True, type="primary")
 
     # Syntax Assist Guide
     clean_cmd_str = (typed_cmd or "").strip().lstrip(". ")
@@ -483,7 +483,7 @@ with tab_cli:
     # Trigger execution
     if should_run:
         st.session_state["stata_v2_cmd_input"] = clean_cmd_str
-        with st.spinner(f"⏳ Processing Stata command `.{clean_cmd_str}`…"):
+        with st.spinner(f"Processing Stata command `.{clean_cmd_str}`…"):
             t0 = time.time()
             res = execute_stata_command(clean_cmd_str, df=panel_df)
             elapsed = time.time() - t0
@@ -515,12 +515,12 @@ with tab_cli:
             st.rerun()
 
     with c_tree_act:
-        if st.button("⚡ Active Top Only", key="btn_active_only", use_container_width=True):
+        if st.button("Active Top Only", icon=":material/filter_list:", key="btn_active_only", use_container_width=True):
             st.session_state["stata_v2_tree_mode"] = "active_only"
             st.rerun()
 
     with c_tree_clr:
-        if st.button("🗑️ Clear History", key="btn_clear_history", use_container_width=True, help="Clear all executed commands in this session"):
+        if st.button("Clear History", icon=":material/delete_sweep:", key="btn_clear_history", use_container_width=True, help="Clear all executed commands in this session"):
             st.session_state["stata_v2_runs"] = []
             st.session_state.pop("analysis_session_v2", None)
             st.rerun()
@@ -606,7 +606,7 @@ with tab_cli:
 
             # Build header label for expander
             _r2_badge = f" | R² = {r2_val:.3f}" if r2_val is not None else ""
-            header_label = f"{'★ LATEST ' if is_latest else ''}Run #{actual_run_num}: .{run_cmd[:60]}{'…' if len(run_cmd)>60 else ''}{_r2_badge} ({run_obj['elapsed']})"
+            header_label = f"{'[LATEST] ' if is_latest else ''}Run #{actual_run_num}: .{run_cmd[:60]}{'…' if len(run_cmd)>60 else ''}{_r2_badge} ({run_obj['elapsed']})"
 
             with st.expander(header_label, expanded=should_expand):
                 # ── Rich header info strip inside expander ─────────────────
@@ -631,24 +631,24 @@ with tab_cli:
                 # Row-Level Action Buttons
                 c_act1, c_act2, c_act3, _spacer = st.columns([1.4, 1.1, 1.1, 4])
                 with c_act1:
-                    if st.button("▶ Re-run", key=f"rerun_{r_id}", use_container_width=True, type="primary"):
+                    if st.button("Re-run", icon=":material/refresh:", key=f"rerun_{r_id}", use_container_width=True, type="primary"):
                         st.session_state["stata_v2_cmd_input"] = run_cmd
                         st.session_state["_trigger_stata_v2_run"] = True
                         st.rerun()
                 with c_act2:
-                    if st.button("📋 Copy Cmd", key=f"copy_{r_id}", use_container_width=True):
+                    if st.button("Copy Cmd", icon=":material/content_copy:", key=f"copy_{r_id}", use_container_width=True):
                         st.session_state["stata_v2_cmd_input"] = run_cmd
-                        st.toast(f"Copied `.{run_cmd[:40]}` to prompt", icon="📋")
+                        st.toast(f"Copied `.{run_cmd[:40]}` to prompt", icon=":material/check:")
                         st.rerun()
                 with c_act3:
-                    if st.button("🗑️ Delete", key=f"del_{r_id}", use_container_width=True):
+                    if st.button("Delete", icon=":material/delete:", key=f"del_{r_id}", use_container_width=True):
                         st.session_state["stata_v2_runs"] = [r for r in st.session_state["stata_v2_runs"] if r["id"] != r_id]
                         st.rerun()
 
                 st.divider()
 
                 # ── Sub-Section 1: Stata Terminal Output ──────────────────
-                with st.expander("📄 Stata Terminal Output", expanded=True):
+                with st.expander("Stata Terminal Output", icon=":material/terminal:", expanded=True):
                     if isinstance(res, dict) and "ascii_output" in res:
                         st.code(res["ascii_output"], language="text")
                     elif isinstance(res, str):
@@ -662,10 +662,10 @@ with tab_cli:
                 fin_trans = get_financial_translation(run_cmd)
                 _has_findings = bool(fin_trans) and fin_trans != f"Executes econometric evaluation for <code>.{html.escape(run_cmd)}</code>."
 
-                with st.expander("💡 Empirical Findings & Hypothesis Scorecard", expanded=is_latest):
+                with st.expander("Empirical Findings & Hypothesis Scorecard", icon=":material/fact_check:", expanded=is_latest):
                     # Financial translation block
                     st.markdown(f"""
-                    <div style="background:{'rgba(2,132,199,0.08)' if is_dark else '#F0F9FF'}; border:1px solid {'#1e40af' if is_dark else '#BAE6FD'}; padding:10px 14px; border-radius:7px; margin-bottom:10px; font-size:0.83rem; color:{'#e2e8f0' if is_dark else '#0C4A6E'};"><strong>📖 Econometric Translation:</strong> {fin_trans}</div>
+                    <div style="background:{'rgba(2,132,199,0.08)' if is_dark else '#F0F9FF'}; border:1px solid {'#1e40af' if is_dark else '#BAE6FD'}; padding:10px 14px; border-radius:7px; margin-bottom:10px; font-size:0.83rem; color:{'#e2e8f0' if is_dark else '#0C4A6E'};"><strong><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">menu_book</span>Econometric Translation:</strong> {fin_trans}</div>
                     """, unsafe_allow_html=True)
 
                     # Hypothesis metric grid (if regression result present)
@@ -710,7 +710,7 @@ with tab_cli:
 # TAB 2: ESTTAB MULTI-MODEL COMPARISON MATRIX
 # =============================================================================
 with tab_esttab:
-    st.markdown("### 📑 Multi-Model Publication Comparison (esttab / outreg2)")
+    st.markdown("### :material/table_chart: Multi-Model Publication Comparison (esttab / outreg2)")
     st.caption("Side-by-side comparison of all regression models estimated in this active session.")
 
     df_models = get_stored_models_table()
@@ -724,7 +724,8 @@ with tab_esttab:
         with c_dl1:
             latex_str = generate_esttab_latex()
             st.download_button(
-                "📥 Download LaTeX (.tex)",
+                "Download LaTeX (.tex)",
+        icon=":material/download:",
                 data=latex_str,
                 file_name="stata_publication_models.tex",
                 mime="text/plain",
@@ -737,19 +738,21 @@ with tab_esttab:
             if docx_res and os.path.exists(tmp_docx):
                 with open(tmp_docx, "rb") as f_docx:
                     st.download_button(
-                        "📥 Download Word (.docx)",
+                        "Download Word (.docx)",
+        icon=":material/download:",
                         data=f_docx.read(),
                         file_name="stata_publication_table.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                         use_container_width=True,
                     )
             else:
-                st.button("📥 Download Word (.docx) [Unavailable]", disabled=True, use_container_width=True)
+                st.button("Download Word (.docx) [Unavailable]", icon=":material/download:", disabled=True, use_container_width=True)
         with c_dl3:
             csv_buf = io.StringIO()
             df_models.to_csv(csv_buf, index=True)
             st.download_button(
-                "📥 Download CSV / Excel",
+                "Download CSV / Excel",
+        icon=":material/download:",
                 data=csv_buf.getvalue(),
                 file_name="stata_publication_models.csv",
                 mime="text/csv",
@@ -761,7 +764,7 @@ with tab_esttab:
 # TAB 3: COEFFICIENT FOREST PLOT (COEFPLOT)
 # =============================================================================
 with tab_coefplot:
-    st.markdown("### 📈 Visual Coefficient Plots (coefplot)")
+    st.markdown("### :material/trending_up: Visual Coefficient Plots (coefplot)")
     st.caption("Point estimates and 95% confidence intervals across estimated models.")
 
     _df_models_coef = get_stored_models_table()
@@ -812,13 +815,13 @@ with tab_coefplot:
 # TAB 4: REPLICATION BUNDLE EXPORT (.DTA & .DO)
 # =============================================================================
 with tab_export:
-    st.markdown("### 💾 1-Click Stata Replication Bundle (.dta & .do)")
+    st.markdown("### :material/archive: 1-Click Stata Replication Bundle (.dta & .do)")
     st.caption("Download the cleaned panel dataset and a self-contained master Stata do-file.")
 
     c_exp1, c_exp2 = st.columns(2)
 
     with c_exp1:
-        st.markdown("#### 📜 Master Stata Do-File (`replication_master.do`)")
+        st.markdown("#### :material/description: Master Stata Do-File (`replication_master.do`)")
         # Dynamic Do-File Generator from Actual Session Run (SW-12)
         history_cmds = st.session_state.get("stata_cmd_history", [])
         active_vintage = st.session_state.get("panel_mode", "thesis")
@@ -873,7 +876,8 @@ with tab_export:
         do_code = "\n".join(lines) + "\n" 
         st.code(do_code, language="stata")
         st.download_button(
-            "📥 Download `replication_master.do`",
+            "Download `replication_master.do`",
+        icon=":material/download:",
             data=do_code,
             file_name="replication_master.do",
             mime="text/plain",
@@ -881,7 +885,7 @@ with tab_export:
         )
 
     with c_exp2:
-        st.markdown("#### 📊 Cleaned Panel Dataset (`.dta`)")
+        st.markdown("#### :material/table_chart: Cleaned Panel Dataset (`.dta`)")
         st.markdown("""
         Cleaned, balanced panel dataset formatted with 118 Stata schema parity.
         Contains all winsorized ratios, Dickinson lifecycle stages, and macroeconomic dummy indicators.
@@ -891,7 +895,8 @@ with tab_export:
             df_stata = prepare_df_for_stata(panel_df)
             df_stata.to_stata(dta_buf, write_index=False, version=118)
             st.download_button(
-                "📥 Download Stata `.dta` Dataset",
+                "Download Stata `.dta` Dataset",
+        icon=":material/download:",
                 data=dta_buf.getvalue(),
                 file_name="sample_manufacturing_panel.dta",
                 mime="application/x-stata-dta",

@@ -80,3 +80,4 @@ def test_backup_database(temp_db):
     bak_conn.close()
     assert len(rows) == 1
     assert rows[0] == ("test", "c1")
+

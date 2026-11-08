@@ -447,6 +447,13 @@ if selected_deal_key == "custom_upload":
 
                 with st.spinner("Extracting disclosures & persisting to owner evidence ledger..."):
                     cloud_consent_val = st.session_state.get("cloud_ocr_consent_checkbox", False)
+                    from models.pre_ipo_docling import MultiEngineIngestionOrchestrator
+                    # Execute multi-engine orchestrator with Docling benchmark and native fallback
+                    struct_res = MultiEngineIngestionOrchestrator.ingest(
+                        file_bytes,
+                        company_name_hint=custom_company_name,
+                        page_limit=20
+                    )
                     dossier_res = PreIPOIngestionEngine.ingest_document(
                         io.BytesIO(file_bytes),
                         company_name_hint=custom_company_name,
@@ -461,6 +468,9 @@ if selected_deal_key == "custom_upload":
                         "official_url": "Uploaded document",
                         "issuer": custom_company_name,
                         "retention_policy": "Retained for Pre-IPO diligence",
+                        "engine": struct_res.engine,
+                        "engine_version": struct_res.engine_version,
+                        "extraction_status": struct_res.status,
                     }
                     company_id = ledger.import_dossier(
                         owner, role, custom_company_name, dossier_res, file_bytes, metadata

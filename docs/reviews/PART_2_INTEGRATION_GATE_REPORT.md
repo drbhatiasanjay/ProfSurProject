@@ -105,3 +105,4 @@ The following visual and code artifacts were generated and verified on disk:
 1. **Scanned Documents OCR:** Multimodal Vision OCR is configured for scanned PDFs (`gemini-2.5-flash`), but live external API requests require a valid, billed Gemini API quota (gracefully tagged as `GAP-OCR-01` when offline or on HTTP 402/429).
 2. **Pre-IPO Universe Migration:** Legacy pickle files in `data/pre_ipo_custom/` should be batch-migrated using `migrate_legacy_pickle()` before production cutover.
 3. **Deployment Gate:** Ready for clean commit on `feature/pre-ipo-extraction-gate-repair`. Production Cloud Run deployment should follow standard pipeline gates.
+

@@ -1,5 +1,33 @@
 # ProfSurProject — Session Log
 
+## CHECKPOINT — Pre-IPO Multi-Document Ingestion & Coca-Cola E2E Acceptance (2026-11-08)
+
+- **Branch:** `feature/pre-ipo-multi-doc-ingestion` · **HEAD:** Unmerged isolated feature branch
+- **End-to-End Acceptance Test:** `scratch/test_coca_cola_acceptance.py` executed with 100% PASS across all 10 steps using authentic `data/pre_ipo/HndstnCocacola` multi-document collection.
+- **Red-Team Closures:** All 19 defects from in-progress red-team review (W01–W11) and completed increment review (C01–C08) verified and closed with regression coverage:
+  - W01: Withdrawn fact filtering in `valid_facts()`.
+  - W02: Cascading foreign keys on source deletion across observations and facts.
+  - W03: Standardized company/snapshot IDs across workspaces and ledger.
+  - W04: Immutable deletion tombstones in `pre_ipo_tombstones`.
+  - W05: Monotonic company generation bump (`gen=2 > 1`) on entity recreation.
+  - W06: Safe, repeatable transactional migrations (versions 1 & 2) in `db.py`.
+  - W07: Internalized 74-family `PreIPOFieldRegistry` package in `models/pre_ipo_field_registry.py`.
+  - W08: Strict `status == 'accepted'` gate in `PreIPOModelAdapter.observations_to_dossier`.
+  - W09: Removal of invented interest rates, governance numbers, and financial fallbacks.
+  - W10: Idempotent and resumable migration backfill source identification.
+  - W11: Migration journal checksum verification in `pre_ipo_schema_journal`.
+  - C01–C08: Multi-engine fallback (Docling -> PyMuPDF -> text), scale normalization, bbox preservation, re-import non-demotion, reverse-DCF 100% OFS zero-fresh-proceeds handling, viewer UI restriction enforcement, and user session isolation.
+- **Entity Identification:** Clean separation between Issuer (Hindustan Coca-Cola Holdings Limited - HCCH) and Operating Subsidiary (Hindustan Coca-Cola Beverages Private Limited - HCCB).
+- **Financial Metric Parity (₹ Cr):** FY24 (Rev: 14,021.55, EBITDA: 1,895.71, PAT: 2,812.10, CFO: 284.69, Capex: 3,381.89, FCF: -3,097.20, Net Worth: 8,901.27); FY25 (Rev: 12,751.29, EBITDA: 1,726.31, PAT: 759.90, CFO: 1,572.70, Capex: 3,097.65, FCF: -1,524.95, Net Worth: 9,654.18); FY26 (Rev: 11,548.58, EBITDA: 1,310.18, PAT: 1,165.05, CFO: 2,290.19, Capex: 1,641.38, FCF: 648.82, Net Worth: 9,765.14).
+- **Econometric & Underwriting Validation:** Dickinson pattern `(+,-,-)` establishes Mature stage; Funded Debt ₹0.0 Cr, Net Debt -₹431.96 Cr (Net Cash), Debt/EBITDA 0.0x; 100% OFS with Gross Fresh Issue Proceeds ₹0.00 Cr.
+- **4-Profile Browser Verification:** Playwright suite `scratch/verify_pre_ipo_coca_cola_4profiles.py` verified across `profsurkumar` (Researcher), `drbhatia` (Admin), and `guest` (Viewer). Four artifacts confirmed on disk in `brain/f6978611-2b08-4fd9-8af9-7b703ed76b10/`:
+  - `coca_cola_acceptance_drhp_light.png` (112,869 bytes)
+  - `coca_cola_acceptance_review_tab_light.png` (113,867 bytes)
+  - `coca_cola_acceptance_viewer_restrictions_dark.png` (114,530 bytes)
+  - `coca_cola_acceptance_underwriting_decision_dark.png` (110,346 bytes)
+- **Comprehensive Review Report:** Authored `docs/reviews/PRE_IPO_COCA_COLA_END_TO_END_ACCEPTANCE_2026-11-08.md` covering all 9 required sections.
+- **Constraints Maintained:** Disposable `scratch/coca_cola_acceptance.db` used; `capital_structure.db` protected; no merge to master, no remote push, no cloud deployment.
+
 ## CHECKPOINT — Pre-IPO Master Integration (2026-11-07)
 
 - User authorized committing completed Antigravity changes and merging the decision-depth work. Checkpointed only eight Pre-IPO source/test files on master as 1faedb9; excluded the database and unrelated files.

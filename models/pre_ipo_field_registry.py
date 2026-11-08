@@ -153,7 +153,7 @@ class PreIPOModelAdapter:
             if rev_state not in ("ACCEPTED", "AUDITED"):
                 continue
             entity = obs.get("entity") or obs.get("context", {}).get("entity")
-            if entity and company_name and entity.lower() != company_name.lower():
+            if entity and company_name and company_name.lower() not in ("analysis", "default", "") and entity.lower() != company_name.lower():
                 continue
             curr = obs.get("currency") or obs.get("context", {}).get("currency")
             if curr and curr.upper() not in ("INR", "RS", "RUPEES", ""):
@@ -161,7 +161,7 @@ class PreIPOModelAdapter:
             valid_obs.append(obs)
 
         for obs in valid_obs:
-            metric = obs.get("metric_id", "")
+            metric = obs.get("metric_id") or obs.get("id") or ""
             val_raw = obs.get("value")
             if val_raw is None:
                 continue
@@ -175,28 +175,28 @@ class PreIPOModelAdapter:
             if period not in periods_map:
                 periods_map[period] = {"fiscal_year": period}
 
-            # Map financial metrics
-            if metric in ("financial.revenue_operations", "history[0].revenue_ops_cr"):
+            # Map financial metrics (supports canonical IDs and any wildcard history[i] metric)
+            if metric == "financial.revenue_operations" or metric.endswith(".revenue_ops_cr"):
                 periods_map[period]["revenue_ops_cr"] = val
-            elif metric in ("financial.ebitda_reported", "history[0].ebitda_cr"):
+            elif metric == "financial.ebitda_reported" or metric.endswith(".ebitda_cr"):
                 periods_map[period]["ebitda_cr"] = val
-            elif metric in ("financial.pat", "history[0].pat_cr"):
+            elif metric == "financial.pat" or metric.endswith(".pat_cr"):
                 periods_map[period]["pat_cr"] = val
-            elif metric in ("financial.cfo", "history[0].cfo_cr"):
+            elif metric == "financial.cfo" or metric.endswith(".cfo_cr"):
                 periods_map[period]["cfo_cr"] = val
-            elif metric in ("financial.cfi", "history[0].cfi_cr"):
+            elif metric == "financial.cfi" or metric.endswith(".cfi_cr"):
                 periods_map[period]["cfi_cr"] = val
-            elif metric in ("financial.cff", "history[0].cff_cr"):
+            elif metric == "financial.cff" or metric.endswith(".cff_cr"):
                 periods_map[period]["cff_cr"] = val
-            elif metric in ("financial.cash_capex", "history[0].capex_cr"):
+            elif metric == "financial.cash_capex" or metric.endswith(".capex_cr"):
                 periods_map[period]["capex_cr"] = val
-            elif metric in ("financial.fcf", "history[0].fcf_cr"):
+            elif metric == "financial.fcf" or metric.endswith(".fcf_cr"):
                 periods_map[period]["fcf_cr"] = val
-            elif metric in ("financial.equity_and_retained_earnings", "history[0].net_worth_cr"):
+            elif metric == "financial.equity_and_retained_earnings" or metric.endswith(".net_worth_cr"):
                 periods_map[period]["net_worth_cr"] = val
-            elif metric in ("financial.assets_and_liabilities", "history[0].total_assets_cr"):
+            elif metric == "financial.assets_and_liabilities" or metric.endswith(".total_assets_cr"):
                 periods_map[period]["total_assets_cr"] = val
-            elif metric in ("financial.receivables", "history[0].receivables_cr"):
+            elif metric == "financial.receivables" or metric.endswith(".receivables_cr"):
                 periods_map[period]["receivables_cr"] = val
 
             # Map indebtedness metrics
@@ -212,6 +212,16 @@ class PreIPOModelAdapter:
                 debt_fields["cash_and_equivalents_cr"] = val
             elif metric in ("lease.liability_movement", "indebtedness.lease_liabilities_ind_as_116_cr"):
                 debt_fields["lease_liabilities_ind_as_116_cr"] = val
+
+            # Map offer structure metrics
+            elif metric in ("offer_structure.total_issue_size_cr", "offer.issue_size"):
+                debt_fields["total_issue_size_cr"] = val
+            elif metric in ("offer_structure.fresh_issue_cr", "offer.fresh_issue"):
+                debt_fields["fresh_issue_cr"] = val
+            elif metric in ("offer_structure.ofs_cr", "offer.ofs"):
+                debt_fields["ofs_cr"] = val
+            elif metric in ("capital_structure.face_value_inr", "capital.face_value"):
+                debt_fields["face_value_inr"] = val
 
         indebtedness_inst = IndebtednessSchedule(
             secured_term_loans_cr=debt_fields["secured_term_loans_cr"] or 0.0,
@@ -244,10 +254,10 @@ class PreIPOModelAdapter:
             sector="General Pre-IPO Diligence",
             filing_type="DRHP",
             filing_date=None,
-            total_issue_size_cr=None,
-            fresh_issue_cr=None,
-            ofs_cr=None,
-            face_value_inr=None,
+            total_issue_size_cr=debt_fields.get("total_issue_size_cr"),
+            fresh_issue_cr=debt_fields.get("fresh_issue_cr"),
+            ofs_cr=debt_fields.get("ofs_cr"),
+            face_value_inr=debt_fields.get("face_value_inr"),
             brlm_bankers=[],
             exchange_listing=["NSE", "BSE"],
             history=[],

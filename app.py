@@ -730,6 +730,7 @@ st.markdown(f"""
     </a>
     <a
         id="navbar-signout-btn"
+        role="button"
         href="?logout=1"
         style="
             background: {_signout_bg};
@@ -775,6 +776,10 @@ header[data-testid="stHeader"] {{
 section[data-testid="stSidebar"] {{
     top: 112px !important;
     height: calc(100vh - 112px) !important;
+    display: block !important;
+}}
+[data-testid="stSidebarNav"] {{
+    display: block !important;
 }}
 /* Main content below both rows */
 .block-container {{

@@ -317,3 +317,4 @@ erDiagram
 3. **Durability Decision:**
    - SQLite WAL mode with `PRAGMA synchronous = NORMAL` and `PRAGMA busy_timeout = 5000` provides ACID compliance.
    - Stored original PDF bytes remain directly in `pre_ipo_sources` (blobs up to 25MB). Artifact derivatives (Docling JSON, OCR text) reside in `pre_ipo_artifacts`.
+

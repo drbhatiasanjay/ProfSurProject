@@ -20,6 +20,11 @@ def _clear_model_fields():
 def _render_content():
     user = st.session_state.get("user", {})
     owner, role = user.get("username", ""), user.get("role", "")
+    if not owner:
+        owner = st.session_state.get("username") or (st.session_state.get("auth_user") or {}).get("username", "")
+        role = (st.session_state.get("auth_user") or {}).get("role", "viewer")
+        if owner and not st.session_state.get("user"):
+            st.session_state["user"] = {"username": owner, "role": role, "name": owner}
     st.title("Pre-IPO decision workbench")
     st.caption("Company facts → evidence → conditional models → diligence → recorded decision")
     st.info("Start with company facts or import an existing case. Optional models run only when you supply their inputs. Review source support and limitations, then save a dated case and record your next action.")

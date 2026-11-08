@@ -413,22 +413,57 @@ def import_dossier(owner,role,legal_name,dossier,content,metadata):
         "limitations_count": len(gaps_list),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    blocked = any(getattr(g, "gap_id", "").startswith(("GAP-OCR-", "GAP-INTAKE-")) for g in getattr(dossier, "limitations", []))
     with connection() as conn:
         conn.execute("INSERT OR IGNORE INTO pre_ipo_extraction_runs(owner,company,id,payload) VALUES(?,?,?,?)",
                      (owner,company,run_id,dump(run_payload)))
         for row in dossier_attributes(dossier):
-            key=row["attribute_id"]
-            prior=conn.execute("SELECT revision,payload FROM pre_ipo_fact_events WHERE owner=? AND company=? AND fact_id=? ORDER BY revision DESC LIMIT 1",(owner,company,key)).fetchone()
-            previous=json.loads(prior[1]) if prior else {}
-            if previous.get("source",{}).get("id")==source_id and previous.get("intake_fingerprint")==fingerprint:
+            key = row["attribute_id"]
+            prior = conn.execute("SELECT revision,payload FROM pre_ipo_fact_events WHERE owner=? AND company=? AND fact_id=? ORDER BY revision DESC LIMIT 1",(owner,company,key)).fetchone()
+            previous = json.loads(prior[1]) if prior else {}
+            if previous.get("source",{}).get("id") == source_id and previous.get("intake_fingerprint") == fingerprint:
                 continue
-            match=re.match(r"history\[(\d+)\]",key)
-            value=None if blocked else row["value"]
-            item={"id":key,"revision":1,"raw_value":row["value"],"value":value,"presence":"EXTRACTION_FAILED" if blocked else "NOT_SEARCHED" if value is None else "OBSERVED_VALUE","origin":"FILING_FACT","review":"UNREVIEWED","domain":domain(key),"context":{"entity":legal_name,"period":periods[int(match[1])] if match else "NOT_ESTABLISHED","duration":"NOT_ESTABLISHED","basis":"NOT_ESTABLISHED","framework":"NOT_ESTABLISHED","currency":"INR" if key.endswith("_cr") else "NOT_ESTABLISHED","unit":"crore" if key.endswith("_cr") else "NOT_ESTABLISHED","definition":key},"source":{"id":source_id,"sha256":retained["sha256"]},"reason":"Existing intake candidate: defaults, source locations and model confidence are unverified. Original source review required.","reviewer":owner,"dependencies":[],"mapping":{}}
-            item.update(revision=prior[0]+1 if prior else 1,intake_fingerprint=fingerprint,extraction_raw_value=row["value"])
-            if prior:
-                item["raw_value"]=previous.get("raw_value")
-            conn.execute("INSERT INTO pre_ipo_fact_events(owner,company,fact_id,revision,payload) VALUES(?,?,?,?,?)",(owner,company,key,item["revision"],dump(item)))
+            match = re.match(r"history\[(\d+)\]", key)
+            val = row["value"]
+            value = None if blocked else val
+            presence = "EXTRACTION_FAILED" if blocked else ("NOT_SEARCHED" if value is None else "OBSERVED_VALUE")
+            is_prior_accepted = previous.get("review") in ("ACCEPTED", "AUDITED")
+
+            item = {
+                "id": key,
+                "revision": prior[0] + 1 if prior else 1,
+                "raw_value": val,
+                "value": previous.get("value") if is_prior_accepted else value,
+                "presence": previous.get("presence") if is_prior_accepted else presence,
+                "origin": "FILING_FACT",
+                "review": previous.get("review") if is_prior_accepted else "UNREVIEWED",
+                "domain": domain(key),
+                "context": previous.get("context") if is_prior_accepted and previous.get("context") else {
+                    "entity": legal_name,
+                    "period": periods[int(match[1])] if match else "NOT_ESTABLISHED",
+                    "duration": "NOT_ESTABLISHED",
+                    "basis": "NOT_ESTABLISHED",
+                    "framework": "NOT_ESTABLISHED",
+                    "currency": "INR" if key.endswith("_cr") else "NOT_ESTABLISHED",
+                    "unit": "crore" if key.endswith("_cr") else "NOT_ESTABLISHED",
+                    "definition": key
+                },
+                "source": previous.get("source") if is_prior_accepted and previous.get("source") else {"id": source_id, "sha256": retained["sha256"]},
+                "reason": previous.get("reason", "Accepted review preserved across new source intake.") if is_prior_accepted else "Existing intake candidate: defaults, source locations and model confidence are unverified. Original source review required.",
+                "reviewer": previous.get("reviewer", owner) if is_prior_accepted else owner,
+                "dependencies": [],
+                "mapping": {},
+                "intake_fingerprint": fingerprint,
+                "extraction_raw_value": val
+            }
+            if prior and not is_prior_accepted:
+                item["raw_value"] = previous.get("raw_value")
+
+            conn.execute("INSERT INTO pre_ipo_fact_events(owner,company,fact_id,revision,payload) VALUES(?,?,?,?,?)",
+                         (owner, company, key, item["revision"], dump(item)))
+
+            # Record observation scoped by source so multiple sources coexist
+            obs_id = f"{key}:{source_id[:12]}"
             conn.execute("""
                 INSERT OR REPLACE INTO pre_ipo_observations (
                     owner, company, observation_id, revision, source_id, entity, metric_id,
@@ -436,10 +471,11 @@ def import_dossier(owner,role,legal_name,dossier,content,metadata):
                     review_state, provenance_json
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                owner, company, key, item["revision"], source_id, legal_name, key,
+                owner, company, obs_id, item["revision"], source_id, legal_name, key,
                 item["context"]["period"], item["context"]["duration"], item["context"]["basis"],
                 item["context"]["framework"], item["context"]["currency"], item["context"]["unit"],
-                str(value) if value is not None else None, item["presence"], item["review"], dump(item.get("source", {}))
+                str(val) if val is not None else None, presence, "UNREVIEWED" if not is_prior_accepted else previous.get("review"),
+                dump(item.get("source", {}))
             ))
         conn.execute("""
             INSERT OR REPLACE INTO pre_ipo_jobs (

@@ -153,3 +153,4 @@ Executed end-to-end against live Streamlit instance (`http://localhost:8501/`) u
 1. **Part 1 Scope Confirmed:** Part 1 repairs the numerical extraction algorithms, truthful UI feedback, confidence scoring, and audit tabs.
 2. **Part 2 Dependency:** Integrating these candidate extractions directly into the owner-scoped evidence review ledger (`pre_ipo_company_profiles`, `pre_ipo_sources`, `pre_ipo_fact_events`) is strictly governed by Part 2, which will begin now that Part 1 has passed.
 3. **Provider Quota:** Google AI Studio credits remain depleted (HTTP 402). The system truthfully reports `PROVIDER_CREDITS_DEPLETED_402` without falling back to synthetic demonstration data.
+
