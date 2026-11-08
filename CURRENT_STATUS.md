@@ -2,11 +2,11 @@
 
 **Last Updated:** 08 November 2026 23:45 IST (Day-Close & Production Deployment Synced)  
 **Active Branch:** `master` (100% In Sync with `origin/master`)  
-**Active Baseline Commit:** `8b3c075066a0108b65cd9f5d14915abaa387fcc0` on `master`  
+**Active Baseline Commit:** `8be2777` on `master`  
 **Release Tag:** `v2.4.0` (Pre-IPO Multi-Document Ingestion & Full Deletion Lifecycle Release)  
 **Production URL:** `https://lifecycle-leverage-779655496440.us-east1.run.app`  
 **GCP Project:** `tempproject-462219` (Region: `us-east1`)  
-**Active CI Run:** `42509235853` (Test and Deploy: In Progress / Cloud Run Deploy)  
+**Verified CI/CD Run:** `42512766806` (Test and Deploy: SUCCESS / Cloud Run Deployed & Live Verified)  
 **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
 

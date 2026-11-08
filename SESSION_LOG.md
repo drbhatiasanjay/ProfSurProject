@@ -1114,3 +1114,17 @@ Authenticated browser checks passed for drbhatia, profsurkumar and skumar: intak
   - Pre-IPO multi-suite: 57/57 passed (100%).
   - Fast smoke suite: 52/52 passed (100%).
   - Closure report documented at `docs/reviews/PRE_IPO_RED_TEAM_CLOSURE_REPORT_2026-11-08.md`.
+
+
+### Session Checkpoint (09 November 2026 00:40 IST) — Production Deployment & Live Verification
+- **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject` (Branch: `master`)
+- **Deployed Commit:** `8be2777` (`fix(tests): resolve CI test fixture paths, database isolation, and security contract assertions`)
+- **GitHub Actions CI/CD Run:** `42512766806`
+  - `OCaml build + tests (lifecycle-ontology)`: **SUCCESS**
+  - `Run pytest (Python 3.11)`: **SUCCESS** (1,107 passed, 1 skipped, 0 failed in 3m03s)
+  - `Deploy to Cloud Run`: **SUCCESS** (Deployed to `https://lifecycle-leverage-779655496440.us-east1.run.app`)
+- **Authenticated Live Browser Verification Evidence:**
+  - Authenticated as `drbhatia` on production Cloud Run.
+  - Page 27 (Pre-IPO DRHP Intelligence): Verified Hero Header (`NTPC Green Energy Limited (NGEL)`) and multi-document intake tabs. Saved artifact: `verified_gcp_live_pre_ipo_v2_4_0.png` (226 KB).
+  - Page 28 (Covenant Compliance & Debt Headroom Engine): Verified Header (`Covenant Compliance & Debt Headroom Engine`). Saved artifact: `verified_gcp_live_covenant_headroom_v2_4_0.png` (194 KB).
+- **Status:** Release v2.4.0 is fully deployed, authenticated, verified in production, and 100% green.
