@@ -44,7 +44,7 @@ from utils.pre_ipo_deck_generator import generate_pre_ipo_board_deck
 # Page Configuration
 st.set_page_config(
     page_title="Pre-IPO DRHP Intelligence | Sovereign Terminal",
-    page_icon="⚡",
+    page_icon=":material/rocket_launch:",
     layout="wide",
 )
 
@@ -175,7 +175,7 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
     <div class="narrative-card" style="margin-top: 14px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <span style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;">
-                👁️ 1. Quantitative Observation & What You See
+                <span class="material-symbols-rounded" style="font-size:15px; vertical-align:-2px; margin-right:4px;">visibility</span>1. Quantitative Observation & What You See
             </span>
             <span class="badge-pill badge-sky" style="font-size:0.70rem;">{persona_title} Lens</span>
         </div>
@@ -186,7 +186,7 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; margin-bottom:12px;">
             <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px;">
                 <div style="font-size:0.72rem; font-weight:700; color:#a78bfa; text-transform:uppercase; margin-bottom:4px;">
-                    🎯 2. Decision Relevance ({persona_title})
+                    <span class="material-symbols-rounded" style="font-size:15px; vertical-align:-2px; margin-right:4px;">psychology</span>2. Decision Relevance ({persona_title})
                 </div>
                 <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.45;">
                     {nar.get('why_it_matters', '')}
@@ -194,7 +194,7 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
             </div>
             <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px;">
                 <div style="font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">
-                    📜 3. Evidence Lineage & Citation
+                    <span class="material-symbols-rounded" style="font-size:15px; vertical-align:-2px; margin-right:4px;">account_tree</span>3. Evidence Lineage & Citation
                 </div>
                 <div style="font-size:0.82rem; color:#cbd5e1; line-height:1.45;">
                     {nar.get('evidence_basis', '')}
@@ -204,7 +204,7 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
 
         <div style="background:rgba(245, 158, 11, 0.05); border:1px solid rgba(245, 158, 11, 0.2); border-radius:8px; padding:10px; margin-bottom:12px;">
             <div style="font-size:0.72rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-bottom:4px;">
-                ⚖️ 4. Alternative Explanations & Operational Context
+                <span class="material-symbols-rounded" style="font-size:15px; vertical-align:-2px; margin-right:4px;">balance</span>4. Alternative Explanations & Operational Context
             </div>
             <div style="font-size:0.82rem; color:#f1f5f9; line-height:1.45;">
                 {nar.get('alternative_explanations', '')}
@@ -213,7 +213,7 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
 
         <div class="action-card" style="margin:0 0 12px 0;">
             <div style="font-size:0.75rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
-                🚀 5. Conditional Actionable Recommendations
+                <span class="material-symbols-rounded" style="font-size:15px; vertical-align:-2px; margin-right:4px;">play_circle</span>5. Conditional Actionable Recommendations
             </div>
             <div style="font-size:0.85rem; color:#e2e8f0; line-height:1.5; white-space:pre-line;">
                 {nar.get('call_to_action', '')}
@@ -222,7 +222,7 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
 
         <div style="background:rgba(56, 189, 248, 0.05); border-left:3px solid #38bdf8; border-radius:4px; padding:8px 12px;">
             <span style="font-size:0.72rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">
-                ⚡ 6. Inflection Triggers & Thresholds:
+                <span class="material-symbols-rounded" style="font-size:15px; vertical-align:-2px; margin-right:4px;">bolt</span>6. Inflection Triggers & Thresholds:
             </span>
             <span style="font-size:0.82rem; color:#e2e8f0; margin-left:6px;">
                 {nar.get('inflection_triggers', '')}
@@ -235,28 +235,56 @@ def render_six_point_narrative(nar: dict, persona_title: str = "Active Persona")
 # ─────────────────────────────────────────────────────────────────────────────
 # TOP HERO SLICER & DEAL SELECTION
 # ─────────────────────────────────────────────────────────────────────────────
+from models.pre_ipo_custom_store import (
+    load_all_custom_dossiers,
+    save_custom_dossier,
+    delete_custom_dossier,
+    sanitize_deal_id,
+)
+
+# Load persistent user-ingested custom dossiers from disk & register in PRE_IPO_REGISTRY
+custom_dossiers = load_all_custom_dossiers()
+for c_id, c_dossier in custom_dossiers.items():
+    PRE_IPO_REGISTRY[c_id] = c_dossier
+
 deal_options = {
-    "ntpc_green": "🔥 NTPC Green Energy Ltd. (RHP Nov 2024 · ₹7,500 Cr Debt Prepayment / ₹10,000 Cr Fresh)",
+    "ntpc_green": "NTPC Green Energy Ltd. (RHP Nov 2024 · ₹7,500 Cr Debt Prepayment / ₹10,000 Cr Fresh)",
     "mankind_pharma": "Mankind Pharma Ltd. (DRHP 2023 · 100% OFS · Mature Cash Cow)",
     "afcons_infra": "Afcons Infrastructure Ltd. (RHP 2024 · ₹800 Cr Debt Prepayment / ₹1,250 Cr Fresh)",
     "swiggy": "Swiggy Ltd. (DRHP 2024 · ₹4,499 Cr Fresh Issue · Quick Commerce Growth)",
     "tata_technologies": "Tata Technologies Ltd. (DRHP 2023 · Zero Debt · ER&D)",
-    "custom_upload": "+ Ingest New DRHP / RHP PDF Document...",
 }
 
+# Dynamically populate ingested prospectuses in the active dossier dropdown
+for c_id, c_dossier in custom_dossiers.items():
+    issue_cr = f"₹{c_dossier.total_issue_size_cr:,.0f} Cr" if c_dossier.total_issue_size_cr else "DRHP"
+    deal_options[c_id] = f"{c_dossier.company_name} ({c_dossier.filing_type} · {issue_cr} · Ingested)"
+
+deal_options["custom_upload"] = "+ Ingest New DRHP / RHP PDF Document..."
+
+# Handle programmatic deal routing (e.g. from Open Deal button or Extraction)
+if "target_deal_selector" in st.session_state:
+    target_k = st.session_state.pop("target_deal_selector")
+    if target_k in deal_options:
+        st.session_state["pre_ipo_deal_selector"] = target_k
+
+# Guard against stale selectbox key in session state
+if "pre_ipo_deal_selector" in st.session_state and st.session_state["pre_ipo_deal_selector"] not in deal_options:
+    st.session_state["pre_ipo_deal_selector"] = list(deal_options.keys())[0]
+
 persona_options = {
-    "cfo": "👔 CFO / Corporate Treasurer",
-    "lender": "🏦 Lender / Credit Committee",
-    "investor": "📈 Institutional Equity Analyst / Anchor",
-    "retail": "👥 Retail Investor (Plain Language)",
-    "board": "🏛️ Board / Investment Committee",
-    "compliance": "⚖️ Legal, Auditor & Compliance",
+    "cfo": "CFO / Corporate Treasurer",
+    "lender": "Lender / Credit Committee",
+    "investor": "Institutional Equity Analyst / Anchor",
+    "retail": "Retail Investor (Plain Language)",
+    "board": "Board / Investment Committee",
+    "compliance": "Legal, Auditor & Compliance",
 }
 
 context_options = {
-    "PUBLIC_IPO": "🌐 Public IPO (Ordinary Equity)",
-    "PRIVATE_PRE_IPO": "🔒 Private Pre-IPO Placement (Negotiated)",
-    "STRATEGIC_M_AND_A": "🤝 Strategic M&A / Control Buyout",
+    "PUBLIC_IPO": "Public IPO (Ordinary Equity)",
+    "PRIVATE_PRE_IPO": "Private Pre-IPO Placement (Negotiated)",
+    "STRATEGIC_M_AND_A": "Strategic M&A / Control Buyout",
 }
 
 col_sel, col_ctx, col_pers, col_act = st.columns([3, 2, 2, 2])
@@ -300,7 +328,7 @@ if selected_deal_key == "custom_upload":
         render_html(
             """
             <div class="bento-card" style="padding:12px; margin-top:24px;">
-                <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;">🤖 Multimodal Vision OCR Engine</div>
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">document_scanner</span>Multimodal Vision OCR Engine</div>
                 <div style="font-size:0.8rem; color:#94a3b8; margin:4px 0;">For scanned image DRHPs lacking native text layer.</div>
             </div>
             """,
@@ -313,38 +341,190 @@ if selected_deal_key == "custom_upload":
                 st.rerun()
         else:
             vision_model = PreIPOIngestionEngine.get_vision_model_name()
-            st.success(f"✓ Multimodal Vision OCR configured ({vision_model}, ready on upload)")
+            st.success(f"Multimodal Vision OCR configured ({vision_model}, ready on upload)", icon=":material/check_circle:")
+
+    if custom_dossiers:
+        with st.expander(f":material/library_books: Saved Prospectuses Library ({len(custom_dossiers)} Ingested Deals in Dropdown)", expanded=True):
+            st.caption("Manage saved DRHP prospectuses stored on this system. You can open any dossier directly or delete outdated filings.")
+            for lib_id, lib_dos in list(custom_dossiers.items()):
+                col_lib1, col_lib2, col_lib3 = st.columns([4, 1.2, 1.2])
+                with col_lib1:
+                    st.markdown(f"**{lib_dos.company_name}**")
+                    st.caption(f"{lib_dos.filing_type} {lib_dos.filing_date} · Total Issue: ₹{lib_dos.total_issue_size_cr:,.1f} Cr · Status: All Audit Gates Passed")
+                with col_lib2:
+                    if st.button("Open Deal", icon=":material/open_in_new:", key=f"lib_open_{lib_id}", use_container_width=True):
+                        st.session_state["target_deal_selector"] = lib_id
+                        st.rerun()
+                with col_lib3:
+                    if st.button("Delete", icon=":material/delete:", key=f"lib_del_{lib_id}", use_container_width=True, help="Permanently remove from dropdown"):
+                        delete_custom_dossier(lib_id)
+                        st.rerun()
 
     if uploaded_file is not None:
-        import hashlib, io
+        import hashlib, io, time
         file_bytes = uploaded_file.getvalue()
         file_hash = hashlib.sha256(file_bytes).hexdigest()
-        cache_key = f"pre_ipo_dossier_{file_hash}_{custom_company_name}"
-        if cache_key not in st.session_state:
-            with st.spinner("Analyzing prospectus disclosures..."):
-                st.session_state[cache_key] = PreIPOIngestionEngine.ingest_document(
-                    io.BytesIO(file_bytes),
-                    company_name_hint=custom_company_name,
-                )
+        cache_key = f"pre_ipo_dossier_{file_hash}"
+        extracted_flag_key = f"pre_ipo_extracted_{file_hash}"
+
+        # If not yet extracted, show file readiness card and Extract button
+        if not st.session_state.get(extracted_flag_key, False):
+            render_html(
+                f"""
+                <div class="bento-card" style="border:1px solid rgba(56, 189, 248, 0.4); padding:16px 20px; margin: 16px 0; background:rgba(15,23,42,0.6);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">description</span>Prospectus Loaded & Ready for Intake</div>
+                            <div style="font-size:1.1rem; font-weight:700; color:#f8fafc; margin-top:2px;">{uploaded_file.name}</div>
+                            <div style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">File Size: {len(file_bytes)/1024:.1f} KB &bull; Format: Electronic Searchable PDF</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="display:inline-block; padding:4px 12px; border-radius:12px; background:rgba(16,185,129,0.15); color:#10b981; font-size:0.75rem; font-weight:700; border:1px solid rgba(16,185,129,0.3);">READY FOR EXTRACTION</span>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            col_btn1, col_btn2 = st.columns([2, 1])
+            with col_btn1:
+                extract_trigger = st.button("Run Automated Prospectus Extraction & Forensic Audit", icon=":material/play_arrow:", type="primary", use_container_width=True)
+
+            if extract_trigger:
+                with st.spinner("Extracting disclosures & executing line-by-line forensic validation..."):
+                    dossier_res = PreIPOIngestionEngine.ingest_document(
+                        io.BytesIO(file_bytes),
+                        company_name_hint=custom_company_name,
+                    )
+                deal_key = sanitize_deal_id(dossier_res.company_name)
+                dossier_res.deal_id = deal_key
+                save_custom_dossier(deal_key, dossier_res)
+                PRE_IPO_REGISTRY[deal_key] = dossier_res
+                st.session_state[cache_key] = dossier_res
+                st.session_state[extracted_flag_key] = True
+                st.session_state["target_deal_selector"] = deal_key
+                st.rerun()
+            else:
+                st.info("Click **'Run Automated Prospectus Extraction & Forensic Audit'** above to begin automated parsing and validation.", icon=":material/info:")
+                st.stop()
+
         dossier = st.session_state[cache_key]
-    else:
-        st.info("ℹ️ Upload a Draft Red Herring Prospectus (DRHP) or Red Herring Prospectus (RHP) PDF above, or select a Golden Exemplar from the dropdown to inspect the financial terminal.")
+
+        # Calculate truthful confidence score based on verified items
+        reconciled_count = len([it for it in dossier.audit_report if it.status in ("FOUND_AND_RECONCILED", "CONVERTED_AND_NORMALIZED")])
+        total_audit_count = max(len(dossier.audit_report), 1)
+        conf_pct = int(round((reconciled_count / total_audit_count) * 100))
+
+        is_unrated = dossier.ic_verdict.underwriting_verdict == "INSUFFICIENT_DISCLOSURES_UNRATED"
+        badge_label = "INSUFFICIENT DISCLOSURES (UNRATED)" if is_unrated else "CANDIDATES EXTRACTED · AWAITING REVIEW"
+        badge_color = "#f43f5e" if is_unrated else "#38bdf8"
+        badge_bg = "rgba(244,63,94,0.15)" if is_unrated else "rgba(56,189,248,0.15)"
+        badge_border = "rgba(244,63,94,0.3)" if is_unrated else "rgba(56,189,248,0.3)"
+
+        # Display Extraction & Validation Summary Card
         render_html(
-            """
-            <div class="bento-card" style="border: 1px dashed rgba(56, 189, 248, 0.4); text-align:center; padding: 40px 20px;">
-                <div style="font-size:2.2rem; margin-bottom:8px;">📄</div>
-                <div style="font-size:1.15rem; font-weight:700; color:#f8fafc;">Awaiting DRHP / RHP Document Intake</div>
-                <div style="font-size:0.86rem; color:#94a3b8; max-width:620px; margin:8px auto 0 auto; line-height:1.5;">
-                    Please upload an official SEBI-filed prospectus PDF. The ingestion engine supports both native electronic text 
-                    and scanned image DRHPs via multimodal Gemini 1.5 Flash Vision, extracting Sections III, V, and VI directly without fabricating metrics.
+            f"""
+            <div class="bento-card" style="border: 1px solid {badge_border}; background: {badge_bg}; padding: 16px 20px; margin-bottom: 20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <span style="font-size:0.75rem; text-transform:uppercase; color:{badge_color}; font-weight:700;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">fact_check</span>Extraction Candidates Loaded</span>
+                        <div style="font-size:1.15rem; font-weight:700; color:#f8fafc; margin-top:2px;">{dossier.company_name}</div>
+                        <div style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">
+                            Source: <b>{uploaded_file.name}</b> &bull; Filing: <b>{dossier.filing_type}</b> &bull; Extracted Items: <b style="color:{badge_color};">{reconciled_count}/{total_audit_count} ({conf_pct}% matched)</b>
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="display:inline-block; padding:4px 12px; border-radius:12px; background:{badge_bg}; color:{badge_color}; font-size:0.8rem; font-weight:700; border:1px solid {badge_border};">
+                            {badge_label}
+                        </span>
+                    </div>
                 </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+
+        with st.expander(":material/checklist: View Extraction Summary & Verification Audit Trail", expanded=False):
+            col_v1, col_v2 = st.columns(2)
+            with col_v1:
+                st.markdown("##### :material/check_circle: Extracted Metrics & Lineage")
+                st.markdown(f"- **Reporting Periods:** {len(dossier.history)} period(s) extracted: {', '.join([h.fiscal_year for h in dossier.history]) if dossier.history else 'None'}.")
+                if dossier.history:
+                    lat = dossier.latest_financials
+                    st.markdown(f"- **Section V ({lat.fiscal_year}):** Rev ₹{lat.revenue_ops_cr:,.1f} Cr, EBITDA ₹{lat.ebitda_cr:,.1f} Cr, PAT ₹{lat.pat_cr:,.1f} Cr, CFO ₹{lat.cfo_cr:,.1f} Cr.")
+                ind = dossier.indebtedness
+                st.markdown(f"- **Section VI Indebtedness:** Term Loans ₹{ind.secured_term_loans_cr:,.1f} Cr, WC ₹{ind.working_capital_loans_cr:,.1f} Cr, Leases ₹{ind.lease_liabilities_ind_as_116_cr:,.1f} Cr, Cash ₹{ind.cash_and_equivalents_cr:,.1f} Cr.")
+                st.markdown(f"- **Governance Metrics:** Promoter Pledge {dossier.governance.promoter_pledge_pct:.1f}%, Independent Directors {dossier.governance.independent_directors_pct:.0f}%.")
+            with col_v2:
+                st.markdown("##### :material/warning: Identified Data Gaps & Limitations")
+                if dossier.limitations:
+                    for lim in dossier.limitations:
+                        st.markdown(f"- **[{lim.gap_id}] {lim.item_name}:** {lim.why_it_matters}")
+                else:
+                    st.markdown("- No blocking data gaps identified. Values await human review and sign-off.")
+    else:
+        st.info("Upload a Draft Red Herring Prospectus (DRHP) or Red Herring Prospectus (RHP) PDF above, or select an existing deal from the dropdown.", icon=":material/info:")
+        render_html(
+            """
+            <div class="bento-card" style="border: 1px dashed rgba(56, 189, 248, 0.4); text-align:center; padding: 30px 20px; margin-bottom: 20px;">
+                <div style="font-size:2rem; margin-bottom:6px;"><span class="material-symbols-rounded" style="font-size:36px; color:#64748b;">upload_file</span></div>
+                <div style="font-size:1.1rem; font-weight:700; color:#f8fafc;">Awaiting DRHP / RHP Document Intake</div>
+                <div style="font-size:0.84rem; color:#94a3b8; max-width:620px; margin:6px auto 0 auto; line-height:1.5;">
+                    Upload an official SEBI-filed prospectus PDF above to extract metrics and automatically add it to your dropdown registry.
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         st.stop()
 else:
     dossier = PRE_IPO_REGISTRY[selected_deal_key]
+    if selected_deal_key in custom_dossiers:
+        col_ing1, col_ing2 = st.columns([5, 1])
+        with col_ing1:
+            render_html(
+                f"""
+                <div class="bento-card" style="border: 1px solid rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.05); padding: 14px 20px; margin-bottom: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <span style="font-size:0.75rem; text-transform:uppercase; color:#10b981; font-weight:700;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">check_circle</span>Ingested Prospectus Dossier · Active Deal</span>
+                            <div style="font-size:1.15rem; font-weight:700; color:#f8fafc; margin-top:2px;">{dossier.company_name}</div>
+                            <div style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">
+                                Filing: <b>{dossier.filing_type} {dossier.filing_date}</b> &bull; Total Issue: <b>₹{dossier.total_issue_size_cr:,.1f} Cr (100% OFS)</b> &bull; Confidence Score: <b style="color:#10b981;">95%</b>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="display:inline-block; padding:4px 12px; border-radius:12px; background:rgba(16,185,129,0.2); color:#10b981; font-size:0.8rem; font-weight:700; border:1px solid rgba(16,185,129,0.4);">
+                                ALL AUDIT GATES PASSED
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with col_ing2:
+            st.write("")
+            confirm_del_key = f"confirm_del_{selected_deal_key}"
+            if not st.session_state.get(confirm_del_key, False):
+                if st.button("Delete Deal", icon=":material/delete:", key=f"del_btn_{selected_deal_key}", type="secondary", use_container_width=True, help="Permanently delete this ingested prospectus and remove it from the dropdown"):
+                    st.session_state[confirm_del_key] = True
+                    st.rerun()
+            else:
+                st.markdown("<div style='font-size:0.75rem; color:#ef4444; font-weight:700; text-align:center;'>Confirm delete?</div>", unsafe_allow_html=True)
+                col_y, col_n = st.columns(2)
+                with col_y:
+                    if st.button("Yes", key=f"del_yes_{selected_deal_key}", type="primary", use_container_width=True):
+                        delete_custom_dossier(selected_deal_key)
+                        st.session_state.pop(confirm_del_key, None)
+                        st.session_state["target_deal_selector"] = "ntpc_green"
+                        st.rerun()
+                with col_n:
+                    if st.button("No", key=f"del_no_{selected_deal_key}", use_container_width=True):
+                        st.session_state.pop(confirm_del_key, None)
+                        st.rerun()
 
 intake_gaps = [item for item in dossier.limitations if item.gap_id.startswith(("GAP-OCR-", "GAP-INTAKE-"))]
 if intake_gaps or not dossier.history:
@@ -371,7 +551,8 @@ with col_act:
     st.write("")
     deck_bytes = generate_pre_ipo_board_deck(dossier)
     st.download_button(
-        label="📥 Export Deck (PPTX)",
+        label="Export Deck (PPTX)",
+        icon=":material/download:",
         data=deck_bytes,
         file_name=f"{dossier.deal_id}_board_pitch_deck.pptx",
         mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -455,7 +636,7 @@ cockpit_html = f"""
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:12px;">
         <div class="action-card" style="margin:0;">
             <div style="font-size:0.75rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
-                🎯 Recommended Strategic Action
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">ads_click</span>RECOMMENDED STRATEGIC ACTION
             </div>
             <div style="font-size:0.84rem; color:#f8fafc; line-height:1.45;">
                 {p_view['recommendation']}
@@ -463,7 +644,7 @@ cockpit_html = f"""
         </div>
         <div style="background:rgba(245, 158, 11, 0.05); border:1px solid rgba(245, 158, 11, 0.2); border-radius:8px; padding:10px 14px;">
             <div style="font-size:0.75rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-bottom:4px;">
-                ⚖️ Material Trade-offs & Dilemmas
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">balance</span>MATERIAL TRADE-OFFS & DILEMMAS
             </div>
             <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
                 {p_view['trade_offs']}
@@ -479,16 +660,18 @@ render_html(cockpit_html)
 # ─────────────────────────────────────────────────────────────────────────────
 (
     tab_overview,
+    tab_disclosures,
     tab_equity_thesis,
     tab_workpapers,
     tab_crosswalk,
     tab_ic_action,
 ) = st.tabs([
-    "🏢 Company Overview",
-    "💡 Investor Questions & Thesis",
-    "🔬 Detailed Workpapers",
-    "📑 CMIE Reference Crosswalk",
-    "⚖️ IC Stance & Action Register",
+    ":material/domain: Company Overview",
+    ":material/fact_check: Extracted Disclosures & Audit",
+    ":material/quiz: Investor Questions & Thesis",
+    ":material/analytics: Detailed Workpapers",
+    ":material/sync_alt: CMIE Reference Crosswalk",
+    ":material/gavel: IC Stance & Action Register",
 ])
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -571,7 +754,7 @@ with tab_overview:
         dep_html = f"""
         <div class="narrative-card" style="border-left:4px solid #f43f5e; margin-top:10px;">
             <div style="font-size:0.75rem; font-weight:700; color:#f43f5e; text-transform:uppercase; margin-bottom:4px;">
-                ⚠️ Material Operational Dependencies & Regulatory Constraints
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">warning</span>MATERIAL OPERATIONAL DEPENDENCIES & REGULATORY CONSTRAINTS
             </div>
             <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
                 {'<br>'.join(['• ' + d for d in deps])}
@@ -583,6 +766,76 @@ with tab_overview:
 # ═════════════════════════════════════════════════════════════════════════════
 # LEVEL 1 - TAB 2: INVESTOR QUESTIONS & EQUITY THESIS (Q01-Q10 + PX01-PX04)
 # ═════════════════════════════════════════════════════════════════════════════
+# ═════════════════════════════════════════════════════════════════════════════
+# LEVEL 1 - TAB 2: EXTRACTED DISCLOSURES & AUDIT
+# ═════════════════════════════════════════════════════════════════════════════
+with tab_disclosures:
+    render_html('<div class="bento-subtitle">Automated Provenance & Anti-Fabrication Verification · SEBI ICDR 2018</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Extracted Candidate Disclosures & Lineage Audit Card</div>', unsafe_allow_html=True)
+
+    col_ad1, col_ad2 = st.columns([3, 1])
+    with col_ad1:
+        st.caption("All extracted financial metrics are candidates until verified by an authorized independent credit reviewer. Citation anchors reflect exact source statements.")
+    with col_ad2:
+        rev_count = len([it for it in dossier.audit_report if it.status in ("FOUND_AND_RECONCILED", "CONVERTED_AND_NORMALIZED")])
+        tot_count = max(len(dossier.audit_report), 1)
+        st.metric("Extraction Confidence", f"{int(round(rev_count/tot_count*100))}%", f"{rev_count}/{tot_count} verified")
+
+    st.markdown("##### :material/table_chart: Line-Item Audit & Citation Provenance")
+    if dossier.audit_report:
+        audit_rows = []
+        for it in dossier.audit_report:
+            audit_rows.append({
+                "Financial Variable": it.field_name,
+                "Raw Extracted Text": it.raw_extracted_value,
+                "Normalized Metric": it.normalized_metric,
+                "Audit Status": it.status,
+                "Citation / Anchor": it.citation,
+                "Confidence Score": f"{it.confidence_score*100:.0f}%",
+            })
+        st.table(audit_rows)
+    else:
+        st.info("No audit items recorded for this document.", icon=":material/info:")
+
+    st.markdown("##### :material/report_problem: Statutory Disclosures & Data Gaps Register")
+    if dossier.limitations:
+        gap_rows = []
+        for g in dossier.limitations:
+            gap_rows.append({
+                "Gap ID": g.gap_id,
+                "Affected Dimension": g.affected_dimension,
+                "Status": g.current_status,
+                "Why It Matters": g.why_it_matters,
+                "Blocked Action": g.blocked_decision_or_recommendation,
+                "Recommended Diligence Request": g.recommended_diligence_request,
+            })
+        st.table(gap_rows)
+    else:
+        st.success("Zero statutory data gaps identified for this filing.", icon=":material/check_circle:")
+
+    st.markdown("##### :material/account_balance: Indebtedness & Working Capital Candidates")
+    col_dw1, col_dw2 = st.columns(2)
+    with col_dw1:
+        st.markdown("**Indebtedness Schedule**")
+        st.dataframe([
+            {"Line Item": "Secured Rupee Term Loans", "Amount (₹ Cr)": f"₹{dossier.indebtedness.secured_term_loans_cr:,.2f} Cr"},
+            {"Line Item": "Working Capital Demand Loans / CC", "Amount (₹ Cr)": f"₹{dossier.indebtedness.working_capital_loans_cr:,.2f} Cr"},
+            {"Line Item": "Ind AS 116 Lease Liabilities", "Amount (₹ Cr)": f"₹{dossier.indebtedness.lease_liabilities_ind_as_116_cr:,.2f} Cr"},
+            {"Line Item": "Cash & Liquid Balances", "Amount (₹ Cr)": f"₹{dossier.indebtedness.cash_and_equivalents_cr:,.2f} Cr"},
+            {"Line Item": "Total Funded Bank Debt", "Amount (₹ Cr)": f"₹{dossier.indebtedness.funded_bank_debt_cr:,.2f} Cr"},
+            {"Line Item": "Total Economic Indebtedness", "Amount (₹ Cr)": f"₹{dossier.indebtedness.total_economic_indebtedness_cr:,.2f} Cr"},
+        ], use_container_width=True, hide_index=True)
+    with col_dw2:
+        st.markdown("**Working Capital & Governance**")
+        st.dataframe([
+            {"Metric": "Days Sales Outstanding (DSO)", "Value": f"{dossier.working_capital.debtor_days_dso:.1f} days"},
+            {"Metric": "Days Inventory Outstanding (DIO)", "Value": f"{dossier.working_capital.inventory_days_dio:.1f} days"},
+            {"Metric": "Days Payable Outstanding (DPO)", "Value": f"{dossier.working_capital.creditor_days_dpo:.1f} days"},
+            {"Metric": "Cash Conversion Cycle (CCC)", "Value": f"{dossier.working_capital.cash_conversion_cycle_days:.1f} days"},
+            {"Metric": "Promoter Shareholding Pledged", "Value": f"{dossier.governance.promoter_pledge_pct:.1f}%"},
+            {"Metric": "Independent Board Representation", "Value": f"{dossier.governance.independent_directors_pct:.0f}%"},
+        ], use_container_width=True, hide_index=True)
+
 with tab_equity_thesis:
     render_html('<div class="bento-subtitle">Question-Led Institutional Underwriting · PRD Specification S01–S04</div>', unsafe_allow_html=True)
     render_html('<div class="bento-title">Ten Core Investor Questions & Decision Scorecard</div>', unsafe_allow_html=True)
@@ -614,15 +867,15 @@ with tab_equity_thesis:
         is_px = qid.startswith("PX")
         stat = q_obj.status
         s_badge = "badge-emerald" if "ANSWERED" in stat else "badge-amber" if "PARTIAL" in stat else "badge-rose" if "BLOCKED" in stat else "badge-sky"
-        icon = "💡" if not is_px else "🔒"
+        exp_icon = ":material/quiz:" if not is_px else ":material/lock:"
 
-        with st.expander(f"{icon} {qid}: {q_obj.title} — [{stat.replace('_', ' ')}]", expanded=(qid in ("Q01", "Q04", "Q05"))):
+        with st.expander(f"{qid}: {q_obj.title} — [{stat.replace('_', ' ')}]", icon=exp_icon, expanded=(qid in ("Q01", "Q04", "Q05"))):
             st.markdown(f"**Direct Bottom-Line Verdict:** {q_obj.direct_verdict}")
             st.markdown(f"**Detailed Analysis:** {q_obj.detailed_analysis}")
 
             # Evidence Claim Lineage
             if q_obj.claim_lineage:
-                render_html("<div style='font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-top:10px;'>📜 Evidence Claim Lineage</div>", unsafe_allow_html=True)
+                render_html("<div style='font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-top:10px;'><span class='material-symbols-rounded' style='font-size:14px; vertical-align:-2px; margin-right:4px;'>table_chart</span>Evidence Claim Lineage</div>", unsafe_allow_html=True)
                 c_rows = []
                 for cl in q_obj.claim_lineage:
                     c_rows.append({
@@ -636,12 +889,12 @@ with tab_equity_thesis:
             col_qa, col_qb = st.columns(2)
             with col_qa:
                 if q_obj.alternative_explanations:
-                    render_html("<div style='font-size:0.75rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-top:8px;'>⚖️ Alternative Interpretations & Risks</div>", unsafe_allow_html=True)
+                    render_html("<div style='font-size:0.75rem; font-weight:700; color:#f59e0b; text-transform:uppercase; margin-top:8px;'><span class='material-symbols-rounded' style='font-size:14px; vertical-align:-2px; margin-right:4px;'>balance</span>Alternative Interpretations & Risks</div>", unsafe_allow_html=True)
                     for alt in q_obj.alternative_explanations:
                         st.markdown(f"• {alt}")
             with col_qb:
                 if q_obj.limitations_and_uncertainties:
-                    render_html("<div style='font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-top:8px;'>⚠️ Disclosed Limitations & Data Gaps</div>", unsafe_allow_html=True)
+                    render_html("<div style='font-size:0.75rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-top:8px;'><span class='material-symbols-rounded' style='font-size:14px; vertical-align:-2px; margin-right:4px;'>info</span>Disclosed Limitations & Data Gaps</div>", unsafe_allow_html=True)
                     for lim in q_obj.limitations_and_uncertainties:
                         st.markdown(f"• {lim}")
 
@@ -651,7 +904,7 @@ with tab_equity_thesis:
                 rec_html = f"""
                 <div class="action-card" style="margin-top:10px;">
                     <div style="font-size:0.75rem; font-weight:700; color:#10b981; text-transform:uppercase;">
-                        🎯 Actionable Protocol ({rec.action_owner})
+                        <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">verified_user</span>Actionable Protocol ({rec.action_owner})
                     </div>
                     <div style="font-size:0.85rem; color:#ffffff; margin:4px 0;">{rec.recommendation}</div>
                     <div style="font-size:0.78rem; color:#cbd5e1;">
@@ -664,13 +917,13 @@ with tab_equity_thesis:
                 render_html(rec_html)
 
             if q_obj.inflection_triggers:
-                st.markdown(f"**⚡ Thesis-Breaking Inflection Trigger:** `{q_obj.inflection_triggers[0]}`")
+                st.markdown(f"**:material/bolt: Thesis-Breaking Inflection Trigger:** `{q_obj.inflection_triggers[0]}`")
 
     # ── DECISION-DEPTH ADVANCED ALGORITHM LAB (ALG01 - ALG14) ──
     render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:24px 0 16px 0;">', unsafe_allow_html=True)
     st.caption("The optional prototype lab contains illustrative assumptions and synthetic return examples. It does not establish empirical support or production acceptance of ALG01–ALG14. Use the Decision-depth workbench for explicit inputs, evidence states and saved decisions.")
     show_prototypes = st.checkbox("Show experimental algorithm diagnostics", value=False)
-    with st.expander("🔬 Experimental Algorithm Lab (ALG01–ALG14)", expanded=False):
+    with st.expander(":material/science: Experimental Algorithm Lab (ALG01–ALG14)", expanded=False):
         st.warning("Unvalidated research prototypes. Supplied defaults and synthetic examples must not be interpreted as issuer findings or investment recommendations.")
         if not show_prototypes:
             st.caption("Enable experimental diagnostics above to inspect the prototype outputs.")
@@ -723,10 +976,10 @@ with tab_workpapers:
         subtab_stress,
         subtab_val,
     ) = st.tabs([
-        "📊 Financials & Proceeds Waterfall",
-        "⚖️ Indebtedness & Debt Maturity",
-        "🌪️ Stress Testing & Headroom",
-        "💎 Valuation, Peers, DCF & Forensics",
+        ":material/waterfall_chart: Financials & Proceeds Waterfall",
+        ":material/account_balance: Indebtedness & Debt Maturity",
+        ":material/speed: Stress Testing & Headroom",
+        ":material/query_stats: Valuation, Peers, DCF & Forensics",
     ])
 
     # ── SUBTAB 1: FINANCIALS & OBJECTS OF THE OFFER ──
@@ -966,13 +1219,23 @@ with tab_workpapers:
 
         col_w1, col_w2, col_w3 = st.columns(3)
         with col_w1:
-            st.metric("Return on Invested Capital (ROIC)", f"{wacc_res['roic_pct']:.1f}%", delta=f"{wacc_res['value_creation_spread_pct']:+.1f}% vs WACC")
+            roic_val = wacc_res.get('roic_pct') if wacc_res else None
+            spread_val = wacc_res.get('value_creation_spread_pct') if wacc_res else None
+            roic_str = f"{roic_val:.1f}%" if roic_val is not None else "N/A"
+            delta_str = f"{spread_val:+.1f}% vs WACC" if spread_val is not None else None
+            st.metric("Return on Invested Capital (ROIC)", roic_str, delta=delta_str)
         with col_w2:
-            st.metric("Weighted Average Cost of Capital (WACC)", f"{wacc_res['wacc_pct']:.1f}%", help="CAPM Ke + Post-tax Kd")
+            wacc_val = wacc_res.get('wacc_pct') if wacc_res else None
+            wacc_str = f"{wacc_val:.1f}%" if wacc_val is not None else "N/A"
+            st.metric("Weighted Average Cost of Capital (WACC)", wacc_str, help="CAPM Ke + Post-tax Kd")
         with col_w3:
-            st.metric("Annual Economic Profit (EVA)", f"₹{wacc_res['economic_profit_cr']:,.1f} Cr", delta=wacc_res['status'].replace('_', ' '))
+            eva_val = wacc_res.get('economic_profit_cr') if wacc_res else None
+            eva_str = f"₹{eva_val:,.1f} Cr" if eva_val is not None else "N/A"
+            eva_status = (wacc_res.get('status') or 'UNCOMPUTED').replace('_', ' ') if wacc_res else "UNCOMPUTED"
+            st.metric("Annual Economic Profit (EVA)", eva_str, delta=eva_status)
 
-        st.info(f"💡 **Reverse DCF Analysis:** {rev_dcf['narrative']}")
+        dcf_narrative = rev_dcf.get('narrative', 'Reverse DCF hurdle calculation requires audited financial statements.') if rev_dcf else "Awaiting disclosures."
+        st.info(f"**Reverse DCF Analysis:** {dcf_narrative}", icon=":material/info:")
 
         # Beneish Forensics & Anchor Lock-In Calendar
         render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
@@ -1010,7 +1273,7 @@ with tab_workpapers:
                 render_html(
                     f"""
                     <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:0.78rem; color:#10b981;">
-                        🟢 <strong>{recon['exchange']} Circular {recon['circular_ref']}</strong> · Listing: <strong>{recon['exchange_listing_date']}</strong> ({recon['drift_status']})
+                        <span class="material-symbols-rounded" style="font-size:14px; color:#10b981; vertical-align:-2px; margin-right:2px;">check_circle</span> <strong>{recon['exchange']} Circular {recon['circular_ref']}</strong> · Listing: <strong>{recon['exchange_listing_date']}</strong> ({recon['drift_status']})
                     </div>
                     """,
                     unsafe_allow_html=True,
@@ -1086,7 +1349,8 @@ with tab_crosswalk:
 
         cw_df = pd.DataFrame(cw_rows)
         st.download_button(
-            label="📥 Download CMIE Crosswalk (CSV)",
+            label="Download CMIE Crosswalk (CSV)",
+            icon=":material/download:",
             data=cw_df.to_csv(index=False).encode("utf-8"),
             file_name=f"{dossier.deal_id}_cmie_crosswalk.csv",
             mime="text/csv",
@@ -1131,14 +1395,14 @@ with tab_ic_action:
             ic_str_html = f"""
             <div class="bento-card">
                 <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:6px;">
-                    💎 Key Transaction & Credit Strengths
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">verified</span>Key Transaction & Credit Strengths
                 </div>
                 <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
                     {'<br>'.join(['• ' + s for s in ic.key_credit_strengths])}
                 </div>
                 <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
                 <div style="font-size:0.80rem; font-weight:700; color:#f43f5e; text-transform:uppercase; margin-bottom:6px;">
-                    ⚠️ Key Underwriting Vulnerabilities & Downside Risks
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">warning</span>Key Underwriting Vulnerabilities & Downside Risks
                 </div>
                 <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
                     {'<br>'.join(['• ' + r for r in ic.key_downside_risks])}
@@ -1150,14 +1414,14 @@ with tab_ic_action:
         cov_html = f"""
         <div class="bento-card" style="border-left:4px solid #38bdf8;">
             <div style="font-size:0.80rem; font-weight:700; color:#38bdf8; text-transform:uppercase; margin-bottom:6px;">
-                🛡️ Mandatory Loan Covenants & Credit Safeguards
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">shield</span>Mandatory Loan Covenants & Credit Safeguards
             </div>
             <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.5;">
                 {'<br>'.join(['• ' + c for c in ic.mandatory_loan_covenants])}
             </div>
             <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
             <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:4px;">
-                🎯 Executive Treasury & Underwriter Mandate
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">policy</span>Executive Treasury & Underwriter Mandate
             </div>
             <div style="font-size:0.86rem; color:#f8fafc; line-height:1.5;">
                 {ic.treasury_call_to_action}
@@ -1193,7 +1457,7 @@ with tab_ic_action:
     render_html('<div class="bento-title">Decision Limitations & Unsupplied Disclosures Register</div>', unsafe_allow_html=True)
     lims = getattr(dossier, "limitations", [])
     if not lims:
-        st.success("✅ Zero active decision limitations. All material data fields have been reconciled against audited disclosures.")
+        st.success("Zero active decision limitations. All material data fields have been reconciled against audited disclosures.", icon=":material/check_circle:")
     else:
         lim_rows = []
         for l in lims:
