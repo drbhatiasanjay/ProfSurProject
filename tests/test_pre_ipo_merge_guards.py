@@ -34,7 +34,7 @@ def test_intake_guard_precedes_ratios_and_deck_export():
     page = Path(__file__).resolve().parents[1]/"pages/27_pre_ipo_drhp.py"
     source = page.read_text(encoding="utf-8-sig")
     tree = ast.parse(source)
-    guard = next(node for node in tree.body if isinstance(node, ast.If) and source.splitlines()[node.lineno-1].startswith("if intake_gaps"))
+    guard = next(node for node in tree.body if isinstance(node, ast.If) and any(isinstance(sub, ast.Attribute) and sub.attr == "allowed" for sub in ast.walk(node)))
     assert any(isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == "stop" for node in ast.walk(guard))
     assert guard.end_lineno < next(node.lineno for node in ast.walk(tree) if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "generate_pre_ipo_board_deck")
 

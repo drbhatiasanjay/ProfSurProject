@@ -44,13 +44,14 @@ from models.pre_ipo_field_registry import PreIPOModelAdapter, get_field_spec, FI
 from models.pre_ipo_ingest import PreIPOIngestionEngine
 
 
-@pytest.fixture(scope="module", autouse=True)
-def restore_environment_db_path():
-    yield
-    if _ORIGINAL_PROFSUR_DB is not None:
-        os.environ["PROFSUR_DB_PATH"] = _ORIGINAL_PROFSUR_DB
-    else:
-        os.environ.pop("PROFSUR_DB_PATH", None)
+@pytest.fixture(autouse=True)
+def isolate_disposable_db(monkeypatch, tmp_path):
+    test_db = str(tmp_path / "test_regressions.db")
+    monkeypatch.setenv("PROFSUR_DB_PATH", test_db)
+    conn = sqlite3.connect(test_db)
+    apply_migrations(conn)
+    conn.close()
+    yield test_db
 
 
 @pytest.fixture()

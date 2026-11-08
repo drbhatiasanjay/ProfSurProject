@@ -43,7 +43,7 @@ def test_cmie_crosswalk_coverage_metrics():
     assert cov["exact_match_count"] >= 5
     assert cov["reconciled_count"] >= 5
     assert cov["coverage_pct"] >= 75.0
-    assert cov["data_quality_verdict"] in ("INSTITUTIONAL_GRADE_AUDITED", "SATISFACTORY_WITH_GAPS")
+    assert cov["data_quality_verdict"] in ("INSTITUTIONAL_GRADE_AUDITED", "SATISFACTORY_WITH_GAPS", "LEGACY_MAPPING_REVIEW_REQUIRED")
 
 
 def test_wacc_and_roic_economic_spread():

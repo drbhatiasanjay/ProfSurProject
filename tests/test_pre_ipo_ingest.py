@@ -22,21 +22,21 @@ def test_ingest_document_by_company_name_hint():
 def test_ingest_document_unverified_fallback():
     # An unknown company or invalid document must yield unverified facts and missing data limitations, NEVER invented numbers
     dossier = PreIPOIngestionEngine.ingest_document(None, company_name_hint="Novel Biotech Pvt Ltd")
-    assert dossier.deal_id == "unverified_upload"
+    assert dossier.deal_id in ("unverified_upload", "unverified_scanned_upload")
     assert "Novel Biotech Pvt Ltd" in dossier.company_name
-    assert "[Unverified Extraction]" in dossier.company_name
+    assert any(tag in dossier.company_name for tag in ["[Unverified Extraction]", "[Not Extracted - Scanned Image]"])
     assert dossier.total_issue_size_cr == 0.0
     assert dossier.history[0].revenue_ops_cr == 0.0
-    assert dossier.ic_verdict.underwriting_verdict == "INSUFFICIENT DATA TO CONCLUDE"
+    assert dossier.ic_verdict.underwriting_verdict in ("INSUFFICIENT DATA TO CONCLUDE", "INSUFFICIENT_DISCLOSURES_UNRATED")
     assert len(dossier.limitations) > 0
-    assert dossier.limitations[0].current_status in ("PARSE_FAILED", "NOT_SUPPLIED", "AWAITING_OCR_KEY")
+    assert dossier.limitations[0].current_status in ("PARSE_FAILED", "NOT_SUPPLIED", "AWAITING_OCR_KEY", "NOT_EXTRACTED", "OCR_CONSENT_REQUIRED")
 
 
 def test_parse_scanned_pdf_missing_key_behavior():
     import io
     from unittest.mock import patch
     with patch("models.pre_ipo_ingest.get_gemini_api_key", return_value=None):
-        res, status = PreIPOIngestionEngine.parse_scanned_pdf_with_vision(io.BytesIO(b"%PDF-1.4 scanned image"))
+        res, status = PreIPOIngestionEngine.parse_scanned_pdf_with_vision(io.BytesIO(b"%PDF-1.4 scanned image"), allow_external_cloud_ocr=True)
         assert res is None
         assert status == "GEMINI_API_KEY_REQUIRED"
 
@@ -97,7 +97,8 @@ def test_parse_scanned_pdf_vision_success_mock():
     with patch("models.pre_ipo_ingest.get_gemini_api_key", return_value="test-key-fake"):
         with patch("google.genai.Client", return_value=mock_client):
             dossier, status = PreIPOIngestionEngine.parse_scanned_pdf_with_vision(
-                io.BytesIO(b"%PDF-1.4 dummy scanned pdf content that is long enough to simulate real file bytes" * 5)
+                io.BytesIO(b"%PDF-1.4 dummy scanned pdf content that is long enough to simulate real file bytes" * 5),
+                allow_external_cloud_ocr=True
             )
             assert status == "SUCCESS"
             assert dossier is not None

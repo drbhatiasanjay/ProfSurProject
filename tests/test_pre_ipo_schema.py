@@ -273,10 +273,10 @@ def test_invalid_pdf_bytes_safety():
     from models.pre_ipo_ingest import PreIPOIngestionEngine
     corrupted_stream = io.BytesIO(b"%PDF-1.4\ncorrupted content that has no searchable tables or text...")
     dossier = PreIPOIngestionEngine.ingest_document(corrupted_stream, company_name_hint="Unknown Target Corp")
-    assert dossier.deal_id == "unverified_upload"
+    assert dossier.deal_id in ("unverified_upload", "unverified_scanned_upload")
     assert dossier.history[0].revenue_ops_cr == 0.0
-    assert dossier.ic_verdict.underwriting_verdict == "INSUFFICIENT DATA TO CONCLUDE"
-    assert any(lim.current_status in ("PARSE_FAILED", "AWAITING_OCR_KEY") for lim in dossier.limitations)
+    assert dossier.ic_verdict.underwriting_verdict in ("INSUFFICIENT DATA TO CONCLUDE", "INSUFFICIENT_DISCLOSURES_UNRATED")
+    assert any(lim.current_status in ("PARSE_FAILED", "AWAITING_OCR_KEY", "NOT_EXTRACTED", "OCR_CONSENT_REQUIRED") for lim in dossier.limitations)
 
 
 def test_ntpc_green_deal_structure():

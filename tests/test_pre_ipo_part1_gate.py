@@ -22,8 +22,13 @@ except ImportError:
 from models.pre_ipo_ingest import PreIPOIngestionEngine
 from utils.pre_ipo_deck_generator import generate_pre_ipo_board_deck
 
-KNOWN_VALUES_PDF = r"C:\Users\hemas\.codex\worktrees\profsur-decision-depth\ProfSurProject\scratch\ingestion_assessment_20261108\known-values.pdf"
-HCCB_DRHP_PDF = "Hindustan_Coca_Cola_Holdings_DRHP.pdf"
+_FIXTURES_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fixtures")
+KNOWN_VALUES_PDF = os.path.join(_FIXTURES_DIR, "known-values.pdf")
+HCCB_DRHP_PDF = os.path.join(_FIXTURES_DIR, "Hindustan_Coca_Cola_Holdings_DRHP.pdf")
+if not os.path.exists(HCCB_DRHP_PDF) and os.path.exists("Hindustan_Coca_Cola_Holdings_DRHP.pdf"):
+    HCCB_DRHP_PDF = "Hindustan_Coca_Cola_Holdings_DRHP.pdf"
+if not os.path.exists(KNOWN_VALUES_PDF) and os.path.exists("scratch/ingestion_assessment_20261108/known-values.pdf"):
+    KNOWN_VALUES_PDF = "scratch/ingestion_assessment_20261108/known-values.pdf"
 
 
 def test_gate_1_known_values_searchable_pdf():

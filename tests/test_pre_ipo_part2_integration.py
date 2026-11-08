@@ -31,14 +31,23 @@ from models import pre_ipo_evidence as ledger
 from utils.pre_ipo_evidence_export import export_json, export_pptx
 from models.pre_ipo_custom_store import migrate_legacy_pickle
 
-# Portable fixture resolution: check local repo scratch first, then fallback to codex worktree
+# Portable fixture resolution: check tests/fixtures first, then local repo scratch, then fallback to codex worktree
+FIXTURE_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "fixtures", "known-values.pdf"
+)
 LOCAL_FIXTURE_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "scratch", "ingestion_assessment_20261108", "known-values.pdf"
 )
 WORKTREE_FIXTURE_PATH = r"C:\Users\hemas\.codex\worktrees\profsur-decision-depth\ProfSurProject\scratch\ingestion_assessment_20261108\known-values.pdf"
 
-KNOWN_VALUES_PDF = LOCAL_FIXTURE_PATH if os.path.exists(LOCAL_FIXTURE_PATH) else WORKTREE_FIXTURE_PATH
+if os.path.exists(FIXTURE_PATH):
+    KNOWN_VALUES_PDF = FIXTURE_PATH
+elif os.path.exists(LOCAL_FIXTURE_PATH):
+    KNOWN_VALUES_PDF = LOCAL_FIXTURE_PATH
+else:
+    KNOWN_VALUES_PDF = WORKTREE_FIXTURE_PATH
 
 # Synthetic test accounts strictly isolated from real application users
 TEST_OWNER_ADMIN = "test_synth_owner_admin"
