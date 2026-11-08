@@ -15,8 +15,12 @@ import io
 import os
 import sqlite3
 import pytest
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
+try:
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import letter
+except ImportError:
+    canvas = None
+    letter = None
 
 from models.pre_ipo_ingest import (
     PreIPOIngestionEngine,

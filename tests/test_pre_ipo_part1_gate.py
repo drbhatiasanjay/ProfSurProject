@@ -12,8 +12,12 @@ import os
 import io
 import re
 import pytest
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+except ImportError:
+    letter = None
+    canvas = None
 
 from models.pre_ipo_ingest import PreIPOIngestionEngine
 from utils.pre_ipo_deck_generator import generate_pre_ipo_board_deck

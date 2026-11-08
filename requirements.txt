@@ -29,3 +29,5 @@ markdown-it-py>=3.0.0
 
 # Pre-IPO primary benchmark document conversion
 docling>=2.48.0
+
+reportlab>=4.0.0
