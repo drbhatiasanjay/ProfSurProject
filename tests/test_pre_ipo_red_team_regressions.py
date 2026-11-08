@@ -28,7 +28,7 @@ import pytest
 _ORIGINAL_PROFSUR_DB = os.environ.get("PROFSUR_DB_PATH")
 _GUARDED_TEMP_DIR = tempfile.mkdtemp(prefix="prof_redteam_guard_")
 _GUARDED_TEMP_DB = str(Path(_GUARDED_TEMP_DIR) / "test_disposable_redteam.db")
-os.environ["PROFSUR_DB_PATH"] = _GUARDED_TEMP_DB
+# os.environ["PROFSUR_DB_PATH"] handled by fixture
 
 _resolved_test_db = Path(_GUARDED_TEMP_DB).resolve()
 _temp_system_root = Path(tempfile.gettempdir()).resolve()

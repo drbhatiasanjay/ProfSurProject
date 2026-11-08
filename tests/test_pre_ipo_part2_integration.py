@@ -17,7 +17,7 @@ from datetime import date
 _ORIGINAL_PROFSUR_DB = os.environ.get("PROFSUR_DB_PATH")
 _GUARDED_TEMP_DIR = tempfile.mkdtemp(prefix="prof_part2_guard_")
 _GUARDED_TEMP_DB = str(Path(_GUARDED_TEMP_DIR) / "test_disposable_evidence.db")
-os.environ["PROFSUR_DB_PATH"] = _GUARDED_TEMP_DB
+# os.environ["PROFSUR_DB_PATH"] handled by fixture
 
 # Strict verification of isolation
 _resolved_test_db = Path(_GUARDED_TEMP_DB).resolve()
@@ -56,7 +56,8 @@ def restore_environment_db_path():
 
 
 @pytest.fixture(autouse=True)
-def guard_and_clean_test_companies():
+def guard_and_clean_test_companies(monkeypatch):
+    monkeypatch.setenv("PROFSUR_DB_PATH", _GUARDED_TEMP_DB)
     """Ensure clean ledger before and after tests, enforcing strict database isolation."""
     current_db = os.environ.get("PROFSUR_DB_PATH", "")
     resolved_db = Path(current_db).resolve()

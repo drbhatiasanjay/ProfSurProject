@@ -10,9 +10,18 @@ from datetime import date
 import pytest
 
 # Ensure isolated test database BEFORE application imports
+_ORIGINAL_PROFSUR_DB = os.environ.get("PROFSUR_DB_PATH")
 _TEMP_DIR = tempfile.mkdtemp(prefix="prof_test_delete_")
 _TEMP_DB = str(Path(_TEMP_DIR) / "test_delete_lifecycle.db")
-os.environ["PROFSUR_DB_PATH"] = _TEMP_DB
+# os.environ["PROFSUR_DB_PATH"] handled by fixture
+
+@pytest.fixture(scope="module", autouse=True)
+def restore_environment_db_path():
+    yield
+    if _ORIGINAL_PROFSUR_DB is not None:
+        os.environ["PROFSUR_DB_PATH"] = _ORIGINAL_PROFSUR_DB
+    else:
+        os.environ.pop("PROFSUR_DB_PATH", None)
 
 from models import pre_ipo_evidence as ledger
 from models.pre_ipo_ingest import PreIPOIngestionEngine
@@ -27,7 +36,8 @@ SAMPLE_PDF_BYTES = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nen
 import uuid
 
 @pytest.fixture(autouse=True)
-def clean_test_data():
+def clean_test_data(monkeypatch):
+    monkeypatch.setenv("PROFSUR_DB_PATH", _TEMP_DB)
     def _cleanup():
         for o in [TEST_OWNER, OTHER_OWNER]:
             try:
