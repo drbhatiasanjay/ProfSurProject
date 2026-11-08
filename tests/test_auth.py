@@ -9,6 +9,7 @@ def auth_db(tmp_path, monkeypatch):
 
     database = tmp_path / "auth.sqlite3"
     monkeypatch.setattr(db, "DB_PATH", str(database))
+    monkeypatch.setenv("PROFSUR_DB_PATH", str(database))
     monkeypatch.setenv("AUTH_TEST_MODE", "1")
     monkeypatch.setenv("AUTH_TEST_OUTBOX", str(tmp_path / "auth-outbox.jsonl"))
     import auth

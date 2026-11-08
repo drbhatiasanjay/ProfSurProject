@@ -1,6 +1,7 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 07 November 2026 (Pre-IPO Intelligence & Decision-Depth Algorithm Suite Production Release)  
+**Last Updated:** 08 November 2026 (Pre-IPO Multi-Document Ingestion & Coca-Cola E2E Acceptance Gate Passed)  
+**Active Feature Branch:** `feature/pre-ipo-multi-doc-ingestion` (Unmerged, Verified against `e7209bc`)  
 **Active Baseline Commit:** `ff01761` on `master`  
 **Release Tag:** `v2.3.0` (Synced to `origin/master`)  
 **Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  
@@ -60,7 +61,8 @@ Browser verification conducted directly on the live Google Cloud Run instance (`
 ## 3. Knowledge Graph & Architecture Index
 - **Graphify Knowledge Graph:** Untracked in git per architecture rules; re-extractable via `graphify extract .` and `graphify cluster-only .`.
 - **Stata Capabilities:** Fully synchronized in `docs/COMMAND_CAPABILITIES.md` via `scripts/sync_command_registry_docs.py`.
-- **Pre-IPO Test Suites:** 73 passing unit and regression tests across `tests/test_pre_ipo*.py`.
+- **Pre-IPO Multi-Document Ingestion & Red-Team Audit (W01–W11):** 100% remediated and verified on `feature/pre-ipo-multi-doc-ingestion`. All 11 red-team defect regressions (`tests/test_pre_ipo_red_team_regressions.py`) passing. Full Pre-IPO test suite: 57/57 passed. Fast smoke suite: 52/52 passed.
+- **Pre-IPO Test Suites:** 73+ passing unit and regression tests across `tests/test_pre_ipo*.py`.
 
 ---
 

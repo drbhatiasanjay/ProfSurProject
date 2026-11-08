@@ -54,12 +54,25 @@ def cmd_status(args):
 
 def cmd_test(args):
     print("=== RUNNING TESTS (Quiet Mode) ===")
-    test_target = "tests/test_chart_switcher_and_literature.py" if args.fast else "tests/"
-    cmd = [sys.executable, "-m", "pytest", test_target, "-q", "--tb=line"]
+    if args.fast:
+        test_targets = [
+            "tests/test_auth.py",
+            "tests/test_pre_ipo_part1_gate.py",
+            "tests/test_pre_ipo_part2_integration.py",
+            "tests/test_pre_ipo_evidence_review.py",
+            "tests/test_code_review_security_remediations.py",
+            "tests/test_chart_switcher_and_literature.py",
+        ]
+        cmd = [sys.executable, "-m", "pytest"] + test_targets + ["-q", "--tb=line"]
+        target_display = "Smoke Suite (" + ", ".join(test_targets) + ")"
+    else:
+        test_targets = ["tests/"]
+        cmd = [sys.executable, "-m", "pytest", "tests/", "-q", "--tb=line"]
+        target_display = "All Tests (tests/)"
     res = subprocess.run(cmd, capture_output=True, text=True)
     output_lines = res.stdout.strip().splitlines()
     summary = output_lines[-1] if output_lines else "No test output"
-    print(f"Target:  {test_target}")
+    print(f"Target:  {target_display}")
     print(f"Summary: {summary}")
     if res.returncode != 0:
         print("\nFailures:")

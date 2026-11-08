@@ -12,6 +12,8 @@ import io
 import re
 import json
 from typing import Dict, Any, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from enum import Enum
 from models.runtime_config import get_gemini_api_key
 from models.pre_ipo_schema import (
     PreIPODealDossier,
@@ -32,6 +34,63 @@ from models.pre_ipo_schema import (
 from models.pre_ipo_data import PRE_IPO_REGISTRY
 
 
+from enum import Enum
+
+class ExtractionState(str, Enum):
+    RECEIVED = "RECEIVED"
+    TEXT_EXTRACTED = "TEXT_EXTRACTED"
+    FACTS_EXTRACTED_UNREVIEWED = "FACTS_EXTRACTED_UNREVIEWED"
+    ACCEPTED_FOR_ANALYSIS = "ACCEPTED_FOR_ANALYSIS"
+    BLOCKED = "BLOCKED"
+
+
+@dataclass(frozen=True)
+class AnalysisEligibility:
+    allowed: bool
+    state: ExtractionState
+    gaps: List[DecisionLimitationItem]
+    reasons: List[str]
+
+
+def assess_analysis_eligibility(dossier: PreIPODealDossier) -> AnalysisEligibility:
+    """
+    Evaluates whether a Pre-IPO deal dossier is eligible for downstream analytics,
+    ratios, lifecycle modeling, and presentation exports.
+    Fail-closed policy: If core financial statements are absent, unparsed, or flagged
+    with blocking intake/OCR gaps, analysis is strictly BLOCKED.
+    """
+    gaps = [item for item in (dossier.limitations or []) if item.gap_id.startswith(("GAP-OCR-", "GAP-INTAKE-"))]
+    reasons = []
+
+    if not dossier.history:
+        reasons.append("No restated financial reporting periods were recognized in the document.")
+        return AnalysisEligibility(allowed=False, state=ExtractionState.BLOCKED, gaps=gaps, reasons=reasons)
+
+    if dossier.ic_verdict.underwriting_verdict == "INSUFFICIENT_DISCLOSURES_UNRATED":
+        reasons.append("Underwriting verdict is INSUFFICIENT_DISCLOSURES_UNRATED due to unverified disclosures.")
+
+    if gaps:
+        for g in gaps:
+            reasons.append(f"[{g.gap_id}] {g.item_name}: {g.why_it_matters}")
+
+    latest = dossier.latest_financials
+    if latest.revenue_ops_cr == 0.0 and latest.ebitda_cr == 0.0 and latest.cfo_cr == 0.0:
+        reasons.append("Core operating financials (Revenue, EBITDA, CFO) are all zero / unextracted.")
+
+    if reasons or gaps:
+        return AnalysisEligibility(allowed=False, state=ExtractionState.BLOCKED, gaps=gaps, reasons=reasons)
+
+    if getattr(dossier, "deal_id", "").startswith(("unverified_", "provisional_")):
+        return AnalysisEligibility(
+            allowed=False,
+            state=ExtractionState.FACTS_EXTRACTED_UNREVIEWED,
+            gaps=gaps,
+            reasons=["Candidates extracted but await human review and sign-off in the Facts & Evidence Review workspace."],
+        )
+
+    return AnalysisEligibility(allowed=True, state=ExtractionState.ACCEPTED_FOR_ANALYSIS, gaps=[], reasons=[])
+
+
 class PreIPOIngestionEngine:
     """
     Ingests and reconciles DRHP/RHP PDF documents.
@@ -45,9 +104,9 @@ class PreIPOIngestionEngine:
     def get_vision_model_name(cls) -> str:
         """
         Returns active multimodal vision model name.
-        Uses GEMINI_VISION_MODEL env var or falls back to standard gemini-2.0-flash.
+        Uses GEMINI_VISION_MODEL env var or falls back to standard gemini-2.5-flash.
         """
-        return os.getenv("GEMINI_VISION_MODEL", "gemini-3.1-flash-lite")
+        return os.getenv("GEMINI_VISION_MODEL", "gemini-2.5-flash")
 
     @staticmethod
     def extract_text_from_pdf(source: Any, max_pages: int = 60) -> Tuple[str, int]:
@@ -244,7 +303,15 @@ class PreIPOIngestionEngine:
         cls,
         document_source: Any,
         company_name_hint: Optional[str] = None,
+        allow_external_cloud_ocr: bool = False,
     ) -> Tuple[Optional[PreIPODealDossier], Optional[str]]:
+        """
+        Parses scanned image-only DRHP files using Gemini multimodal vision.
+        Enforces privacy / consent gate (P1-01): Returns EXTERNAL_OCR_CONSENT_REQUIRED
+        unless allow_external_cloud_ocr is explicitly True.
+        """
+        if not allow_external_cloud_ocr:
+            return None, "EXTERNAL_OCR_CONSENT_REQUIRED"
         """
         Parses scanned image-only DRHP files using Gemini 1.5 Flash multimodal vision.
         Returns (dossier, status_code).
@@ -516,7 +583,31 @@ class PreIPOIngestionEngine:
                 issue_status="RUNNING_PIPELINE",
             ), "SUCCESS"
         except Exception as exc:
+            err_msg = str(exc)
+            if "402" in err_msg or "RESOURCE_EXHAUSTED" in err_msg or "prepayment credits are depleted" in err_msg:
+                return None, "PROVIDER_CREDITS_DEPLETED_402"
             return None, f"VISION_ERROR: {type(exc).__name__} (HTTP {getattr(exc, 'code', 'unavailable')})"
+
+    @staticmethod
+    def _clean_financial_number(val_str: Optional[str]) -> Optional[float]:
+        """Cleans financial strings, converting Nil/dash to 0.0, handling parentheses for negatives."""
+        if val_str is None:
+            return None
+        s = val_str.strip().replace(",", "")
+        if s.lower() in ("nil", "none", "-", "—", "na", "n/a", "zero"):
+            return 0.0
+        m_neg = re.match(r"^\(([\d\.]+)\)$", s)
+        if m_neg:
+            return -float(m_neg.group(1))
+        try:
+            return float(s)
+        except ValueError:
+            return None
+
+    @classmethod
+    def extract_from_text(cls, text: str, company_name_hint: Optional[str] = None):
+        dossier = cls.ingest_document(text, company_name_hint=company_name_hint)
+        return dossier, dossier.audit_report, dossier.limitations, {}
 
     @classmethod
     def ingest_document(
@@ -525,6 +616,7 @@ class PreIPOIngestionEngine:
         deal_id_hint: Optional[str] = None,
         company_name_hint: Optional[str] = None,
         is_exemplar_mode: bool = False,
+        allow_external_cloud_ocr: bool = False,
     ) -> PreIPODealDossier:
         """
         Ingests a DRHP/RHP document.
@@ -543,288 +635,747 @@ class PreIPOIngestionEngine:
                         return v
 
         extracted_text, page_count = "", 0
+        pages_text: List[Tuple[int, str]] = []
         if document_source is not None:
-            extracted_text, page_count = cls.extract_text_from_pdf(document_source, max_pages=60)
+            if isinstance(document_source, str) and not os.path.exists(document_source) and ("\n" in document_source or "\t" in document_source or len(document_source) > 20):
+                extracted_text = document_source
+                pages_text = [(1, document_source)]
+                page_count = 1
+            else:
+                try:
+                    import pypdf
+                    stream = document_source
+                    if isinstance(document_source, (str, os.PathLike)):
+                        if os.path.exists(document_source):
+                            stream = open(document_source, "rb")
+                    elif hasattr(document_source, "read"):
+                        pos = document_source.tell() if hasattr(document_source, "tell") else 0
+                        stream = document_source
+                        if hasattr(document_source, "seek"):
+                            document_source.seek(pos)
+                    elif isinstance(document_source, bytes):
+                        stream = io.BytesIO(document_source)
 
-        # If document could not be read or contains negligible text (e.g. Scanned Image DRHP)
+                    reader = pypdf.PdfReader(stream)
+                    page_count = len(reader.pages)
+                    pages_to_read = min(page_count, 60)
+                    for i in range(pages_to_read):
+                        p_text = reader.pages[i].extract_text() or ""
+                        pages_text.append((i + 1, p_text))
+                    extracted_text = "\n".join([pt[1] for pt in pages_text])
+
+                    if isinstance(document_source, (str, os.PathLike)) and hasattr(stream, "close"):
+                        stream.close()
+                except Exception:
+                    extracted_text, page_count = "", 0
+
+        # Scanned / Image-only Document Handling:
         if len(extracted_text.strip()) < 100:
-            # 1. Attempt multimodal vision OCR via Gemini 1.5 Flash
-            vision_deal, vision_status = cls.parse_scanned_pdf_with_vision(document_source, company_name_hint)
+            vision_deal, vision_status = cls.parse_scanned_pdf_with_vision(document_source, company_name_hint, allow_external_cloud_ocr=allow_external_cloud_ocr)
             if vision_deal is not None:
                 return vision_deal
 
             doc_name = getattr(document_source, "name", "Uploaded Document")
-            company_display = company_name_hint.strip() if company_name_hint and company_name_hint.strip() else "Unidentified Document"
+            company_display = company_name_hint.strip() if company_name_hint and company_name_hint.strip() else "Scanned Image Document"
 
-            ocr_msg = "Gemini Flash Vision OCR requires GEMINI_API_KEY" if vision_status == "GEMINI_API_KEY_REQUIRED" else f"Vision OCR status: {vision_status}"
+            if vision_status == "EXTERNAL_OCR_CONSENT_REQUIRED":
+                ocr_msg = "Cloud OCR consent not authorized. External data transmission to Google Vision API blocked."
+                gap_status = "OCR_CONSENT_REQUIRED"
+                rec_action = "Authorize cloud OCR consent or upload an electronic searchable DRHP PDF."
+            elif vision_status == "PROVIDER_CREDITS_DEPLETED_402":
+                ocr_msg = "HTTP 402: Gemini API prepayment credits are depleted. Please manage project billing at ai.studio/projects or upload an electronic searchable DRHP PDF."
+                gap_status = "PROVIDER_CREDITS_DEPLETED_402"
+                rec_action = "Manage API project billing or upload an electronic searchable DRHP PDF."
+            elif vision_status == "GEMINI_API_KEY_REQUIRED":
+                ocr_msg = "Gemini Flash Vision OCR requires GEMINI_API_KEY to process scanned documents."
+                gap_status = "AWAITING_OCR_KEY"
+                rec_action = "Configure GEMINI_API_KEY in the sidebar or upload an electronic searchable DRHP PDF."
+            else:
+                ocr_msg = f"Vision OCR status: {vision_status}"
+                gap_status = "PARSE_FAILED"
+                rec_action = "Check document resolution or supply searchable PDF."
+
             audit_report = [
                 IngestionAuditItem(
                     field_name="Document Intake Status",
-                    raw_extracted_value=f"File: {doc_name} ({page_count} pages read - Scanned Image Layer)",
-                    normalized_metric="EXTRACTION_SUSPENDED_AWAITING_KEY" if vision_status == "GEMINI_API_KEY_REQUIRED" else "EXTRACTION_FAILED",
-                    status="MISSING_UNDISCLOSED",
-                    citation="Intake Pipeline",
+                    raw_extracted_value=f"File: {doc_name} ({page_count} pages read - Scanned Image Layer, 0 electronic characters)",
+                    normalized_metric="SCANNED_IMAGE_LAYER",
+                    status="NOT_EXTRACTED",
+                    citation="PDF Parser",
                     confidence_score=0.0,
                 ),
                 IngestionAuditItem(
                     field_name="Multimodal OCR Status",
                     raw_extracted_value=ocr_msg,
-                    normalized_metric="OCR_KEY_REQUIRED" if vision_status == "GEMINI_API_KEY_REQUIRED" else "OCR_FAILED",
-                    status="MISSING_UNDISCLOSED",
+                    normalized_metric=gap_status,
+                    status="NOT_EXTRACTED",
                     citation="Vision OCR Engine",
                     confidence_score=0.0,
                 ),
                 IngestionAuditItem(
-                    field_name="Section V Restated Financials",
-                    raw_extracted_value="No searchable text or tables found",
-                    normalized_metric="UNAVAILABLE",
-                    status="MISSING_UNDISCLOSED",
+                    field_name="Revenue from Operations (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
                     citation="DRHP Section V",
                     confidence_score=0.0,
                 ),
                 IngestionAuditItem(
-                    field_name="Section VI Indebtedness",
-                    raw_extracted_value="No loan schedules identified",
-                    normalized_metric="UNAVAILABLE",
-                    status="MISSING_UNDISCLOSED",
-                    citation="DRHP Section VI",
+                    field_name="Operating EBITDA (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Profit After Tax (PAT) (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Cash Flow from Operations (CFO) (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Capital Expenditures (Capex) (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Free Cash Flow (FCF) (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
+                    confidence_score=0.0,
+                ),
+                IngestionAuditItem(
+                    field_name="Net Worth (FY24)",
+                    raw_extracted_value="Not extracted",
+                    normalized_metric="₹0.00 Cr",
+                    status="NOT_EXTRACTED",
+                    citation="DRHP Section V",
                     confidence_score=0.0,
                 ),
             ]
 
             limitations = [
                 DecisionLimitationItem(
-                    gap_id="GAP-INTAKE-01",
-                    item_name="Scanned Image DRHP / Multimodal Vision OCR Ready",
+                    gap_id="GAP-OCR-01",
+                    item_name="Scanned Image DRHP / Multimodal OCR Quota",
                     affected_dimension="All Dimensions (P&L, Balance Sheet, Indebtedness, Governance)",
-                    current_status="AWAITING_OCR_KEY" if vision_status == "GEMINI_API_KEY_REQUIRED" else "PARSE_FAILED",
-                    why_it_matters=(
-                        "The uploaded file is a scanned image DRHP without an embedded text layer. "
-                        "Gemini 1.5 Flash Vision OCR is integrated into the intake pipeline but requires a GEMINI_API_KEY to execute."
-                        if vision_status == "GEMINI_API_KEY_REQUIRED"
-                        else "The uploaded file lacks an accessible OCR/text layer. Automated metric extraction is suspended."
-                    ),
+                    current_status=gap_status,
+                    why_it_matters=f"The uploaded file is a scanned image without an embedded text layer ({ocr_msg}). Financial figures default to 0.0 with comments 'Not extracted'.",
                     blocked_decision_or_recommendation="All credit underwriting, leverage sizing, and valuation conclusions are blocked.",
                     materiality_priority="HIGH",
-                    recommended_diligence_request="Configure GEMINI_API_KEY in the sidebar or upload an electronic searchable DRHP PDF.",
+                    recommended_diligence_request=rec_action,
                 ),
                 DecisionLimitationItem(
                     gap_id="GAP-INTAKE-02",
                     item_name="Audited Financial Statements",
                     affected_dimension="Restated Consolidated Performance",
-                    current_status="NOT_SUPPLIED",
-                    why_it_matters="Historical revenue, EBITDA, and operating cash flow cannot be verified.",
+                    current_status="NOT_EXTRACTED",
+                    why_it_matters="Historical revenue, EBITDA, and operating cash flow are not extracted and set to 0.0.",
                     blocked_decision_or_recommendation="Cash conversion assessment and Dickinson life-cycle classification cannot be performed.",
                     materiality_priority="HIGH",
-                    recommended_diligence_request="Supply Section V (Financial Information) of the Draft Red Herring Prospectus.",
+                    recommended_diligence_request="Supply Section V (Financial Information) of the Draft Red Herring Prospectus in searchable PDF format.",
                 ),
             ]
 
-            from dataclasses import replace
-            limitations.insert(0, replace(limitations[0],
-                gap_id="GAP-OCR-01", item_name="Scanned OCR extraction unavailable"))
+            hist_not_extracted = [
+                FinancialYearMetric(
+                    fiscal_year="FY24",
+                    revenue_ops_cr=0.0,
+                    ebitda_cr=0.0,
+                    pat_cr=0.0,
+                    cfo_cr=0.0,
+                    cfi_cr=0.0,
+                    cff_cr=0.0,
+                    capex_cr=0.0,
+                    fcf_cr=0.0,
+                    net_worth_cr=0.0,
+                    provenance=ProvenanceRef("Section V Restated Financials", 1, "Not extracted", f"Not extracted ({ocr_msg})"),
+                )
+            ]
+
             return PreIPODealDossier(
-                deal_id="unverified_upload",
-                company_name=f"{company_display} [Unverified Extraction]",
-                sector="Awaiting Verification",
-                filing_type="DRHP (Pending Audit)",
-                filing_date="Undisclosed",
-                total_issue_size_cr=0.0,
-                fresh_issue_cr=0.0,
-                ofs_cr=0.0,
-                face_value_inr=0.0,
-                brlm_bankers=["Unverified"],
-                exchange_listing=["BSE", "NSE"],
-                history=[
-                    FinancialYearMetric(
-                        fiscal_year="FY--",
-                        revenue_ops_cr=0.0,
-                        ebitda_cr=0.0,
-                        pat_cr=0.0,
-                        cfo_cr=0.0,
-                        cfi_cr=0.0,
-                        cff_cr=0.0,
-                        capex_cr=0.0,
-                        fcf_cr=0.0,
-                        net_worth_cr=0.0,
-                    )
-                ],
-                indebtedness=IndebtednessSchedule(
-                    secured_term_loans_cr=0.0,
-                    working_capital_loans_cr=0.0,
-                    ncd_bonds_cr=0.0,
-                    unsecured_loans_cr=0.0,
-                    lease_liabilities_ind_as_116_cr=0.0,
-                    cash_and_equivalents_cr=0.0,
-                ),
-                working_capital=WorkingCapitalDynamics(
-                    inventory_days_dio=0.0,
-                    debtor_days_dso=0.0,
-                    creditor_days_dpo=0.0,
-                    net_working_capital_pct_sales=0.0,
-                ),
-                governance=NonFinancialGovernance(
-                    promoter_pledge_pct=0.0,
-                    related_party_transactions_pct_rev=0.0,
-                    top_5_customer_concentration_pct=0.0,
-                    herfindahl_hhi_index=0.0,
-                    contingent_liabilities_pct_networth=0.0,
-                    independent_directors_pct=0.0,
-                ),
-                ic_verdict=InvestmentCommitteeVerdict(
-                    underwriting_verdict="INSUFFICIENT DATA TO CONCLUDE",
-                    internal_screening_grade="UNRATED / AWAITING AUDITED PROSPECTUS",
-                    max_recommended_leverage_ratio=0.0,
-                    key_credit_strengths=["Document received into intake pipeline."],
-                    key_downside_risks=[
-                        "Uploaded file could not be parsed; no audited financial numbers available.",
-                        "Underwriting decision suspended pending verified document intake.",
-                    ],
-                    mandatory_loan_covenants=[
-                        "Mandatory supply of audited 3-year restated financial statements.",
-                        "Reconciliation of debt facilities with credit bureau certificates.",
-                    ],
-                    treasury_call_to_action="Intake Action: Provide an official SEBI DRHP PDF with searchable text or contact transaction diligence.",
-                ),
-                limitations=limitations,
-                audit_report=audit_report,
-            )
-
-        # If text is present, extract known header/summary fields or return provisional intake
-        # Check if the extracted text contains genuine financial tables/disclosures
-        has_financials_in_text = bool(
-            re.search(r"(?:restated|revenue from operations|ebitda|profit after tax|borrowings|total debt|net worth)", extracted_text, re.IGNORECASE)
-            and re.search(r"\d{1,3}(?:,\d{3})*(?:\.\d+)?", extracted_text)
-        )
-
-        inferred_name = company_name_hint.strip() if company_name_hint else "Provisional Uploaded Issuer"
-
-        if not has_financials_in_text:
-            # Genuine non-financial or unparsed PDF: Return explicit provisional dossier without fabricated metrics
-            audit_items = [
-                IngestionAuditItem(
-                    field_name="Document Text Intake",
-                    raw_extracted_value=f"{page_count} pages read ({len(extracted_text):,} characters)",
-                    normalized_metric="TEXT_CONFIRMED_NO_FINANCIALS",
-                    status="MISSING_UNDISCLOSED",
-                    citation="PDF Text Parser",
-                    confidence_score=0.0,
-                ),
-                IngestionAuditItem(
-                    field_name="Section V Restated Financials",
-                    raw_extracted_value="No restated P&L or cash flow statements identified",
-                    normalized_metric="UNAVAILABLE",
-                    status="MISSING_UNDISCLOSED",
-                    citation="DRHP Section V",
-                    confidence_score=0.0,
-                ),
-                IngestionAuditItem(
-                    field_name="Section III Objects of the Offer",
-                    raw_extracted_value="No use-of-proceeds waterfall identified",
-                    normalized_metric="UNAVAILABLE",
-                    status="MISSING_UNDISCLOSED",
-                    citation="DRHP Section III",
-                    confidence_score=0.0,
-                ),
-            ]
-            limitations = [
-                DecisionLimitationItem(
-                    gap_id="GAP-INTAKE-TEXT-01",
-                    item_name="Audited Restated Financial Statements",
-                    affected_dimension="Section V Financial Information",
-                    current_status="NOT_SUPPLIED",
-                    why_it_matters="Document contains searchable text but lacks recognizable Section V audited financial statements.",
-                    blocked_decision_or_recommendation="All earnings, margin, cash flow conversion, and Dickinson life-cycle assessments are blocked.",
-                    materiality_priority="HIGH",
-                    recommended_diligence_request="Upload the complete Draft Red Herring Prospectus including Section V.",
-                ),
-                DecisionLimitationItem(
-                    gap_id="GAP-INTAKE-TEXT-02",
-                    item_name="Capital Structure & Offer Objects",
-                    affected_dimension="Section III Objects of Offer",
-                    current_status="NOT_SUPPLIED",
-                    why_it_matters="Offer size, fresh issue vs OFS breakdown, and debt prepayment allocations are undisclosed.",
-                    blocked_decision_or_recommendation="SEBI Reg 7 GCP compliance, interest savings, and EPS accretion cannot be computed.",
-                    materiality_priority="HIGH",
-                    recommended_diligence_request="Supply Section III (Objects of the Offer) from the prospectus.",
-                ),
-            ]
-            return PreIPODealDossier(
-                deal_id="provisional_upload",
-                company_name=f"{inferred_name} [Provisional Intake - Incomplete Disclosures]",
+                deal_id="unverified_scanned_upload",
+                company_name=f"{company_display} [Not Extracted - Scanned Image]",
                 sector="Awaiting Financials",
-                filing_type="DRHP (Provisional Intake)",
+                filing_type="DRHP (Scanned Image)",
                 filing_date="Current Year",
                 total_issue_size_cr=0.0,
                 fresh_issue_cr=0.0,
                 ofs_cr=0.0,
                 face_value_inr=10.0,
-                brlm_bankers=["Unverified"],
+                brlm_bankers=["Not extracted"],
                 exchange_listing=["BSE", "NSE"],
-                history=[
-                    FinancialYearMetric("FY--", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
-                ],
-                indebtedness=IndebtednessSchedule(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                working_capital=WorkingCapitalDynamics(0.0, 0.0, 0.0, 0.0),
-                governance=NonFinancialGovernance(0.0, 0.0, 0.0, 0.0, 0.0, 50.0),
-                objects_of_offer=ObjectsOfOfferWaterfall(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                history=hist_not_extracted,
+                indebtedness=IndebtednessSchedule(
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    provenance=ProvenanceRef("Section VI Indebtedness", 1, "Not extracted", f"Not extracted ({ocr_msg})")
+                ),
+                working_capital=WorkingCapitalDynamics(
+                    0.0, 0.0, 0.0, 0.0,
+                    provenance=ProvenanceRef("Section V Working Capital", 1, "Not extracted", f"Not extracted ({ocr_msg})")
+                ),
+                governance=NonFinancialGovernance(
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    provenance=ProvenanceRef("Section IV Governance", 1, "Not extracted", f"Not extracted ({ocr_msg})")
+                ),
+                objects_of_offer=ObjectsOfOfferWaterfall(
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                    provenance=ProvenanceRef("Section III Objects", 1, "Not extracted", f"Not extracted ({ocr_msg})")
+                ),
                 beneish_forensics=BeneishMScoreRatios(),
                 debt_maturity=DebtMaturityLadder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-                valuation_comps=ValuationPeerBenchmarking(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "None", [], "DATA_UNAVAILABLE"),
+                valuation_comps=ValuationPeerBenchmarking(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "None", [], "NOT_EXTRACTED"),
                 ic_verdict=InvestmentCommitteeVerdict(
                     underwriting_verdict="INSUFFICIENT_DISCLOSURES_UNRATED",
                     internal_screening_grade="UNRATED",
                     max_recommended_leverage_ratio=0.0,
                     key_credit_strengths=[],
-                    key_downside_risks=["No audited financial statements or indebtedness disclosures identified in document text."],
-                    mandatory_loan_covenants=["Supply Section V and VI disclosures prior to credit committee review."],
-                    treasury_call_to_action="Underwriting suspended pending verifiable statutory filing intake.",
+                    key_downside_risks=["No electronic text layer found; financial line items were not extracted and set to 0.0."],
+                    mandatory_loan_covenants=["Supply searchable electronic DRHP filing."],
+                    treasury_call_to_action="Underwriting blocked: financial metrics not extracted; manual review or searchable PDF required.",
                 ),
                 limitations=limitations,
-                audit_report=audit_items,
+                audit_report=audit_report,
             )
 
-        # When genuine financial content is parsed:
-        audit_items = [
-            IngestionAuditItem(
-                field_name="Document Text Intake",
-                raw_extracted_value=f"{page_count} pages read ({len(extracted_text):,} characters)",
-                normalized_metric="TEXT_LAYER_CONFIRMED",
-                status="FOUND_AND_RECONCILED",
-                citation="PDF Parser",
-                confidence_score=0.95,
-            ),
+        # Electronic Searchable PDF Extraction
+        full_text = extracted_text
+
+        # 1. Company Name Identification
+        comp_name = company_name_hint.strip() if company_name_hint else None
+        if not comp_name or comp_name == "Novel Enterprise Limited":
+            m_c1 = re.search(r"INITIAL PUBLIC OFFERING OF UP TO .*? OF\s*\n\s*([A-Z0-9\s,\.\(\)-]+?)\s*(?:\('COMPANY'|\(THE 'ISSUER'\))", full_text, re.DOTALL)
+            if m_c1:
+                comp_name = m_c1.group(1).strip()
+            else:
+                m_c2 = re.search(r"\b([A-Z0-9\s,\.\(\)-]{3,60}\s+(?:LIMITED|PRIVATE LIMITED))\b", full_text)
+                if m_c2:
+                    comp_name = m_c2.group(1).strip()
+                else:
+                    m_c3 = re.search(r"^([A-Z0-9\s,\.\(\)-]{3,60})\s*[-–]\s*NOT AN ACTUAL COMPANY", full_text, re.MULTILINE)
+                    if m_c3:
+                        comp_name = m_c3.group(1).strip()
+                    else:
+                        comp_name = company_name_hint.strip() if company_name_hint else "Uploaded Issuer"
+
+        # 2. Scale & Currency Detection
+        scale = 1.0
+        unit_label = "INR_CRORE"
+        m_scale = re.search(r"(?:all\s+amounts\s+(?:in\s+)?(?:inr|rs\.?|₹|■)?\s*(crore|cr|million|mn|lakhs?|lac|lacs)\b|\(\s*(?:in\s+|■\s*in\s+|₹\s*in\s+|rs\.?\s*in\s+)?(crore|cr|million|mn|lakhs?|lac|lacs)[^\)]*\))", full_text, re.IGNORECASE)
+        if m_scale:
+            raw_u = (m_scale.group(1) or m_scale.group(2) or "").lower()
+            if "mn" in raw_u or "million" in raw_u:
+                scale = 0.1
+                unit_label = "INR_MILLION"
+            elif "lakh" in raw_u or "lac" in raw_u:
+                scale = 0.01
+                unit_label = "INR_LAKHS"
+            elif "cr" in raw_u or "crore" in raw_u:
+                scale = 1.0
+                unit_label = "INR_CRORE"
+
+        # 3. Period & Table Header Detection
+        detected_periods: List[str] = []
+        for page_num, ptext in pages_text:
+            lines = [l.strip() for l in ptext.split("\n") if l.strip()]
+            for i, l in enumerate(lines):
+                if re.search(r"Metric\s*\(", l, re.IGNORECASE):
+                    j = i + 1
+                    seq = []
+                    while j < min(len(lines), i + 12):
+                        cand = lines[j]
+                        if re.match(r"^(?:Revenue|Total|Income|Expenses|Cost)", cand, re.IGNORECASE):
+                            break
+                        m_p = re.search(r"\b(Q[1-4]\s*FY\d{2}|FY\s*\d{2,4}|Fiscal\s*\d{4})\b", cand, re.IGNORECASE)
+                        if m_p:
+                            raw_p = m_p.group(0).upper().replace(" ", "")
+                            if raw_p.startswith("FISCAL"):
+                                raw_p = "FY" + raw_p[-2:]
+                            if raw_p not in seq:
+                                seq.append(raw_p)
+                        j += 1
+                    if len(seq) >= 2:
+                        detected_periods = seq
+                        break
+
+                matches = list(re.finditer(r"\b(Q[1-4]\s*FY\d{2}|FY\s*\d{2,4}|Fiscal\s*\d{4}|31-Mar-\d{4})\b", l, re.IGNORECASE))
+                if len(matches) >= 2:
+                    for m in matches:
+                        raw_p = m.group(0).upper().replace(" ", "")
+                        if "31-MAR-" in raw_p:
+                            raw_p = "FY" + raw_p.split("31-MAR-")[-1][-2:]
+                        elif raw_p.startswith("FISCAL"):
+                            raw_p = "FY" + raw_p[-2:]
+                        if raw_p not in detected_periods:
+                            detected_periods.append(raw_p)
+                    break
+            if detected_periods:
+                break
+
+        if not detected_periods:
+            m_single = re.search(r"(?:financial statements|statement of profit and loss)[,\s]+(?:for\s+)?(FY\s*\d{2,4}|Fiscal\s*\d{4}|\d{4})", full_text, re.IGNORECASE)
+            if m_single:
+                raw_p = m_single.group(1).upper().replace(" ", "")
+                if raw_p.startswith("FISCAL"):
+                    raw_p = "FY" + raw_p[-2:]
+                elif len(raw_p) == 4 and raw_p.isdigit():
+                    raw_p = "FY" + raw_p[-2:]
+                detected_periods = [raw_p]
+            else:
+                all_fy = re.findall(r"\b(FY\s*\d{2,4})\b", full_text, re.IGNORECASE)
+                if all_fy:
+                    detected_periods = [all_fy[0].upper().replace(" ", "")]
+
+        periods_data: Dict[str, Dict[str, float]] = {p: {} for p in detected_periods}
+        provenance_map: Dict[str, Dict[str, Tuple[int, str, str]]] = {p: {} for p in detected_periods}
+        audit_items: List[IngestionAuditItem] = []
+        limitations: List[DecisionLimitationItem] = []
+
+        METRIC_PATTERNS = [
+            ("revenue_ops_cr", r"(?:revenue from operations|gross revenue|turnover|total revenue from operations)"),
+            ("ebitda_cr", r"(?:restated (?:operating )?ebitda|operating ebitda|\bebitda\b)"),
+            ("pat_cr", r"(?:restated profit after tax|profit after tax|\bpat\b|net profit)"),
+            ("cfo_cr", r"(?:cash flow from operations|cash flow from operating activities|\bcfo\b|operating cash flows?)"),
+            ("cfi_cr", r"(?:cash flow from investing(?: activities)?|\bcfi\b)"),
+            ("cff_cr", r"(?:cash flow from financing(?: activities)?|\bcff\b)"),
+            ("capex_cr", r"(?:capital expenditures?|\bcapex\b|purchase of property, plant and equipment)"),
+            ("fcf_cr", r"(?:free cash flow|\bfcf\b)"),
+            ("net_worth_cr", r"(?:tangible net worth|net worth|total equity)"),
         ]
-        limitations = []
-        return PreIPODealDossier(
-            deal_id="provisional_upload",
-            company_name=f"{inferred_name} [Provisional Intake]",
+
+        # Multi-column table extraction pass
+        if len(detected_periods) >= 2:
+            for page_num, ptext in pages_text:
+                lines = [l.strip() for l in ptext.split("\n") if l.strip()]
+                for i, line in enumerate(lines):
+                    for mkey, mpat in METRIC_PATTERNS:
+                        if re.search(r"^" + mpat + r"$", line, re.IGNORECASE) or re.search(r"^" + mpat + r"\s*[:\(\[]", line, re.IGNORECASE):
+                            collected_nums = []
+                            j = i + 1
+                            while j < min(len(lines), i + len(detected_periods) + 4):
+                                cand = lines[j]
+                                val = cls._clean_financial_number(cand)
+                                if val is not None:
+                                    collected_nums.append((val, cand))
+                                    j += 1
+                                else:
+                                    parts = cand.split()
+                                    part_nums = [(cls._clean_financial_number(p), p) for p in parts]
+                                    if all(p[0] is not None for p in part_nums) and part_nums:
+                                        collected_nums.extend(part_nums)
+                                        j += 1
+                                    else:
+                                        break
+                            if collected_nums:
+                                for p_idx, p_name in enumerate(detected_periods):
+                                    if p_idx < len(collected_nums):
+                                        num_val, raw_str = collected_nums[p_idx]
+                                        local_scale = scale
+                                        line_lower = line.lower()
+                                        if "mn" in line_lower or "million" in line_lower:
+                                            local_scale = 0.1
+                                        elif "lakh" in line_lower or "lac" in line_lower:
+                                            local_scale = 0.01
+                                        elif "cr" in line_lower or "crore" in line_lower:
+                                            local_scale = 1.0
+                                        scaled_val = round(num_val * local_scale, 2)
+                                        periods_data[p_name][mkey] = scaled_val
+                                        provenance_map[p_name][mkey] = (page_num, line, raw_str)
+
+        # Single-line key-value disclosures pass
+        for page_num, ptext in pages_text:
+            lines = [l.strip() for l in ptext.split("\n") if l.strip()]
+            for line in lines:
+                for mkey, mpat in METRIC_PATTERNS:
+                    m_kv = re.search(r"^" + mpat + r"(?:\s*\([^\)]*\))?[\s:\|\t]+([-\(\)\d,\.]+)\s*(cr|crore|mn|million|lakh|lakhs|%)?", line, re.IGNORECASE)
+                    if m_kv:
+                        raw_val = m_kv.group(1)
+                        local_u = (m_kv.group(2) or "").lower()
+                        local_scale = scale
+                        line_lower = line.lower()
+                        if "mn" in local_u or "million" in local_u or "mn" in line_lower or "million" in line_lower:
+                            local_scale = 0.1
+                        elif "lakh" in local_u or "lakh" in line_lower or "lac" in line_lower:
+                            local_scale = 0.01
+                        elif "cr" in local_u or "crore" in local_u or "cr" in line_lower or "crore" in line_lower:
+                            local_scale = 1.0
+                        val = cls._clean_financial_number(raw_val)
+                        if val is not None:
+                            target_p = detected_periods[0] if detected_periods else "FY24"
+                            if target_p not in periods_data:
+                                periods_data[target_p] = {}
+                                provenance_map[target_p] = {}
+                            scaled_val = round(val * local_scale, 2)
+                            periods_data[target_p][mkey] = scaled_val
+                            provenance_map[target_p][mkey] = (page_num, line, raw_val)
+
+        # 4. Indebtedness & Balance Sheet Extraction
+        debt_items: Dict[str, Tuple[float, str, int, str]] = {}
+        DEBT_PATTERNS = [
+            ("term_loans", r"(?:secured (?:rupee )?term loans from banks|term loans from banks|secured term loans)"),
+            ("wc_loans", r"(?:working capital demand loans|working capital loans / cc|short-term borrowings)"),
+            ("ncd_bonds", r"(?:non-convertible debentures|ncds?|bonds)"),
+            ("unsecured_loans", r"(?:unsecured loans?)"),
+            ("leases", r"(?:ind as 116 (?:capitalized )?lease liabilities|lease liabilities)"),
+            ("cash", r"(?:cash & bank balances|cash and cash equivalents|cash and bank balances|liquid mutual funds)"),
+            ("total_borrowings", r"(?:total borrowings? \(excluding leases?\)|total debt|total borrowings?)"),
+        ]
+
+        for page_num, ptext in pages_text:
+            lines = [l.strip() for l in ptext.split("\n") if l.strip()]
+            for i, line in enumerate(lines):
+                for dkey, dpat in DEBT_PATTERNS:
+                    m_inline = re.search(r"^" + dpat + r"(?:\s*\([^\)]*\))?[\s:\|\t]+([-\(\)\d,\.]+)", line, re.IGNORECASE)
+                    if m_inline and dkey not in debt_items:
+                        raw_d = m_inline.group(1)
+                        val = cls._clean_financial_number(raw_d)
+                        if val is not None:
+                            debt_items[dkey] = (round(val * scale, 2), raw_d, page_num, line)
+                            continue
+                    if re.search(r"^" + dpat + r"$", line, re.IGNORECASE) and dkey not in debt_items:
+                        if i + 1 < len(lines):
+                            cand = lines[i + 1]
+                            val = cls._clean_financial_number(cand)
+                            if val is not None:
+                                debt_items[dkey] = (round(val * scale, 2), cand, page_num, line)
+
+        # 5. Working capital & Governance
+        wc_gov_items: Dict[str, Tuple[float, str, int, str]] = {}
+        WC_GOV_PATTERNS = [
+            ("dio", r"(?:days inventory outstanding|\bdio\b)"),
+            ("dso", r"(?:days sales outstanding|\bdso\b)"),
+            ("dpo", r"(?:days payable outstanding|\bdpo\b)"),
+            ("ccc", r"(?:cash conversion cycle|\bccc\b)"),
+            ("pledge", r"(?:promoter shareholding pledged|promoter pledge)"),
+            ("rpt", r"(?:related party transactions|rpt \(% of rev\))"),
+            ("top5", r"(?:top 5 customer concentration|customer concentration)"),
+            ("indep", r"(?:independent directors on board|independent directors)"),
+        ]
+        for page_num, ptext in pages_text:
+            lines = [l.strip() for l in ptext.split("\n") if l.strip()]
+            for i, line in enumerate(lines):
+                for wgkey, wgpat in WC_GOV_PATTERNS:
+                    m_inline = re.search(r"^" + wgpat + r"(?:\s*\([^\)]*\))?[\s:\|\t]+([-\(\)\d,\.]+)", line, re.IGNORECASE)
+                    if m_inline and wgkey not in wc_gov_items:
+                        raw_val = m_inline.group(1)
+                        val = cls._clean_financial_number(raw_val)
+                        if val is not None:
+                            wc_gov_items[wgkey] = (val, raw_val, page_num, line)
+                            continue
+                    if re.search(r"^" + wgpat + r"$", line, re.IGNORECASE) and wgkey not in wc_gov_items:
+                        if i + 1 < len(lines):
+                            cand = lines[i + 1]
+                            val = cls._clean_financial_number(cand)
+                            if val is not None:
+                                wc_gov_items[wgkey] = (val, cand, page_num, line)
+
+        # 6. Build History (Only for periods that have extracted facts)
+        history: List[FinancialYearMetric] = []
+        valid_periods = [p for p in detected_periods if periods_data.get(p)]
+        def sort_key(p):
+            m = re.search(r"\d+", p)
+            return int(m.group(0)) if m else 0
+        valid_periods.sort(key=sort_key)
+
+        for p in valid_periods:
+            p_dict = periods_data[p]
+            p_prov = provenance_map.get(p, {})
+
+            rev = p_dict.get("revenue_ops_cr", 0.0)
+            eb = p_dict.get("ebitda_cr", 0.0)
+            pat = p_dict.get("pat_cr", 0.0)
+            cfo = p_dict.get("cfo_cr", 0.0)
+            cfi = p_dict.get("cfi_cr", 0.0)
+            cff = p_dict.get("cff_cr", 0.0)
+            capex = p_dict.get("capex_cr", 0.0)
+            fcf = p_dict.get("fcf_cr", round(cfo - capex, 2) if ("cfo_cr" in p_dict and "capex_cr" in p_dict) else 0.0)
+            nw = p_dict.get("net_worth_cr", 0.0)
+
+            prov_obj = None
+            if p_prov:
+                first_prov = next(iter(p_prov.values()))
+                prov_obj = ProvenanceRef("Section V Restated Financials", first_prov[0], f"Restated Statement ({p})", first_prov[1])
+
+            history.append(
+                FinancialYearMetric(
+                    fiscal_year=p,
+                    revenue_ops_cr=rev,
+                    ebitda_cr=eb,
+                    pat_cr=pat,
+                    cfo_cr=cfo,
+                    cfi_cr=cfi,
+                    cff_cr=cff,
+                    capex_cr=capex,
+                    fcf_cr=fcf,
+                    net_worth_cr=nw,
+                    provenance=prov_obj,
+                )
+            )
+
+            for m_key, m_name, m_val in [
+                ("revenue_ops_cr", "Revenue from Operations", rev),
+                ("ebitda_cr", "Operating EBITDA", eb),
+                ("pat_cr", "Profit After Tax (PAT)", pat),
+                ("cfo_cr", "Cash Flow from Operations (CFO)", cfo),
+                ("capex_cr", "Capital Expenditures (Capex)", capex),
+                ("fcf_cr", "Free Cash Flow (FCF)", fcf),
+                ("net_worth_cr", "Tangible Net Worth", nw),
+            ]:
+                if m_key == "fcf_cr" and "fcf_cr" not in p_dict and ("cfo_cr" in p_dict and "capex_cr" in p_dict):
+                    audit_items.append(
+                        IngestionAuditItem(
+                            field_name=f"{m_name} ({p})",
+                            raw_extracted_value=f"Derived: CFO ({cfo:,.1f}) - Capex ({capex:,.1f})",
+                            normalized_metric=f"₹{fcf:,.2f} Cr",
+                            status="CONVERTED_AND_NORMALIZED",
+                            citation=f"Derived Metric (SEBI ICDR)",
+                            confidence_score=0.95,
+                        )
+                    )
+                elif m_key in p_dict:
+                    audit_items.append(
+                        IngestionAuditItem(
+                            field_name=f"{m_name} ({p})",
+                            raw_extracted_value=f"{m_val:,.2f}" if m_val is not None else "0.00",
+                            normalized_metric=f"₹{m_val:,.2f} Cr" if m_val is not None else "₹0.00 Cr",
+                            status="FOUND_AND_RECONCILED",
+                            citation=f"Audited Statement ({p})",
+                            confidence_score=1.0,
+                        )
+                    )
+                else:
+                    audit_items.append(
+                        IngestionAuditItem(
+                            field_name=f"{m_name} ({p})",
+                            raw_extracted_value="Not disclosed or unparsed",
+                            normalized_metric="UNAVAILABLE",
+                            status="MISSING_UNDISCLOSED",
+                            citation="DRHP Text Layer",
+                            confidence_score=0.0,
+                        )
+                    )
+
+        # 7. Indebtedness Object
+        t_loans = debt_items.get("term_loans", (0.0, "None", 1, "None"))[0]
+        w_loans = debt_items.get("wc_loans", (0.0, "None", 1, "None"))[0]
+        n_bonds = debt_items.get("ncd_bonds", (0.0, "None", 1, "None"))[0]
+        u_loans = debt_items.get("unsecured_loans", (0.0, "None", 1, "None"))[0]
+        l_liab = debt_items.get("leases", (0.0, "None", 1, "None"))[0]
+        c_cash = debt_items.get("cash", (0.0, "None", 1, "None"))[0]
+        tot_borrow = debt_items.get("total_borrowings", (None, "None", 1, "None"))[0]
+
+        if tot_borrow is not None and t_loans == 0.0 and w_loans == 0.0:
+            t_loans = tot_borrow
+            audit_items.append(
+                IngestionAuditItem(
+                    field_name="Total Borrowings",
+                    raw_extracted_value=str(tot_borrow),
+                    normalized_metric=f"₹{tot_borrow:,.2f} Cr",
+                    status="FOUND_AND_RECONCILED",
+                    citation="Indebtedness Disclosures",
+                    confidence_score=1.0,
+                )
+            )
+        elif t_loans > 0.0:
+            audit_items.append(
+                IngestionAuditItem(
+                    field_name="Secured Term Loans",
+                    raw_extracted_value=str(t_loans),
+                    normalized_metric=f"₹{t_loans:,.2f} Cr",
+                    status="FOUND_AND_RECONCILED",
+                    citation="Section VI Indebtedness",
+                    confidence_score=1.0,
+                )
+            )
+
+        if c_cash > 0.0:
+            audit_items.append(
+                IngestionAuditItem(
+                    field_name="Cash & Bank Balances",
+                    raw_extracted_value=str(c_cash),
+                    normalized_metric=f"₹{c_cash:,.2f} Cr",
+                    status="FOUND_AND_RECONCILED",
+                    citation="Section VI Liquid Assets",
+                    confidence_score=1.0,
+                )
+            )
+
+        indebtedness_obj = IndebtednessSchedule(
+            secured_term_loans_cr=t_loans,
+            working_capital_loans_cr=w_loans,
+            ncd_bonds_cr=n_bonds,
+            unsecured_loans_cr=u_loans,
+            lease_liabilities_ind_as_116_cr=l_liab,
+            cash_and_equivalents_cr=c_cash,
+            weighted_avg_interest_rate_pct=None,
+            floating_rate_portion_pct=None,
+            fixed_rate_portion_pct=None,
+        )
+
+        # Working Capital & Governance Objects
+        dio_val = wc_gov_items.get("dio", (0.0,))[0]
+        dso_val = wc_gov_items.get("dso", (0.0,))[0]
+        dpo_val = wc_gov_items.get("dpo", (0.0,))[0]
+        ccc_val = wc_gov_items.get("ccc", (round(dio_val + dso_val - dpo_val, 1) if (dio_val or dso_val or dpo_val) else 0.0,))[0]
+        working_cap_obj = WorkingCapitalDynamics(
+            inventory_days_dio=dio_val,
+            debtor_days_dso=dso_val,
+            creditor_days_dpo=dpo_val,
+            net_working_capital_pct_sales=0.0,
+        )
+
+        pledge_val = wc_gov_items.get("pledge", (None,))[0] if "pledge" in wc_gov_items else None
+        rpt_val = wc_gov_items.get("rpt", (None,))[0] if "rpt" in wc_gov_items else None
+        top5_val = wc_gov_items.get("top5", (None,))[0] if "top5" in wc_gov_items else None
+        indep_val = wc_gov_items.get("indep", (None,))[0] if "indep" in wc_gov_items else None
+        governance_obj = NonFinancialGovernance(
+            promoter_pledge_pct=pledge_val or 0.0,
+            related_party_transactions_pct_rev=rpt_val or 0.0,
+            top_5_customer_concentration_pct=top5_val or 0.0,
+            herfindahl_hhi_index=0.0,
+            contingent_liabilities_pct_networth=0.0,
+            independent_directors_pct=indep_val,
+        )
+
+        # 8. Check for Missing Required Information
+        if not history:
+            limitations.append(
+                DecisionLimitationItem(
+                    gap_id="GAP-INTAKE-HIST-01",
+                    item_name="Historical Restated Statements",
+                    affected_dimension="Section V Disclosures",
+                    current_status="NOT_SUPPLIED",
+                    why_it_matters="No restated financial periods were recognized in the document.",
+                    blocked_decision_or_recommendation="Dickinson classification and solvency modeling blocked.",
+                    materiality_priority="HIGH",
+                    recommended_diligence_request="Upload Section V of Draft Red Herring Prospectus.",
+                )
+            )
+        else:
+            latest = history[-1]
+            latest_dict = periods_data.get(latest.fiscal_year, {})
+            if "revenue_ops_cr" not in latest_dict:
+                limitations.append(
+                    DecisionLimitationItem(
+                        gap_id="GAP-INTAKE-REV-01",
+                        item_name="Revenue from Operations",
+                        affected_dimension="Income Statement",
+                        current_status="NOT_SUPPLIED",
+                        why_it_matters="Top-line revenue is not disclosed or unparsed.",
+                        blocked_decision_or_recommendation="Operating margin and growth rates cannot be computed.",
+                        materiality_priority="HIGH",
+                        recommended_diligence_request="Confirm revenue line item in restated financial statements.",
+                    )
+                )
+            if "ebitda_cr" not in latest_dict:
+                limitations.append(
+                    DecisionLimitationItem(
+                        gap_id="GAP-INTAKE-EBITDA-01",
+                        item_name="Operating EBITDA",
+                        affected_dimension="Operating Cash & Profitability",
+                        current_status="NOT_SUPPLIED",
+                        why_it_matters="Operating EBITDA is not disclosed or unparsed.",
+                        blocked_decision_or_recommendation="Leverage multiples (Debt/EBITDA) and interest coverage cannot be evaluated.",
+                        materiality_priority="HIGH",
+                        recommended_diligence_request="Confirm operating EBITDA disclosure in prospectus.",
+                    )
+                )
+            if "cfo_cr" not in latest_dict:
+                limitations.append(
+                    DecisionLimitationItem(
+                        gap_id="GAP-INTAKE-CFO-01",
+                        item_name="Cash Flow from Operations",
+                        affected_dimension="Cash Flow Statement",
+                        current_status="NOT_SUPPLIED",
+                        why_it_matters="Operating cash flow is undisclosed.",
+                        blocked_decision_or_recommendation="Cash conversion and Dickinson life-stage classification cannot be verified.",
+                        materiality_priority="HIGH",
+                        recommended_diligence_request="Supply restated cash flow statement.",
+                    )
+                )
+
+        # 9. Investment Committee Stance
+        has_blocking_gaps = bool([g for g in limitations if g.gap_id.startswith(("GAP-OCR-", "GAP-INTAKE-"))])
+        if has_blocking_gaps or not history:
+            verdict = "INSUFFICIENT_DISCLOSURES_UNRATED"
+            screening_grade = "UNRATED"
+            call_to_action = "Underwriting suspended pending verifiable statutory filing intake."
+        else:
+            verdict = "AWAITING_INDEPENDENT_REVIEW"
+            screening_grade = "UNRATED"
+            call_to_action = "Review extraction candidates against original source before underwriting authorization."
+
+        ic_verdict_obj = InvestmentCommitteeVerdict(
+            underwriting_verdict=verdict,
+            internal_screening_grade=screening_grade,
+            max_recommended_leverage_ratio=2.5 if not has_blocking_gaps else 0.0,
+            key_credit_strengths=[
+                f"Extracted {len(history)} restated reporting period(s): {', '.join([h.fiscal_year for h in history])}.",
+                f"Scale detected as {unit_label} (multiplier: {scale}).",
+            ] if history else [],
+            key_downside_risks=[g.why_it_matters for g in limitations] if limitations else ["Filing facts await human review."],
+            mandatory_loan_covenants=["Verify candidate values against certified audited statements."],
+            treasury_call_to_action=call_to_action,
+        )
+
+        # Compute authentic confidence score:
+        # Proportion of reconciled financial items among total checked
+        reconciled_count = len([it for it in audit_items if it.status in ("FOUND_AND_RECONCILED", "CONVERTED_AND_NORMALIZED")])
+        total_audit_count = max(len(audit_items), 1)
+        raw_conf = reconciled_count / total_audit_count
+        overall_confidence = round(raw_conf, 2)
+
+        # Issue size and structure if disclosed
+        total_issue_cr = 0.0
+        m_iss = re.search(r"APPROXIMATELY [■₹Rs\.\s]*([\d,]+\.?\d*)\s*CRORE", full_text, re.IGNORECASE)
+        if not m_iss:
+            m_iss = re.search(r"(?:Estimated Issue Value|Gross OFS|Offer for Sale \(OFS\))[\s\n]*[■₹Rs\.\s]*([\d,]+\.?\d*)\s*Cr", full_text, re.IGNORECASE)
+        if m_iss:
+            total_issue_cr = float(m_iss.group(1).replace(",", ""))
+
+        is_ofs = bool(re.search(r"100%\s*Offer for Sale|No Fresh Capital", full_text, re.IGNORECASE))
+        fresh_cr = 0.0 if is_ofs else total_issue_cr
+        ofs_cr = total_issue_cr if is_ofs else 0.0
+
+        dossier = PreIPODealDossier(
+            deal_id=deal_id_hint or re.sub(r"[^a-zA-Z0-9]+", "_", comp_name.lower()).strip("_"),
+            company_name=comp_name,
             sector="General Commercial & Industrial",
-            filing_type="DRHP (Provisional Intake)",
+            filing_type="DRHP (Electronic Searchable)",
             filing_date="Current Year",
-            total_issue_size_cr=0.0,
-            fresh_issue_cr=0.0,
-            ofs_cr=0.0,
+            total_issue_size_cr=total_issue_cr,
+            fresh_issue_cr=fresh_cr,
+            ofs_cr=ofs_cr,
             face_value_inr=10.0,
-            brlm_bankers=["Syndicate Lead Managers"],
+            brlm_bankers=["Unverified"],
             exchange_listing=["BSE", "NSE"],
-            history=[FinancialYearMetric("FY24", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)],
-            indebtedness=IndebtednessSchedule(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-            working_capital=WorkingCapitalDynamics(0.0, 0.0, 0.0, 0.0),
-            governance=NonFinancialGovernance(0.0, 0.0, 0.0, 0.0, 0.0, 50.0),
+            history=history,
+            indebtedness=indebtedness_obj,
+            working_capital=working_cap_obj,
+            governance=governance_obj,
             objects_of_offer=ObjectsOfOfferWaterfall(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
             beneish_forensics=BeneishMScoreRatios(),
             debt_maturity=DebtMaturityLadder(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
-            valuation_comps=ValuationPeerBenchmarking(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "None", [], "DATA_UNAVAILABLE"),
-            ic_verdict=InvestmentCommitteeVerdict(
-                underwriting_verdict="INSUFFICIENT_DISCLOSURES_UNRATED",
-                internal_screening_grade="UNRATED",
-                max_recommended_leverage_ratio=0.0,
-                key_credit_strengths=[],
-                key_downside_risks=["Automated extraction requires manual reconciliation of non-standard disclosures."],
-                mandatory_loan_covenants=["Obtain signed auditor restated summaries."],
-                treasury_call_to_action="Underwriting suspended pending manual reconciliation.",
-            ),
+            valuation_comps=ValuationPeerBenchmarking(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, "None", [], "UNVERIFIED_DATA_UNAVAILABLE"),
+            ic_verdict=ic_verdict_obj,
             limitations=limitations,
             audit_report=audit_items,
         )
+
+        return dossier

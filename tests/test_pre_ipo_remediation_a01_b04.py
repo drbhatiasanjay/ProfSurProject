@@ -95,7 +95,7 @@ def test_a03_empty_ocr_json_does_not_yield_reconciled_confidence():
     client.models.generate_content.return_value.text = '{}'
     with patch('models.pre_ipo_ingest.get_gemini_api_key', return_value='fake-key'), \
          patch('google.genai.Client', return_value=client):
-        dossier, status = PreIPOIngestionEngine.parse_scanned_pdf_with_vision(io.BytesIO(b'%PDF-1.4 ' + b'0' * 120))
+        dossier, status = PreIPOIngestionEngine.parse_scanned_pdf_with_vision(io.BytesIO(b'%PDF-1.4 ' + b'0' * 120), allow_external_cloud_ocr=True)
 
     assert status in ("EXTRACTION_EMPTY_OR_INVALID", "INSUFFICIENT_DATA")
     if dossier is not None:

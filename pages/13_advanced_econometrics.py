@@ -155,7 +155,7 @@ with tab_gmm:
                 ), unsafe_allow_html=True)
 
             # Coefficient table
-            st.markdown("#### 📐 Coefficient Estimates & Target Adjustment")
+            st.markdown("#### Coefficient Estimates & Target Adjustment")
             ct = format_coef_table(gmm["coef_table"])
             st.dataframe(ct, use_container_width=True, hide_index=True)
             df_download_button(ct, "gmm_coefficients.csv")
@@ -176,7 +176,7 @@ with tab_gmm:
                 f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
                 f"$N={gmm.get('n_firms', 'N')}$ firms, $R^2={gmm.get('r_squared', 0):.3f}$."
             )
-            with st.expander("📋 Cite this result"):
+            with st.expander("Cite this result", icon=":material/format_quote:"):
                 st.caption("Copy the citation in your preferred format:")
                 st.markdown("**APA**")
                 st.code(_apa_text, language=None)
@@ -184,7 +184,7 @@ with tab_gmm:
                 st.code(_latex_text, language=None)
 
             # Diagnostic tests
-            st.markdown("#### 🔬 Dynamic Specification & Overidentification Diagnostics")
+            st.markdown("#### Dynamic Specification & Overidentification Diagnostics")
             dc1, dc2, dc3 = st.columns(3)
             ar1 = gmm["ar1"]
             ar2 = gmm["ar2"]
@@ -218,7 +218,7 @@ with tab_gmm:
                 ), unsafe_allow_html=True)
 
             # ── 4-Way GMM Chart Switcher ──
-            st.markdown("#### 📊 Dynamic Econometric Visualizations")
+            st.markdown("#### Dynamic Econometric Visualizations")
             gmm_head_left, gmm_head_right = st.columns([3, 2])
             with gmm_head_left:
                 st.caption("Select interactive econometric representation:")
@@ -347,7 +347,7 @@ with tab_gmm:
             gmm_scholarly_html = f"""
             <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px;">
                 <div style="font-size: 13px; font-weight: 700; color: #38BDF8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">
-                    💡 Dynamic Econometric Mechanisms & Adjustment Theory
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">insights</span>Dynamic Econometric Mechanisms & Adjustment Theory
                 </div>
                 <div style="font-size: 13px; color: {text_c}; line-height: 1.6; margin-bottom: 10px;">
                     <b style="color: #06B6D4;">• Target Adjustment Speed [λ = {soa:.1f}%/yr, Half-Life = {half_life_yr:.1f} yrs]:</b> 
@@ -369,11 +369,11 @@ with tab_gmm:
                 vault_html = render_academic_vault_html(
                     vault_citations,
                     theme=_theme,
-                    title="📚 Peer-Reviewed Literature Benchmark Knowledge Vault (context only; proxy is not System GMM)"
+                    title="Peer-Reviewed Literature Benchmark Knowledge Vault (context only; proxy is not System GMM)"
                 )
                 st.markdown(vault_html, unsafe_allow_html=True)
 
-            with st.expander("🤖 AI Deep Interpretation", expanded=False):
+            with st.expander("AI Deep Interpretation", icon=":material/psychology:", expanded=False):
                 if st.button("Generate AI Analysis", key="p13_gmm_ai_gen"):
                     _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
                     _citations = st.session_state.get("p19_citations", False)
@@ -438,7 +438,7 @@ with tab_delta:
                 f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
                 f"$R^2={rec.get('r_squared', 0):.3f}$."
             )
-            with st.expander("📋 Cite this result"):
+            with st.expander("Cite this result", icon=":material/format_quote:"):
                 st.caption("Copy the citation in your preferred format:")
                 st.markdown("**APA**")
                 st.code(_apa_text, language=None)
@@ -571,7 +571,7 @@ with tab_compare:
                     f"$R^2_{{{stage_a}}}={result['result_a']['r_squared']:.3f}$, "
                     f"$R^2_{{{stage_b}}}={result['result_b']['r_squared']:.3f}$."
                 )
-                with st.expander("📋 Cite this result"):
+                with st.expander("Cite this result", icon=":material/format_quote:"):
                     st.caption("Copy the citation in your preferred format:")
                     st.markdown("**APA**")
                     st.code(_apa_text, language=None)
@@ -579,7 +579,7 @@ with tab_compare:
                     st.code(_latex_text, language=None)
 
                 # ── 4-Way Stage Comparison Chart Switcher ──
-                st.markdown("#### 📊 Comparative Life Stage Visualizations")
+                st.markdown("#### Comparative Life Stage Visualizations")
                 stg_head_left, stg_head_right = st.columns([3, 2])
                 with stg_head_left:
                     st.caption("Select comparative econometric representation:")
@@ -704,7 +704,7 @@ with tab_compare:
                 stg_scholarly_html = f"""
                 <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px;">
                     <div style="font-size: 13px; font-weight: 700; color: #38BDF8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">
-                        💡 Life-Cycle Structural Transition Analysis
+                        <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">insights</span>Life-Cycle Structural Transition Analysis
                     </div>
                     <div style="font-size: 13px; color: {text_c}; line-height: 1.6; margin-bottom: 10px;">
                         <b style="color: #F43F5E;">• Life Stage Asymmetry & Capital Structure Rebalancing:</b> 
@@ -725,7 +725,7 @@ with tab_compare:
                     vault_html_stg = render_academic_vault_html(
                         vault_citations_stg,
                         theme=_theme,
-                        title="📚 Peer-Reviewed Literature Benchmark Knowledge Vault (Life-Cycle Stage Comparison)"
+                        title="Peer-Reviewed Literature Benchmark Knowledge Vault (Life-Cycle Stage Comparison)"
                     )
                     st.markdown(vault_html_stg, unsafe_allow_html=True)
 

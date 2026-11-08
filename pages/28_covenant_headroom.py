@@ -46,7 +46,7 @@ def render_covenant_headroom_page():
     accent_rose = "#E11D48" if light else "#F43F5E"
 
     # Header
-    st.markdown("## 🛡️ Covenant Compliance & Debt Headroom Engine")
+    st.markdown("## :material/shield: Covenant Compliance & Debt Headroom Engine")
     st.caption(
         "12-Quarter CFADS Stress Testing · Dynamic Covenant Breach Diagnostics · "
         "Deterministic Headroom Binary Search · Audited Regulatory Anchors"
@@ -80,7 +80,7 @@ def render_covenant_headroom_page():
     # ─────────────────────────────────────────────────────────────────────────
     # 2. THE BACKGROUND: Solution Architecture & Mathematical Engine
     # ─────────────────────────────────────────────────────────────────────────
-    with st.expander("🔬 2. Solution Architecture & Methodological Background (Click to Expand)", expanded=False):
+    with st.expander("2. Solution Architecture & Methodological Background (Click to Expand)", icon=":material/science:", expanded=False):
         render_html(f"""
         <div style="font-size:0.88rem; color:{text_color}; line-height:1.6; margin-bottom:12px;">
             This engine implements the independently verified, deterministic 12-quarter covenant simulation protocol from 
@@ -384,7 +384,7 @@ def render_covenant_headroom_page():
         st.plotly_chart(fig_dscr, use_container_width=True)
 
     # 12-Quarter Detailed Audit Table
-    with st.expander("📋 Detailed 12-Quarter Audit Schedule & Violations Log", expanded=False):
+    with st.expander("Detailed 12-Quarter Audit Schedule & Violations Log", icon=":material/list_alt:", expanded=False):
         table_rows = []
         for q in stressed["quarters"]:
             table_rows.append({
@@ -419,7 +419,7 @@ def render_covenant_headroom_page():
     binding_str = ", ".join(binding) if binding else "None"
     
     if violations_count > 0:
-        verdict_badge = f'<span style="background:rgba(244,63,94,0.15); color:{accent_rose}; padding:4px 10px; border-radius:4px; font-weight:700; font-size:0.82rem;">⚠️ COVENANT BREACH DETECTED ({violations_count} Quarters)</span>'
+        verdict_badge = f'<span style="background:rgba(244,63,94,0.15); color:{accent_rose}; padding:4px 10px; border-radius:4px; font-weight:700; font-size:0.82rem;"><span class="material-symbols-rounded" style="font-size:13px; vertical-align:-2px; margin-right:4px;">warning</span>COVENANT BREACH DETECTED ({violations_count} Quarters)</span>'
         interpretation_lead = (
             f"Under the simulated combined stress (+{rate_shock_bps} bps interest rate shock and {margin_shock_pct}% operating margin shock), "
             f"<strong>{snapshot.company}</strong> breaches debt covenants across <strong>{len(breach_quarters)} quarters</strong> "
@@ -427,7 +427,7 @@ def render_covenant_headroom_page():
             f"compressing additional debt capacity to zero."
         )
     else:
-        verdict_badge = f'<span style="background:rgba(16,185,129,0.15); color:{accent_emerald}; padding:4px 10px; border-radius:4px; font-weight:700; font-size:0.82rem;">✅ COVENANTS FULLY PRESERVED (₹{headroom_cr:,.1f} Cr Headroom)</span>'
+        verdict_badge = f'<span style="background:rgba(16,185,129,0.15); color:{accent_emerald}; padding:4px 10px; border-radius:4px; font-weight:700; font-size:0.82rem;"><span class="material-symbols-rounded" style="font-size:13px; vertical-align:-2px; margin-right:4px;">check_circle</span>COVENANTS FULLY PRESERVED (₹{headroom_cr:,.1f} Cr Headroom)</span>'
         interpretation_lead = (
             f"Under the simulated scenario (+{rate_shock_bps} bps rate shock and {margin_shock_pct}% margin compression), "
             f"<strong>{snapshot.company}</strong> maintains full compliance across all 12 quarters. "
@@ -484,7 +484,7 @@ def render_covenant_headroom_page():
             st.markdown(f"""
             <div style="background:{card_bg}; border:1px solid {card_border}; border-left:4px solid {accent_rose}; border-radius:6px; padding:14px 16px;">
                 <div style="font-size:0.85rem; font-weight:700; color:{accent_rose}; margin-bottom:6px;">
-                    🚨 Pre-emptive Debt Restructuring Playbook (Borrower Mandate)
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">warning</span>Pre-emptive Debt Restructuring Playbook (Borrower Mandate)
                 </div>
                 <div style="font-size:0.83rem; color:{text_color}; line-height:1.5;">
                     1. <strong>Tenor Reprofiling:</strong> Extend scheduled debt repayments from 3-year linear amortization to a 7-year balloon schedule to lower quarterly principal calls by ~40%.<br/>
@@ -497,7 +497,7 @@ def render_covenant_headroom_page():
             st.markdown(f"""
             <div style="background:{card_bg}; border:1px solid {card_border}; border-left:4px solid {accent_emerald}; border-radius:6px; padding:14px 16px;">
                 <div style="font-size:0.85rem; font-weight:700; color:{accent_emerald}; margin-bottom:6px;">
-                    🎯 Capital Allocation & Borrowing Clearance (CFO Authorization)
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">check_circle</span>Capital Allocation & Borrowing Clearance (CFO Authorization)
                 </div>
                 <div style="font-size:0.83rem; color:{text_color}; line-height:1.5;">
                     1. <strong>Approved Borrowing Envelope:</strong> The company is cleared to execute up to ₹{headroom_cr:,.1f} Cr in incremental debt financing.<br/>
@@ -511,7 +511,7 @@ def render_covenant_headroom_page():
         st.markdown(f"""
         <div style="background:{card_bg}; border:1px solid {card_border}; border-left:4px solid {accent_blue}; border-radius:6px; padding:14px 16px;">
             <div style="font-size:0.85rem; font-weight:700; color:{accent_blue}; margin-bottom:6px;">
-                📑 Credit Committee Sanction Conditions (Lender Mandate)
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">fact_check</span>Credit Committee Sanction Conditions (Lender Mandate)
             </div>
             <div style="font-size:0.83rem; color:{text_color}; line-height:1.5;">
                 1. <strong>Covenant Definition Standardization:</strong> Enforce strict inclusion of Ind AS 116 operating lease obligations in Total Economic Indebtedness.<br/>
@@ -529,7 +529,8 @@ def render_covenant_headroom_page():
     with exp2:
         json_export = json.dumps(sim_res, indent=2)
         st.download_button(
-            label="📥 Download Audit Memo (JSON)",
+            label="Download Audit Memo (JSON)",
+            icon=":material/download:",
             data=json_export,
             file_name=f"covenant_audit_{selected_key}_{datetime.now().strftime('%Y%m%d')}.json",
             mime="application/json",

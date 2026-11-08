@@ -122,13 +122,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Write secrets.toml for Cloud Build
-        env:
-          SECRETS_TOML: ${{ secrets.STREAMLIT_SECRETS_TOML }}
-        run: |
-          mkdir -p .streamlit
-          printf '%s' "$SECRETS_TOML" > .streamlit/secrets.toml
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:

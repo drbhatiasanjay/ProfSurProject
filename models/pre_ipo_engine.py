@@ -1197,8 +1197,7 @@ def calculate_reverse_dcf_hurdle(
 
 def generate_cmie_crosswalk_coverage(dossier: PreIPODealDossier) -> Dict[str, Any]:
     """
-    Generates data coverage and reconciliation audit metrics between DRHP extracted figures
-    and the licensed CMIE standardized financial database schema.
+    Counts legacy mapping labels only; no document audit or vendor reconciliation implied.
     """
     records = dossier.cmie_crosswalk
     if not records:
@@ -1222,11 +1221,8 @@ def generate_cmie_crosswalk_coverage(dossier: PreIPODealDossier) -> Dict[str, An
     audited_count = n_exact + n_reconciled
     cov_pct = round((audited_count / tot_denominator) * 100.0, 1)
 
-    verdict = (
-        "INSTITUTIONAL_GRADE_AUDITED" if cov_pct >= 85.0
-        else "SATISFACTORY_WITH_GAPS" if cov_pct >= 60.0
-        else "PARTIAL_TAXONOMY_ALIGNMENT"
-    )
+    # Stored match labels establish neither document review nor vendor equivalence.
+    verdict = "LEGACY_MAPPING_REVIEW_REQUIRED"
 
     return {
         "total_concepts_tracked": tot_denominator,
@@ -1235,6 +1231,8 @@ def generate_cmie_crosswalk_coverage(dossier: PreIPODealDossier) -> Dict[str, An
         "undisclosed_count": n_undisclosed,
         "parse_failed_count": n_failed,
         "coverage_pct": cov_pct,
+        "coverage_qualification": "Stored mapping-label coverage only; not extraction accuracy, accepted evidence or an audit opinion.",
+        "accepted_coverage_pct": None,
         "data_quality_verdict": verdict,
         "records": records,
     }

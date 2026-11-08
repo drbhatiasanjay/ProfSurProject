@@ -26,3 +26,6 @@ tiktoken>=0.5
 google-genai>=1.0
 pypdf>=4.0.0
 markdown-it-py>=3.0.0
+
+# Pre-IPO primary benchmark document conversion
+docling>=2.48.0

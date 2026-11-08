@@ -2,11 +2,15 @@ FROM us-east1-docker.pkg.dev/tempproject-462219/cloud-run-source-deploy/lifecycl
 
 WORKDIR /app
 
-# Install torch CPU separately (too large for base image bake)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+# Install torch CPU separately (too large for base image bake) and pypdf
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu && \
+    pip install --no-cache-dir "pypdf>=4.0.0"
 
-# App code only — all Python deps are pre-baked in the base image
+# App code only -- all Python deps are pre-baked in the base image
 COPY . .
+
+# Security guard: Enforce that secrets.toml is NEVER baked into the image
+RUN rm -f /app/.streamlit/secrets*.toml
 
 # Streamlit config
 RUN mkdir -p /app/.streamlit

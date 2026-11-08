@@ -332,12 +332,12 @@ if st.session_state.get("deck_previewed"):
             if tid == 1:
                 t1_view = st.radio(
                     "Topic 1 Visual Mode",
-                    ["📈 5-Yr Trends & Indicators", "🕸️ Peer Benchmark Radar", "📊 Peer Quartile Distribution"],
+                    ["5-Yr Trends & Indicators", "Peer Benchmark Radar", "Peer Quartile Distribution"],
                     horizontal=True,
                     key="p17_t1_vmode",
                     label_visibility="collapsed",
                 )
-                if t1_view == "🕸️ Peer Benchmark Radar":
+                if t1_view == "Peer Benchmark Radar":
                     # Multi-factor Radar vs 50th percentile peer median
                     categories = ["Leverage", "Profitability", "Tangibility", "Debt Coverage", "Size", "Growth"]
                     size_pct = _calc_pct(peers_df["size"] if peers_df is not None and "size" in peers_df.columns else None, _latest.get("size", 0))
@@ -381,7 +381,7 @@ if st.session_state.get("deck_previewed"):
                     chart_download_button(fig_radar, "board_topic1_radar.png")
                     topic_data["figs"] = [fig_radar]
 
-                elif t1_view == "📊 Peer Quartile Distribution":
+                elif t1_view == "Peer Quartile Distribution":
                     # Peer comparison distribution bars
                     metric_labels = ["Leverage (%)", "ROA (%)", "Tangibility (%)"]
                     fig_dist = go.Figure()
@@ -448,7 +448,7 @@ if st.session_state.get("deck_previewed"):
                             panel_mode=panel_mode, role=_user_role, citations=_citations,
                         )
                 if st.session_state.get(_ai_key):
-                    with st.expander("🤖 Board AI Narrative", expanded=True):
+                    with st.expander("Board AI Narrative", icon=":material/psychology:", expanded=True):
                         st.markdown(st.session_state[_ai_key])
                     topic_data["insights"] = [*topic_data.get("insights", []), st.session_state[_ai_key]]
 
@@ -463,7 +463,7 @@ if st.session_state.get("deck_previewed"):
         vault_html = render_academic_vault_html(
             vault_cits,
             theme=_theme,
-            title="📚 Peer-Reviewed Literature Benchmark Knowledge Vault (Corporate Capital Structure & Board Strategy)"
+            title="Peer-Reviewed Literature Benchmark Knowledge Vault (Corporate Capital Structure & Board Strategy)"
         )
         st.markdown(vault_html, unsafe_allow_html=True)
 

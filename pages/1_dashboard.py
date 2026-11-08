@@ -42,7 +42,7 @@ if df.empty:
     st.stop()
 
 # ── Row 1: Modern Bento Grid KPI Capsules ──
-st.markdown("### 📊 Executive Portfolio Metrics")
+st.markdown("### :material/dashboard: Executive Portfolio Metrics")
 
 n_companies = df["company_name"].nunique()
 avg_lev = df["leverage"].mean()
@@ -174,7 +174,7 @@ insights, actions = interpret_kpi_cards(df, n_companies, avg_lev, med_lev, avg_p
 _render_insight_box("KPI Overview — What do these numbers tell us?", insights, actions,
     "Dynamic summary of the current filtered dataset's capital structure profile.")
 
-with st.expander("🤖 AI Insights", expanded=False):
+with st.expander("AI Insights", icon=":material/psychology:", expanded=False):
     if st.button("Generate AI Analysis", key="p1_ai_gen"):
         _user_role = (st.session_state.get("user") or {}).get("role", "viewer")
         _citations = st.session_state.get("p19_citations", False)

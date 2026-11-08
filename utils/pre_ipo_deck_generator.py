@@ -478,12 +478,22 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
     add_header(s7, "Valuation Benchmarking, WACC/ROIC & Reverse DCF Hurdle", "Implied Offer Multiples, Economic Spread & 5-Year Growth Bar", 7)
 
     val = dossier.valuation_comps
+    eva_val = wacc_res.get("economic_profit_cr") if wacc_res else None
+    eva_str = f"{'+' if eva_val > 0 else ''}Rs. {eva_val:,.1f} Cr" if eva_val is not None else "N/A"
+
+    spread_val = wacc_res.get("value_creation_spread_pct") if wacc_res else None
+    spread_str = f"{spread_val:.1f}%" if spread_val is not None else "N/A"
+
+    roic_val = wacc_res.get("roic_pct") if wacc_res else None
+    wacc_val = wacc_res.get("wacc_pct") if wacc_res else None
+    roic_sub = f"ROIC: {roic_val:.1f}% | WACC: {wacc_val:.1f}%" if (roic_val is not None and wacc_val is not None) else "Insufficient Disclosures"
+
     v_cards = [
-        ("IMPLIED ENTERPRISE VALUE", f"Rs. {val.implied_ev_cr:,.1f} Cr" if val else "N/A", "Upper Price Band EV"),
-        ("IMPLIED P/E RATIO", f"{val.implied_pe_ratio:.1f}x" if val else "N/A", f"Peer Median: {val.peer_median_pe or 'N/A'}x" if val else "N/A"),
-        ("ROIC VS WACC SPREAD", f"{wacc_res['value_creation_spread_pct']}%", f"ROIC: {wacc_res['roic_pct']}% | WACC: {wacc_res['wacc_pct']}%"),
-        ("ECONOMIC PROFIT (EVA)", f"+Rs. {wacc_res['economic_profit_cr']:,.1f} Cr", "Annual Value Creation"),
-        ("REVERSE DCF 5-YR CAGR", f"{rev_dcf.get('required_fcf_cagr_pct', 'N/A')}%" if rev_dcf.get('required_fcf_cagr_pct') else "High Risk", rev_dcf.get("hurdle_difficulty", "")),
+        ("IMPLIED ENTERPRISE VALUE", f"Rs. {val.implied_ev_cr:,.1f} Cr" if (val and val.implied_ev_cr is not None) else "N/A", "Upper Price Band EV"),
+        ("IMPLIED P/E RATIO", f"{val.implied_pe_ratio:.1f}x" if (val and val.implied_pe_ratio is not None) else "N/A", f"Peer Median: {val.peer_median_pe or 'N/A'}x" if val else "N/A"),
+        ("ROIC VS WACC SPREAD", spread_str, roic_sub),
+        ("ECONOMIC PROFIT (EVA)", eva_str, "Annual Value Creation"),
+        ("REVERSE DCF 5-YR CAGR", f"{rev_dcf.get('required_fcf_cagr_pct', 'N/A')}%" if (rev_dcf and rev_dcf.get('required_fcf_cagr_pct') is not None) else "High Risk", rev_dcf.get("hurdle_difficulty", "") if rev_dcf else ""),
         ("VALUATION VERDICT", val.valuation_verdict if val else "FAIR_VALUE", "Peer Relative Multiple Stance"),
     ]
     for idx, (label, val_txt, sub) in enumerate(v_cards):

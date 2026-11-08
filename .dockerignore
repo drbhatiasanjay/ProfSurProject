@@ -51,3 +51,10 @@ FORK_WORKFLOW.md
 # Misc
 data.json
 table*.xml
+
+# Sensitive secrets - NEVER bake into container image
+.streamlit/secrets*.toml
+.env
+.env.*
+*.pem
+*.key
