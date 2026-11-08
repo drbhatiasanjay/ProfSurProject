@@ -1,5 +1,27 @@
 # ProfSurProject — Session Log
 
+## DAY CLOSE CHECKPOINT — Production Deployment & Release v2.4.0 (2026-11-08 23:45 IST)
+
+- **Branch:** `master` · **HEAD:** `8b3c075` (In Sync with `origin/master`)
+- **Automated Deployment:** Master push triggered GitHub Actions workflow `Test and Deploy` (Run ID: `42509235853`) deploying to Cloud Run (`https://lifecycle-leverage-779655496440.us-east1.run.app`).
+- **Core Release Features:**
+  - **Pre-IPO Multi-Document Ingestion & OCR Architecture:** Multi-engine pipeline featuring Docling as primary structured benchmark candidate, PaddleOCR as challenger, and Tesseract/RapidOCR as local fallbacks. Fail-closed `GAP-OCR-01` protection without synthetic number invention.
+  - **Database Migration Architecture:** SQLite migrations 001 and 002 executed with transactional safety and SHA-256 journal verification (`pre_ipo_schema_journal`).
+  - **Internalized Field Registry:** Runtime-packaged 74-family field registry (`models/pre_ipo_field_registry.py` & `models/data/pre_ipo_field_bindings.json`).
+  - **Full Deletion Lifecycle:** Complete cascading deletion for sources, derived observations, and facts; monotonic generation bumps (`gen=2 > 1`) and distinct company tombstones preventing resurrecting stale state.
+  - **Coca-Cola End-to-End Acceptance:** 10/10 automated verification steps passed with authentic Hindustan Coca-Cola filings; zero synthetic inventions; strict issuer (`HCCH`) vs subsidiary (`HCCB`) perimeter separation. 4 visual artifacts verified on disk.
+  - **Independent Browser Functional Acceptance Suite:** 5/5 smoke tests passed cleanly in 2.8m. Full suite and runner incorporated in `tests/functional/pre_ipo/` and `scripts/run_pre_ipo_functional.py`.
+  - **Bank Covenant & Debt Headroom Engine (Page 28):** Multi-quarter Ind AS 116 stress testing and headroom visualization cleanly integrated.
+  - **UI/UX Polish:** Eliminated emojis across analytics and econometrics tabs, replaced with Google Material Symbols.
+- **Verification Gates Passed:**
+  - Smoke Suite: 52/52 PASSED (10.2s)
+  - Pre-Push Fast Targeted Suite: 122/122 PASSED (23.2s)
+  - Pre-IPO Migrations & Docling: 7/7 PASSED (41.5s)
+  - Pre-IPO Harness Safety: 4/4 PASSED (0.9s)
+  - Covenant Headroom: 4/4 PASSED (2.4s)
+  - Independent Browser Functional Smoke: 5/5 PASSED (2.8m)
+- **Handoff Artifacts:** Published `PROFSUR_DAY_CLOSE_HANDOFF_2026-11-08.md` and updated `CURRENT_STATUS.md`.
+
 ## CHECKPOINT — Pre-IPO Multi-Document Ingestion & Coca-Cola E2E Acceptance (2026-11-08)
 
 - **Branch:** `feature/pre-ipo-multi-doc-ingestion` · **HEAD:** Unmerged isolated feature branch

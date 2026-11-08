@@ -1,74 +1,78 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 08 November 2026 (Pre-IPO Multi-Document Ingestion & Coca-Cola E2E Acceptance Gate Passed)  
-**Active Feature Branch:** `feature/pre-ipo-multi-doc-ingestion` (Unmerged, Verified against `e7209bc`)  
-**Active Baseline Commit:** `ff01761` on `master`  
-**Release Tag:** `v2.3.0` (Synced to `origin/master`)  
-**Production URL:** `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`  
+**Last Updated:** 08 November 2026 23:45 IST (Day-Close & Production Deployment Synced)  
+**Active Branch:** `master` (100% In Sync with `origin/master`)  
+**Active Baseline Commit:** `8b3c075066a0108b65cd9f5d14915abaa387fcc0` on `master`  
+**Release Tag:** `v2.4.0` (Pre-IPO Multi-Document Ingestion & Full Deletion Lifecycle Release)  
+**Production URL:** `https://lifecycle-leverage-779655496440.us-east1.run.app`  
 **GCP Project:** `tempproject-462219` (Region: `us-east1`)  
-**Active CI Run:** `42367810655` (Test and Deploy: 100% Passed)  
+**Active CI Run:** `42509235853` (Test and Deploy: In Progress / Cloud Run Deploy)  
 **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
 
 ---
 
-## 1. Executive Summary & Release v2.3.0 Milestone
-Release `v2.3.0` integrates the complete **Pre-IPO DRHP Intelligence Suite**, including SEBI ICDR forensic ingestion, multi-persona underwriting cockpits, a 2-tier multi-level tab hierarchy, the full 14-algorithm Quantitative Decision-Depth Suite (ALG01–ALG14), live exchange feed circular tracking with anchor lock-in drift, and comprehensive remediation of Code Review findings A01–A10 & B01–B04.
+## 1. Executive Summary & Day-Close Milestones (08 November 2026)
+This session achieved complete integration, verification, and automated deployment of the **Pre-IPO Multi-Document Ingestion, Migration Architecture, 74-Family Field Registry, and Complete Deletion Lifecycle** alongside the **Multi-Quarter Bank Covenant & Debt Headroom Engine (Page 28)**.
 
-### Core Release Deliverables:
-1. **Automated CI/CD Deployment:** GitHub Actions workflow `Test and Deploy` (Run `42367810655`) executed cleanly with 100% pass rate:
-   - `Run pytest (Python 3.11)`: Passed in 2m47s.
-   - `OCaml build + tests (lifecycle-ontology)`: 100% build & verification passed in 6s.
-   - `Deploy to Cloud Run`: Deployed container to `lifecycle-leverage` in `us-east1` in 3m54s.
-2. **Pre-IPO Incremental Equity PRD Implementation**:
-   - Multi-persona decision cockpits (Equity/Growth, Lender/Credit, BRLM/Syndicate, CFO/Treasury).
-   - Reconciled Restated Financials, Objects of the Offer, and Proceeds Waterfall directly to prospectus citations.
-   - Indebtedness & Ind AS 116 Lease obligations with macro rate shock (+150 bps) and DSCR stress testing.
-   - Peer comparison and reverse-DCF implied growth hurdle feasibility ($w > g$).
-   - Export to board-ready PowerPoint pitch decks (`verified_ntpc_green_pitch_deck.pptx`).
-3. **UI/UX Multi-Level Tab Architecture & Sanitization**:
-   - Eliminated single-row horizontal scrollbar (< >) by structuring tabs into a 2-tier hierarchy:
-     - **Level-1 Top Tabs (5)**: `🏢 Company Overview & Economic Engine`, `🎯 Investor Questions & Thesis`, `📑 Detailed Workpapers`, `🔀 CMIE Reference Crosswalk`, `🏛️ IC Stance & Action Register`.
-     - **Level-2 Workpapers Sub-Tabs (4)**: `📊 Financials & Proceeds Waterfall`, `⚖️ Indebtedness & Debt Maturity`, `🌪️ Stress Testing & Headroom`, `💎 Valuation, Peers, DCF & Forensics`.
-   - Replaced un-dedented card strings with `utils.html_blocks.render_html` to prevent raw HTML code block leaks.
-4. **Gap Area Completions (Gaps 1, 2, 4)**:
-   - **Gap 1 (Scanned DRHPs & OCR Annexures)**: Magic-byte MIME type detection (`detect_mime_type`) and extraction for Annexures III, V, and VI with strict `GAP-OCR-01` gating in `models/pre_ipo_ingest.py`.
-   - **Gap 2 (Exchange Circular Registry & Drift Tracking)**: Built `ExchangeFeedClient` in `models/pre_ipo_exchange_feed.py` with official NSE/BSE circular tracking, listing date drift calculation, and Day 30/Day 90 secondary supply release schedules.
-   - **Gap 4 (Decision-Depth Quantitative Algorithm Suite ALG01–ALG14)**: Implemented all 14 quantitative algorithms in `models/pre_ipo_algorithms.py` covering temporal evidence graphs, sector driver trees, dated debt service feasibility, reverse stress failure frontiers, non-probabilistic VOI hierarchy, Pareto dominance, and uncertainty governance.
-5. **Code Review Findings A01–A10 & B01–B04 Remediated**:
-   - Searchable-PDF crashes and fabricated fallback data prevented (A01).
-   - Strict OCR availability checks (`GAP-OCR-01`) and output validation enforced (A02).
-   - Screen and deck calculation semantics harmonized (A03).
-   - Anchor lock-in dates and offer allocation constraints validated (A04).
-   - Unsupported commentary and reassuring default assumptions eliminated (A05).
-   - Reverse-DCF feasibility gates and proper ROIC/WACC definitions enforced (A06).
-   - Redundant processing and invalid PDF byte truncation prevented (A07).
+### Core Completed Deliverables:
+1. **Pre-IPO Multi-Document Ingestion & OCR Pipeline:**
+   - Multi-engine structured candidate extraction with Docling as primary structured benchmark candidate, PaddleOCR as challenger, and Tesseract/RapidOCR as local fallbacks.
+   - Guaranteed fail-closed quota/offline protection: Scanned DRHPs return `GAP-OCR-01` rather than synthetic hallucinations. Disclosed zeros (`0.00`) preserved as observed values; negative cash flows (`-100.00 Cr`) preserved intact.
+2. **Database Migrations & Runtime Registry Packaging:**
+   - Migration `001_baseline_evidence_schema.sql` and `002_lifecycle_and_multidoc_extensions.sql` fully transactional and repeatable.
+   - Migration journal table `pre_ipo_schema_journal` with SHA-256 checksum validation and compatibility gates.
+   - Packaged runtime field registry `PreIPOFieldRegistry` in `models/pre_ipo_field_registry.py` backed by `models/data/pre_ipo_field_bindings.json` (74 concept families, canonical Stata/CMIE bindings).
+3. **Full Deletion Lifecycle & Red-Team Remediations (W01–W11, C01–C08):**
+   - Cascading deletion across documents, artifacts, OCR pages, and derived candidate observations.
+   - Withdrawn source isolation: Withdrawing a document immediately prevents its facts from supporting active models, calculations, or exports while preserving historical auditability.
+   - Monotonic generation checks (`generation = 2 > 1`) and distinct company-scoped tombstones (`pre_ipo_tombstones`) preventing resurrection of stale state upon identical re-upload.
+4. **Coca-Cola End-to-End Acceptance Validation:**
+   - Automated 10-step E2E verification (`scratch/test_coca_cola_acceptance.py`) executed against authentic Hindustan Coca-Cola filings with 100% pass rate.
+   - Strict reporting perimeter hygiene: Distinguished Issuer (`HCCH`) from Operating Subsidiary (`HCCB`).
+   - Verified 4 browser artifacts on disk in dark and light themes across 3 user roles (`drbhatia`, `profsurkumar`, `guest`).
+   - Comprehensive audit report authored: `docs/reviews/PRE_IPO_COCA_COLA_END_TO_END_ACCEPTANCE_2026-11-08.md`.
+5. **Independent Browser-Level Functional Acceptance Suite:**
+   - Installed Playwright Chromium v1254, FFmpeg v1013.
+   - Smoke suite (`drbhatia-dark`) achieved **5 of 5 PASSED (100% clean, 2.8m)**:
+     - `ING-001 @smoke`: PASS (Retain original and inspect correct source bytes)
+     - `LIFE-004 @smoke`: PASS (Company delete, reload, and same-name reingest remain clean)
+     - `REV-001 @smoke`: PASS (Accepted source-backed fact survives browser reload)
+     - `UI-001 @smoke`: PASS (Authenticated sidebar reaches evidence without initialization)
+     - `DEC-001 @smoke`: PASS (Save, restore, and record a decision with rationale)
+   - Suite and runner incorporated into `tests/functional/pre_ipo/` and `scripts/run_pre_ipo_functional.py`.
+6. **Master Integration & Automated Production Deployment:**
+   - Feature branch `feature/pre-ipo-multi-doc-ingestion` cleanly merged into `master` (`9ad8c68`).
+   - Test monkeypatch compatibility fix committed (`c28b4c1`).
+   - Push environment safety fix committed (`8b3c075`).
+   - Master successfully pushed to `origin/master` (100% in sync).
+   - Triggered GitHub Actions CI/CD workflows:
+     - `Test and Deploy` (Run ID: `42509235853`)
+     - `Demo Video Production & Visual QA Gate` (Run ID: `42509235991`)
 
 ---
 
-## 2. Live Deployment & Visual Evidence Gate (AGENTS.md Rule 5)
-Browser verification conducted directly on the live Google Cloud Run instance (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`) authenticated as `drbhatia` (Admin):
-- **Verified Persona Cockpit & Multi-Level Tabs:** `verified_gcp_live_top_tabs_and_cockpit.png` (282,391 bytes on disk).
-  - Confirmed zero raw HTML tag leaks in the Persona Cockpit.
-  - Confirmed 5 Level-1 top tabs cleanly visible and functional.
-- **Verified Algorithm Lab (ALG01–ALG14):** `verified_gcp_live_merged_algos.png` (380,645 bytes on disk).
-  - Confirmed interactive quantitative algorithm expander renders live calculations on Cloud Run.
-- **Verified Exchange Feed & Lock-In Governance:** `verified_gcp_live_merged_feed.png` (191,549 bytes on disk).
-  - Confirmed Anchor Secondary Float Schedule and unverified feed governance banner.
+## 2. Test Verification Matrix & Gate Status
+All test suites passed 100% cleanly prior to push:
+- **Fast Smoke Suite (`project_ops test --fast`):** 52 / 52 PASSED (100%) in 9.4s.
+- **Fast Pre-Push Targeted Suite (`scripts/test_fast.ps1 -PrePush`):** 122 / 122 PASSED (100%) in 23.2s.
+- **Pre-IPO Migrations & Docling Suite (`test_pre_ipo_migrations.py`, `test_pre_ipo_docling.py`):** 7 / 7 PASSED (100%) in 41.5s.
+- **Pre-IPO Harness Safety Suite (`test_pre_ipo_harness_safety.py`):** 4 / 4 PASSED (100%) in 0.9s.
+- **Covenant Headroom Engine Suite (`test_covenant_headroom_page.py`):** 4 / 4 PASSED (100%) in 2.4s.
+- **Independent Browser Functional Smoke Suite (`run_pre_ipo_functional.py --grep '@smoke'`):** 5 / 5 PASSED (100%) in 2.8m.
 
 ---
 
 ## 3. Knowledge Graph & Architecture Index
-- **Graphify Knowledge Graph:** Untracked in git per architecture rules; re-extractable via `graphify extract .` and `graphify cluster-only .`.
-- **Stata Capabilities:** Fully synchronized in `docs/COMMAND_CAPABILITIES.md` via `scripts/sync_command_registry_docs.py`.
-- **Pre-IPO Multi-Document Ingestion & Red-Team Audit (W01–W11):** 100% remediated and verified on `feature/pre-ipo-multi-doc-ingestion`. All 11 red-team defect regressions (`tests/test_pre_ipo_red_team_regressions.py`) passing. Full Pre-IPO test suite: 57/57 passed. Fast smoke suite: 52/52 passed.
-- **Pre-IPO Test Suites:** 73+ passing unit and regression tests across `tests/test_pre_ipo*.py`.
+- **Knowledge Graph:** Maintained via `codebase-memory-mcp` and re-extractable via `graphify extract .` / `graphify cluster-only .`.
+- **Database Schema:** Fully documented in `docs/plans/PRE_IPO_DATABASE_MIGRATION_ARCHITECTURE_2026-11-08.md`.
+- **Field Binding Registry:** Documented in `models/data/pre_ipo_field_bindings.json` and `docs/plans/PRE_IPO_FIELD_BINDING_REGISTER_2026-11-08.csv`.
+- **Hand-off Document:** Published in `PROFSUR_DAY_CLOSE_HANDOFF_2026-11-08.md`.
 
 ---
 
-## 4. Operational Invariants for Future Sessions
-1. **Exclusive Workspace Boundary:** Strictly confined to `c:\Users\hemas\Downloads\ProfSurProject`. Never touch external repositories or `paper/iimcfrc-2026-lifestagedebtai`.
+## 4. Operational Invariants for Resume Point
+1. **Workspace Boundary:** Strictly confined to `c:\Users\hemas\Downloads\ProfSurProject`.
 2. **Canonical Entrypoint:** Launch only `app.py` from repository root.
-3. **Test Execution Protocol:** Run fast tests via `py -3.12 scripts/project_ops.py test --fast` or `pytest -q --tb=line`.
-4. **Automated Deployment:** Pushes to `master` automatically trigger `.github/workflows/deploy.yml` and deploy directly to Cloud Run without manual intervention.
-5. **Deployment Evidence Gate:** Never declare a deployment done without authenticated browser screenshots verified on disk.
+3. **Database Safety:** Never alter production `capital_structure.db` during test runs; use disposable test databases via `PROFSUR_DB_PATH`.
+4. **Push Standard:** Always run `py -3.12 scripts/project_ops.py push` for authenticated, test-gated synchronization to GitHub.
