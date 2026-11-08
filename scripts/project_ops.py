@@ -97,7 +97,7 @@ def cmd_push(args):
     token = token_proc.stdout.strip()
     remote_url = f"https://drbhatiasanjay:{token}@github.com/drbhatiasanjay/ProfSurProject.git"
     
-    push_proc = subprocess.run(["git", "push", remote_url, "master"], capture_output=True, text=True)
+    push_proc = subprocess.run(["git", "push", remote_url, "master"], env=env, capture_output=True, text=True)
     if push_proc.returncode == 0:
         print("Successfully pushed master to origin/master.")
     else:
