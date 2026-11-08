@@ -369,15 +369,53 @@ def _sources_and_review(owner,role,company,items,editable):
             with st.expander("Fact revision history"):
                 st.json(ledger.history(owner,company,current["id"]),expanded=False)
     if company in ledger.companies(owner):
-        with st.expander(":material/delete_forever: Delete private company & filing", expanded=False):
-            st.warning("Permanently remove this company, its retained source PDF, and all candidate/reviewed facts from your private evidence ledger.")
-            confirm_del = st.checkbox("I confirm permanent deletion of this private company", key=f"confirm_del_{company}")
-            if st.button("Delete private company", disabled=not (editable and confirm_del), key=f"btn_del_{company}"):
+        all_sources = ledger.sources(owner, company)
+        if all_sources and source_id:
+            with st.expander(":material/description: Document Lifecycle Actions (Selected Document)", expanded=False):
+                st.caption(f"Selected document: **{metadata.get('title', source_id[:12])}** (ID: `{source_id[:12]}…`)")
+                col_doc_w, col_doc_d = st.columns(2)
+                with col_doc_w:
+                    w_reason = st.text_input("Withdrawal reason", value="Superseded by updated filing", key=f"w_reason_{source_id}")
+                    if st.button("Withdraw Document", icon=":material/archive:", key=f"btn_w_{source_id}", disabled=not editable):
+                        try:
+                            ledger.withdraw_source(owner, role, company, source_id, w_reason)
+                            st.success("Document withdrawn from active reliance.")
+                            st.rerun()
+                        except Exception as exc:
+                            st.error(str(exc))
+                with col_doc_d:
+                    conf_doc = st.checkbox("Confirm permanent deletion of THIS document only", key=f"conf_doc_del_{source_id}")
+                    if st.button("Delete Document", icon=":material/delete:", key=f"btn_del_doc_{source_id}", disabled=not (editable and conf_doc)):
+                        try:
+                            ledger.delete_source(owner, role, company, source_id)
+                            st.success("Document and its artifacts deleted.")
+                            st.session_state.pop("ev_source", None)
+                            st.rerun()
+                        except Exception as exc:
+                            st.error(str(exc))
+
+        with st.expander(":material/delete_forever: Delete Private Company Package", expanded=False):
+            impact = ledger.get_deletion_impact(owner, company)
+            aff = impact.get("affected_counts", {})
+            st.warning(
+                "**Permanent Deletion Impact Manifest:**\n"
+                f"- Retained Documents: {aff.get('sources', 0)}\n"
+                f"- Artifacts / OCR Pages: {aff.get('artifacts', 0)}\n"
+                f"- Processing Jobs: {aff.get('jobs', 0)}\n"
+                f"- Extracted Observations & Facts: {aff.get('observations', 0) + aff.get('facts', 0)}\n"
+                f"- Evidence Snapshots: {aff.get('snapshots', 0)}\n"
+                f"- Saved Decision Workbench Copies: {aff.get('saved_decisions', 0)}\n\n"
+                "Permanently removes this company, all retained sources, and dependent records from your evidence ledger."
+            )
+            confirm_del = st.checkbox("I confirm permanent deletion of this private company and all dependent records", key=f"confirm_del_{company}")
+            if st.button("Delete private company", disabled=not (editable and confirm_del), key=f"btn_del_{company}", type="primary"):
                 try:
                     ledger.delete_company(owner, role, company)
                     st.success("Company and retained records deleted.")
                     st.session_state.pop("evidence_company", None)
                     st.session_state.pop("ev_active_company", None)
+                    st.session_state.pop("ev_source", None)
+                    st.session_state.pop("ev_fact", None)
                     st.rerun()
                 except PermissionError as exc:
                     st.error(str(exc))

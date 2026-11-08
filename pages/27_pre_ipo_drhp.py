@@ -375,13 +375,34 @@ if selected_deal_key == "custom_upload":
                         st.rerun()
                 with col_lib3:
                     is_viewer = role not in {"admin", "researcher"}
-                    if st.button("Delete", icon=":material/delete:", key=f"lib_del_{lib_id}", use_container_width=True, disabled=is_viewer, help="Remove from private ledger" if not is_viewer else "Viewers cannot delete"):
-                        try:
-                            ledger.delete_company(owner, role, lib_id)
-                            st.success("Deleted.")
-                            st.rerun()
-                        except PermissionError as exc:
-                            st.error(str(exc))
+                    del_prompt_key = f"lib_del_prompt_{lib_id}"
+                    if st.button("Delete…", icon=":material/delete:", key=f"lib_del_{lib_id}", use_container_width=True, disabled=is_viewer, help="Inspect impact preview and delete company" if not is_viewer else "Viewers cannot delete"):
+                        st.session_state[del_prompt_key] = not st.session_state.get(del_prompt_key, False)
+                if st.session_state.get(f"lib_del_prompt_{lib_id}", False):
+                    impact = ledger.get_deletion_impact(owner, lib_id)
+                    aff = impact.get("affected_counts", {})
+                    st.warning(
+                        f"**Deletion Impact Manifest for {lib_prof.company_name}:**\n"
+                        f"- Retained Documents: {aff.get('sources', 0)}\n"
+                        f"- Facts & Observations: {aff.get('observations', 0) + aff.get('facts', 0)}\n"
+                        f"- Evidence Snapshots: {aff.get('snapshots', 0)}\n"
+                        f"- Dependent Decision Cases: {aff.get('saved_decisions', 0)}\n\n"
+                        f"Permanently erasing this company will revoke all associated evidence and unlinked decisions."
+                    )
+                    col_c1, col_c2 = st.columns([3, 1])
+                    with col_c1:
+                        conf_check = st.checkbox("I confirm permanent erasure of this company", key=f"conf_box_{lib_id}")
+                    with col_c2:
+                        if st.button("Confirm Delete", type="primary", key=f"do_del_{lib_id}", disabled=not conf_check):
+                            try:
+                                ledger.delete_company(owner, role, lib_id)
+                                st.session_state.pop(f"lib_del_prompt_{lib_id}", None)
+                                st.session_state.pop("evidence_company", None)
+                                st.session_state.pop("ev_active_company", None)
+                                st.success(f"{lib_prof.company_name} deleted.")
+                                st.rerun()
+                            except Exception as exc:
+                                st.error(str(exc))
 
     if uploaded_file is not None:
         import hashlib, io, time

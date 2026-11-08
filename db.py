@@ -9,7 +9,16 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime, timezone
 
-DB_PATH = os.environ.get("PROFSUR_DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "capital_structure.db"))
+_DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "capital_structure.db")
+DB_PATH = os.environ.get("PROFSUR_DB_PATH", _DEFAULT_DB_PATH)
+
+def get_db_path() -> str:
+    """Return the active database path, respecting runtime PROFSUR_DB_PATH overrides or monkeypatched DB_PATH."""
+    if DB_PATH != _DEFAULT_DB_PATH and DB_PATH != os.environ.get("PROFSUR_DB_PATH"):
+        return DB_PATH
+    if "PROFSUR_DB_PATH" in os.environ:
+        return os.environ["PROFSUR_DB_PATH"]
+    return DB_PATH
 
 
 def is_cmie_lab_enabled() -> bool:
@@ -96,7 +105,7 @@ def _register_sqlite_stats_functions(conn):
 
 
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(get_db_path(), check_same_thread=False)
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA busy_timeout=5000")
     _register_sqlite_stats_functions(conn)
@@ -106,7 +115,7 @@ def get_connection() -> sqlite3.Connection:
 def db_cache_revision() -> int:
     """Integer that changes when the SQLite file on disk changes (for Streamlit cache keys)."""
     try:
-        return int(os.stat(DB_PATH).st_mtime_ns)
+        return int(os.stat(get_db_path()).st_mtime_ns)
     except OSError:
         return 0
 

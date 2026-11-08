@@ -105,32 +105,12 @@ def compare(left, right, absolute="0.02", relative="0"):
 @contextmanager
 def connection():
     from db import get_connection
+    from models.pre_ipo_migrations import apply_migrations
     conn = get_connection()
     conn.row_factory = sqlite3.Row
     try:
         conn.execute("PRAGMA foreign_keys=ON")
-        conn.executescript("""
-        CREATE TABLE IF NOT EXISTS pre_ipo_sources(owner TEXT NOT NULL, company TEXT NOT NULL,
-          id TEXT NOT NULL, metadata TEXT NOT NULL, content BLOB NOT NULL, PRIMARY KEY(owner,company,id));
-        CREATE TABLE IF NOT EXISTS pre_ipo_extraction_runs(owner TEXT NOT NULL,company TEXT NOT NULL,
-          id TEXT NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(owner,company,id));
-        CREATE TABLE IF NOT EXISTS pre_ipo_fact_events(owner TEXT NOT NULL,company TEXT NOT NULL,
-          fact_id TEXT NOT NULL,revision INTEGER NOT NULL,payload TEXT NOT NULL,
-          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(owner,company,fact_id,revision));
-        CREATE TABLE IF NOT EXISTS pre_ipo_evidence_snapshots(owner TEXT NOT NULL,company TEXT NOT NULL,
-          id TEXT NOT NULL,payload TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-          PRIMARY KEY(owner,company,id));
-        CREATE TABLE IF NOT EXISTS pre_ipo_reference_versions(owner TEXT NOT NULL,id TEXT NOT NULL,
-          payload TEXT NOT NULL,PRIMARY KEY(owner,id));
-        CREATE TABLE IF NOT EXISTS pre_ipo_evidence_actions(owner TEXT NOT NULL,company TEXT NOT NULL,
-          id TEXT NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(owner,company,id));
-        CREATE TABLE IF NOT EXISTS pre_ipo_company_profiles(owner TEXT NOT NULL,id TEXT NOT NULL,
-          payload TEXT NOT NULL,PRIMARY KEY(owner,id));
-        CREATE TABLE IF NOT EXISTS pre_ipo_evidence_action_events(owner TEXT NOT NULL,company TEXT NOT NULL,
-          action_id TEXT NOT NULL,revision INTEGER NOT NULL,payload TEXT NOT NULL,
-          PRIMARY KEY(owner,company,action_id,revision));
-        """)
-        conn.commit()
+        apply_migrations(conn)
         yield conn
         conn.commit()
     except Exception:
@@ -193,20 +173,137 @@ def create_company(owner,role,name,sector,periods):
     return key
 
 
+def get_deletion_impact(owner, company_id):
+    """Compute an owner-scoped dependency manifest before irreversible deletion."""
+    actor(owner)
+    with connection() as conn:
+        prof = conn.execute("SELECT id, payload, generation, status FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company_id)).fetchone()
+        if not prof:
+            return {"exists": False, "company_id": company_id}
+        sources_cnt = conn.execute("SELECT COUNT(*) FROM pre_ipo_sources WHERE owner=? AND company=?", (owner, company_id)).fetchone()[0]
+        artifacts_cnt = conn.execute("SELECT COUNT(*) FROM pre_ipo_artifacts WHERE owner=? AND company=?", (owner, company_id)).fetchone()[0]
+        jobs_cnt = conn.execute("SELECT COUNT(*) FROM pre_ipo_jobs WHERE owner=? AND company=?", (owner, company_id)).fetchone()[0]
+        facts_cnt = conn.execute("SELECT COUNT(*) FROM pre_ipo_fact_events WHERE owner=? AND company=?", (owner, company_id)).fetchone()[0]
+        obs_cnt = conn.execute("SELECT COUNT(*) FROM pre_ipo_observations WHERE owner=? AND company=?", (owner, company_id)).fetchone()[0]
+        snaps_cnt = conn.execute("SELECT COUNT(*) FROM pre_ipo_evidence_snapshots WHERE owner=? AND company=?", (owner, company_id)).fetchone()[0]
+        dec_cols = [r[1] for r in conn.execute("PRAGMA table_info(pre_ipo_decision_versions)").fetchall()]
+        dec_cnt = conn.execute("SELECT COUNT(*) FROM pre_ipo_decision_versions WHERE owner=? AND company_id=?", (owner, company_id)).fetchone()[0] if "company_id" in dec_cols else 0
+        return {
+            "exists": True,
+            "company_id": company_id,
+            "generation": prof["generation"] if "generation" in prof.keys() else 1,
+            "status": prof["status"] if "status" in prof.keys() else "ACTIVE",
+            "affected_counts": {
+                "sources": sources_cnt,
+                "artifacts": artifacts_cnt,
+                "jobs": jobs_cnt,
+                "facts": facts_cnt,
+                "observations": obs_cnt,
+                "snapshots": snaps_cnt,
+                "saved_decisions": dec_cnt,
+            }
+        }
+
+
 def delete_company(owner, role, company_id):
-    """Enforce server-side owner/role permissions to delete an owner's private company and its facts."""
+    """Enforce full deletion lifecycle with atomic DELETE_PENDING transition, worker cancellation, and audit tombstones."""
     actor(owner, role)
     if role not in {"admin", "researcher"}:
         raise PermissionError("Viewers cannot delete private companies")
     with connection() as conn:
         conn.execute("BEGIN IMMEDIATE")
-        conn.execute("DELETE FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company_id))
+        prof = conn.execute("SELECT generation, status FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company_id)).fetchone()
+        if not prof:
+            return False
+        curr_gen = prof[0] if prof[0] is not None else 1
+
+        # Mark DELETE_PENDING and bump generation to invalidate in-flight async commits
+        conn.execute("UPDATE pre_ipo_company_profiles SET status='DELETE_PENDING', generation=? WHERE owner=? AND id=?",
+                     (curr_gen + 1, owner, company_id))
+
+        # Cancel pending / running background jobs
+        conn.execute("UPDATE pre_ipo_jobs SET status='CANCELLED' WHERE owner=? AND company=? AND status IN ('QUEUED', 'RUNNING')",
+                     (owner, company_id))
+
+        # Atomic purge of scoped company records
         conn.execute("DELETE FROM pre_ipo_sources WHERE owner=? AND company=?", (owner, company_id))
+        conn.execute("DELETE FROM pre_ipo_artifacts WHERE owner=? AND company=?", (owner, company_id))
         conn.execute("DELETE FROM pre_ipo_extraction_runs WHERE owner=? AND company=?", (owner, company_id))
         conn.execute("DELETE FROM pre_ipo_fact_events WHERE owner=? AND company=?", (owner, company_id))
+        conn.execute("DELETE FROM pre_ipo_observations WHERE owner=? AND company=?", (owner, company_id))
         conn.execute("DELETE FROM pre_ipo_evidence_actions WHERE owner=? AND company=?", (owner, company_id))
         conn.execute("DELETE FROM pre_ipo_evidence_action_events WHERE owner=? AND company=?", (owner, company_id))
         conn.execute("DELETE FROM pre_ipo_evidence_snapshots WHERE owner=? AND company=?", (owner, company_id))
+        conn.execute("DELETE FROM pre_ipo_dependencies WHERE owner=? AND company=?", (owner, company_id))
+
+        # Purge dependent saved decisions
+        try:
+            conn.execute("DELETE FROM pre_ipo_decision_versions WHERE owner=? AND company_id=?", (owner, company_id))
+        except Exception:
+            pass
+
+        # Purge profile itself
+        conn.execute("DELETE FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company_id))
+
+        # Record non-reconstructive audit tombstone
+        conn.execute("INSERT OR REPLACE INTO pre_ipo_tombstones (owner, target_kind, target_id, generation, action, actor) VALUES (?, 'COMPANY', ?, ?, 'DELETE', ?)",
+                     (owner, company_id, curr_gen + 1, owner))
+        conn.commit()
+    return True
+
+
+def delete_source(owner, role, company_id, source_id):
+    """Permanently delete a specific document/source incarnation while preserving company and other documents."""
+    actor(owner, role)
+    if role not in {"admin", "researcher"}:
+        raise PermissionError("Viewers cannot delete private sources")
+    with connection() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        src = conn.execute("SELECT generation, status FROM pre_ipo_sources WHERE owner=? AND company=? AND id=?", (owner, company_id, source_id)).fetchone()
+        if not src:
+            return False
+        curr_gen = src[0] if src[0] is not None else 1
+
+        # Cancel jobs for this specific source
+        conn.execute("UPDATE pre_ipo_jobs SET status='CANCELLED' WHERE owner=? AND company=? AND source_id=? AND status IN ('QUEUED', 'RUNNING')",
+                     (owner, company_id, source_id))
+
+        # Purge artifacts, observations, and source row
+        conn.execute("DELETE FROM pre_ipo_artifacts WHERE owner=? AND company=? AND source_id=?", (owner, company_id, source_id))
+        conn.execute("DELETE FROM pre_ipo_observations WHERE owner=? AND company=? AND source_id=?", (owner, company_id, source_id))
+        conn.execute("DELETE FROM pre_ipo_sources WHERE owner=? AND company=? AND id=?", (owner, company_id, source_id))
+
+        # Record tombstone
+        conn.execute("INSERT OR REPLACE INTO pre_ipo_tombstones (owner, target_kind, target_id, generation, action, actor) VALUES (?, 'SOURCE', ?, ?, 'DELETE', ?)",
+                     (owner, source_id, curr_gen + 1, owner))
+        conn.commit()
+    return True
+
+
+def withdraw_source(owner, role, company_id, source_id, reason="Superseded by updated filing"):
+    """Exclude source from new reliance while retaining historical audit trail."""
+    actor(owner, role)
+    if role not in {"admin", "researcher"}:
+        raise PermissionError("Viewers cannot withdraw private sources")
+    with connection() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        src = conn.execute("SELECT generation, status FROM pre_ipo_sources WHERE owner=? AND company=? AND id=?", (owner, company_id, source_id)).fetchone()
+        if not src:
+            return False
+        curr_gen = src[0] if src[0] is not None else 1
+
+        # Mark source WITHDRAWN and bump generation
+        conn.execute("UPDATE pre_ipo_sources SET status='WITHDRAWN', generation=? WHERE owner=? AND company=? AND id=?",
+                     (curr_gen + 1, owner, company_id, source_id))
+
+        # Mark extracted observations WITHDRAWN
+        conn.execute("UPDATE pre_ipo_observations SET review_state='WITHDRAWN' WHERE owner=? AND company=? AND source_id=?",
+                     (owner, company_id, source_id))
+
+        # Record tombstone
+        conn.execute("INSERT OR REPLACE INTO pre_ipo_tombstones (owner, target_kind, target_id, generation, action, reason, actor) VALUES (?, 'SOURCE', ?, ?, 'WITHDRAW', ?, ?)",
+                     (owner, source_id, curr_gen + 1, reason, owner))
+        conn.commit()
     return True
 
 
@@ -274,6 +371,28 @@ def import_dossier(owner,role,legal_name,dossier,content,metadata):
             if prior:
                 item["raw_value"]=previous.get("raw_value")
             conn.execute("INSERT INTO pre_ipo_fact_events(owner,company,fact_id,revision,payload) VALUES(?,?,?,?,?)",(owner,company,key,item["revision"],dump(item)))
+            conn.execute("""
+                INSERT OR REPLACE INTO pre_ipo_observations (
+                    owner, company, observation_id, revision, source_id, entity, metric_id,
+                    period, duration, basis, framework, currency, unit, value, presence,
+                    review_state, provenance_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                owner, company, key, item["revision"], source_id, legal_name, key,
+                item["context"]["period"], item["context"]["duration"], item["context"]["basis"],
+                item["context"]["framework"], item["context"]["currency"], item["context"]["unit"],
+                str(value) if value is not None else None, item["presence"], item["review"], dump(item.get("source", {}))
+            ))
+        conn.execute("""
+            INSERT OR REPLACE INTO pre_ipo_jobs (
+                owner, company, job_id, source_id, target_generation, pipeline, profile_hash, status, page_range
+            ) VALUES (?, ?, ?, ?, 1, 'PreIPOIngestionEngine', ?, ?, ?)
+        """, (owner, company, run_id, source_id, run_id[:16], "COMPLETED_WITH_GAPS" if gaps_list else "COMPLETED", f"1-{metadata.get('pages', 1)}"))
+        conn.execute("""
+            INSERT OR REPLACE INTO pre_ipo_artifacts (
+                owner, company, source_id, artifact_id, kind, digest, content
+            ) VALUES (?, ?, ?, ?, 'ORIGINAL_PDF', ?, ?)
+        """, (owner, company, source_id, f"art-pdf-{source_id[:16]}", retained["sha256"], content))
     return company
 
 
@@ -360,7 +479,26 @@ def retain_pdf(owner, role, company, content, metadata):
     record = {k: str(v)[:2000] for k,v in metadata.items() if k in required or k in {"official_url", "issuer", "retention_policy"}}
     record.update(id=identity,sha256=sha,pages=pages,bytes=len(content),origin_id=sha,ingested_at=datetime.now(timezone.utc).isoformat())
     with connection() as conn:
-        conn.execute("INSERT OR IGNORE INTO pre_ipo_sources(owner,company,id,metadata,content) VALUES(?,?,?,?,?)",(owner,company,identity,dump(record),content))
+        prof = conn.execute("SELECT status FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company)).fetchone()
+        if not prof:
+            tomb = conn.execute(
+                "SELECT 1 FROM pre_ipo_tombstones WHERE owner=? AND target_kind='COMPANY' AND target_id=? AND action='DELETE'",
+                (owner, company)
+            ).fetchone()
+            if tomb:
+                raise ValueError(f"Company {company} does not exist or has been deleted")
+            default_payload = json.dumps({"name": company, "sector": "General", "history": []})
+            conn.execute(
+                "INSERT OR IGNORE INTO pre_ipo_company_profiles(owner, id, payload, generation, status) VALUES(?, ?, ?, 1, 'ACTIVE')",
+                (owner, company, default_payload)
+            )
+        elif prof[0] != "ACTIVE":
+            raise ValueError(f"Company {company} is in state {prof[0]} and cannot accept new documents")
+        fam = metadata.get("family") or ("OFFER" if metadata.get("filing_type") in ("DRHP", "RHP") else "FINANCIAL")
+        conn.execute("""
+            INSERT OR IGNORE INTO pre_ipo_sources(owner, company, id, metadata, content, family, reporting_period, availability_date)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?)
+        """, (owner, company, identity, dump(record), content, fam, metadata.get("reporting_period", "FY24"), metadata.get("available_by")))
     return identity
 
 
@@ -453,7 +591,44 @@ def save_fact(owner, role, company, fact, expected_revision=0):
         candidate.update(revision=expected_revision+1,reviewer=owner,domain=candidate.get("domain",domain(fact_id)),updated_at=datetime.now(timezone.utc).isoformat())
         # No implicit sharing or second-review claims: this private workspace remains single-review.
         candidate["review_qualification"]="SINGLE_REVIEW"
+        prof = conn.execute("SELECT status FROM pre_ipo_company_profiles WHERE owner=? AND id=?", (owner, company)).fetchone()
+        if not prof:
+            tomb = conn.execute(
+                "SELECT 1 FROM pre_ipo_tombstones WHERE owner=? AND target_kind='COMPANY' AND target_id=? AND action='DELETE'",
+                (owner, company)
+            ).fetchone()
+            if tomb:
+                raise ValueError(f"Company {company} does not exist or has been deleted")
+            default_payload = json.dumps({"name": company, "sector": "General", "history": []})
+            conn.execute(
+                "INSERT OR IGNORE INTO pre_ipo_company_profiles(owner, id, payload, generation, status) VALUES(?, ?, ?, 1, 'ACTIVE')",
+                (owner, company, default_payload)
+            )
+        elif prof[0] != "ACTIVE":
+            raise ValueError(f"Company {company} is in state {prof[0]} and cannot accept updates")
         conn.execute("INSERT INTO pre_ipo_fact_events(owner,company,fact_id,revision,payload) VALUES(?,?,?,?,?)",(owner,company,fact_id,candidate["revision"],dump(candidate)))
+        conn.execute("""
+            INSERT OR REPLACE INTO pre_ipo_observations (
+                owner, company, observation_id, revision, source_id, entity, metric_id,
+                period, duration, basis, framework, currency, unit, value, presence,
+                review_state, provenance_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            owner, company, fact_id, candidate["revision"],
+            candidate.get("source", {}).get("id") or candidate.get("origin_id", "manual"),
+            candidate.get("context", {}).get("entity", company),
+            fact_id,
+            candidate.get("context", {}).get("period"),
+            candidate.get("context", {}).get("duration"),
+            candidate.get("context", {}).get("basis"),
+            candidate.get("context", {}).get("framework"),
+            candidate.get("context", {}).get("currency"),
+            candidate.get("context", {}).get("unit"),
+            str(candidate.get("value")) if candidate.get("value") is not None else None,
+            candidate.get("presence", "OBSERVED_VALUE"),
+            candidate["review"],
+            dump(candidate.get("source", {}))
+        ))
     return candidate
 
 

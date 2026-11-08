@@ -1,29 +1,90 @@
 """Integration acceptance test suite for Pre-IPO Part 2.
 Verifies end-to-end connection between Part 1 ingestion and owner-scoped evidence ledger.
+
+MANDATORY TEST SAFETY DIRECTIVE:
+This file executes ONLY against an isolated, disposable temporary database.
+Under no circumstances may it run against or delete records from capital_structure.db.
 """
 import os
+import sys
 import io
 import json
-import pytest
+import tempfile
+from pathlib import Path
 from datetime import date
+
+# ── MANDATORY TEST SAFETY: Initialize isolated test DB path BEFORE imports ──────
+_ORIGINAL_PROFSUR_DB = os.environ.get("PROFSUR_DB_PATH")
+_GUARDED_TEMP_DIR = tempfile.mkdtemp(prefix="prof_part2_guard_")
+_GUARDED_TEMP_DB = str(Path(_GUARDED_TEMP_DIR) / "test_disposable_evidence.db")
+os.environ["PROFSUR_DB_PATH"] = _GUARDED_TEMP_DB
+
+# Strict verification of isolation
+_resolved_test_db = Path(_GUARDED_TEMP_DB).resolve()
+_temp_system_root = Path(tempfile.gettempdir()).resolve()
+assert "capital_structure.db" not in _resolved_test_db.name, "Fatal: Test DB path cannot be capital_structure.db"
+assert _resolved_test_db.is_relative_to(_temp_system_root), "Fatal: Test DB must be strictly inside system temp directory"
+
+import pytest
 from models.pre_ipo_ingest import PreIPOIngestionEngine
 from models import pre_ipo_evidence as ledger
 from utils.pre_ipo_evidence_export import export_json, export_pptx
 from models.pre_ipo_custom_store import migrate_legacy_pickle
 
-KNOWN_VALUES_PDF = r"C:\Users\hemas\.codex\worktrees\profsur-decision-depth\ProfSurProject\scratch\ingestion_assessment_20261108\known-values.pdf"
+# Portable fixture resolution: check local repo scratch first, then fallback to codex worktree
+LOCAL_FIXTURE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "scratch", "ingestion_assessment_20261108", "known-values.pdf"
+)
+WORKTREE_FIXTURE_PATH = r"C:\Users\hemas\.codex\worktrees\profsur-decision-depth\ProfSurProject\scratch\ingestion_assessment_20261108\known-values.pdf"
+
+KNOWN_VALUES_PDF = LOCAL_FIXTURE_PATH if os.path.exists(LOCAL_FIXTURE_PATH) else WORKTREE_FIXTURE_PATH
+
+# Synthetic test accounts strictly isolated from real application users
+TEST_OWNER_ADMIN = "test_synth_owner_admin"
+TEST_OWNER_OTHER = "test_synth_owner_other"
+TEST_VIEWER_USER = "test_synth_viewer"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def restore_environment_db_path():
+    yield
+    if _ORIGINAL_PROFSUR_DB is not None:
+        os.environ["PROFSUR_DB_PATH"] = _ORIGINAL_PROFSUR_DB
+    else:
+        os.environ.pop("PROFSUR_DB_PATH", None)
 
 
 @pytest.fixture(autouse=True)
-def clean_test_companies():
-    """Ensure clean ledger before and after tests."""
+def guard_and_clean_test_companies():
+    """Ensure clean ledger before and after tests, enforcing strict database isolation."""
+    current_db = os.environ.get("PROFSUR_DB_PATH", "")
+    resolved_db = Path(current_db).resolve()
+    default_db = Path(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "capital_structure.db")).resolve()
+
+    # Destructive guard: refuse execution if pointing to default or non-temporary database
+    if not current_db or resolved_db == default_db or "capital_structure.db" in resolved_db.name:
+        raise RuntimeError(f"TEST SAFETY VIOLATION BLOCKED: Refusing destructive test cleanup on: {current_db}")
+    if not resolved_db.is_relative_to(Path(tempfile.gettempdir()).resolve()):
+        raise RuntimeError(f"TEST SAFETY VIOLATION BLOCKED: DB path is not in temporary workspace: {resolved_db}")
+
     yield
-    for owner in ["drbhatia", "profsurkumar", "test_user_alpha", "skumar", "sbhatia"]:
+
+    # Clean up ONLY synthetic test owners created by this test suite
+    for owner in [TEST_OWNER_ADMIN, TEST_OWNER_OTHER, TEST_VIEWER_USER]:
         try:
             for cid in list(ledger.companies(owner).keys()):
                 ledger.delete_company(owner, "admin", cid)
         except Exception:
             pass
+
+
+def test_test_safety_guard_blocks_real_and_production_databases():
+    """Verifies that the test safety guard strictly blocks execution against default/production DB."""
+    active_db = os.environ.get("PROFSUR_DB_PATH", "")
+    assert active_db, "PROFSUR_DB_PATH must be explicitly set"
+    assert "capital_structure.db" not in Path(active_db).name, "Must not target capital_structure.db"
+    assert Path(active_db).resolve().is_relative_to(Path(tempfile.gettempdir()).resolve())
 
 
 def test_part2_end_to_end_upload_to_evidence_ledger():
@@ -48,20 +109,20 @@ def test_part2_end_to_end_upload_to_evidence_ledger():
         "issuer": "Fresh Venture Corp",
         "retention_policy": "Retained for Pre-IPO diligence",
     }
-    company_id = ledger.import_dossier("drbhatia", "admin", "Fresh Venture Corp", dossier, pdf_bytes, meta)
+    company_id = ledger.import_dossier(TEST_OWNER_ADMIN, "admin", "Fresh Venture Corp", dossier, pdf_bytes, meta)
     assert company_id.startswith("private-")
 
     # Step 3: Verify company appears in owner's profile, but NOT in another owner's profile
-    dr_companies = ledger.companies("drbhatia")
-    assert company_id in dr_companies
-    assert dr_companies[company_id].company_name == "Fresh Venture Corp"
+    admin_companies = ledger.companies(TEST_OWNER_ADMIN)
+    assert company_id in admin_companies
+    assert admin_companies[company_id].company_name == "Fresh Venture Corp"
 
-    # Isolation check: profsurkumar must NOT see drbhatia's private company
-    prof_companies = ledger.companies("profsurkumar")
-    assert company_id not in prof_companies
+    # Isolation check: other synthetic owner must NOT see primary owner's private company
+    other_companies = ledger.companies(TEST_OWNER_OTHER)
+    assert company_id not in other_companies
 
     # Step 4: Verify facts in ledger match exact Part 1 extracted numbers
-    facts = ledger.facts("drbhatia", company_id)
+    facts = ledger.facts(TEST_OWNER_ADMIN, company_id)
     fact_dict = {f["id"]: f for f in facts}
 
     expected_facts = {
@@ -86,14 +147,14 @@ def test_part2_end_to_end_upload_to_evidence_ledger():
         assert f_entry["source"]["sha256"] == ledger.digest(pdf_bytes)
 
     # Step 5: Verify original PDF source is retained byte-for-byte
-    sources = ledger.sources("drbhatia", company_id)
+    sources = ledger.sources(TEST_OWNER_ADMIN, company_id)
     assert len(sources) == 1
-    src_meta, src_bytes = ledger.source("drbhatia", company_id, sources[0]["id"])
+    src_meta, src_bytes = ledger.source(TEST_OWNER_ADMIN, company_id, sources[0]["id"])
     assert src_meta["sha256"] == ledger.digest(pdf_bytes)
     assert src_bytes == pdf_bytes
 
     # Step 6: Verify extraction run was recorded
-    runs = ledger.runs("drbhatia", company_id)
+    runs = ledger.runs(TEST_OWNER_ADMIN, company_id)
     assert len(runs) >= 1
     assert runs[0]["engine"] == "PreIPOIngestionEngine"
     assert runs[0]["status"] == "BATCH_COMPLETED"
@@ -113,16 +174,16 @@ def test_part2_duplicate_upload_idempotency_and_version_bumping():
         "rights": "SEBI ICDR 2018",
     }
 
-    cid = ledger.import_dossier("drbhatia", "admin", "Idem Corp", dossier, pdf_bytes, meta_v1)
+    cid = ledger.import_dossier(TEST_OWNER_ADMIN, "admin", "Idem Corp", dossier, pdf_bytes, meta_v1)
 
     # First import: revision is 1
-    f_v1 = next(f for f in ledger.facts("drbhatia", cid) if f["id"] == "history[0].revenue_ops_cr")
+    f_v1 = next(f for f in ledger.facts(TEST_OWNER_ADMIN, cid) if f["id"] == "history[0].revenue_ops_cr")
     assert f_v1["revision"] == 1
 
     # Idempotent second upload of identical document and metadata: revision remains 1
-    cid2 = ledger.import_dossier("drbhatia", "admin", "Idem Corp", dossier, pdf_bytes, meta_v1)
+    cid2 = ledger.import_dossier(TEST_OWNER_ADMIN, "admin", "Idem Corp", dossier, pdf_bytes, meta_v1)
     assert cid2 == cid
-    f_v2 = next(f for f in ledger.facts("drbhatia", cid) if f["id"] == "history[0].revenue_ops_cr")
+    f_v2 = next(f for f in ledger.facts(TEST_OWNER_ADMIN, cid) if f["id"] == "history[0].revenue_ops_cr")
     assert f_v2["revision"] == 1
 
     # Upload updated version (Draft 2.0): creates revision 2, preserving revision 1
@@ -133,8 +194,8 @@ def test_part2_duplicate_upload_idempotency_and_version_bumping():
         "available_by": str(date.today()),
         "rights": "SEBI ICDR 2018",
     }
-    ledger.import_dossier("drbhatia", "admin", "Idem Corp", dossier, pdf_bytes, meta_v2)
-    hist = ledger.history("drbhatia", cid, "history[0].revenue_ops_cr")
+    ledger.import_dossier(TEST_OWNER_ADMIN, "admin", "Idem Corp", dossier, pdf_bytes, meta_v2)
+    hist = ledger.history(TEST_OWNER_ADMIN, cid, "history[0].revenue_ops_cr")
     assert len(hist) == 2
     assert hist[0]["revision"] == 1
     assert hist[1]["revision"] == 2
@@ -156,18 +217,18 @@ def test_part2_role_permissions_and_viewer_restrictions():
 
     # Viewer cannot import
     with pytest.raises(PermissionError):
-        ledger.import_dossier("skumar", "viewer", "Secure Corp", dossier, pdf_bytes, meta)
+        ledger.import_dossier(TEST_VIEWER_USER, "viewer", "Secure Corp", dossier, pdf_bytes, meta)
 
     # Admin imports successfully
-    cid = ledger.import_dossier("drbhatia", "admin", "Secure Corp", dossier, pdf_bytes, meta)
+    cid = ledger.import_dossier(TEST_OWNER_ADMIN, "admin", "Secure Corp", dossier, pdf_bytes, meta)
 
     # Viewer cannot delete
     with pytest.raises(PermissionError):
-        ledger.delete_company("drbhatia", "viewer", cid)
+        ledger.delete_company(TEST_OWNER_ADMIN, "viewer", cid)
 
     # Admin can delete
-    assert ledger.delete_company("drbhatia", "admin", cid) is True
-    assert cid not in ledger.companies("drbhatia")
+    assert ledger.delete_company(TEST_OWNER_ADMIN, "admin", cid) is True
+    assert cid not in ledger.companies(TEST_OWNER_ADMIN)
 
 
 def test_part2_frozen_export_consistency():
@@ -183,10 +244,10 @@ def test_part2_frozen_export_consistency():
         "available_by": str(date.today()),
         "rights": "SEBI ICDR 2018",
     }
-    cid = ledger.import_dossier("drbhatia", "admin", "Export Corp", dossier, pdf_bytes, meta)
+    cid = ledger.import_dossier(TEST_OWNER_ADMIN, "admin", "Export Corp", dossier, pdf_bytes, meta)
 
     # Freeze evidence snapshot
-    snap = ledger.snapshot("drbhatia", "admin", cid, dossier, str(date.today()))
+    snap = ledger.snapshot(TEST_OWNER_ADMIN, "admin", cid, dossier, str(date.today()))
     assert "id" in snap
     assert snap["company"] == cid
 

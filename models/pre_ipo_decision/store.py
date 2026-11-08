@@ -6,11 +6,11 @@ from .contracts import canonical_json
 
 def _schema(conn):
     conn.execute("""CREATE TABLE IF NOT EXISTS pre_ipo_decision_versions (
-        owner TEXT NOT NULL, case_id TEXT NOT NULL, revision INTEGER NOT NULL,
+        owner TEXT NOT NULL, case_id TEXT NOT NULL, revision INTEGER NOT NULL, company_id TEXT, snapshot_id TEXT,
         payload TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(owner, case_id, revision))""")
     conn.execute("""CREATE TABLE IF NOT EXISTS pre_ipo_decision_actions (
-        owner TEXT NOT NULL, case_id TEXT NOT NULL, revision INTEGER NOT NULL,
+        owner TEXT NOT NULL, case_id TEXT NOT NULL, revision INTEGER NOT NULL, company_id TEXT, snapshot_id TEXT,
         action_id TEXT NOT NULL, payload TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(owner, action_id))""")
@@ -52,8 +52,15 @@ def save_case(owner, role, report, case_id=None, expected_revision=0):
         revision = conn.execute("SELECT MAX(revision) FROM pre_ipo_decision_versions WHERE owner=? AND case_id=?", (owner, case_id)).fetchone()[0] or 0
         if revision != expected_revision:
             raise ValueError("Case changed; reload before saving")
-        conn.execute("INSERT INTO pre_ipo_decision_versions(owner,case_id,revision,payload) VALUES(?,?,?,?)",
-                     (owner, case_id, revision+1, payload))
+        ctx = report.get("context", {}) if isinstance(report, dict) else {}
+        cid = ctx.get("company_id") or ctx.get("company")
+        snap_id = ctx.get("snapshot_id") or (report.get("snapshot_id") if isinstance(report, dict) else None)
+        conn.execute("INSERT INTO pre_ipo_decision_versions(owner,case_id,revision,company_id,snapshot_id,payload) VALUES(?,?,?,?,?,?)", (owner, case_id, revision+1, cid, snap_id, payload))
+        if cid:
+            try:
+                conn.execute("INSERT OR IGNORE INTO pre_ipo_dependencies(owner, company, dependent_kind, dependent_id, target_kind, target_id, relation_type) VALUES(?, ?, 'DECISION', ?, 'COMPANY', ?, 'USES_COMPANY')", (owner, cid, case_id, cid))
+            except Exception:
+                pass
     return case_id, revision+1
 
 def record_action(owner, role, case_id, revision, action):

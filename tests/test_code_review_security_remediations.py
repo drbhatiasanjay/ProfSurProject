@@ -117,6 +117,8 @@ def test_p1_04_unsafe_html_is_escaped(monkeypatch):
 
 def test_p1_08_legacy_bootstrap_does_not_overwrite_existing_passwords(monkeypatch):
     """Validates that bootstrap_legacy_users uses ON CONFLICT DO NOTHING and preserves existing hashes."""
+    import auth
+    auth.ensure_auth_tables()
     conn = db.get_connection()
     try:
         cur = conn.cursor()
