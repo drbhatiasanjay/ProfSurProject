@@ -1,6 +1,23 @@
 # ProfSurProject — Session Log
 
-## DAY CLOSE CHECKPOINT — Production Deployment & Release v2.4.0 (2026-11-08 23:45 IST)
+## DAY CLOSE CHECKPOINT — Production Deployment & Release v2.4.2 (2026-11-09 19:30 IST)
+
+- **Branch:** `master` · **HEAD:** `a78aa84` (In Sync with `origin/master`)
+- **Automated Deployment:** Master push triggered GitHub Actions workflow `Test and Deploy` (Run ID: `42626000240`) deploying to Cloud Run (`https://lifecycle-leverage-779655496440.us-east1.run.app`).
+- **Core Release Features:**
+  - **Hindustan Coca-Cola Terminal Integration:** Added `hindustan_coca_cola` directly into `PRE_IPO_REGISTRY` in `models/pre_ipo_data.py` and `deal_options` in `pages/27_pre_ipo_drhp.py`. Zero synthetic inventions; authentic restated financials (FY24 ₹14,021.5 Cr revenue, ₹1,895.7 Cr EBITDA, ₹2,812.1 Cr PAT), 100% OFS structure of ₹9,974.6 Cr, zero funded bank debt, Beneish M-Score forensics (-2.48), and Varun Beverages peer comps.
+  - **Terminal Navigation & Routing Fix:** Fixed forced redirect loop in `pages/27_pre_ipo_drhp.py` (`st.session_state["pre_ipo_target_workspace"] = "Facts & evidence review"; st.rerun()`), enabling seamless transition into the Existing Pre-IPO Terminal for Coca-Cola without bounce loops.
+  - **Option B Document & Page Provenance Lineage:** Redesigned Facts & Evidence view in `components/pre_ipo_evidence_review.py` to provide readable tabular constructs with explicit Document Source attribution and Page/Figure locators for every extracted attribute.
+  - **Database Size Optimization:** Pruned redundant PDF binary blobs duplicated across multi-user test profiles in `pre_ipo_artifacts`, reducing database size from 119 MB to 45 MB to comply with GitHub's 100 MB limits.
+  - **Authentication Parity:** Synchronized canonical password hash for `Pass@123` across all user profiles (`drbhatia`, `skumar`, `profsurkumar`, `guest`, `sbhatia`). Fixed lockout retry timer behavior in `auth.py`.
+- **Verification Gates Passed:**
+  - Fast Smoke Test Suite: 52/52 PASSED (9.65s)
+  - Pre-IPO HTML Rendering & Schema Suite: 23/23 PASSED (9.04s)
+  - GitHub Actions Pytest Suite (Python 3.11): 1,105 PASSED (Run ID: `42621917849` & `42626000240`)
+  - Authenticated Browser UI Tests: Verified clean login and navigation for `drbhatia`, `skumar`, and `profsurkumar` with `Pass@123`.
+  - Live GCP Cloud Run Browser Verification: Verified on-screen rendering of Pre-IPO terminal with Hindustan Coca-Cola on live production (`verified_gcp_live_pre_ipo_coca_cola.png`).
+- **Handoff Artifacts:** Published `PROFSUR_DAY_CLOSE_HANDOFF_2026-11-09.md` and updated `CURRENT_STATUS.md`.
+
 
 - **Branch:** `master` · **HEAD:** `8b3c075` (In Sync with `origin/master`)
 - **Automated Deployment:** Master push triggered GitHub Actions workflow `Test and Deploy` (Run ID: `42509235853`) deploying to Cloud Run (`https://lifecycle-leverage-779655496440.us-east1.run.app`).

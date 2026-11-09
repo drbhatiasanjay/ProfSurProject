@@ -1,12 +1,12 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 09 November 2026 18:45 IST (Hindustan Coca-Cola Pre-IPO Terminal & Multi-Doc Ingestion Live Deployed)  
+**Last Updated:** 09 November 2026 19:30 IST (Day-Close & Production Deployment Synced)  
 **Active Branch:** `master` (100% In Sync with `origin/master`)  
-**Active Baseline Commit:** `7bfe7f7` on `master`  
-**Release Tag:** `v2.4.1` (Hindustan Coca-Cola Pre-IPO Intelligence & Evidence Lineage Production Release)  
+**Active Baseline Commit:** `a78aa84` on `master`  
+**Release Tag:** `v2.4.2` (Hindustan Coca-Cola Pre-IPO Intelligence, Option B Lineage Layout & Auth Parity Release)  
 **Production URL:** `https://lifecycle-leverage-779655496440.us-east1.run.app`  
 **GCP Project:** `tempproject-462219` (Region: `us-east1`)  
-**Verified CI/CD Run:** `42621917849` (Test and Deploy: SUCCESS / Cloud Run Deployed & Live Verified)  
+**Verified CI/CD Run:** `42626000240` (Test and Deploy: SUCCESS / Cloud Run Deployed & Live Verified)  
 **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
 
