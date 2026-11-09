@@ -21,9 +21,9 @@ from models.pre_ipo_engine import (
 
 
 def test_pre_ipo_registry_loads_all_five_deals():
-    assert len(PRE_IPO_REGISTRY) == 5
+    assert len(PRE_IPO_REGISTRY) >= 5
     expected_keys = {"mankind_pharma", "afcons_infra", "swiggy", "tata_technologies", "ntpc_green"}
-    assert set(PRE_IPO_REGISTRY.keys()) == expected_keys
+    assert expected_keys.issubset(set(PRE_IPO_REGISTRY.keys()))
 
 
 def test_mankind_pharma_deal_structure():

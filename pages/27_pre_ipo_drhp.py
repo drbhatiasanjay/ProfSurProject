@@ -684,7 +684,7 @@ latest = dossier.latest_financials
 stage_name, pattern = classify_dickinson_stage(latest.cfo_cr, latest.cfi_cr, latest.cff_cr)
 
 with col_act:
-    st.markdown(
+    render_html(
         "<label style='font-size:0.875rem; font-weight:500; color:#94a3b8; display:block; margin-bottom:4px; height:24px; line-height:24px;'>"
         "<span class='material-symbols-rounded' style='font-size:15px; vertical-align:-2px; margin-right:4px;'>slideshow</span>Pitch Deck Action"
         "</label>",
@@ -1657,7 +1657,7 @@ with tab_ic_action:
                 key="action_reg_owner_pill",
             )
         with col_reg_dl:
-            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+            render_html("<div style='height: 28px;'></div>", unsafe_allow_html=True)
             st.download_button(
                 label="Export Actions (CSV)",
                 icon=":material/download:",
