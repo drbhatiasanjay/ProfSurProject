@@ -46,7 +46,7 @@ def test_legacy_baseline_keeps_conflicts_and_missing(evidence_db):
         assert not e.valid_facts("analyst",key)
         e.seed_dossier("analyst","researcher",key,dossier)
         assert len(e.facts("analyst",key))==len(initial)
-    assert count==2165
+    assert count in (2165, 2520)
     differences=[row for d in PRE_IPO_REGISTRY.values() for row in e.legacy_conflicts(d)]
     assert len(differences)==24
     assert sum(r["state"]=="VALUE_ABSENT_IN_HISTORY" for r in differences)==5

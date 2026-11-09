@@ -486,7 +486,7 @@ def import_dossier(owner,role,legal_name,dossier,content,metadata):
             INSERT OR REPLACE INTO pre_ipo_artifacts (
                 owner, company, source_id, artifact_id, artifact_type, mime_type, content, metadata_json
             ) VALUES (?, ?, ?, ?, 'ORIGINAL_PDF', 'application/pdf', ?, ?)
-        """, (owner, company, source_id, f"art-pdf-{source_id[:16]}", content, json.dumps({"digest": retained["sha256"]})))
+        """, (owner, company, source_id, f"art-pdf-{source_id[:16]}", b"", json.dumps({"digest": retained["sha256"]})))
     return company
 
 

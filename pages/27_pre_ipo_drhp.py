@@ -330,6 +330,7 @@ role = user.get("role", "")
 owner_companies = ledger.companies(owner) if owner else {}
 
 deal_options = {
+    "hindustan_coca_cola": "Hindustan Coca-Cola Holdings Ltd. (DRHP 2024 · ₹9,975 Cr 100% OFS · Beverage Giant)",
     "ntpc_green": "NTPC Green Energy Ltd. (RHP Nov 2024 · ₹7,500 Cr Debt Prepayment / ₹10,000 Cr Fresh)",
     "mankind_pharma": "Mankind Pharma Ltd. (DRHP 2023 · 100% OFS · Mature Cash Cow)",
     "afcons_infra": "Afcons Infrastructure Ltd. (RHP 2024 · ₹800 Cr Debt Prepayment / ₹1,250 Cr Fresh)",
@@ -338,9 +339,15 @@ deal_options = {
 }
 
 for cid, prof in owner_companies.items():
-    deal_options[cid] = f"{prof.company_name} (Private Evidence · {prof.filing_type})"
+    if "coca" not in prof.company_name.lower() and "coca" not in cid.lower():
+        deal_options[cid] = f"{prof.company_name} (Private Evidence · {prof.filing_type})"
 
 deal_options["custom_upload"] = "+ Ingest New DRHP / RHP PDF Document..."
+
+# Sync deal selector if user was inspecting Coca-Cola in Facts & Evidence
+active_ev = st.session_state.get("evidence_company", "") or st.session_state.get("ev_active_company", "")
+if ("coca" in str(active_ev).lower()) and ("pre_ipo_deal_selector" not in st.session_state or st.session_state["pre_ipo_deal_selector"] == "ntpc_green"):
+    st.session_state["pre_ipo_deal_selector"] = "hindustan_coca_cola"
 
 # Handle programmatic deal routing (e.g. from Open Deal button or Extraction)
 if "target_deal_selector" in st.session_state:
@@ -396,12 +403,22 @@ with col_pers:
     )
     st.caption(f":material/psychology: Focuses decision cockpit for {persona_options[selected_persona].split('/')[0].strip()}")
 
-# If user selected a private company from the dropdown, route to Facts & evidence review
+# If user selected a private company from the dropdown
 if selected_deal_key.startswith("private-"):
-    st.session_state["evidence_company"] = selected_deal_key
-    st.session_state["ev_active_company"] = selected_deal_key
-    st.session_state["pre_ipo_target_workspace"] = "Facts & evidence review"
-    st.rerun()
+    prof_label = deal_options.get(selected_deal_key, "").lower()
+    if "coca" in selected_deal_key.lower() or "coca" in prof_label:
+        selected_deal_key = "hindustan_coca_cola"
+        st.session_state["pre_ipo_deal_selector"] = "hindustan_coca_cola"
+    elif selected_deal_key in PRE_IPO_REGISTRY:
+        pass
+    else:
+        st.info(":material/info: This private company evidence dossier is reviewed under **Facts & evidence review**.")
+        if st.button("Open Facts & Evidence Review", type="primary", key="btn_goto_evidence_review"):
+            st.session_state["evidence_company"] = selected_deal_key
+            st.session_state["ev_active_company"] = selected_deal_key
+            st.session_state["pre_ipo_target_workspace"] = "Facts & evidence review"
+            st.rerun()
+        st.stop()
 
 dossier = None
 if selected_deal_key == "custom_upload":

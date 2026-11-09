@@ -269,7 +269,14 @@ def _login():
                 if user:
                     _complete_login(user)
                 else:
-                    st.error("Invalid credentials. Please verify your username/email and password.")
+                    u = _auth.get_user_by_username(identifier)
+                    from time import time
+                    now = int(time())
+                    if u and u.get("locked_until") and u["locked_until"] > now:
+                        remaining_mins = max(1, (u["locked_until"] - now + 59) // 60)
+                        st.error(f"Account temporarily locked due to multiple failed login attempts. Please retry in {remaining_mins} minute{'s' if remaining_mins > 1 else ''}.")
+                    else:
+                        st.error("Invalid credentials. Please verify your username/email and password.")
 
         else:
             with st.form("enrollment_form"):

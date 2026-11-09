@@ -447,8 +447,9 @@ def authenticate(identifier: str, password: str):
             valid = bcrypt.checkpw((password or "").encode("utf-8"), password_hash.encode("utf-8"))
         except (ValueError, TypeError):
             valid = False
-        if not user or user["status"] != "active" or (user["locked_until"] and user["locked_until"] > now) or not valid:
-            if user and user["status"] == "active":
+        is_currently_locked = bool(user and user["locked_until"] and user["locked_until"] > now)
+        if not user or user["status"] != "active" or is_currently_locked or not valid:
+            if user and user["status"] == "active" and not is_currently_locked:
                 failures = user["failed_login_count"] + 1
                 locked = now + LOCKOUT_SECONDS if failures >= MAX_LOGIN_FAILURES else None
                 conn.execute("UPDATE auth_users SET failed_login_count=?, locked_until=?, updated_at=? WHERE id=?", (failures, locked, now, user["id"]))

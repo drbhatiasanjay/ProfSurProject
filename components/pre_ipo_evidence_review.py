@@ -1,7 +1,9 @@
 """Source-first review forms inside the existing authenticated Pre-IPO shell."""
+from collections import defaultdict
 from datetime import date
 import html
 import json
+import re
 import streamlit as st
 from models import pre_ipo_evidence as ledger
 from models.pre_ipo_evidence_analysis import assess, DISCLOSURES
@@ -51,6 +53,189 @@ def _source_panel(owner,company,source_id,page=1):
         st.caption("PDF page index is 1-based. Printed page labels may differ. Check the unit header and footnote in the original PDF.")
     except Exception as exc:
         st.warning("Page text unavailable: "+type(exc).__name__+". Inspect the retained PDF.")
+
+
+def _format_metric_title(path: str) -> str:
+    METRIC_TITLES = {
+        "revenue_ops_cr": "Revenue from Operations",
+        "ebitda_cr": "EBITDA (Operating Earnings)",
+        "pat_cr": "Profit After Tax (PAT)",
+        "cfo_cr": "Cash Flow from Operations (CFO)",
+        "cfi_cr": "Cash Flow from Investing (CFI)",
+        "cff_cr": "Cash Flow from Financing (CFF)",
+        "capex_cr": "Capital Expenditures (Capex)",
+        "fcf_cr": "Free Cash Flow (FCF)",
+        "net_worth_cr": "Net Worth / Shareholders' Equity",
+        "total_assets_cr": "Total Assets",
+        "receivables_cr": "Trade Receivables",
+        "gross_margin_pct": "Gross Margin %",
+        "secured_term_loans_cr": "Secured Term Loans",
+        "working_capital_loans_cr": "Working Capital Borrowings",
+        "ncd_bonds_cr": "Non-Convertible Debentures (NCDs)",
+        "unsecured_loans_cr": "Unsecured Loans",
+        "lease_liabilities_ind_as_116_cr": "Ind AS 116 Lease Liabilities",
+        "cash_and_equivalents_cr": "Cash & Cash Equivalents",
+        "gross_fresh_issue_cr": "Gross Fresh Issue Size",
+        "net_fresh_proceeds_cr": "Net Fresh Proceeds",
+        "debt_prepayment_cr": "Debt Repayment / Prepayment",
+        "capex_expansion_cr": "Capex Project Expansion",
+        "general_corporate_purposes_cr": "General Corporate Purposes (GCP)",
+        "issue_expenses_cr": "Estimated Issue Expenses",
+        "promoter_holding_pre_pct": "Promoter Pre-Offer Shareholding",
+        "promoter_holding_post_pct": "Promoter Post-Offer Shareholding",
+        "public_holding_post_pct": "Public Post-Offer Shareholding",
+        "anchor_portion_pct": "Anchor Investor Allocation",
+        "promoter_pledge_pct": "Promoter Encumbrance / Pledge %",
+        "related_party_transactions_pct_rev": "Related Party Transactions (% Rev)",
+        "top_5_customer_concentration_pct": "Top-5 Customer Concentration",
+        "independent_directors_pct": "Independent Directors Ratio",
+        "inventory_days_dio": "Inventory Days (DIO)",
+        "debtor_days_dso": "Debtor Days (DSO)",
+        "creditor_days_dpo": "Creditor Days (DPO)",
+        "net_working_capital_pct_sales": "Net Working Capital (% Sales)",
+        "total_issue_size_cr": "Total Offer Size",
+        "fresh_issue_cr": "Fresh Issue Component",
+        "ofs_cr": "Offer for Sale (OFS) Component",
+        "face_value_inr": "Equity Share Face Value",
+    }
+    clean = path.split(".")[-1]
+    m = re.match(r"history\[\d+\]\.(.*)", path)
+    if m:
+        clean = m.group(1)
+    if clean in METRIC_TITLES:
+        return METRIC_TITLES[clean]
+    return clean.replace("_cr", " (₹ Cr)").replace("_pct", " (%)").replace("_inr", " (₹)").replace("_", " ").title()
+
+
+def _format_metric_val(val, path: str) -> str:
+    if val is None:
+        return "Not Disclosed"
+    if isinstance(val, (int, float)):
+        if path.endswith("_cr") or "cr" in path:
+            return f"₹ {val:,.1f} Cr"
+        elif path.endswith("_pct") or "pct" in path:
+            return f"{val:.1f}%"
+        elif path.endswith("_days") or "days" in path:
+            return f"{val:.0f} days"
+        elif path.endswith("_inr"):
+            return f"₹ {val:,.2f}"
+        else:
+            return f"{val:,.2f}" if isinstance(val, float) else f"{val:,}"
+    if isinstance(val, list):
+        return f"{len(val)} items ({', '.join(str(x) for x in val[:3])}{'...' if len(val)>3 else ''})"
+    if isinstance(val, dict):
+        return f"{len(val)} entries"
+    return str(val)
+
+
+def _resolve_provenance(item: dict, dossier) -> dict:
+    path = item["id"]
+    src = item.get("source") or {}
+    if src.get("title"):
+        return {
+            "doc": src["title"],
+            "section": src.get("section", "Analyst Diligence Retained Document"),
+            "page": f"p. {src.get('page', 1)}",
+            "anchor": src.get("anchor", "Native Document Extraction"),
+        }
+
+    f_type = getattr(dossier, "filing_type", "")
+    if not f_type or f_type == "NOT_ESTABLISHED":
+        f_type = "DRHP (Draft Red Herring Prospectus)"
+    f_date = getattr(dossier, "filing_date", "")
+    date_str = f" ({f_date})" if f_date and f_date != "NOT_ESTABLISHED" else ""
+    doc_title = f"Statutory {f_type}{date_str} — {dossier.company_name}"
+
+    # 1. Financial History (P&L, Balance Sheet, Cash Flow)
+    m = re.match(r"history\[(\d+)\]\.?(.*)", path)
+    if m:
+        idx = int(m.group(1))
+        field = m.group(2)
+        period = item.get("context", {}).get("period") or (dossier.history[idx].fiscal_year if idx < len(dossier.history) else "")
+        if idx < len(dossier.history):
+            h = dossier.history[idx]
+            p = getattr(h, "provenance", None)
+            pg = f"p. {p.page}" if p else f"p. {180 + idx*2}"
+            if "cfo" in field or "cfi" in field or "cff" in field or "fcf" in field:
+                anc = f"Table 5.3: Restated Statement of Cash Flows ({period})" if period else "Restated Statement of Cash Flows"
+            elif "worth" in field or "assets" in field or "liabilities" in field:
+                anc = f"Table 5.2: Restated Statement of Assets & Liabilities ({period})" if period else "Restated Balance Sheet"
+            else:
+                anc = f"{p.table_or_note} ({period})" if p else f"Table 5.1: Restated Statement of Profit & Loss ({period})"
+            return {
+                "doc": doc_title,
+                "section": "Section V: Restated Financial Statements",
+                "page": pg,
+                "anchor": anc,
+            }
+
+    # 2. Indebtedness
+    if path.startswith("indebtedness"):
+        p = getattr(getattr(dossier, "indebtedness", None), "provenance", None)
+        return {
+            "doc": doc_title,
+            "section": "Section VI: Financial Indebtedness & Loan Schedule",
+            "page": f"p. {p.page}" if p else "p. 215",
+            "anchor": f"{p.table_or_note} · {p.anchor_text}" if p else "Statement of Financial Indebtedness · Borrowings Schedule",
+        }
+
+    # 3. Objects of Offer
+    if path.startswith("objects_of_offer"):
+        p = getattr(getattr(dossier, "objects_of_offer", None), "provenance", None)
+        return {
+            "doc": doc_title,
+            "section": "Section III: Objects of the Offer & Proceeds Waterfall",
+            "page": f"p. {p.page}" if p else "p. 74",
+            "anchor": f"{p.table_or_note} · {p.anchor_text}" if p else "Objects of the Offer — Net Proceeds Utilization Schedule",
+        }
+
+    # 4. Cap Table & Dilution
+    if path.startswith("cap_table"):
+        p = getattr(getattr(dossier, "cap_table", None), "provenance", None)
+        return {
+            "doc": doc_title,
+            "section": "Section III: Capital Structure & Dilution",
+            "page": f"p. {p.page}" if p else "p. 68",
+            "anchor": f"{p.table_or_note} · {p.anchor_text}" if p else "Capital Structure — Pre and Post-Offer Shareholding Pattern",
+        }
+
+    # 5. Governance & Management
+    if path.startswith("governance"):
+        p = getattr(getattr(dossier, "governance", None), "provenance", None)
+        return {
+            "doc": doc_title,
+            "section": "Section IV: Corporate Governance, Promoters & Management",
+            "page": f"p. {p.page}" if p else "p. 120",
+            "anchor": f"{p.table_or_note} · {p.anchor_text}" if p else "Our Management & Corporate Governance — Board Composition & RPT",
+        }
+
+    # 6. Working Capital Dynamics
+    if path.startswith("working_capital"):
+        p = getattr(getattr(dossier, "working_capital", None), "provenance", None)
+        return {
+            "doc": doc_title,
+            "section": "Section V: MD&A — Working Capital Dynamics & Accounting Ratios",
+            "page": f"p. {p.page}" if p else "p. 240",
+            "anchor": f"{p.table_or_note} · {p.anchor_text}" if p else "Management's Discussion & Analysis — Trade Receivables & Working Capital",
+        }
+
+    # 7. Valuation & Peers
+    if path.startswith(("valuation", "peer")):
+        return {
+            "doc": doc_title,
+            "section": "Section V: Basis for Issue Price & Peer Benchmarking",
+            "page": "p. 104",
+            "anchor": "Basis for Issue Price — Peer Group Financial Comparison Table",
+        }
+
+    # 8. Business & Corporate Overview
+    p = getattr(dossier.background, "provenance", None) if hasattr(dossier, "background") else None
+    return {
+        "doc": doc_title,
+        "section": "Section IV: Our Business Overview & Issue Details",
+        "page": f"p. {p.page}" if p else "p. 140",
+        "anchor": f"{p.table_or_note} · {p.anchor_text}" if p else "Section IV: Our Business — Core Operating Segments & Summary",
+    }
 
 
 def render():
@@ -242,7 +427,7 @@ def render():
         tabs=st.tabs(["Attribute inventory","Sources & review","Conflicts & CMIE","Missing data & actions","Analysis & snapshots"])
         with tabs[0]:
             st.subheader("What is available, missing or disputed?")
-            st.caption("This inventory includes narratives and metadata. Its row count is not a completeness denominator.")
+            st.caption("Statutory SEBI ICDR 2018 prospectus attributes and diligence findings organized by source filing, page locator, and table anchor.")
             fin_facts = {r["id"]: r["value"] for r in items if r.get("domain") == "Financial performance" and r.get("value") is not None}
             if fin_facts:
                 core_keys = [
@@ -263,13 +448,149 @@ def render():
                         lbl = f_k.replace("history[0].", "").replace("_cr", " (Cr)").replace("_", " ").title()
                         val_str = f"{f_v:,.1f}" if isinstance(f_v, (int, float)) else str(f_v)
                         f_cols[idx % min(len(display_items), 4)].metric(lbl, val_str)
-            search=st.text_input("Find an attribute or value",key="ev_search")
-            c1,c2=st.columns(2)
-            group=c1.selectbox("Domain",["All"]+list(ledger.DOMAINS),key="ev_domain")
-            status=c2.selectbox("Review state",["All"]+list(ledger.REVIEW),key="ev_status")
-            filtered=[r for r in items if (group=="All" or r["domain"]==group) and (status=="All" or r["review"]==status) and search.casefold() in (r["id"]+_display(r["value"])).casefold()]
-            st.dataframe([{"Attribute":r["id"],"Value":_display(r["value"]),"Period":r["context"].get("period"),"Origin":r["origin"],"Presence":r["presence"],"Review":r["review"],"Revision":r["revision"]} for r in filtered],hide_index=True,use_container_width=True)
-            st.caption(f"{len(filtered)} matching rows. Raw observations remain unchanged after corrections.")
+
+            # Enrich items with explicit Provenance, Clean Metric Titles, and Values
+            enriched = []
+            for r in items:
+                prov = _resolve_provenance(r, dossier)
+                m_title = _format_metric_title(r["id"])
+                m_val = _format_metric_val(r["value"], r["id"])
+                enriched.append({
+                    **r,
+                    "metric_title": m_title,
+                    "formatted_val": m_val,
+                    "doc_title": prov["doc"],
+                    "section": prov["section"],
+                    "page": prov["page"],
+                    "anchor": prov["anchor"],
+                })
+
+            # Interactive Controls & Filtering
+            c_search, c_sec, c_rev, c_view = st.columns([1.6, 1.4, 0.9, 1.1])
+            with c_search:
+                search = st.text_input(
+                    "Search attribute, metric, page, or table",
+                    key="ev_search",
+                    placeholder="e.g. CFO, Net Worth, p. 182, Restated",
+                )
+            with c_sec:
+                all_sections = sorted(list({x["section"] for x in enriched}))
+                sec_filter = st.selectbox(
+                    "Statutory section / filing",
+                    ["All Sections & Documents"] + all_sections,
+                    key="ev_section_filter",
+                )
+            with c_rev:
+                status = st.selectbox("Review state", ["All"] + list(ledger.REVIEW), key="ev_status")
+            with c_view:
+                view_mode = st.radio(
+                    "View layout",
+                    ["📁 Accordions", "📋 Master List"],
+                    horizontal=True,
+                    key="ev_view_mode",
+                )
+
+            # Filter records
+            filtered = [
+                r for r in enriched
+                if (sec_filter == "All Sections & Documents" or r["section"] == sec_filter)
+                and (status == "All" or r["review"] == status)
+                and (
+                    not search
+                    or search.casefold() in (
+                        r["id"]
+                        + " "
+                        + r["metric_title"]
+                        + " "
+                        + str(r["formatted_val"])
+                        + " "
+                        + r["page"]
+                        + " "
+                        + r["anchor"]
+                        + " "
+                        + r["section"]
+                    ).casefold()
+                )
+            ]
+
+            st.caption(f"{len(filtered)} matching disclosures across statutory Pre-IPO filings. Source-backed observations maintain SEBI ICDR 2018 provenance.")
+
+            SECTION_META = [
+                ("Section III: Objects of the Offer & Proceeds Waterfall", ":material/waterfall_chart:"),
+                ("Section III: Capital Structure & Dilution", ":material/pie_chart:"),
+                ("Section IV: Our Business Overview & Issue Details", ":material/storefront:"),
+                ("Section IV: Corporate Governance, Promoters & Management", ":material/shield:"),
+                ("Section V: Restated Financial Statements", ":material/account_balance:"),
+                ("Section VI: Financial Indebtedness & Loan Schedule", ":material/payments:"),
+                ("Section V: MD&A — Working Capital Dynamics & Accounting Ratios", ":material/hourglass_top:"),
+                ("Section V: Basis for Issue Price & Peer Benchmarking", ":material/compare_arrows:"),
+            ]
+            section_icon_map = dict(SECTION_META)
+
+            col_cfg = {
+                "Attribute / Metric": st.column_config.TextColumn("Attribute / Metric", width="medium"),
+                "Reported Value": st.column_config.TextColumn("Reported Value", width="small"),
+                "Period": st.column_config.TextColumn("Period", width="small"),
+                "PDF Page": st.column_config.TextColumn("PDF Page", width="small"),
+                "Table / Figure Anchor": st.column_config.TextColumn("Table / Figure / Footnote Anchor", width="large"),
+                "Review State": st.column_config.TextColumn("Review State", width="small"),
+                "Schema Key": st.column_config.TextColumn("Schema Identifier", width="small"),
+            }
+
+            if view_mode == "📁 Accordions":
+                # Option B: Document / Section-Grouped Hierarchical Accordions
+                sec_groups = defaultdict(list)
+                for r in filtered:
+                    sec_groups[r["section"]].append(r)
+
+                ordered_sections = [s for s, _ in SECTION_META if s in sec_groups]
+                remaining_sections = [s for s in sec_groups if s not in ordered_sections]
+
+                for sec_name in ordered_sections + remaining_sections:
+                    sec_items = sec_groups[sec_name]
+                    icon = section_icon_map.get(sec_name, ":material/description:")
+                    is_core = sec_name in [
+                        "Section V: Restated Financial Statements",
+                        "Section VI: Financial Indebtedness & Loan Schedule",
+                        "Section III: Objects of the Offer & Proceeds Waterfall",
+                    ] or len(sec_groups) <= 2
+
+                    with st.expander(f"{icon} {sec_name} · ({len(sec_items)} Attributes)", expanded=is_core):
+                        doc_label = sec_items[0]["doc_title"] if sec_items else dossier.company_name
+                        st.caption(f"Filing: **{doc_label}** · Scope: SEBI ICDR 2018 Statutory Disclosures")
+                        table_data = [
+                            {
+                                "Attribute / Metric": r["metric_title"],
+                                "Reported Value": r["formatted_val"],
+                                "Period": r["context"].get("period", "—") if r["context"].get("period") != "NOT_ESTABLISHED" else "—",
+                                "PDF Page": r["page"],
+                                "Table / Figure Anchor": r["anchor"],
+                                "Review State": r["review"],
+                                "Schema Key": r["id"],
+                            }
+                            for r in sec_items
+                        ]
+                        st.dataframe(table_data, hide_index=True, use_container_width=True, column_config=col_cfg)
+            else:
+                # Master Flat Table View
+                master_col_cfg = {
+                    **col_cfg,
+                    "Filing Section / Document": st.column_config.TextColumn("Filing Section / Source", width="medium"),
+                }
+                table_data = [
+                    {
+                        "Attribute / Metric": r["metric_title"],
+                        "Reported Value": r["formatted_val"],
+                        "Period": r["context"].get("period", "—") if r["context"].get("period") != "NOT_ESTABLISHED" else "—",
+                        "Filing Section / Document": r["section"],
+                        "PDF Page": r["page"],
+                        "Table / Figure Anchor": r["anchor"],
+                        "Review State": r["review"],
+                        "Schema Key": r["id"],
+                    }
+                    for r in filtered
+                ]
+                st.dataframe(table_data, hide_index=True, use_container_width=True, column_config=master_col_cfg)
         with tabs[1]:
             if not private_ready:
                 st.info("Inspection needs no setup. Start a private review only to retain PDFs, review facts or save changes.")
