@@ -288,7 +288,7 @@ context_options = {
     "STRATEGIC_M_AND_A": "Strategic M&A / Control Buyout",
 }
 
-col_sel, col_ctx, col_pers, col_act = st.columns([3, 2, 2, 2])
+col_sel, col_act = st.columns([3.2, 1.0])
 with col_sel:
     selected_deal_key = st.selectbox(
         "Active Pre-IPO Deal Dossier",
@@ -298,6 +298,7 @@ with col_sel:
     )
     st.caption(":material/domain: Drives prospectuses & tabs below")
 
+col_ctx, col_pers = st.columns(2)
 with col_ctx:
     selected_context = st.selectbox(
         "Transaction Context",
