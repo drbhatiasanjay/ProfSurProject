@@ -128,10 +128,87 @@ def render():
         background=dossier.background
         text=getattr(background,"business_model_summary","") or dossier.sector
         render_html(f'<section class="evidence-brief"><h3>{html.escape(dossier.company_name)}</h3><p>{html.escape(str(text))}</p><p>{html.escape(dossier.sector)} · Registry background is unverified until source review.</p></section>')
-        with st.expander("Company background and filing context"):
-            from dataclasses import asdict
-            st.json(asdict(background) if background else {"sector":dossier.sector},expanded=True)
-            st.caption(f"Stored filing label: {dossier.filing_type} · {dossier.filing_date}. Confirm exact document version before accepting facts.")
+        with st.expander("Company background and filing context", expanded=True):
+            if background:
+                # 1. Statutory Corporate Profile & Filing Metadata Grid
+                c1, c2, c3, c4 = st.columns(4)
+                with c1:
+                    st.caption("CORPORATE IDENTITY (CIN)")
+                    st.write(f"**`{getattr(background, 'cin', 'N/A') or 'N/A'}`**")
+                with c2:
+                    st.caption("INCORPORATION / HQ")
+                    st.write(f"**{getattr(background, 'incorporation_year', '—')}** · {getattr(background, 'headquarters', '—')}")
+                with c3:
+                    st.caption("LEGAL STRUCTURE")
+                    st.write(f"**{getattr(background, 'legal_form', '—')}**")
+                with c4:
+                    st.caption("FILING REFERENCE")
+                    st.write(f"**{dossier.filing_type}** ({dossier.filing_date})")
+
+                st.markdown("<hr style='margin:0.5rem 0 1rem 0; border:none; border-top:1px solid rgba(255,255,255,0.08);'>", unsafe_allow_html=True)
+
+                # 2. Strategic Narrative & Revenue Engine
+                col_bm, col_rev = st.columns([1.2, 1.0])
+                with col_bm:
+                    st.markdown("**Business Model & Corporate Strategy**")
+                    bm_text = getattr(background, "business_model_summary", "") or "No business model narrative stored."
+                    st.info(bm_text, icon=":material/corporate_fare:")
+                with col_rev:
+                    st.markdown("**Revenue Model & Monetization**")
+                    rev_text = getattr(background, "revenue_model", "") or "Direct commercial revenue."
+                    st.caption(rev_text)
+                    promoter_text = getattr(background, "promoter_and_management_pedigree", "")
+                    if promoter_text:
+                        st.markdown("**Promoter & Management Pedigree**")
+                        st.caption(promoter_text)
+
+                # 3. Core Operating Segments & Offerings (Clean Table)
+                core_prods = getattr(background, "core_products_and_services", [])
+                if core_prods:
+                    st.markdown("**Core Operating Segments & Product Lines**")
+                    import pandas as pd
+                    df_prods = pd.DataFrame([
+                        {
+                            "Operating Segment / Offering": p.get("name", "—"),
+                            "Revenue Share (%)": f"{float(p.get('revenue_pct', 0.0)):.1f}%",
+                            "Operational Description & Strategic Footprint": p.get("description", "—")
+                        }
+                        for p in core_prods
+                    ])
+                    st.dataframe(df_prods, use_container_width=True, hide_index=True)
+
+                # 4. Operational Dependencies & Market Footprint
+                col_dep, col_geo = st.columns(2)
+                with col_dep:
+                    deps = getattr(background, "material_operational_dependencies", [])
+                    if deps:
+                        st.markdown("**Material Operational Dependencies & Regulatory Bottlenecks**")
+                        for d in deps:
+                            st.markdown(f"- {d}")
+                with col_geo:
+                    geo = getattr(background, "geographic_presence", {})
+                    cust = getattr(background, "customer_segments", [])
+                    if geo:
+                        st.markdown("**Geographic Footprint**")
+                        geo_items = [f"**{k}**: {v:.1f}%" for k, v in geo.items()]
+                        st.write(" · ".join(geo_items))
+                    if cust:
+                        st.markdown("**Primary Customer / Distribution Segments**")
+                        for c in cust:
+                            st.markdown(f"- {c}")
+
+                # 5. Provenance & Stored filing note
+                prov = getattr(background, "provenance", None)
+                prov_str = f" · Source: {prov.section}, p.{prov.page} ({prov.table_or_note})" if prov and hasattr(prov, "page") else ""
+                st.caption(f"Stored filing label: {dossier.filing_type} · {dossier.filing_date}{prov_str}. Confirm exact document version before accepting facts.")
+
+                # 6. Raw Schema JSON toggle for developer/audit debugging
+                with st.expander(":material/data_object: View Raw Schema Attributes (JSON)", expanded=False):
+                    from dataclasses import asdict
+                    st.json(asdict(background), expanded=True)
+            else:
+                st.write({"sector": dossier.sector})
+                st.caption(f"Stored filing label: {dossier.filing_type} · {dossier.filing_date}. Confirm exact document version before accepting facts.")
         if not editable:
             st.warning("Read-only profile: you can inspect your permitted workspace; upload, review, action and snapshot writes are disabled.")
         items=ledger.facts(owner,company)
