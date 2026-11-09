@@ -296,6 +296,7 @@ with col_sel:
         format_func=lambda k: deal_options[k],
         key="pre_ipo_deal_selector",
     )
+    st.caption(":material/domain: Drives prospectuses & tabs below")
 
 with col_ctx:
     selected_context = st.selectbox(
@@ -304,6 +305,7 @@ with col_ctx:
         format_func=lambda k: context_options[k],
         key="pre_ipo_context_selector",
     )
+    st.caption(":material/lock_open: Unlocks PX01–PX04" if selected_context != "PUBLIC_IPO" else ":material/public: 10 Core Public IPO Questions")
 
 with col_pers:
     selected_persona = st.selectbox(
@@ -312,6 +314,7 @@ with col_pers:
         format_func=lambda k: persona_options[k],
         key="pre_ipo_persona_selector",
     )
+    st.caption(f":material/psychology: Focuses cockpit for {persona_options[selected_persona].split('/')[0].strip()}")
 
 # If user selected a private company from the dropdown, route to Facts & evidence review
 if selected_deal_key.startswith("private-"):
@@ -596,6 +599,39 @@ with col_act:
         use_container_width=True,
     )
 
+# Feedback toasts on selection change
+prev_deal = st.session_state.get("_prev_pre_ipo_deal")
+prev_persona = st.session_state.get("_prev_pre_ipo_persona")
+prev_context = st.session_state.get("_prev_pre_ipo_context")
+
+if prev_deal and prev_deal != selected_deal_key:
+    st.toast(f"Active deal: {dossier.company_name}", icon=":material/domain:")
+if prev_persona and prev_persona != selected_persona:
+    st.toast(f"Decision Lens: {persona_options[selected_persona]} active", icon=":material/psychology:")
+if prev_context and prev_context != selected_context:
+    st.toast(f"Context: {context_options[selected_context]} ({'14 Questions' if selected_context != 'PUBLIC_IPO' else '10 Core Questions'})", icon=":material/handshake:")
+
+st.session_state["_prev_pre_ipo_deal"] = selected_deal_key
+st.session_state["_prev_pre_ipo_persona"] = selected_persona
+st.session_state["_prev_pre_ipo_context"] = selected_context
+
+# Compact Scope Indicator Bar
+scope_bar_html = f"""
+<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:6px 14px; margin-bottom:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; font-size:0.78rem;">
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <span style="color:#94a3b8;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">business</span>Prospectus: <b style="color:#f8fafc;">{dossier.company_name}</b></span>
+        <span style="color:#64748b;">•</span>
+        <span style="color:#94a3b8;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">handshake</span>Framework: <b style="color:#f59e0b;">{context_options[selected_context]}</b></span>
+        <span style="color:#64748b;">•</span>
+        <span style="color:#94a3b8;"><span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">psychology</span>Active Lens: <b style="color:#38bdf8;">{persona_options[selected_persona]}</b></span>
+    </div>
+    <div style="color:#64748b; font-size:0.72rem;">
+        <span class="material-symbols-rounded" style="font-size:13px; vertical-align:-2px; margin-right:2px;">info</span>Persona focuses decision priorities & narrative; audited filing facts remain constant.
+    </div>
+</div>
+"""
+render_html(scope_bar_html)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # PANEL 1: SOVEREIGN HERO OFFERING DNA (Rendered clean without code blocks)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -705,7 +741,7 @@ render_html(cockpit_html)
 ) = st.tabs([
     ":material/domain: Company Overview",
     ":material/fact_check: Extracted Disclosures & Audit",
-    ":material/quiz: Investor Questions & Thesis",
+    f":material/quiz: Investor Questions & Thesis ({'14 Questions' if selected_context != 'PUBLIC_IPO' else '10 Core'})",
     ":material/analytics: Detailed Workpapers",
     ":material/sync_alt: CMIE Reference Crosswalk",
     ":material/gavel: IC Stance & Action Register",
@@ -889,7 +925,7 @@ with tab_equity_thesis:
                     <span class="badge-pill badge-emerald">Executive Investment Thesis</span>
                     <h3 style="color:#ffffff; margin:6px 0 2px 0;">{dossier.company_name} — Equity Underwriting Verdict</h3>
                 </div>
-                <span class="badge-pill badge-sky">10/10 Questions Evaluated</span>
+                <span class="badge-pill badge-sky">{len(eq_findings)} Questions Evaluated ({'10 Core + 4 Private Extensions' if selected_context != 'PUBLIC_IPO' else '10 Core'})</span>
             </div>
             <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.5; margin-top:8px;">
                 Structured evaluation connects observable operating drivers to financial consequences and investor trade-offs. 
