@@ -884,27 +884,41 @@ with tab_overview:
         render_html(corp_id_html)
 
     render_html('<div class="bento-subtitle" style="margin-top:16px;">Product Portfolios & Segmental Breakdown</div>', unsafe_allow_html=True)
-    c_p1, c_p2 = st.columns([3, 2])
-    with c_p1:
-        prods = bg.core_products_and_services if bg else []
-        if prods:
-            p_rows = []
-            for pr in prods:
-                p_rows.append({
-                    "Product / Service Line": pr.get("name", ""),
-                    "Revenue Contribution (%)": f"{pr.get('revenue_pct', 0):.1f}%",
-                    "Operational Description & Market Position": pr.get("description", ""),
-                })
-            st.dataframe(pd.DataFrame(p_rows), use_container_width=True, hide_index=True)
-        else:
-            st.info("Product breakdown detailed in Section V restated notes.")
+    render_html('<div class="bento-title">Core Operating Lines & Segmental Revenue Contribution</div>', unsafe_allow_html=True)
+    prods = bg.core_products_and_services if bg else []
+    if prods:
+        p_rows = []
+        for pr in prods:
+            p_rows.append({
+                "Product / Service Line": pr.get("name", ""),
+                "Revenue Contribution (%)": f"{pr.get('revenue_pct', 0):.1f}%",
+                "Operational Description & Market Position": pr.get("description", ""),
+            })
+        st.dataframe(pd.DataFrame(p_rows), use_container_width=True, hide_index=True)
+    else:
+        st.info("Product breakdown detailed in Section V restated notes.")
 
-    with c_p2:
-        geo = bg.geographic_presence if (bg and bg.geographic_presence) else {"Domestic (India)": 100.0}
-        st.markdown("**Geographic Revenue Split**")
+    # Dedicated full-row Geographic Revenue Split with regional commentary
+    geo = bg.geographic_presence if (bg and bg.geographic_presence) else {"Domestic (India)": 100.0}
+    c_geo1, c_geo2 = st.columns([1.5, 2.5])
+    with c_geo1:
+        render_html('<div class="bento-subtitle" style="margin-top:14px;">Market Dispersion</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">Geographic Revenue Split</div>', unsafe_allow_html=True)
         fig_geo = go.Figure(data=[go.Pie(labels=list(geo.keys()), values=list(geo.values()), hole=0.55, marker_colors=["#38bdf8", "#10b981", "#f59e0b"])])
-        fig_geo.update_layout(height=220, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#cbd5e1"))
+        fig_geo.update_layout(height=210, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="rgba(0,0,0,0)", font=dict(color="#cbd5e1"))
         st.plotly_chart(fig_geo, use_container_width=True)
+    with c_geo2:
+        render_html('<div class="bento-subtitle" style="margin-top:14px;">Domestic vs Export Territory Exposure</div>', unsafe_allow_html=True)
+        geo_summary = "".join([f"<li style='margin-bottom:6px;'><strong>{k}:</strong> {v:.1f}% of total consolidated revenue</li>" for k, v in geo.items()])
+        render_html(f"""
+        <div class="bento-card" style="margin-top:10px;">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8; font-weight:700;">Jurisdictional Footprint</div>
+            <ul style="color:#f8fafc; font-size:0.85rem; line-height:1.6; margin:8px 0 0 16px; padding:0;">
+                {geo_summary}
+            </ul>
+            <div style="font-size:0.78rem; color:#94a3b8; margin-top:8px;">SEBI ICDR 2018 Section IV geographic concentration risk profile.</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # Material Operational Dependencies
     deps = bg.material_operational_dependencies if bg else []
@@ -1142,24 +1156,25 @@ with tab_workpapers:
 
     # ── SUBTAB 1: FINANCIALS & OBJECTS OF THE OFFER ──
     with subtab_fin:
+        render_html('<div class="bento-subtitle">Section V Disclosures · Restated Consolidated Ind AS</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">3-to-4 Year Restated Performance</div>', unsafe_allow_html=True)
+        fin_rows = []
+        for f_item in dossier.history:
+            fin_rows.append({
+                "Fiscal Year": f_item.fiscal_year,
+                "Revenue (₹ Cr)": f"₹{f_item.revenue_ops_cr:,.1f}",
+                "Restated EBITDA (₹ Cr)": f"₹{f_item.ebitda_cr:,.1f}",
+                "EBITDA Margin (%)": f"{(f_item.ebitda_cr / max(0.1, f_item.revenue_ops_cr))*100:.1f}%",
+                "PAT (₹ Cr)": f"₹{f_item.pat_cr:,.1f}",
+                "CFO (₹ Cr)": f"₹{f_item.cfo_cr:,.1f}",
+                "Capex (₹ Cr)": f"₹{f_item.capex_cr:,.1f}",
+                "Free Cash Flow (₹ Cr)": f"₹{f_item.fcf_cr:,.1f}",
+            })
+        st.dataframe(pd.DataFrame(fin_rows), use_container_width=True, hide_index=True)
+
         col_f1, col_f2 = st.columns([3, 2])
         with col_f1:
-            render_html('<div class="bento-subtitle">Section V Disclosures · Restated Consolidated Ind AS</div>', unsafe_allow_html=True)
-            render_html('<div class="bento-title">3-to-4 Year Restated Performance</div>', unsafe_allow_html=True)
-            fin_rows = []
-            for f_item in dossier.history:
-                fin_rows.append({
-                    "Fiscal Year": f_item.fiscal_year,
-                    "Revenue (₹ Cr)": f"{f_item.revenue_ops_cr:,.1f}",
-                    "Restated EBITDA (₹ Cr)": f"{f_item.ebitda_cr:,.1f}",
-                    "EBITDA Margin (%)": f"{(f_item.ebitda_cr / max(0.1, f_item.revenue_ops_cr))*100:.1f}%",
-                    "PAT (₹ Cr)": f"{f_item.pat_cr:,.1f}",
-                    "CFO (₹ Cr)": f"{f_item.cfo_cr:,.1f}",
-                    "Capex (₹ Cr)": f"{f_item.capex_cr:,.1f}",
-                    "Free Cash Flow (₹ Cr)": f"{f_item.fcf_cr:,.1f}",
-                })
-            st.dataframe(pd.DataFrame(fin_rows), use_container_width=True, hide_index=True)
-
+            render_html('<div class="bento-subtitle" style="margin-top:14px;">Historical Trend Trajectory</div>', unsafe_allow_html=True)
             fig_trend = go.Figure()
             yrs = [f.fiscal_year for f in dossier.history]
             revs = [f.revenue_ops_cr for f in dossier.history]
@@ -1167,7 +1182,7 @@ with tab_workpapers:
             fig_trend.add_trace(go.Bar(x=yrs, y=revs, name="Revenue", marker_color="#38bdf8", opacity=0.75))
             fig_trend.add_trace(go.Scatter(x=yrs, y=ebitdas, name="Restated EBITDA", line=dict(color="#10b981", width=3), mode="lines+markers"))
             fig_trend.update_layout(
-                height=240, margin=dict(l=20, r=20, t=30, b=20),
+                height=220, margin=dict(l=20, r=20, t=20, b=20),
                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                 font=dict(color="#cbd5e1"),
@@ -1175,14 +1190,13 @@ with tab_workpapers:
             st.plotly_chart(fig_trend, use_container_width=True)
 
         with col_f2:
-            render_html('<div class="bento-subtitle">Empirical Benchmark (N=8,677 CMIE Database)</div>', unsafe_allow_html=True)
-            render_html('<div class="bento-title">Dickinson Life-Cycle Radar</div>', unsafe_allow_html=True)
+            render_html('<div class="bento-subtitle" style="margin-top:14px;">Empirical Benchmark (N=8,677 CMIE Database)</div>', unsafe_allow_html=True)
             dickinson_html = f"""
-            <div class="bento-card">
+            <div class="bento-card" style="margin-top:4px;">
                 <div style="font-size:0.85rem; color:#94a3b8;">Classified Stage:</div>
-                <div style="font-size:1.45rem; font-weight:800; color:#10b981; margin:4px 0;">{stage_name}</div>
+                <div style="font-size:1.45rem; font-weight:800; color:#10b981; margin:2px 0;">{stage_name}</div>
                 <div style="font-size:0.90rem; color:#cbd5e1; font-family:monospace;">Cash Flow Sign Triplet: {pattern}</div>
-                <hr style="border-color:rgba(255,255,255,0.08); margin:12px 0;">
+                <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
                 <div style="font-size:0.82rem; line-height:1.45; color:#cbd5e1;">
                     • <strong>Operating Cash Flow:</strong> ₹{latest.cfo_cr:,.1f} Cr<br>
                     • <strong>Investing Accrual:</strong> ₹{latest.cfi_cr:,.1f} Cr<br>
@@ -1328,45 +1342,47 @@ with tab_workpapers:
 
     # ── SUBTAB 4: VALUATION, PEERS, DCF & FORENSICS ──
     with subtab_val:
-        col_v1, col_v2 = st.columns([3, 2])
         val = dossier.valuation_comps
-        with col_v1:
-            render_html('<div class="bento-subtitle">CMIE Listed Peers at Identical Life-Cycle Stage</div>', unsafe_allow_html=True)
-            render_html('<div class="bento-title">Valuation Peer Benchmarking</div>', unsafe_allow_html=True)
-            if val and val.peers:
-                p_comps = []
-                for p in val.peers:
-                    p_comps.append({
-                        "Peer Name": p.peer_name,
-                        "Ticker": p.ticker,
-                        "Market Cap (₹ Cr)": f"₹{p.mcap_cr:,.1f}",
-                        "P/E Ratio": f"{p.pe_ratio:.1f}x" if p.pe_ratio else "Loss",
-                        "EV/EBITDA": f"{p.ev_ebitda:.1f}x" if p.ev_ebitda else "Loss",
-                        "ROE (%)": f"{p.roe_pct:.1f}%",
-                        "Life Stage": p.dickinson_stage,
-                    })
-                st.dataframe(pd.DataFrame(p_comps), use_container_width=True, hide_index=True)
-            else:
-                st.info("Peer comparison table configured in DRHP Section III.")
-
-        with col_v2:
-            render_html('<div class="bento-subtitle">Offer Valuation Metrics</div>', unsafe_allow_html=True)
-            render_html('<div class="bento-title">Implied Pricing Multiples</div>', unsafe_allow_html=True)
-            if val:
-                v_badge = "badge-emerald" if "DISCOUNT" in val.valuation_verdict else "badge-sky"
-                val_box_html = f"""
-                <div class="bento-card">
-                    <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Implied Enterprise Value (Upper Band)</div>
-                    <div style="font-size:1.8rem; font-weight:800; color:#38bdf8; margin:4px 0;">₹{val.implied_ev_cr:,.1f} Cr</div>
-                    <div style="margin-top:6px;"><span class="badge-pill {v_badge}">Verdict: {val.valuation_verdict}</span></div>
-                    <div style="font-size:0.82rem; color:#cbd5e1; margin-top:10px; line-height:1.6;">
-                        • <strong>Implied P/E:</strong> {val.implied_pe_ratio:.1f}x (Peer Median: {val.peer_median_pe or 'N/A'}x)<br>
-                        • <strong>Implied EV/EBITDA:</strong> {val.implied_ev_ebitda:.1f}x<br>
-                        • <strong>Price Band:</strong> ₹{val.price_band_lower_inr:.0f} - ₹{val.price_band_upper_inr:.0f}
+        if val:
+            v_badge = "badge-emerald" if "DISCOUNT" in val.valuation_verdict else "badge-sky"
+            val_box_html = f"""
+            <div class="bento-card" style="margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8; font-weight:700;">Offer Valuation Summary & Multiples Overview</div>
+                        <div style="font-size:1.85rem; font-weight:800; color:#38bdf8; margin:2px 0;">₹{val.implied_ev_cr:,.1f} Cr <span style="font-size:0.9rem; font-weight:500; color:#94a3b8;">Implied Enterprise Value (Upper Band)</span></div>
+                    </div>
+                    <div>
+                        <span class="badge-pill {v_badge}" style="font-size:0.82rem; padding:6px 14px;">Verdict: {val.valuation_verdict}</span>
                     </div>
                 </div>
-                """
-                render_html(val_box_html)
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.84rem;">
+                    <div><span style="color:#94a3b8;">Implied P/E:</span> <strong style="color:#ffffff;">{val.implied_pe_ratio:.1f}x</strong> <span style="color:#64748b;">(Peer Median: {val.peer_median_pe or 'N/A'}x)</span></div>
+                    <div><span style="color:#94a3b8;">Implied EV/EBITDA:</span> <strong style="color:#ffffff;">{val.implied_ev_ebitda:.1f}x</strong></div>
+                    <div><span style="color:#94a3b8;">Price Band:</span> <strong style="color:#10b981;">₹{val.price_band_lower_inr:.0f} - ₹{val.price_band_upper_inr:.0f}</strong></div>
+                    <div><span style="color:#94a3b8;">Peer Comps Sizing:</span> <strong style="color:#f8fafc;">{len(val.peers) if val.peers else 0} Listed Competitors</strong></div>
+                </div>
+            </div>
+            """
+            render_html(val_box_html)
+
+        render_html('<div class="bento-subtitle">CMIE Listed Peers at Identical Life-Cycle Stage</div>', unsafe_allow_html=True)
+        render_html('<div class="bento-title">Valuation Peer Benchmarking</div>', unsafe_allow_html=True)
+        if val and val.peers:
+            p_comps = []
+            for p in val.peers:
+                p_comps.append({
+                    "Peer Name": p.peer_name,
+                    "Ticker": p.ticker,
+                    "Market Cap (₹ Cr)": f"₹{p.mcap_cr:,.1f}",
+                    "P/E Ratio": f"{p.pe_ratio:.1f}x" if p.pe_ratio else "Loss",
+                    "EV/EBITDA": f"{p.ev_ebitda:.1f}x" if p.ev_ebitda else "Loss",
+                    "ROE (%)": f"{p.roe_pct:.1f}%",
+                    "Life Stage": p.dickinson_stage,
+                })
+            st.dataframe(pd.DataFrame(p_comps), use_container_width=True, hide_index=True)
+        else:
+            st.info("Peer comparison table configured in DRHP Section III.")
 
         # WACC, ROIC & Reverse DCF Hurdle
         render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
@@ -1399,60 +1415,67 @@ with tab_workpapers:
         render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
         render_html('<div class="bento-subtitle">Forensic Accruals & Statutory Lock-In Calendar</div>', unsafe_allow_html=True)
         render_html('<div class="bento-title">Beneish M-Score & Anchor Secondary Float Schedule</div>', unsafe_allow_html=True)
-        c_bf1, c_bf2 = st.columns(2)
-        with c_bf1:
-            beneish = dossier.beneish_forensics
-            if beneish and beneish.m_score is not None:
-                b_color = "#10b981" if not beneish.is_manipulation_risk else "#f43f5e"
-                b_status = "SAFE (Low Accrual Manipulation Risk)" if not beneish.is_manipulation_risk else "ELEVATED EARNINGS QUALITY CONCERN"
-                render_html(
-                    f"""
-                    <div class="bento-card" style="border-left:4px solid {b_color};">
-                        <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Beneish (1999) 8-Variable M-Score</div>
-                        <div style="font-size:1.8rem; font-weight:800; color:{b_color}; margin:4px 0;">{beneish.m_score:.2f}</div>
-                        <div style="font-size:0.84rem; color:#ffffff; font-weight:600;">{b_status}</div>
-                        <div style="font-size:0.80rem; color:#94a3b8; margin-top:8px;">
-                            • DSRI (Receivables): {beneish.dsri or 1.0:.2f} · GMI (Margin): {beneish.gmi or 1.0:.2f}<br>
-                            • AQI (Asset Quality): {beneish.aqi or 1.0:.2f} · SGI (Sales Growth): {beneish.sgi or 1.0:.2f}<br>
-                            • Threshold: M-Score > -1.78 indicates high statistical probability of earnings management.
+
+        beneish = dossier.beneish_forensics
+        if beneish and beneish.m_score is not None:
+            b_color = "#10b981" if not beneish.is_manipulation_risk else "#f43f5e"
+            b_status = "SAFE (Low Accrual Manipulation Risk)" if not beneish.is_manipulation_risk else "ELEVATED EARNINGS QUALITY CONCERN"
+            render_html(
+                f"""
+                <div class="bento-card" style="border-left:4px solid {b_color}; margin-bottom:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div>
+                            <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8; font-weight:700;">Beneish (1999) 8-Variable M-Score Model</div>
+                            <div style="font-size:1.85rem; font-weight:800; color:{b_color}; margin:2px 0;">{beneish.m_score:.2f} <span style="font-size:0.88rem; font-weight:600; color:{b_color}; margin-left:8px;">[{b_status}]</span></div>
+                        </div>
+                        <div style="font-size:0.80rem; color:#94a3b8; max-width:420px; text-align:right;">
+                            Threshold: M-Score &gt; -1.78 indicates high statistical probability of earnings management.
                         </div>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.info("Forensic M-Score requires minimum 2 full years of restated balance sheet disclosures.")
-
-        with c_bf2:
-            from datetime import datetime, timezone
-            from models.pre_ipo_exchange_feed import ExchangeFeedClient
-            recon = ExchangeFeedClient.reconcile_with_prospectus(dossier.listing_date, dossier.company_name)
-            if recon.get("is_reconciled"):
-                render_html(
-                    f"""
-                    <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:0.78rem; color:#10b981;">
-                        <span class="material-symbols-rounded" style="font-size:14px; color:#10b981; vertical-align:-2px; margin-right:2px;">check_circle</span> <strong>{recon['exchange']} Circular {recon['circular_ref']}</strong> · Listing: <strong>{recon['exchange_listing_date']}</strong> ({recon['drift_status']})
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.82rem; color:#cbd5e1;">
+                        <div>• DSRI (Days Sales in Receivables): <strong style="color:#ffffff;">{beneish.dsri or 1.0:.2f}</strong></div>
+                        <div>• GMI (Gross Margin Index): <strong style="color:#ffffff;">{beneish.gmi or 1.0:.2f}</strong></div>
+                        <div>• AQI (Asset Quality Index): <strong style="color:#ffffff;">{beneish.aqi or 1.0:.2f}</strong></div>
+                        <div>• SGI (Sales Growth Index): <strong style="color:#ffffff;">{beneish.sgi or 1.0:.2f}</strong></div>
                     </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            if not recon.get("is_reconciled"):
-                st.info(recon["notes"])
-            as_of_today = datetime.now(timezone.utc).date()
-            lockin_sched = generate_anchor_lockin_calendar(dossier, as_of_date=as_of_today)
-            if lockin_sched:
-                l_rows = []
-                for l in lockin_sched:
-                    l_rows.append({
-                        "Unlock Milestone": l.milestone_name,
-                        "Target Date": l.calendar_date,
-                        "Unlocked (₹ Cr)": f"₹{l.unlocked_value_cr:,.1f}",
-                        "Free Float (%)": f"{l.cumulative_free_float_pct:.1f}%",
-                        "Risk Level": l.supply_risk_level,
-                        "Status": l.status,
-                        "Exchange Circular": l.exchange_notice_ref,
-                    })
-                st.dataframe(pd.DataFrame(l_rows), use_container_width=True, hide_index=True)
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.info("Forensic M-Score requires minimum 2 full years of restated balance sheet disclosures.")
+
+        # Full-width Statutory Lock-In Schedule
+        render_html('<div class="bento-subtitle">Statutory Anchor & Promoter Lock-in Expiry Calendar</div>', unsafe_allow_html=True)
+        from datetime import datetime, timezone
+        from models.pre_ipo_exchange_feed import ExchangeFeedClient
+        recon = ExchangeFeedClient.reconcile_with_prospectus(dossier.listing_date, dossier.company_name)
+        if recon.get("is_reconciled"):
+            render_html(
+                f"""
+                <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:0.78rem; color:#10b981;">
+                    <span class="material-symbols-rounded" style="font-size:14px; color:#10b981; vertical-align:-2px; margin-right:2px;">check_circle</span> <strong>{recon['exchange']} Circular {recon['circular_ref']}</strong> · Listing: <strong>{recon['exchange_listing_date']}</strong> ({recon['drift_status']})
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        if not recon.get("is_reconciled"):
+            st.info(recon["notes"])
+        as_of_today = datetime.now(timezone.utc).date()
+        lockin_sched = generate_anchor_lockin_calendar(dossier, as_of_date=as_of_today)
+        if lockin_sched:
+            l_rows = []
+            for l in lockin_sched:
+                l_rows.append({
+                    "Unlock Milestone": l.milestone_name,
+                    "Target Date": l.calendar_date,
+                    "Unlocked (₹ Cr)": f"₹{l.unlocked_value_cr:,.1f}",
+                    "Free Float (%)": f"{l.cumulative_free_float_pct:.1f}%",
+                    "Risk Level": l.supply_risk_level,
+                    "Status": l.status,
+                    "Exchange Circular": l.exchange_notice_ref,
+                })
+            st.dataframe(pd.DataFrame(l_rows), use_container_width=True, hide_index=True)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # LEVEL 1 - TAB 4: CMIE REFERENCE CROSSWALK & DATA COVERAGE
