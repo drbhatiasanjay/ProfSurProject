@@ -170,45 +170,77 @@ render_html(
         margin-bottom: 12px;
     }
 
-    /* Multi-line stacked tabs for all stTabs */
+    /* Multi-line stacked tabs with tactile border, depth & shadow */
     div[data-testid="stTabs"] [role="tablist"] {
         display: flex !important;
         flex-wrap: wrap !important;
-        gap: 8px 10px !important;
+        gap: 10px 12px !important;
         overflow-x: visible !important;
-        border-bottom: 2px solid rgba(255, 255, 255, 0.08) !important;
-        padding-bottom: 8px !important;
-        margin-bottom: 14px !important;
+        border: none !important;
+        border-bottom: none !important;
+        padding: 6px 0 14px 0 !important;
+        margin-bottom: 16px !important;
+    }
+
+    /* Suppress detached Streamlit underline bar in multi-row tabs */
+    div[data-testid="stTabs"] [data-baseweb="tab-highlight"],
+    div[data-testid="stTabs"] [data-baseweb="tab-border"] {
+        display: none !important;
     }
 
     div[data-testid="stTabs"] [role="tab"] {
         white-space: normal !important;
         word-break: normal !important;
         height: auto !important;
-        min-height: 40px !important;
-        padding: 8px 16px !important;
-        border-radius: 8px !important;
-        background: rgba(255, 255, 255, 0.03) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
-        font-size: 0.85rem !important;
+        min-height: 42px !important;
+        padding: 9px 18px !important;
+        border-radius: 9px !important;
+        background: linear-gradient(180deg, rgba(30, 41, 59, 0.75) 0%, rgba(15, 23, 42, 0.85) 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.12) !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.20) !important;
+        box-shadow: 0 3px 8px -1px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+        font-size: 0.84rem !important;
         font-weight: 500 !important;
         color: #94a3b8 !important;
         flex: 0 1 auto !important;
         transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        cursor: pointer !important;
     }
 
     div[data-testid="stTabs"] [role="tab"]:hover {
-        background: rgba(56, 189, 248, 0.08) !important;
-        border-color: rgba(56, 189, 248, 0.3) !important;
+        background: linear-gradient(180deg, rgba(51, 65, 85, 0.85) 0%, rgba(30, 41, 59, 0.95) 100%) !important;
+        border-color: rgba(56, 189, 248, 0.45) !important;
+        border-top: 1px solid rgba(125, 211, 252, 0.6) !important;
         color: #f8fafc !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 14px -2px rgba(0, 0, 0, 0.55), 0 0 12px rgba(56, 189, 248, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
     }
 
     div[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
-        background: rgba(56, 189, 248, 0.16) !important;
+        background: linear-gradient(180deg, rgba(14, 165, 233, 0.25) 0%, rgba(2, 132, 199, 0.12) 100%) !important;
         border: 1px solid #38bdf8 !important;
+        border-top: 1px solid #7dd3fc !important;
         color: #38bdf8 !important;
         font-weight: 700 !important;
-        box-shadow: 0 2px 10px rgba(56, 189, 248, 0.2) !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 14px -2px rgba(0, 0, 0, 0.6), 0 0 16px rgba(56, 189, 248, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.30) !important;
+    }
+
+    /* Elevate Action Download Button with matching depth */
+    div[data-testid="stDownloadButton"] button {
+        background: linear-gradient(180deg, rgba(56, 189, 248, 0.16) 0%, rgba(14, 165, 233, 0.24) 100%) !important;
+        border: 1px solid rgba(56, 189, 248, 0.45) !important;
+        border-top: 1px solid rgba(125, 211, 252, 0.65) !important;
+        border-radius: 9px !important;
+        box-shadow: 0 3px 10px -1px rgba(0, 0, 0, 0.45), 0 0 12px rgba(56, 189, 248, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+        font-weight: 600 !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+    div[data-testid="stDownloadButton"] button:hover {
+        background: linear-gradient(180deg, rgba(56, 189, 248, 0.28) 0%, rgba(14, 165, 233, 0.38) 100%) !important;
+        border-color: #38bdf8 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.55), 0 0 18px rgba(56, 189, 248, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
     }
 
     /* Hide Streamlit horizontal scroll chevron buttons since tabs wrap */
