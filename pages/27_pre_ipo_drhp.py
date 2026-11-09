@@ -1607,17 +1607,17 @@ with tab_ic_action:
                 "Monitoring Tripwire": act.monitoring_trigger,
             })
     if action_rows:
-        col_reg_hdr, col_reg_dl = st.columns([3, 1])
-        with col_reg_hdr:
-            view_options = ["Worklist Cards (Interactive)", "Scannable Matrix (with Drawers)", "Spreadsheet Grid (Legacy)"]
-            selected_reg_view = st.segmented_control(
-                "Presentation Architecture",
-                options=view_options,
-                default="Worklist Cards (Interactive)",
-                key="action_reg_view_mode",
-                label_visibility="collapsed",
+        col_reg_pill, col_reg_dl = st.columns([3.2, 1.0])
+        owners = ["All Owners"] + sorted(list({r["Action Owner"] for r in action_rows}))
+        with col_reg_pill:
+            selected_owner = st.pills(
+                "Filter by Committee Member / Owner",
+                options=owners,
+                default="All Owners",
+                key="action_reg_owner_pill",
             )
         with col_reg_dl:
+            st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
             st.download_button(
                 label="Export Actions (CSV)",
                 icon=":material/download:",
@@ -1628,116 +1628,58 @@ with tab_ic_action:
                 key="dl_action_reg_csv",
             )
 
-        if selected_reg_view == "Worklist Cards (Interactive)":
-            owners = ["All Owners"] + sorted(list({r["Action Owner"] for r in action_rows}))
-            selected_owner = st.pills(
-                "Filter by Committee Member / Owner",
-                options=owners,
-                default="All Owners",
-                key="action_reg_owner_pill",
-            )
-            filtered_rows = action_rows if selected_owner == "All Owners" else [r for r in action_rows if r["Action Owner"] == selected_owner]
-            st.caption(f"Displaying **{len(filtered_rows)}** prioritized underwriting mandates ({selected_owner}):")
+        filtered_rows = action_rows if selected_owner == "All Owners" else [r for r in action_rows if r["Action Owner"] == selected_owner]
+        st.caption(f"Displaying **{len(filtered_rows)}** prioritized underwriting mandates ({selected_owner}):")
 
-            for r in filtered_rows:
-                card_html = f"""
-                <div style="background:rgba(15,23,42,0.75); border:1px solid rgba(255,255,255,0.10); border-top:1px solid rgba(255,255,255,0.18); border-radius:10px; padding:16px 18px; margin-bottom:14px; box-shadow:0 3px 10px -2px rgba(0,0,0,0.5);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
-                        <div style="font-size:0.92rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
-                            <span class="material-symbols-rounded" style="font-size:16px; color:#38bdf8;">task_alt</span>
-                            {r['Source Dimension']}
+        for r in filtered_rows:
+            card_html = f"""
+            <div style="background:rgba(15,23,42,0.75); border:1px solid rgba(255,255,255,0.10); border-top:1px solid rgba(255,255,255,0.18); border-radius:10px; padding:16px 18px; margin-bottom:14px; box-shadow:0 3px 10px -2px rgba(0,0,0,0.5);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:8px;">
+                    <div style="font-size:0.92rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+                        <span class="material-symbols-rounded" style="font-size:16px; color:#38bdf8;">task_alt</span>
+                        {r['Source Dimension']}
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <span style="display:inline-block; padding:3px 10px; border-radius:6px; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:0.75rem; font-weight:600;">
+                            {r['Action Owner']}
+                        </span>
+                        <span style="display:inline-block; padding:3px 8px; border-radius:6px; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:0.72rem; font-weight:700;">
+                            MANDATE
+                        </span>
+                    </div>
+                </div>
+                <div style="font-size:0.88rem; color:#f8fafc; line-height:1.55; margin-bottom:14px;">
+                    <strong style="color:#e2e8f0;">Action Mandate:</strong> {r['Recommended Action']}
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
+                    <div style="background:rgba(245,158,11,0.05); border-left:3px solid #f59e0b; border-radius:6px; padding:10px 12px;">
+                        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#f59e0b; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                            <span class="material-symbols-rounded" style="font-size:13px;">lock</span> Precondition Required
                         </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <span style="display:inline-block; padding:3px 10px; border-radius:6px; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:0.75rem; font-weight:600;">
-                                {r['Action Owner']}
-                            </span>
-                            <span style="display:inline-block; padding:3px 8px; border-radius:6px; background:rgba(16,185,129,0.12); color:#10b981; border:1px solid rgba(16,185,129,0.3); font-size:0.72rem; font-weight:700;">
-                                MANDATE
-                            </span>
+                        <div style="font-size:0.80rem; color:#cbd5e1; line-height:1.4;">
+                            {r['Precondition Required']}
                         </div>
                     </div>
-                    <div style="font-size:0.88rem; color:#f8fafc; line-height:1.55; margin-bottom:14px;">
-                        <strong style="color:#e2e8f0;">Action Mandate:</strong> {r['Recommended Action']}
+                    <div style="background:rgba(16,185,129,0.05); border-left:3px solid #10b981; border-radius:6px; padding:10px 12px;">
+                        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#10b981; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                            <span class="material-symbols-rounded" style="font-size:13px;">verified</span> Completion Evidence
+                        </div>
+                        <div style="font-size:0.80rem; color:#cbd5e1; line-height:1.4;">
+                            {r['Completion Evidence']}
+                        </div>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:10px;">
-                        <div style="background:rgba(245,158,11,0.05); border-left:3px solid #f59e0b; border-radius:6px; padding:10px 12px;">
-                            <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#f59e0b; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                                <span class="material-symbols-rounded" style="font-size:13px;">lock</span> Precondition Required
-                            </div>
-                            <div style="font-size:0.80rem; color:#cbd5e1; line-height:1.4;">
-                                {r['Precondition Required']}
-                            </div>
+                    <div style="background:rgba(244,63,94,0.05); border-left:3px solid #f43f5e; border-radius:6px; padding:10px 12px;">
+                        <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#f43f5e; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                            <span class="material-symbols-rounded" style="font-size:13px;">warning</span> Monitoring Tripwire
                         </div>
-                        <div style="background:rgba(16,185,129,0.05); border-left:3px solid #10b981; border-radius:6px; padding:10px 12px;">
-                            <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#10b981; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                                <span class="material-symbols-rounded" style="font-size:13px;">verified</span> Completion Evidence
-                            </div>
-                            <div style="font-size:0.80rem; color:#cbd5e1; line-height:1.4;">
-                                {r['Completion Evidence']}
-                            </div>
-                        </div>
-                        <div style="background:rgba(244,63,94,0.05); border-left:3px solid #f43f5e; border-radius:6px; padding:10px 12px;">
-                            <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; color:#f43f5e; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                                <span class="material-symbols-rounded" style="font-size:13px;">warning</span> Monitoring Tripwire
-                            </div>
-                            <div style="font-size:0.80rem; color:#cbd5e1; line-height:1.4;">
-                                {r['Monitoring Tripwire']}
-                            </div>
+                        <div style="font-size:0.80rem; color:#cbd5e1; line-height:1.4;">
+                            {r['Monitoring Tripwire']}
                         </div>
                     </div>
                 </div>
-                """
-                render_html(card_html, unsafe_allow_html=True)
-
-        elif selected_reg_view == "Scannable Matrix (with Drawers)":
-            st.caption("Clean responsive table with full-text wrapping (zero horizontal scroll). Expand drawer below for tripwires and evidence:")
-            table_html = """
-            <div style="border:1px solid rgba(255,255,255,0.1); border-radius:8px; overflow:hidden; margin-bottom:16px;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.84rem; text-align:left;">
-                <thead>
-                    <tr style="background:rgba(30,41,59,0.85); border-bottom:1px solid rgba(255,255,255,0.12); color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">
-                        <th style="padding:10px 14px; width:25%;">Source Dimension</th>
-                        <th style="padding:10px 14px; width:22%;">Action Owner</th>
-                        <th style="padding:10px 14px; width:53%;">Recommended Action (Full Text Wrapped)</th>
-                    </tr>
-                </thead>
-                <tbody>
+            </div>
             """
-            for i, r in enumerate(action_rows):
-                bg = "rgba(15,23,42,0.4)" if i % 2 == 0 else "rgba(15,23,42,0.7)"
-                table_html += f"""
-                    <tr style="background:{bg}; border-bottom:1px solid rgba(255,255,255,0.05);">
-                        <td style="padding:10px 14px; color:#38bdf8; font-weight:600; vertical-align:top;">{r['Source Dimension']}</td>
-                        <td style="padding:10px 14px; color:#cbd5e1; vertical-align:top;">
-                            <span style="display:inline-block; padding:2px 8px; border-radius:4px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); font-size:0.75rem;">
-                                {r['Action Owner']}
-                            </span>
-                        </td>
-                        <td style="padding:10px 14px; color:#f8fafc; line-height:1.45; vertical-align:top;">{r['Recommended Action']}</td>
-                    </tr>
-                """
-            table_html += "</tbody></table></div>"
-            render_html(table_html, unsafe_allow_html=True)
-
-            with st.expander(":material/tune: Deep Governance Details & Tripwire Audit Drawers", expanded=False):
-                for r in action_rows:
-                    st.markdown(f"**{r['Source Dimension']}** · *{r['Action Owner']}*")
-                    c1, c2, c3 = st.columns(3)
-                    with c1:
-                        st.caption(":material/lock: Precondition Required")
-                        st.markdown(f"<div style='font-size:0.80rem; color:#cbd5e1;'>{r['Precondition Required']}</div>", unsafe_allow_html=True)
-                    with c2:
-                        st.caption(":material/verified: Completion Evidence")
-                        st.markdown(f"<div style='font-size:0.80rem; color:#cbd5e1;'>{r['Completion Evidence']}</div>", unsafe_allow_html=True)
-                    with c3:
-                        st.caption(":material/warning: Monitoring Tripwire")
-                        st.markdown(f"<div style='font-size:0.80rem; color:#cbd5e1;'>{r['Monitoring Tripwire']}</div>", unsafe_allow_html=True)
-                    st.markdown("<hr style='border-color:rgba(255,255,255,0.06); margin:8px 0;'>", unsafe_allow_html=True)
-
-        else:
-            # Spreadsheet Grid (Legacy)
-            st.caption("Standard spreadsheet view with horizontal scrollbar across all 6 columns:")
-            st.dataframe(pd.DataFrame(action_rows), use_container_width=True, hide_index=True)
+            render_html(card_html, unsafe_allow_html=True)
 
     # Missing Data & Decision Limitations
     render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
