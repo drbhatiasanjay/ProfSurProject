@@ -169,6 +169,53 @@ render_html(
         letter-spacing: -0.02em;
         margin-bottom: 12px;
     }
+
+    /* Multi-line stacked tabs for all stTabs */
+    div[data-testid="stTabs"] [role="tablist"] {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px 10px !important;
+        overflow-x: visible !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.08) !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 14px !important;
+    }
+
+    div[data-testid="stTabs"] [role="tab"] {
+        white-space: normal !important;
+        word-break: normal !important;
+        height: auto !important;
+        min-height: 40px !important;
+        padding: 8px 16px !important;
+        border-radius: 8px !important;
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        color: #94a3b8 !important;
+        flex: 0 1 auto !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    div[data-testid="stTabs"] [role="tab"]:hover {
+        background: rgba(56, 189, 248, 0.08) !important;
+        border-color: rgba(56, 189, 248, 0.3) !important;
+        color: #f8fafc !important;
+    }
+
+    div[data-testid="stTabs"] [role="tab"][aria-selected="true"] {
+        background: rgba(56, 189, 248, 0.16) !important;
+        border: 1px solid #38bdf8 !important;
+        color: #38bdf8 !important;
+        font-weight: 700 !important;
+        box-shadow: 0 2px 10px rgba(56, 189, 248, 0.2) !important;
+    }
+
+    /* Hide Streamlit horizontal scroll chevron buttons since tabs wrap */
+    div[data-testid="stTabs"] button[data-testid*="stTabsScroll"],
+    div[data-testid="stTabs"] [data-testid*="stTabsScroll"] {
+        display: none !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -296,7 +343,7 @@ with col_sel:
         format_func=lambda k: deal_options[k],
         key="pre_ipo_deal_selector",
     )
-    st.caption(":material/domain: Drives prospectuses & tabs below")
+    st.caption(":material/domain: Drives prospectuses, financial models & diligence tabs")
 
 col_ctx, col_pers = st.columns(2)
 with col_ctx:
@@ -306,7 +353,7 @@ with col_ctx:
         format_func=lambda k: context_options[k],
         key="pre_ipo_context_selector",
     )
-    st.caption(":material/lock_open: Unlocks PX01–PX04" if selected_context != "PUBLIC_IPO" else ":material/public: 10 Core Public IPO Questions")
+    st.caption(":material/lock_open: Unlocks PX01–PX04 Private Questions" if selected_context != "PUBLIC_IPO" else ":material/public: Evaluates 10 Core Public IPO Questions")
 
 with col_pers:
     selected_persona = st.selectbox(
@@ -315,7 +362,7 @@ with col_pers:
         format_func=lambda k: persona_options[k],
         key="pre_ipo_persona_selector",
     )
-    st.caption(f":material/psychology: Focuses cockpit for {persona_options[selected_persona].split('/')[0].strip()}")
+    st.caption(f":material/psychology: Focuses decision cockpit for {persona_options[selected_persona].split('/')[0].strip()}")
 
 # If user selected a private company from the dropdown, route to Facts & evidence review
 if selected_deal_key.startswith("private-"):
@@ -588,8 +635,12 @@ latest = dossier.latest_financials
 stage_name, pattern = classify_dickinson_stage(latest.cfo_cr, latest.cfi_cr, latest.cff_cr)
 
 with col_act:
-    st.write("")
-    st.write("")
+    st.markdown(
+        "<label style='font-size:0.875rem; font-weight:500; color:#94a3b8; display:block; margin-bottom:4px; height:24px; line-height:24px;'>"
+        "<span class='material-symbols-rounded' style='font-size:15px; vertical-align:-2px; margin-right:4px;'>slideshow</span>Pitch Deck Action"
+        "</label>",
+        unsafe_allow_html=True,
+    )
     deck_bytes = generate_pre_ipo_board_deck(dossier)
     st.download_button(
         label="Export Deck (PPTX)",
@@ -599,6 +650,7 @@ with col_act:
         mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
         use_container_width=True,
     )
+    st.caption(":material/download: 1-Click Board PPTX Export")
 
 # Feedback toasts on selection change
 prev_deal = st.session_state.get("_prev_pre_ipo_deal")
