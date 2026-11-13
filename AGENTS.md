@@ -29,6 +29,33 @@
 5. **Database Transaction Atomicity & Fault-Injection:** In Python's standard `sqlite3`, calling `conn.executescript()` silently triggers an implicit `COMMIT` before executing the script, breaking transaction atomicity. Never use `executescript()` inside an active `BEGIN IMMEDIATE` transaction. Migration tests MUST inject an intentional failure midway (after DDL alteration and before journal write) to prove that `conn.rollback()` restores the pre-migration schema with zero residual columns or indexes.
 6. **Ground-Truth Corpus Respect:** Never substitute synthetic blank pages or truncated fixtures (e.g., 3-page test PDF) as substitutes for official filings (513-page HCCH DRHP). OCR consent alone must never mark empty text as status `OK`.
 
+## F. The Adversarial Mindset: Verification Across the Design & Code Lifecycle
+Author bias is the single largest source of escaped defects: authors test to demonstrate their design *works*, while reviewers test to find how it *breaks*. Every engineer and autonomous agent working on this codebase must adopt an explicit **Adversarial Mindset** across all three phases of the engineering lifecycle:
+
+### 1. Phase 1: Pre-Design Adversarial Threat Modeling (Before Architecture & Design)
+- **Assume Hostile Callers & Environmental Corruption:** Before drafting any design or interface, ask: *"How will a caller bypass this contract? What if caller-supplied IDs or hashes are omitted, unpersisted, spoofed, or replayed?"*
+- **Identify Structural Traps Early:** Uncover hidden library quirks (e.g. SQLite `executescript()` silently auto-committing active transactions; Streamlit rerun lifecycles dropping state) *before* committing to an architecture.
+- **Fail-Closed by Design:** Architect gates so that missing data, unexpected document keys, or unauthenticated snapshots unconditionally reject or fail closed (`ExportBlockedError`, `BlockedResult`), rather than falling back to permissive defaults.
+- **Explicit Numerical Domain Design:** Design data contracts such that mathematical boundaries ($0.0$, $0\%$, negative values) are first-class valid inputs distinct from absent/None values.
+
+### 2. Phase 2: Pre-Code Adversarial Red-Teaming (The Red Phase of TDD)
+- **Author Malicious & Boundary Tests First:** Before writing implementation code, write tests specifically designed to exploit and break the system:
+  1. *Bypass Probing:* Call export/service layers directly with `snapshot_id="nonexistent"`, `snapshot_hash=None`, or tampered hashes. The test must assert immediate failure.
+  2. *Truthiness Probing:* Pass zero values (`beta=0.0`, `tax_rate=0.0`, `debt=0.0`) and assert that the calculation does not substitute defaults (`or 1.0`, `or 25.17`).
+  3. *Solver Boundary Probing:* Provide extreme financial values ($WACC \le g$, high interest rates) and assert that the solver halts cleanly with typed diagnostics rather than silently clamping.
+  4. *Transaction Fault Injection:* Inject exceptions midway during DDL executions to verify `conn.rollback()` restores the pre-migration state with zero residual schema changes.
+- **Verify Red-Phase Failure:** Confirm that these tests genuinely fail against unpatched code before implementing the fix. A test that passes before code is written provides zero verification value.
+
+### 3. Phase 3: Post-Code Adversarial Self-Audit Gate (Before Declaring Any Task Done)
+Before submitting a PR, commit, or repair handoff, the author must switch roles into a Hostile Auditor and complete this verification checklist:
+- [ ] **Zero Dead Code / Production Wiring Audit:** Trace AST or call-graphs from production entrypoints (`app.py`, `pages/`, CLI) down to the new code. Are all new classes, validators, and helpers actively invoked in the production pipeline?
+- [ ] **Bypass Immunity Check:** Re-run the negative bypass suite. Can any caller obtain analytical output without satisfying persistence and cryptographic hash verification?
+- [ ] **Truthiness Scan:** Grep all modified files for `\bor\b` following numeric or financial variables (`val or default`). Replace every instance with explicit `if val is None:`.
+- [ ] **Mathematical Inversion Check:** For any numerical solver (e.g. reverse DCF implied CAGR), assert that feeding solved parameters back into the multi-period discounting model reprices the target valuation within $\le 0.05\%$.
+- [ ] **Transaction Atomicity Verification:** Confirm no `conn.executescript()` calls exist inside transaction blocks. Verify rollback recovery with fault-injection tests.
+- [ ] **Ground-Truth Data & DB Immutability:** Verify that `capital_structure.db` SHA-256 is unchanged (`CA696195...`). Verify that regulatory tests use authentic filings, never synthetic blank-page fixtures.
+- [ ] **Evidence Gate Verification:** Do not report browser UI success without live, authenticated browser execution and physical screenshot verification on disk.
+
 ---
 # AGENTS.md — LifeCycle Leverage Dashboard Agent Directives
 
