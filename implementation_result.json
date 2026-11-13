@@ -1,27 +1,35 @@
 {
   "verdict": "READY_FOR_CODEX_REVIEW",
   "repository": "drbhatiasanjay/ProfSurProject",
-  "worktree": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\.worktrees\\preipo-hcch-p0-containment",
-  "branch": "fix/preipo-hcch-p0-containment-2026-11-13",
-  "base_sha": "6462cbbefcb71dfdca8cebfe7a1b068778f72cf9",
-  "head_sha": "e9c789cf91b975e542ef8a113a3a9fb2f87db98f",
+  "worktree": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\.worktrees\\preipo-evidence-contract",
+  "branch": "fix/preipo-evidence-contract-2026-11-13",
+  "base_sha": "160326adca43a052f159dac5f54cf09107db406a",
   "origin_master_sha": "6462cbbefcb71dfdca8cebfe7a1b068778f72cf9",
-  "divergence": "0 behind / 1 ahead",
   "changed_files": [
-    "models/pre_ipo_capability_gate.py",
-    "models/pre_ipo_engine.py",
-    "pages/27_pre_ipo_drhp.py",
-    "utils/pre_ipo_deck_generator.py",
-    "tests/test_pre_ipo_p0_containment.py",
-    "tests/test_browser_pre_ipo_p0_containment.py",
-    "tests/test_hcch_computational_integrity.py",
-    "docs/review-evidence/PR1_IMPLEMENTATION_REPORT.md",
+    "models/migrations/003_evidence_contract_normalization.sql",
+    "models/pre_ipo_migrations.py",
+    "models/pre_ipo_evidence.py",
+    "models/pre_ipo_schema.py",
+    "models/pre_ipo_ingest.py",
+    "tests/test_pre_ipo_pr2_contracts_and_migration.py",
+    "tests/test_pre_ipo_migrations.py",
+    "tests/test_pre_ipo_remediation_a01_b04.py",
+    "docs/review-evidence/PR2_IMPLEMENTATION_REPORT.md",
     "implementation_result.json"
   ],
   "production_db_sha_before": "ca696195a5c541b56e0533de6c69a3bec4e501a232fd2b18a1b09d15d6fa7873",
   "production_db_sha_after": "ca696195a5c541b56e0533de6c69a3bec4e501a232fd2b18a1b09d15d6fa7873",
   "production_db_unchanged": true,
   "tests": [
+    {
+      "command": "py -3.12 -m pytest tests/test_pre_ipo_pr2_contracts_and_migration.py -v",
+      "exit_code": 0,
+      "collected": 13,
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 2
+    },
     {
       "command": "py -3.12 -m pytest tests/test_pre_ipo_p0_containment.py -v",
       "exit_code": 0,
@@ -30,15 +38,6 @@
       "failed": 0,
       "skipped": 0,
       "warnings": 2
-    },
-    {
-      "command": "py -3.12 -m pytest tests/test_browser_pre_ipo_p0_containment.py -v",
-      "exit_code": 0,
-      "collected": 1,
-      "passed": 1,
-      "failed": 0,
-      "skipped": 0,
-      "warnings": 0
     },
     {
       "command": "py -3.12 -m pytest tests/test_hcch_computational_integrity.py -q",
@@ -50,8 +49,8 @@
       "warnings": 2
     }
   ],
-  "browser_acceptance": "PASS",
-  "migration_acceptance": "NOT_IN_PACKET",
+  "browser_acceptance": "NOT_IN_PACKET",
+  "migration_acceptance": "PASS",
   "official_corpus_acceptance": "NOT_IN_PACKET",
   "defects": {
     "P0_01_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
@@ -62,11 +61,11 @@
     "P0_06_STATUS": "OPEN",
     "P0_07_STATUS": "OPEN_CONTAINED",
     "P0_08_STATUS": "OPEN_CONTAINED",
-    "P1_01_STATUS": "OPEN",
-    "P1_02_STATUS": "OPEN"
+    "P1_01_STATUS": "OPEN_PARTIALLY_ADDRESSED",
+    "P1_02_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION"
   },
   "unresolved_risks": [
-    "Full 513-page parent DRHP extraction and financial semantics corrections remain to be executed in subsequent authorized packets PR 2 through PR 4.",
+    "Full 513-page parent DRHP extraction and financial semantics corrections remain to be executed in subsequent authorized packets PR 3 and PR 4.",
     "Official HCCH parent PDF (10.5 MB) must be provided in PR 3 for full 513-page section indexing."
   ],
   "non_claims": [
@@ -76,5 +75,5 @@
     "No defect self-classified CLOSED_VERIFIED.",
     "No scientific or investment validation inferred from test success."
   ],
-  "next_codex_action": "Independently inspect diff on branch fix/preipo-hcch-p0-containment-2026-11-13, rerun tests in isolated test environment, review browser screenshot verified_browser_pr1_hcch_containment.png, and confirm authorization for PR 2 (Evidence Contract & Additive Migration 003)."
+  "next_codex_action": "Independently inspect diff on branch fix/preipo-evidence-contract-2026-11-13, rerun tests in isolated test environment, verify additive migration 003 and legacy example rejection, and authorize PR 3 (Full 513-Page Indexing and Extraction)."
 }

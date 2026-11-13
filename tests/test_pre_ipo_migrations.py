@@ -27,11 +27,13 @@ def test_migrations_applied_and_journaled(temp_db):
     newly_applied = apply_migrations(conn)
     assert 1 in newly_applied
     assert 2 in newly_applied
+    assert 3 in newly_applied
 
     applied = get_applied_versions(conn)
-    assert len(applied) == 2
+    assert len(applied) == 3
     assert applied[1]["name"] == "001_baseline_evidence_schema"
     assert applied[2]["name"] == "002_lifecycle_and_multidoc_extensions"
+    assert applied[3]["name"] == "003_evidence_contract_normalization"
 
     # Verify additive tables exist
     tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]

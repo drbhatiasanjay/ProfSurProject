@@ -1,5 +1,6 @@
 import uuid
 """Private, append-only Pre-IPO source and fact ledger. No cloud model calls."""
+from typing import Optional, Dict, List, Any
 from contextlib import contextmanager
 from dataclasses import dataclass, field, asdict
 from datetime import date, datetime, timezone
@@ -56,6 +57,135 @@ class EvidenceProfile:
     cmie_crosswalk: list = field(default_factory=list)
     background: object = None
     generation: int = 1
+
+
+@dataclass
+class SourceLocator:
+    physical_page: Optional[int] = None
+    printed_page: Optional[str] = None
+    table_id: Optional[str] = None
+    row_label: Optional[str] = None
+    column_label: Optional[str] = None
+    raw_text: Optional[str] = None
+    source_id: Optional[str] = None
+    document_name: Optional[str] = None
+    text_hash: Optional[str] = None
+
+    def is_valid(self) -> bool:
+        return bool(self.physical_page is not None or self.raw_text or self.table_id)
+
+
+@dataclass
+class Observation:
+    observation_id: str
+    owner: str
+    company: str
+    metric_id: str
+    entity: str
+    revision: int = 1
+    period: Optional[str] = None
+    duration: Optional[str] = None
+    basis: Optional[str] = None
+    framework: Optional[str] = None
+    currency: Optional[str] = None
+    unit: Optional[str] = None
+    value: Optional[str] = None
+    presence: str = "OBSERVED_VALUE"
+    review_state: str = "UNREVIEWED"
+    origin: str = "FILING_FACT"
+    definition_id: Optional[str] = None
+    locator: Optional[SourceLocator] = None
+    extraction_run_id: Optional[str] = None
+    method_version: Optional[str] = None
+    reviewer: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    review_reason: Optional[str] = None
+    created_at: Optional[str] = None
+
+    def __post_init__(self):
+        if self.presence not in PRESENCE:
+            raise ValueError(f"Invalid presence '{self.presence}'. Must be one of {PRESENCE}")
+        if self.review_state not in REVIEW:
+            raise ValueError(f"Invalid review_state '{self.review_state}'. Must be one of {REVIEW}")
+        if self.origin not in ORIGINS:
+            raise ValueError(f"Invalid origin '{self.origin}'. Must be one of {ORIGINS}")
+
+        # PR 2 Requirement: Accepted observation requires valid locator, reviewer, and review_reason
+        if self.review_state == "ACCEPTED":
+            if not self.locator or not self.locator.is_valid():
+                raise ValueError("Accepted observation requires a valid SourceLocator (physical_page, table_id, or raw_text).")
+            if not self.reviewer or not str(self.reviewer).strip():
+                raise ValueError("Accepted observation requires an identified reviewer.")
+            if not self.review_reason or not str(self.review_reason).strip():
+                raise ValueError("Accepted observation requires an explicit review_reason.")
+
+    @property
+    def numeric_value(self) -> Optional[float]:
+        if self.presence == "EXPLICIT_NIL":
+            return 0.0
+        if self.presence == "NOT_DISCLOSED" or self.value is None:
+            return None
+        try:
+            return float(str(self.value).replace(",", ""))
+        except (ValueError, TypeError):
+            return None
+
+    @property
+    def is_observed(self) -> bool:
+        return self.presence == "OBSERVED_VALUE" and self.value is not None
+
+    @property
+    def is_explicit_zero(self) -> bool:
+        return self.presence == "EXPLICIT_NIL" or (self.presence == "OBSERVED_VALUE" and self.numeric_value == 0.0)
+
+
+@dataclass
+class AcceptedEvidenceSnapshot:
+    snapshot_id: str
+    owner: str
+    company: str
+    snapshot_hash: str
+    observations: dict = field(default_factory=dict)
+    accepted_by: str = ""
+    accepted_at: str = ""
+    created_at: str = ""
+    status: str = "ACCEPTED_FOR_ANALYSIS"
+    is_immutable: bool = True
+
+    def __post_init__(self):
+        # PR 2 Requirement: LEGACY_EXAMPLE origin observations are strictly rejected from accepted snapshots
+        for obs_id, obs in self.observations.items():
+            obs_origin = getattr(obs, "origin", None) or (obs.get("origin") if isinstance(obs, dict) else None)
+            if obs_origin == "LEGACY_EXAMPLE":
+                raise ValueError(
+                    f"Observation '{obs_id}' has origin 'LEGACY_EXAMPLE'. "
+                    "LEGACY_EXAMPLE data is strictly prohibited from entering an accepted evidence snapshot."
+                )
+
+
+@dataclass
+class DerivedResult:
+    capability: str
+    metric_id: str
+    value: object
+    status: str = "COMPUTED"
+    snapshot_id: str = ""
+    snapshot_hash: str = ""
+    input_observation_ids: list = field(default_factory=list)
+    formula: Optional[str] = None
+    assumptions: dict = field(default_factory=dict)
+    created_at: Optional[str] = None
+
+
+@dataclass
+class BlockedResult:
+    capability: str
+    metric_id: str
+    status: str = "BLOCKED"
+    reason: str = ""
+    next_action: str = ""
+    missing_inputs: list = field(default_factory=list)
+    snapshot_id: Optional[str] = None
 
 
 def dump(value):
