@@ -1,20 +1,29 @@
 {
   "verdict": "READY_FOR_CODEX_REVIEW",
   "repository": "drbhatiasanjay/ProfSurProject",
-  "worktree": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\.worktrees\\preipo-hcch-financial-semantics",
-  "branch": "fix/preipo-hcch-financial-semantics-2026-11-13",
-  "base_sha": "6f641492ba6f7c75626ebcc6669c17822a9ec49b",
+  "worktree": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\.worktrees\\preipo-analysis-safety",
+  "branch": "fix/preipo-analysis-safety-2026-11-13",
+  "base_sha": "b32e6d5e1654e58f0dc42e0fa540d9e83060b2eb",
   "origin_master_sha": "6462cbbefcb71dfdca8cebfe7a1b068778f72cf9",
   "changed_files": [
-    "models/pre_ipo_financial_contracts.py",
-    "tests/test_pre_ipo_pr4_financial_semantics.py",
-    "docs/review-evidence/PR4_IMPLEMENTATION_REPORT.md",
+    "models/pre_ipo_analysis_safety.py",
+    "tests/test_pre_ipo_pr5_analysis_safety.py",
+    "docs/review-evidence/PR5_IMPLEMENTATION_REPORT.md",
     "implementation_result.json"
   ],
   "production_db_sha_before": "ca696195a5c541b56e0533de6c69a3bec4e501a232fd2b18a1b09d15d6fa7873",
   "production_db_sha_after": "ca696195a5c541b56e0533de6c69a3bec4e501a232fd2b18a1b09d15d6fa7873",
   "production_db_unchanged": true,
   "tests": [
+    {
+      "command": "py -3.12 -m pytest tests/test_pre_ipo_pr5_analysis_safety.py -v",
+      "exit_code": 0,
+      "collected": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 2
+    },
     {
       "command": "py -3.12 -m pytest tests/test_pre_ipo_pr4_financial_semantics.py -v",
       "exit_code": 0,
@@ -32,15 +41,6 @@
       "failed": 0,
       "skipped": 0,
       "warnings": 2
-    },
-    {
-      "command": "py -3.12 -m pytest tests/test_pre_ipo_pr2_contracts_and_migration.py -v",
-      "exit_code": 0,
-      "collected": 13,
-      "passed": 13,
-      "failed": 0,
-      "skipped": 0,
-      "warnings": 2
     }
   ],
   "browser_acceptance": "NOT_IN_PACKET",
@@ -53,14 +53,14 @@
     "P0_04_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
     "P0_05_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
     "P0_06_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
-    "P0_07_STATUS": "OPEN_CONTAINED",
-    "P0_08_STATUS": "OPEN_CONTAINED",
+    "P0_07_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P0_08_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
     "P1_01_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
     "P1_02_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION"
   },
   "unresolved_risks": [
-    "Analytical and decision-support safety (WACC/ROIC/reverse DCF and neutral claim language) to be addressed in PR 5.",
-    "User journey and UI/deck export alignment to be delivered in PR 6."
+    "User journey and UI/deck export alignment to be delivered in PR 6.",
+    "Official HCCH parent PDF (10.5 MB) required for end-to-end extraction against official corpus."
   ],
   "non_claims": [
     "No merge to master performed.",
@@ -69,5 +69,5 @@
     "No defect self-classified CLOSED_VERIFIED.",
     "No scientific or investment validation inferred from test success."
   ],
-  "next_codex_action": "Independently inspect diff on branch fix/preipo-hcch-financial-semantics-2026-11-13, rerun tests in isolated test environment, verify financial perimeter contracts, and authorize PR 5 (Analytical and Decision-Support Safety)."
+  "next_codex_action": "Independently inspect diff on branch fix/preipo-analysis-safety-2026-11-13, rerun tests in isolated test environment, verify calculation contracts and banned-claim auditor, and authorize PR 6 (Story-Led UI, Provenance and Export Integration)."
 }
