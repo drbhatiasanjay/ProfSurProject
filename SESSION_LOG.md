@@ -1299,3 +1299,21 @@ Authenticated browser checks passed for drbhatia, profsurkumar and skumar: intak
   - Page 27 (Pre-IPO DRHP Intelligence): Verified Hero Header (`NTPC Green Energy Limited (NGEL)`) and multi-document intake tabs. Saved artifact: `verified_gcp_live_pre_ipo_v2_4_0.png` (226 KB).
   - Page 28 (Covenant Compliance & Debt Headroom Engine): Verified Header (`Covenant Compliance & Debt Headroom Engine`). Saved artifact: `verified_gcp_live_covenant_headroom_v2_4_0.png` (194 KB).
 - **Status:** Release v2.4.0 is fully deployed, authenticated, verified in production, and 100% green.
+
+### Session Checkpoint (13 November 2026 15:10 IST) — Production Deployment & Live Verification of Unpriced DRHP & Provenance Inspector
+- **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject` (Branch: `master`)
+- **Deployed Commit:** `b14e212` (`feat(pre-ipo): unpriced drhp circuit breakers, dynamic beneish derivation, interactive provenance inspector, and hcch statutory integrity suite`)
+- **GitHub Actions CI/CD Run:** `43402025752`
+  - `OCaml build + tests (lifecycle-ontology)`: **SUCCESS** (7s)
+  - `Run pytest (Python 3.11)`: **SUCCESS** (3m16s)
+  - `Deploy to Cloud Run`: **SUCCESS** (3m50s deployed to `https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`)
+- **Key Enhancements Deployed:**
+  1. Purged literal `TOTAL OFFERING VALUE ₹0.00 Cr` and `0.0x P/E` defects for unpriced DRHPs. Replaced with SEBI ICDR 2018 statutory unpriced book-building indicators: `OFFERING SIZE (EQUITY SHARES): 997,461,456 Shares` with `Structure: 100% OFS (₹[●] Undisclosed) · 0% Fresh (Nil Issue)`.
+  2. Implemented dynamic Beneish M-Score derivation from multi-year restated financials in `models/pre_ipo_schema.py` and `models/pre_ipo_engine.py`, purging hardcoded static ratio literals across all registered dossiers.
+  3. Integrated Deep-Dive Raw Citation Inspector into Tab 2 (`components/pre_ipo_provenance_ledger.py`), eliminating negative page offset bugs across all 6 production dossiers.
+  4. Wired statutory unpriced circuit breakers across investor Q&A (Q07, Q08, Q10) and Board Deck PPTX generator (`utils/pre_ipo_deck_generator.py`).
+- **Authenticated Live Browser Verification Evidence:**
+  - Authenticated as `drbhatia` on production Google Cloud Run (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app/pre_ipo_drhp`).
+  - Page 27 (Pre-IPO DRHP Intelligence): Verified Hero Header for `Hindustan Coca-Cola Holdings Limited`, unpriced offering banner (`997,461,456 Shares (100% OFS · ₹[●] Undisclosed)`), and zero literal zeros. Saved artifact: `verified_gcp_live_hccb_hero_fix.png` (184 KB).
+  - Tab 2 (Provenance Ledger): Verified full provenance audit trail and opened Deep-Dive Raw Citation Inspector. Saved artifact: `verified_gcp_live_hccb_provenance_ledger.png` (213 KB).
+- **Status:** Production deployment verified live, authenticated, and 100% green.
