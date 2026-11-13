@@ -17,6 +17,18 @@
 ## D. Automated Capability Synchronization
 - Run `python scripts/sync_command_registry_docs.py` whenever modifying `models/stata_engine.py` to keep `docs/COMMAND_CAPABILITIES.md` synchronized.
 
+## E. Codex Review Post-Mortem & Adversarial Safeguards (13 Nov 2026 Update)
+1. **End-to-End Production Wiring Contract (Zero Dead Helpers):** Writing a new helper module or contract class is strictly incomplete until production callers (`app.py`, `models/pre_ipo_engine.py`, `models/pre_ipo_ingest.py`, `pages/27_pre_ipo_drhp.py`) import, route, and execute it. Unit tests verifying helper functions in isolation do NOT constitute production implementation.
+2. **Negative & Bypass Probing (Fail-Closed Architecture):** Never write assertions testing only happy paths and matching hashes. Explicitly test malicious or edge-case bypasses:
+   - What happens when `snapshot_hash` is `None`?
+   - What happens when `snapshot_id="nonexistent"`?
+   - What happens when a user uploads a custom document that does not contain the default dropdown key?
+   Gates must unconditionally fail closed (`ExportBlockedError`, `BlockedResult`).
+3. **Zero Python Truthiness in Financial Calculations:** In financial econometrics, $0.0$, $0\%$, and $0$ are genuine, valid numbers distinct from absence (`None`). NEVER write `val or default` (e.g. `beta or 1.0`, `tax or 25.17`). Always use explicit presence checks: `if val is None:`.
+4. **Solver Round-Trip Inversion Requirement:** Any mathematical root-finding or optimization solver (e.g. reverse DCF implied CAGR) MUST have a unit test asserting that feeding the solved value back into the explicit multi-period model reprices the target valuation within documented tolerance ($\le 0.05\%$).
+5. **Database Transaction Atomicity & Fault-Injection:** In Python's standard `sqlite3`, calling `conn.executescript()` silently triggers an implicit `COMMIT` before executing the script, breaking transaction atomicity. Never use `executescript()` inside an active `BEGIN IMMEDIATE` transaction. Migration tests MUST inject an intentional failure midway (after DDL alteration and before journal write) to prove that `conn.rollback()` restores the pre-migration schema with zero residual columns or indexes.
+6. **Ground-Truth Corpus Respect:** Never substitute synthetic blank pages or truncated fixtures (e.g., 3-page test PDF) as substitutes for official filings (513-page HCCH DRHP). OCR consent alone must never mark empty text as status `OK`.
+
 ---
 # AGENTS.md — LifeCycle Leverage Dashboard Agent Directives
 
