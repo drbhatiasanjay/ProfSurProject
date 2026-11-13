@@ -536,7 +536,7 @@ def generate_pre_ipo_board_deck(
         ("ROIC VS WACC SPREAD", spread_str, roic_sub),
         ("ECONOMIC PROFIT (EVA)", eva_str, "Annual Value Creation"),
         ("REVERSE DCF 5-YR CAGR", dcf_str, dcf_sub),
-        ("VALUATION VERDICT", val.valuation_verdict if val else "FAIR_VALUE", "Peer Relative Multiple Stance"),
+        ("VALUATION VERDICT", val.valuation_verdict if (val and is_priced) else "NOT_COMPUTABLE", "Peer Relative Multiple Stance" if is_priced else "Awaiting Disclosed Price Band"),
     ]
     for idx, (label, val_txt, sub) in enumerate(v_cards):
         col = idx % 3
@@ -606,24 +606,26 @@ def generate_pre_ipo_board_deck(
     p.font.size = Pt(8.5)
     p.font.color.rgb = text_muted
 
-    # Right column: IC Verdict & Covenants
+    # Right column: Decision Support Stance & Covenants
     box_ic = s8.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.8), Inches(1.8), Inches(5.733), Inches(4.8))
     box_ic.fill.solid()
     box_ic.fill.fore_color.rgb = surface_navy
-    box_ic.line.color.rgb = status_emerald if ic and "APPROVE" in ic.underwriting_verdict else accent_gold
+    box_ic.line.color.rgb = accent_gold
     tf_ic = box_ic.text_frame
     tf_ic.word_wrap = True
-    verdict_txt = ic.underwriting_verdict if (ic and ic.underwriting_verdict) else "PENDING_IC_REVIEW"
+    raw_verdict = ic.underwriting_verdict if (ic and ic.underwriting_verdict) else "PENDING_EVIDENCE_REVIEW"
+    clean_verdict = raw_verdict.replace("APPROVE WITH COVENANTS", "CONDITIONAL MONITORING WITH COVENANTS").replace("APPROVE", "CONDITIONAL REVIEW")
     p = tf_ic.paragraphs[0]
-    p.text = f"IC UNDERWRITING VERDICT: {verdict_txt}"
+    p.text = f"DECISION SUPPORT STANCE: {clean_verdict}"
     p.font.bold = True
     p.font.size = Pt(12)
-    p.font.color.rgb = status_emerald if ic and "APPROVE" in ic.underwriting_verdict else accent_gold
+    p.font.color.rgb = accent_gold
 
     p = tf_ic.add_paragraph()
-    grade_txt = ic.internal_screening_grade if (ic and ic.internal_screening_grade) else "UNRATED"
+    raw_grade = ic.internal_screening_grade if (ic and ic.internal_screening_grade) else "UNRATED"
+    clean_grade = raw_grade.replace("TIER_1_STRONG_CUSHION", "TIER_1_QUANTITATIVE_CUSHION")
     lev_txt = f"{ic.max_recommended_leverage_ratio:.2f}x" if (ic and ic.max_recommended_leverage_ratio) else "N/A"
-    p.text = f"SCREENING GRADE: {grade_txt} | MAX LEVERAGE: {lev_txt}"
+    p.text = f"SCREENING PROFILE: {clean_grade} | MAX LEVERAGE: {lev_txt}"
     p.font.size = Pt(9.5)
     p.font.color.rgb = accent_sky
 
