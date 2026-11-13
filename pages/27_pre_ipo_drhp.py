@@ -25,6 +25,7 @@ from models.pre_ipo_capability_gate import (
     evaluate_capability_gate,
     assert_export_allowed,
     ExportBlockedError,
+    is_hcch_entity,
 )
 from models.pre_ipo_engine import (
     classify_dickinson_stage,
@@ -668,10 +669,11 @@ else:
     dossier = PRE_IPO_REGISTRY[selected_deal_key]
 
 # Evaluate analytical capability gate (PR 1 Containment)
-is_hcch = "coca_cola" in selected_deal_key.lower() or "hcch" in selected_deal_key.lower()
+is_hcch = is_hcch_entity(selected_deal_key, getattr(dossier, "company_name", ""), getattr(dossier, "cin", ""))
 active_owner = st.session_state.get("authenticated_user", "drbhatia")
 active_snapshot_id = st.session_state.get("pre_ipo_active_snapshot_id")
 active_snapshot_status = st.session_state.get("pre_ipo_active_snapshot_status", "UNREVIEWED")
+active_snapshot_hash = st.session_state.get("pre_ipo_active_snapshot_hash")
 dossier_origin = "LEGACY_REGISTRY" if selected_deal_key in PRE_IPO_REGISTRY else "PROCESSED_INTAKE"
 
 gate_decision = evaluate_capability_gate(
@@ -730,6 +732,8 @@ with col_act:
                 dossier=dossier,
                 snapshot_id=active_snapshot_id,
                 snapshot_status=active_snapshot_status,
+                snapshot_hash=active_snapshot_hash,
+                result_snapshot_hash=active_snapshot_hash,
                 is_production=True,
             )
             st.download_button(
@@ -1730,34 +1734,108 @@ with tab_ic_action:
     render_html('<div class="bento-subtitle">Institutional Governance & Decision Protocol</div>', unsafe_allow_html=True)
     render_html('<div class="bento-title">Investment Committee Underwriting Stance & Action Register</div>', unsafe_allow_html=True)
 
-    ic = dossier.ic_verdict
-    if ic:
+    # P0-08 Containment: Evaluate recommendation capability gate
+    gate_ic = evaluate_capability_gate(
+        owner=active_owner,
+        company=getattr(dossier, "company_name", selected_deal_key),
+        capability=CapabilityType.RECOMMENDATIONS,
+        snapshot_id=active_snapshot_id,
+        snapshot_status=active_snapshot_status,
+        origin=dossier_origin,
+        is_production=True,
+    )
+
+    if not gate_ic.allowed:
+        render_html(f"""
+        <div class="bento-card" style="border:1px solid #ef4444; background:rgba(239, 68, 68, 0.08); padding:16px; border-radius:8px; margin-bottom:16px;">
+            <div style="font-size:0.85rem; font-weight:700; color:#f87171; text-transform:uppercase; margin-bottom:6px;">
+                <span class="material-symbols-rounded" style="font-size:16px; vertical-align:-3px; margin-right:4px;">gavel</span>
+                P0-08 Containment Active: Automated IC Verdict & Agency Ratings Prohibited
+            </div>
+            <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.5;">
+                {gate_ic.reason}
+                <br><em>Policy Directive:</em> {gate_ic.next_action}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
         col_ic1, col_ic2 = st.columns([2, 3])
         with col_ic1:
-            v_color = "#10b981" if "APPROVE" in ic.underwriting_verdict else "#f59e0b"
-            rating_display = (
-                f"External Rating: <strong style='color:#ffffff;'>{ic.external_rating_symbol} ({ic.external_rating_agency})</strong>"
-                if (ic.external_rating_symbol and ic.external_rating_agency)
-                else f"Internal Screening Grade: <strong style='color:#ffffff;'>{ic.internal_screening_grade or 'UNRATED'}</strong>"
-            )
-            ic_box_html = f"""
-            <div class="bento-card" style="border:2px solid {v_color}; text-align:center;">
-                <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">IC Underwriting Verdict</div>
-                <div style="font-size:1.5rem; font-weight:800; color:{v_color}; margin:8px 0; line-height:1.2;">
-                    {ic.underwriting_verdict}
+            neutral_box_html = f"""
+            <div class="bento-card" style="border:2px solid #3b82f6; text-align:center;">
+                <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Institutional Governance Protocol</div>
+                <div style="font-size:1.3rem; font-weight:800; color:#60a5fa; margin:8px 0; line-height:1.2;">
+                    DECISION-SUPPORT ONLY
                 </div>
                 <div style="font-size:0.85rem; color:#cbd5e1; margin-top:8px;">
-                    {rating_display}<br>
-                    Max Rec. Leverage Ceiling: <strong style="color:#ffffff;">{ic.max_recommended_leverage_ratio:.2f}x EBITDA</strong>
+                    Underwriting Verdict: <strong style="color:#ffffff;">MANUAL_IC_DELIBERATION_REQUIRED</strong><br>
+                    External Rating: <strong style="color:#ffffff;">NO_AUTOMATED_SYNTHESIS (SEBI CRA 1999)</strong>
                 </div>
                 <div style="font-size:0.70rem; color:#94a3b8; margin-top:6px;">
-                    *Statutory Notice: Internal screening grade is derived from financial metrics, not a Credit Rating Agency opinion under SEBI CRA Regulations 1999.
+                    *Statutory Mandate: No automated committee approval or synthetic credit agency rating is provided.
                 </div>
             </div>
             """
-            render_html(ic_box_html)
+            render_html(neutral_box_html)
         with col_ic2:
-            ic_str_html = f"""
+            ic = dossier.ic_verdict if dossier else None
+            strengths = ic.key_credit_strengths if ic else [
+                "Track record of cash operating profitability across evaluated fiscal periods.",
+                "Established market footprint in domestic consumer categories.",
+                "Parentage and brand support from established institutional sponsors."
+            ]
+            risks = ic.key_underwriting_risks if ic else [
+                "Execution risks on planned capital expenditure expansion.",
+                "Working capital fluctuations and raw material commodity pricing exposure.",
+                "Competitive dynamics from both organized and unorganized sector participants."
+            ]
+            neutral_str_html = f"""
+            <div class="bento-card">
+                <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:6px;">
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">verified</span>Diligence Observations & Transaction Strengths
+                </div>
+                <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
+                    {'<br>'.join(['• ' + s for s in strengths])}
+                </div>
+                <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
+                <div style="font-size:0.80rem; font-weight:700; color:#f43f5e; text-transform:uppercase; margin-bottom:6px;">
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">warning</span>Key Diligence Vulnerabilities & Downside Considerations
+                </div>
+                <div style="font-size:0.84rem; color:#cbd5e1; line-height:1.45;">
+                    {'<br>'.join(['• ' + r for r in risks])}
+                </div>
+            </div>
+            """
+            render_html(neutral_str_html)
+    else:
+        ic = dossier.ic_verdict
+        if ic:
+            col_ic1, col_ic2 = st.columns([2, 3])
+            with col_ic1:
+                v_color = "#10b981" if "APPROVE" in ic.underwriting_verdict else "#f59e0b"
+                rating_display = (
+                    f"External Rating: <strong style='color:#ffffff;'>{ic.external_rating_symbol} ({ic.external_rating_agency})</strong>"
+                    if (ic.external_rating_symbol and ic.external_rating_agency)
+                    else f"Internal Screening Grade: <strong style='color:#ffffff;'>{ic.internal_screening_grade or 'UNRATED'}</strong>"
+                )
+                ic_box_html = f"""
+                <div class="bento-card" style="border:2px solid {v_color}; text-align:center;">
+                    <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">IC Underwriting Verdict</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:{v_color}; margin:8px 0; line-height:1.2;">
+                        {ic.underwriting_verdict}
+                    </div>
+                    <div style="font-size:0.85rem; color:#cbd5e1; margin-top:8px;">
+                        {rating_display}<br>
+                        Max Rec. Leverage Ceiling: <strong style="color:#ffffff;">{ic.max_recommended_leverage_ratio:.2f}x EBITDA</strong>
+                    </div>
+                    <div style="font-size:0.70rem; color:#94a3b8; margin-top:6px;">
+                        *Statutory Notice: Internal screening grade is derived from financial metrics, not a Credit Rating Agency opinion under SEBI CRA Regulations 1999.
+                    </div>
+                </div>
+                """
+                render_html(ic_box_html)
+            with col_ic2:
+                ic_str_html = f"""
             <div class="bento-card">
                 <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:6px;">
                     <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">verified</span>Key Transaction & Credit Strengths

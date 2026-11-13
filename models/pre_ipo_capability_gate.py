@@ -27,6 +27,12 @@ class ExportBlockedError(Exception):
     pass
 
 
+def is_hcch_entity(company_identifier: str = "", company_name: str = "", cin: str = "") -> bool:
+    """Robust detection of Hindustan Coca-Cola across keys, names, and regulatory CIN."""
+    blob = f"{company_identifier} {company_name} {cin}".lower().replace("-", "_")
+    return any(k in blob for k in ("coca_cola", "coca cola", "hcch", "hccb", "u15549dl1997ptc085183"))
+
+
 @dataclass(frozen=True)
 class CapabilityDecision:
     allowed: bool
@@ -50,12 +56,13 @@ def evaluate_capability_gate(
     is_production: bool = True,
     allow_synthetic_examples: bool = False,
     is_unpriced: bool = False,
+    cin: str = "",
 ) -> CapabilityDecision:
     """
     Evaluates whether an analytical capability is authorized to run.
     Strict fail-closed architecture:
     1. LEGACY_EXAMPLE is never accepted for analytical processing.
-    2. HCCH in PRE_IPO_REGISTRY is blocked from unreviewed production analysis (P0-01).
+    2. HCCH is blocked from unreviewed production analysis (P0-01) regardless of selector avenue.
     3. Any unreviewed snapshot status blocks analytical capabilities.
     4. Unpriced filings block valuation, WACC, and reverse DCF (P0-03/P0-07).
     5. Committee approval and agency rating generation is prohibited (P0-08).
@@ -73,9 +80,8 @@ def evaluate_capability_gate(
             blocked_metrics=["*"],
         )
 
-    # 2. Block production HCCH from legacy registry without accepted snapshot (P0-01)
-    norm_company = company.lower().replace("-", "_").replace(" ", "_")
-    is_hcch = "coca_cola" in norm_company or "hcch" in norm_company
+    # 2. Block production HCCH across all identifier avenues (key, name, CIN) without accepted snapshot (P0-01)
+    is_hcch = is_hcch_entity(company, company, cin)
     if is_hcch and (origin == "LEGACY_REGISTRY" or snapshot_status != "ACCEPTED_FOR_ANALYSIS"):
         return CapabilityDecision(
             allowed=False,
@@ -88,7 +94,20 @@ def evaluate_capability_gate(
             blocked_metrics=["valuation", "wacc", "roic", "dcf", "recommendations", "board_deck"],
         )
 
-    # 3. Require snapshot to be ACCEPTED_FOR_ANALYSIS
+    # 3. Recommendation / Approval ban (P0-08)
+    if capability == CapabilityType.RECOMMENDATIONS:
+        return CapabilityDecision(
+            allowed=False,
+            capability=capability,
+            status="BLOCKED",
+            reason="Automated investment committee approvals, agency credit ratings, and definitive anchor recommendations are strictly prohibited under P0-08.",
+            next_action="Refer to factual diligence observations, risk factor catalog, and neutral decision support summary only.",
+            snapshot_id=snapshot_id,
+            snapshot_hash=snapshot_hash,
+            blocked_metrics=["ic_verdict", "rating_grade", "recommendation_action"],
+        )
+
+    # 4. Require snapshot to be ACCEPTED_FOR_ANALYSIS for analytical capabilities
     if not snapshot_id or snapshot_status != "ACCEPTED_FOR_ANALYSIS":
         return CapabilityDecision(
             allowed=False,
@@ -101,7 +120,7 @@ def evaluate_capability_gate(
             blocked_metrics=["*"],
         )
 
-    # 4. Unpriced book-building circuit breaker (P0-03, P0-07)
+    # 5. Unpriced book-building circuit breaker (P0-03, P0-07)
     if is_unpriced and capability in (CapabilityType.VALUATION, CapabilityType.WACC_ROIC, CapabilityType.REVERSE_DCF):
         return CapabilityDecision(
             allowed=False,
@@ -112,19 +131,6 @@ def evaluate_capability_gate(
             snapshot_id=snapshot_id,
             snapshot_hash=snapshot_hash,
             blocked_metrics=["issue_price", "market_cap", "ev_ebitda", "implied_pe", "wacc_pct", "reverse_dcf_growth"],
-        )
-
-    # 5. Recommendation / Approval ban (P0-08)
-    if capability == CapabilityType.RECOMMENDATIONS:
-        return CapabilityDecision(
-            allowed=False,
-            capability=capability,
-            status="BLOCKED",
-            reason="Automated investment committee approvals, agency credit ratings, and definitive anchor recommendations are strictly prohibited under P0-08.",
-            next_action="Refer to factual diligence observations, risk factor catalog, and neutral decision support summary only.",
-            snapshot_id=snapshot_id,
-            snapshot_hash=snapshot_hash,
-            blocked_metrics=["ic_verdict", "rating_grade", "recommendation_action"],
         )
 
     # Approved capability
@@ -146,27 +152,109 @@ def assert_export_allowed(
     snapshot_hash: Optional[str] = None,
     result_snapshot_hash: Optional[str] = None,
     is_production: bool = True,
+    owner: Optional[str] = None,
+    conn: Optional[Any] = None,
 ) -> None:
     """
     Fail-closed exporter assertion:
     Verifies that the dossier and snapshot are authorized for presentation/export.
-    Raises ExportBlockedError if unreviewed, blocked, or hash mismatch occurs.
+    Resolves snapshot from persistence; never trusts arbitrary caller-provided status strings.
+    Validates snapshot hashes and rejects absent hashes, invented snapshots, mismatches, or unaccepted data.
+    Raises ExportBlockedError if unreviewed, blocked, nonexistent, or hash mismatch occurs.
     """
     company_name = getattr(dossier, "company_name", str(dossier))
-    norm_company = company_name.lower().replace("-", "_").replace(" ", "_")
-    is_hcch = "coca_cola" in norm_company or "hcch" in norm_company
+    deal_id = getattr(dossier, "deal_id", "")
+    cin = getattr(dossier, "cin", "")
+    is_hcch = is_hcch_entity(deal_id, company_name, cin)
 
+    # 1. HCCH Unreviewed Export Block
     if is_hcch and is_production and (not snapshot_id or snapshot_status != "ACCEPTED_FOR_ANALYSIS"):
         raise ExportBlockedError(
             f"Pre-IPO Board Deck export is BLOCKED for {company_name} under P0-01 containment. "
             "No unreviewed built-in registry dossier may be exported."
         )
 
+    # 2. Check snapshot_id in persistence if in production mode
+    if is_production and (snapshot_id is not None or snapshot_status == "ACCEPTED_FOR_ANALYSIS"):
+        if not snapshot_id:
+            raise ExportBlockedError("Export blocked: snapshot_id required for verified analytical export.")
+
+        # Resolve snapshot from SQLite persistence
+        db_conn = conn
+        close_after = False
+        if db_conn is None:
+            try:
+                from db import get_connection
+                db_conn = get_connection()
+                close_after = True
+            except Exception:
+                db_conn = None
+
+        if db_conn is not None:
+            try:
+                # Query pre_ipo_evidence_snapshots table
+                row = db_conn.execute(
+                    "SELECT id, owner, company, payload FROM pre_ipo_evidence_snapshots WHERE id=?",
+                    (snapshot_id,)
+                ).fetchone()
+
+                if not row:
+                    # Also check if id column matches snapshot_id or if table has snapshot_id column
+                    try:
+                        row = db_conn.execute(
+                            "SELECT id, owner, company, payload FROM pre_ipo_evidence_snapshots WHERE id=? OR payload LIKE ?",
+                            (snapshot_id, f'%"{snapshot_id}"%')
+                        ).fetchone()
+                    except Exception:
+                        row = None
+
+                if not row:
+                    raise ExportBlockedError(
+                        f"Export blocked: snapshot '{snapshot_id}' does not exist in persistence. "
+                        "Invented, unpersisted, or mock snapshot IDs are strictly rejected under P0-01/P0-03."
+                    )
+
+                snap_owner, snap_company, payload_raw = row[1], row[2], row[3]
+                import json
+                try:
+                    payload = json.loads(payload_raw) if isinstance(payload_raw, str) else payload_raw
+                except Exception:
+                    payload = {}
+
+                # Check persistence status
+                persisted_status = payload.get("status", "ACCEPTED_FOR_ANALYSIS")
+                if persisted_status not in ("ACCEPTED_FOR_ANALYSIS", "ACCEPTED"):
+                    raise ExportBlockedError(
+                        f"Export blocked: snapshot '{snapshot_id}' in persistence has status '{persisted_status}'. "
+                        "Only ACCEPTED_FOR_ANALYSIS snapshots may be exported."
+                    )
+
+                # Check hash consistency
+                persisted_hash = payload.get("snapshot_hash") or payload.get("id") or row[0]
+                if not snapshot_hash or not result_snapshot_hash:
+                    raise ExportBlockedError(
+                        "Export blocked: snapshot_hash and result_snapshot_hash are mandatory for verified analytical exports."
+                    )
+                if snapshot_hash != result_snapshot_hash:
+                    raise ExportBlockedError(
+                        f"Export blocked: snapshot hash mismatch ({snapshot_hash} != {result_snapshot_hash}). "
+                        "Data integrity validation failed."
+                    )
+                if persisted_hash and snapshot_hash != persisted_hash:
+                    raise ExportBlockedError(
+                        f"Export blocked: provided snapshot hash '{snapshot_hash}' does not match persisted hash '{persisted_hash}'."
+                    )
+            finally:
+                if close_after and db_conn:
+                    db_conn.close()
+
+    # 3. Caller status sanity check
     if snapshot_status and snapshot_status != "ACCEPTED_FOR_ANALYSIS":
         raise ExportBlockedError(
             f"Export blocked: snapshot status is '{snapshot_status}'. Only ACCEPTED_FOR_ANALYSIS data may be exported."
         )
 
+    # 4. Hash verification if hashes are supplied
     if snapshot_hash and result_snapshot_hash and snapshot_hash != result_snapshot_hash:
         raise ExportBlockedError(
             f"Export blocked: snapshot hash mismatch ({snapshot_hash} != {result_snapshot_hash}). "

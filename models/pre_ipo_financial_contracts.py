@@ -84,21 +84,43 @@ def parse_prospectus_token(val: Optional[str]) -> Tuple[Optional[float], str]:
 
 
 def validate_offer_contract(
-    face_value_inr: Optional[float],
-    issue_price_inr: Optional[float],
-    total_shares: Optional[float],
+    face_value_inr: Optional[float] = None,
+    issue_price_inr: Optional[float] = None,
+    total_shares: Optional[float] = None,
+    offered_shares: Optional[float] = None,
+    total_post_issue_shares: Optional[float] = None,
+    price_provenance: Optional[str] = None,
+    source_metric_id: Optional[str] = None,
+    is_at_par: bool = False,
 ) -> Dict[str, Any]:
     """
     Strict offer contract validation:
-    - Face value must NEVER be substituted for issue price.
+    - Face value must NEVER be substituted for issue price unless verified at-par issue.
+    - Offer value = (offered_shares * issue_price) / 1e7
+    - Market capitalization = (total_post_issue_shares * issue_price) / 1e7
     - If issue price is None/NOT_DISCLOSED, offer value and market cap are NOT_COMPUTABLE.
     """
+    # Provenance-aware face value substitution rejection
+    is_face_val_provenance = (
+        price_provenance in ("FACE_VALUE", "PAR_VALUE") or
+        source_metric_id in ("face_value", "face_value_inr", "par_value")
+    )
+    if is_face_val_provenance and not is_at_par:
+        return {
+            "valid": False,
+            "error": "REJECTED: Face value provenance detected in issue price input for a book-building offer.",
+            "offer_value_cr": None,
+            "market_cap_cr": None,
+            "is_priced": False,
+        }
+
     if issue_price_inr is not None and face_value_inr is not None:
-        if issue_price_inr == face_value_inr and face_value_inr in (1.0, 2.0, 5.0, 10.0):
+        if issue_price_inr == face_value_inr and face_value_inr in (1.0, 2.0, 5.0, 10.0) and not is_at_par:
             return {
                 "valid": False,
                 "error": "REJECTED: Face value cannot be used as issue price in a book-building offer.",
                 "offer_value_cr": None,
+                "market_cap_cr": None,
                 "is_priced": False,
             }
 
@@ -111,12 +133,20 @@ def validate_offer_contract(
             "reason": "Price not disclosed in DRHP [●]. Offer value and market cap not computable under SEBI ICDR 2018.",
         }
 
-    offer_val = round((issue_price_inr * (total_shares or 0.0)) / 10000000.0, 2) if total_shares else None
+    # Distinctly resolve offer value and market capitalization
+    offer_val = round((issue_price_inr * offered_shares) / 10000000.0, 2) if offered_shares is not None else None
+
+    # Market capitalization uses total post-issue shares
+    effective_post_shares = total_post_issue_shares if total_post_issue_shares is not None else total_shares
+    mcap_val = round((issue_price_inr * effective_post_shares) / 10000000.0, 2) if effective_post_shares is not None else None
+
     return {
         "valid": True,
         "is_priced": True,
         "offer_value_cr": offer_val,
-        "market_cap_cr": offer_val,
+        "market_cap_cr": mcap_val,
+        "offered_shares": offered_shares,
+        "total_post_issue_shares": effective_post_shares,
     }
 
 

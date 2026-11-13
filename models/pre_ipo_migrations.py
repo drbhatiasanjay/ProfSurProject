@@ -17,6 +17,31 @@ def compute_checksum(content: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def _execute_sql_script_transactional(conn: sqlite3.Connection, sql: str) -> None:
+    """Executes multiple SQL statements sequentially within an active transaction without implicit commit."""
+    statements = []
+    current = []
+    for line in sql.splitlines():
+        line_clean = line.strip()
+        if line_clean.startswith("--") or not line_clean:
+            continue
+        current.append(line)
+        if ";" in line:
+            full_stmt = "\n".join(current)
+            for part in full_stmt.split(";"):
+                part_clean = part.strip()
+                if part_clean:
+                    statements.append(part_clean)
+            current = []
+    if current:
+        remaining = "\n".join(current).strip()
+        if remaining:
+            statements.append(remaining)
+
+    for stmt in statements:
+        conn.execute(stmt)
+
+
 def _get_table_columns(conn: sqlite3.Connection, table_name: str) -> List[str]:
     """Retrieve list of column names for a table."""
     try:
@@ -113,7 +138,7 @@ def apply_migrations(conn: sqlite3.Connection) -> List[int]:
         chk = compute_checksum(sql)
         conn.execute("BEGIN IMMEDIATE")
         try:
-            conn.executescript(sql)
+            _execute_sql_script_transactional(conn, sql)
             conn.execute(
                 "INSERT INTO pre_ipo_schema_migrations(version, name, checksum, status) VALUES(?, ?, ?, ?)",
                 (1, "001_baseline_evidence_schema", chk, "APPLIED")
@@ -171,7 +196,7 @@ def apply_migrations(conn: sqlite3.Connection) -> List[int]:
                     conn.execute("ALTER TABLE pre_ipo_decision_actions ADD COLUMN company_id TEXT")
 
             # Execute SQL script for newly defined tables and indexes
-            conn.executescript(sql)
+            _execute_sql_script_transactional(conn, sql)
 
             # Ensure decision versions index is created after columns exist
             conn.execute("CREATE INDEX IF NOT EXISTS idx_decision_versions_company ON pre_ipo_decision_versions(owner, company_id)")
@@ -231,7 +256,7 @@ def apply_migrations(conn: sqlite3.Connection) -> List[int]:
                         conn.execute(f"ALTER TABLE pre_ipo_evidence_snapshots ADD COLUMN {col_name} {col_type}")
 
             # Execute SQL script for indexes
-            conn.executescript(sql)
+            _execute_sql_script_transactional(conn, sql)
 
             conn.execute(
                 "INSERT INTO pre_ipo_schema_migrations(version, name, checksum, status) VALUES(?, ?, ?, ?)",

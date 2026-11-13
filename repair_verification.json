@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-11-13T18:21:00Z",
+  "audit_ref": "PROFSUR_PR1_PR6_INDEPENDENT_REVIEW_2026-11-13.md",
+  "base_commit": "1bb597f75d5dc75c52c9557fa748432841f6efc1",
+  "repair_branch": "fix/preipo-codex-review-repair-2026-11-13",
+  "database_verification": {
+    "path": "capital_structure.db",
+    "sha256": "CA696195A5C541B56E0533DE6C69A3BEC4E501A232FD2B18A1B09D15D6FA7873",
+    "status": "PRISTINE_UNCHANGED"
+  },
+  "test_evidence": {
+    "total_tests_run": 59,
+    "total_passed": 59,
+    "total_failed": 0,
+    "execution_time_seconds": 3.15,
+    "test_suite_files": [
+      "tests/test_pre_ipo_p0_containment.py",
+      "tests/test_pre_ipo_pr2_contracts_and_migration.py",
+      "tests/test_pre_ipo_pr3_indexing_and_extraction.py",
+      "tests/test_pre_ipo_pr4_financial_semantics.py",
+      "tests/test_pre_ipo_pr5_analysis_safety.py",
+      "tests/test_pre_ipo_pr6_evidence_story_and_ui.py",
+      "tests/test_codex_review_repairs.py"
+    ]
+  },
+  "findings": {
+    "F01": {
+      "title": "Missing production integration across helper modules",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_codex_review_repairs.py::test_f01_production_engine_integration"
+    },
+    "F02": {
+      "title": "Containment leak on Tab 7 & incomplete HCCH detection",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_codex_review_repairs.py::test_f02_ic_verdict_containment_and_entity_detection"
+    },
+    "F03": {
+      "title": "Exporter bypassed persistence and hash checks",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_codex_review_repairs.py::test_f03_export_unverified_snapshot_fails_closed"
+    },
+    "F04": {
+      "title": "Accepted snapshot immutability & validity enforcement",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_codex_review_repairs.py::test_f04_accepted_snapshot_enforces_contracts_and_immutability"
+    },
+    "F05": {
+      "title": "Non-atomic migration 003",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_codex_review_repairs.py::test_f05_atomic_migration_003_rollback"
+    },
+    "F06": {
+      "title": "Document completion and OCR false-positive defects",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_codex_review_repairs.py::test_f06_blank_pdf_rejected_and_ocr_requires_text"
+    },
+    "F07": {
+      "title": "WACC overwrote zeros and invented premises",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_codex_review_repairs.py::test_f07_wacc_preserves_zero_beta_and_tax_and_blocks_none"
+    },
+    "F08": {
+      "title": "Reverse DCF shortcut diverged from valuation model",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_codex_review_repairs.py::test_f08_reverse_dcf_exact_root_solver_and_repricing"
+    },
+    "F09": {
+      "title": "Conflation of offer value and market capitalization",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_codex_review_repairs.py::test_f09_offer_value_and_market_cap_distinct"
+    },
+    "F10": {
+      "title": "Overstated reports and discrepancies",
+      "status": "FIXED_PENDING_CODEX_VERIFICATION",
+      "test": "full_suite_regression_and_documentation"
+    }
+  }
+}

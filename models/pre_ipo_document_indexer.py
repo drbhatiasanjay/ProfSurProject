@@ -116,7 +116,15 @@ class DocumentIndex:
 
     @property
     def is_complete(self) -> bool:
-        return len(self.failed_pages) == 0 and len(self.pages) == self.total_pages
+        return self.total_pages > 0 and len(self.failed_pages) == 0 and len(self.pages) == self.total_pages
+
+    @property
+    def is_text_extracted(self) -> bool:
+        return self.is_complete and all(p.status == "OK" and p.char_count > 0 for p in self.pages.values())
+
+    @property
+    def is_capability_ready(self) -> bool:
+        return self.is_text_extracted and len(self.sections) > 0
 
     def get_section_text(self, section_key: str) -> str:
         if section_key not in self.sections:
@@ -172,13 +180,12 @@ class DocumentIndexer:
         source_sha = self.compute_sha256(pdf_bytes)
 
         # Check for official HCCH PDF assertions if source claimed to be official HCCH
-        if "coca_cola" in source_id.lower() or "hcch" in source_id.lower():
-            if len(pdf_bytes) == OFFICIAL_HCCH_EXPECTED["size_bytes"]:
-                if source_sha != OFFICIAL_HCCH_EXPECTED["sha256"]:
-                    raise ValueError(
-                        f"Official HCCH PDF checksum mismatch: got {source_sha}, "
-                        f"expected {OFFICIAL_HCCH_EXPECTED['sha256']}. Untrusted source rejected."
-                    )
+        if "official" in source_id.lower() and ("coca_cola" in source_id.lower() or "hcch" in source_id.lower()):
+            if source_sha != OFFICIAL_HCCH_EXPECTED["sha256"]:
+                raise ValueError(
+                    f"Official HCCH PDF checksum mismatch: got {source_sha}, "
+                    f"expected {OFFICIAL_HCCH_EXPECTED['sha256']}. Untrusted source rejected."
+                )
 
         import pypdf
         import io
@@ -202,14 +209,12 @@ class DocumentIndexer:
                 p_text_clean = p_text.strip()
                 char_count = len(p_text_clean)
 
-                if char_count < 15:
-                    if allow_ocr:
-                        # Explicitly permitted OCR on scanned/image page
-                        method = "ocr_consent"
-                        status = "OK"
-                    else:
-                        method = "pypdf"
-                        status = "IMAGE_ONLY"
+                if char_count == 0:
+                    method = "ocr_consent" if allow_ocr else "pypdf"
+                    status = "IMAGE_ONLY"
+                elif char_count < 15:
+                    method = "ocr_consent" if allow_ocr else "pypdf"
+                    status = "IMAGE_ONLY"
                 else:
                     method = "pypdf"
                     status = "OK"
@@ -284,7 +289,7 @@ class DocumentIndexer:
         ))
 
     def _build_sections(self, pages: Dict[int, PageArtifact]) -> Dict[str, SectionBoundary]:
-        """Locates section boundaries based on TOC and headings across all pages."""
+        """Locates authentic section boundaries from headings across pages, ignoring Table of Contents lines."""
         sections: Dict[str, SectionBoundary] = {}
         found_starts: Dict[str, int] = {}
 
@@ -292,14 +297,33 @@ class DocumentIndexer:
         for phys_p, art in sorted(pages.items()):
             if art.status != "OK" or not art.text:
                 continue
-            text_lower = art.text.lower()
-            for sec_key, patterns in SECTION_PATTERNS.items():
-                if sec_key in found_starts:
+
+            lines = [l.strip() for l in art.text.splitlines() if l.strip()]
+            page_text_lower = art.text.lower()
+
+            # Skip dedicated Table of Contents / Index pages in preliminary sections
+            is_toc_page = any(
+                toc_marker in page_text_lower[:250]
+                for toc_marker in ("table of contents", "index of contents", "table of content")
+            )
+            if is_toc_page and phys_p < 40:
+                continue
+
+            for line in lines:
+                line_lower = line.lower()
+                # Skip lines that look like TOC entries (dot leaders or trailing page number dots)
+                if re.search(r"\.{3,}|…", line):
                     continue
-                for pat in patterns:
-                    if re.search(pat, text_lower):
-                        found_starts[sec_key] = phys_p
-                        break
+                if len(line) > 130:
+                    continue
+
+                for sec_key, patterns in SECTION_PATTERNS.items():
+                    if sec_key in found_starts:
+                        continue
+                    for pat in patterns:
+                        if re.search(pat, line_lower):
+                            found_starts[sec_key] = phys_p
+                            break
 
         # Determine start/end ranges
         sorted_secs = sorted(found_starts.items(), key=lambda x: x[1])

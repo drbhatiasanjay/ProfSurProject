@@ -70,12 +70,17 @@ class SafeROICResult:
 
 @dataclass
 class SafeReverseDCFResult:
+    implied_fcf_growth_cagr_pct: float
     implied_revenue_cagr_pct: float
     implied_terminal_fcf_cr: float
     market_valuation_cr: float
     discount_rate_wacc_pct: float
+    terminal_growth_pct: float
+    forecast_years: int
+    repriced_valuation_cr: float
+    repricing_error_pct: float
     nature: str = "ANALYST_SCENARIO"
-    disclaimer: str = "Implied hurdle analysis under analyst scenario premises; not a forecast or filing fact."
+    disclaimer: str = "Implied FCF hurdle analysis under analyst scenario premises; not a forecast or filing fact."
     lineage_hash: str = ""
 
 
@@ -138,15 +143,17 @@ def compute_safe_wacc(
     market_equity_cr: Optional[float],
     total_debt_cr: Optional[float],
     cost_of_debt_pct: Optional[float],
-    risk_free_rate_pct: Optional[float] = 7.15,
-    beta: Optional[float] = 1.0,
-    market_risk_premium_pct: Optional[float] = 6.0,
-    tax_rate_pct: Optional[float] = 25.17,
+    risk_free_rate_pct: Optional[float] = None,
+    beta: Optional[float] = None,
+    market_risk_premium_pct: Optional[float] = None,
+    tax_rate_pct: Optional[float] = None,
     is_scenario: bool = False
 ) -> Union[SafeWACCResult, BlockedResult]:
     """
     Computes WACC without unaccepted fallbacks.
     Never silently substitutes book equity for market equity, or 9% for cost of debt.
+    Preserves genuine zeros (beta=0.0, tax_rate_pct=0.0) without corrupting them.
+    Fails closed if any required premise is None.
     """
     missing = []
     if market_equity_cr is None or market_equity_cr <= 0:
@@ -155,26 +162,42 @@ def compute_safe_wacc(
         missing.append("total_debt_cr")
     if cost_of_debt_pct is None:
         missing.append("cost_of_debt_pct (prohibited from defaulting to 9.0%)")
+    if risk_free_rate_pct is None:
+        missing.append("risk_free_rate_pct")
+    if beta is None:
+        missing.append("beta")
+    if market_risk_premium_pct is None:
+        missing.append("market_risk_premium_pct")
+    if tax_rate_pct is None:
+        missing.append("tax_rate_pct")
 
     if missing:
         return BlockedResult(
             capability="WACC",
             missing_premises=missing,
             reason="WACC computation blocked due to missing required premises.",
-            remedy_action="Provide accepted market pricing and explicit cost of debt or enter in Analyst Scenario workspace."
+            remedy_action="Provide accepted market pricing, explicit cost of debt, CAPM parameters, and tax rate, or enter in Analyst Scenario workspace."
         )
 
-    # Cost of equity = Rf + Beta * MRP
-    ke = (risk_free_rate_pct or 0.0) + (beta or 1.0) * (market_risk_premium_pct or 6.0)
-    # After tax cost of debt
-    kd_after_tax = cost_of_debt_pct * (1.0 - ((tax_rate_pct or 25.17) / 100.0))
+    # Cost of equity = Rf + Beta * MRP (preserving zero beta)
+    ke = risk_free_rate_pct + (beta * market_risk_premium_pct)
+    # After tax cost of debt (preserving zero tax rate)
+    kd_after_tax = cost_of_debt_pct * (1.0 - (tax_rate_pct / 100.0))
 
     total_cap = market_equity_cr + total_debt_cr
+    if total_cap <= 0:
+        return BlockedResult(
+            capability="WACC",
+            missing_premises=["total_capital_base"],
+            reason="Total capitalization base must be strictly positive.",
+            remedy_action="Ensure market equity or debt is positive."
+        )
+
     we = market_equity_cr / total_cap
     wd = total_debt_cr / total_cap
 
     wacc = round((we * ke) + (wd * kd_after_tax), 2)
-    h = hashlib.sha256(f"{market_equity_cr}_{total_debt_cr}_{cost_of_debt_pct}_{ke}".encode("utf-8")).hexdigest()
+    h = hashlib.sha256(f"{market_equity_cr}_{total_debt_cr}_{cost_of_debt_pct}_{ke}_{tax_rate_pct}".encode("utf-8")).hexdigest()
 
     return SafeWACCResult(
         wacc_pct=wacc,
@@ -232,7 +255,10 @@ def compute_safe_reverse_dcf(
     forecast_years: int = 5
 ) -> Union[SafeReverseDCFResult, BlockedResult]:
     """
-    Reverse DCF hurdle analysis under explicit scenario assumptions.
+    Exact Reverse DCF hurdle analysis under explicit scenario assumptions.
+    Solves for constant FCF growth rate g during explicit forecast period such that
+    PV(g) = market_valuation_cr within 0.01% tolerance.
+    Reprices back to verify valuation and rejects invalid terminal assumptions.
     Never portrayed as forecast or fact.
     """
     missing = []
@@ -241,7 +267,7 @@ def compute_safe_reverse_dcf(
     if wacc_pct is None or wacc_pct <= 0:
         missing.append("wacc_pct")
     if current_fcf_cr is None or current_fcf_cr <= 0:
-        missing.append("current_fcf_cr")
+        missing.append("current_fcf_cr (positive base cash flow required)")
 
     if missing:
         return BlockedResult(
@@ -251,19 +277,74 @@ def compute_safe_reverse_dcf(
             remedy_action="Configure explicit pricing scenario in Analyst Scenario panel."
         )
 
-    # Simplified illustrative hurdle rate
     r = wacc_pct / 100.0
-    g = terminal_growth_pct / 100.0
-    # Implied cash flow requirement
-    implied_terminal_fcf = market_valuation_cr * max(0.01, (r - g))
-    cagr = round((((implied_terminal_fcf / current_fcf_cr) ** (1.0 / forecast_years)) - 1.0) * 100.0, 2)
-    h = hashlib.sha256(f"{market_valuation_cr}_{wacc_pct}_{current_fcf_cr}".encode("utf-8")).hexdigest()
+    gt = terminal_growth_pct / 100.0
+
+    # Reject invalid Gordon terminal assumption rather than clamping
+    if r <= gt:
+        return BlockedResult(
+            capability="REVERSE_DCF",
+            missing_premises=["valid_terminal_spread"],
+            reason=f"Invalid terminal assumption: WACC ({wacc_pct}%) must be strictly greater than terminal growth rate ({terminal_growth_pct}%). Clamping is prohibited under P0-07.",
+            remedy_action="Adjust discount rate or reduce perpetual terminal growth assumption."
+        )
+
+    # Standard DCF valuation equation as a function of growth rate g
+    def compute_dcf_pv(g: float) -> float:
+        pv_explicit = sum(
+            current_fcf_cr * ((1.0 + g) ** t) / ((1.0 + r) ** t)
+            for t in range(1, forecast_years + 1)
+        )
+        fcf_n = current_fcf_cr * ((1.0 + g) ** forecast_years)
+        terminal_val = (fcf_n * (1.0 + gt)) / (r - gt)
+        pv_terminal = terminal_val / ((1.0 + r) ** forecast_years)
+        return pv_explicit + pv_terminal
+
+    # Bisection root-finding solver: pv(g) = target
+    low_g = -0.99  # -99% growth
+    high_g = 10.0  # +1000% growth
+    target = market_valuation_cr
+
+    pv_low = compute_dcf_pv(low_g)
+    pv_high = compute_dcf_pv(high_g)
+
+    if target < pv_low or target > pv_high:
+        return BlockedResult(
+            capability="REVERSE_DCF",
+            missing_premises=["admissible_growth_domain"],
+            reason=f"Target valuation ({target} Cr) falls outside admissible growth domain [-99%, +1000%].",
+            remedy_action="Check market valuation or base cash flow inputs."
+        )
+
+    # Bisection search
+    for _ in range(100):
+        mid_g = (low_g + high_g) / 2.0
+        pv_mid = compute_dcf_pv(mid_g)
+        if abs(pv_mid - target) / target < 1e-6:
+            break
+        if pv_mid < target:
+            low_g = mid_g
+        else:
+            high_g = mid_g
+
+    g_star = mid_g
+    repriced_pv = compute_dcf_pv(g_star)
+    repricing_error_pct = abs(repriced_pv - target) / target * 100.0
+
+    terminal_fcf = current_fcf_cr * ((1.0 + g_star) ** forecast_years) * (1.0 + gt)
+    cagr_pct = round(g_star * 100.0, 2)
+    h = hashlib.sha256(f"{market_valuation_cr}_{wacc_pct}_{current_fcf_cr}_{terminal_growth_pct}_{forecast_years}_{cagr_pct}".encode("utf-8")).hexdigest()
 
     return SafeReverseDCFResult(
-        implied_revenue_cagr_pct=cagr,
-        implied_terminal_fcf_cr=round(implied_terminal_fcf, 2),
+        implied_fcf_growth_cagr_pct=cagr_pct,
+        implied_revenue_cagr_pct=cagr_pct,
+        implied_terminal_fcf_cr=round(terminal_fcf, 2),
         market_valuation_cr=market_valuation_cr,
         discount_rate_wacc_pct=wacc_pct,
+        terminal_growth_pct=terminal_growth_pct,
+        forecast_years=forecast_years,
+        repriced_valuation_cr=round(repriced_pv, 2),
+        repricing_error_pct=round(repricing_error_pct, 4),
         nature="ANALYST_SCENARIO",
         lineage_hash=h
     )

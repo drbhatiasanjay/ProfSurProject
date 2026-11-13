@@ -32,6 +32,7 @@ from models.pre_ipo_schema import (
     ProvenanceRef,
 )
 from models.pre_ipo_data import PRE_IPO_REGISTRY
+from models.pre_ipo_document_indexer import DocumentIndexer, DocumentIndex
 
 
 from enum import Enum
@@ -643,32 +644,19 @@ class PreIPOIngestionEngine:
                 page_count = 1
             else:
                 try:
-                    import pypdf
-                    stream = document_source
-                    if isinstance(document_source, (str, os.PathLike)):
-                        if os.path.exists(document_source):
-                            stream = open(document_source, "rb")
-                    elif hasattr(document_source, "read"):
-                        pos = document_source.tell() if hasattr(document_source, "tell") else 0
-                        stream = document_source
-                        if hasattr(document_source, "seek"):
-                            document_source.seek(pos)
-                    elif isinstance(document_source, bytes):
-                        stream = io.BytesIO(document_source)
-
-                    reader = pypdf.PdfReader(stream)
-                    page_count = len(reader.pages)
-                    # Bounded streaming full-document indexing up to MAX_PAGES (1500)
-                    for i in range(min(page_count, 1500)):
-                        try:
-                            p_text = reader.pages[i].extract_text() or ""
-                            pages_text.append((i + 1, p_text))
-                        except Exception:
-                            pages_text.append((i + 1, ""))
-                    extracted_text = "\n".join([pt[1] for pt in pages_text])
-
-                    if isinstance(document_source, (str, os.PathLike)) and hasattr(stream, "close"):
-                        stream.close()
+                    pdf_bytes = cls.get_source_bytes(document_source)
+                    if pdf_bytes:
+                        indexer = DocumentIndexer()
+                        doc_index = indexer.index_pdf_stream(
+                            pdf_bytes,
+                            source_id=deal_id_hint or "uploaded_drhp",
+                            allow_ocr=allow_external_cloud_ocr
+                        )
+                        page_count = doc_index.total_pages
+                        pages_text = [(p, art.text) for p, art in sorted(doc_index.pages.items())]
+                        extracted_text = "\n".join([pt[1] for pt in pages_text])
+                    else:
+                        extracted_text, page_count = "", 0
                 except Exception:
                     extracted_text, page_count = "", 0
 

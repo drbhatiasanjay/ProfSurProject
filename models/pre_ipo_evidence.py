@@ -72,6 +72,8 @@ class SourceLocator:
     text_hash: Optional[str] = None
 
     def is_valid(self) -> bool:
+        if self.physical_page is not None and self.physical_page <= 0:
+            return False
         return bool(self.physical_page is not None or self.raw_text or self.table_id)
 
 
@@ -114,6 +116,8 @@ class Observation:
         if self.review_state == "ACCEPTED":
             if not self.locator or not self.locator.is_valid():
                 raise ValueError("Accepted observation requires a valid SourceLocator (physical_page, table_id, or raw_text).")
+            if self.locator.physical_page is not None and self.locator.physical_page <= 0:
+                raise ValueError("Accepted observation requires positive physical page bounds.")
             if not self.reviewer or not str(self.reviewer).strip():
                 raise ValueError("Accepted observation requires an identified reviewer.")
             if not self.review_reason or not str(self.review_reason).strip():
@@ -144,7 +148,7 @@ class AcceptedEvidenceSnapshot:
     snapshot_id: str
     owner: str
     company: str
-    snapshot_hash: str
+    snapshot_hash: str = ""
     observations: dict = field(default_factory=dict)
     accepted_by: str = ""
     accepted_at: str = ""
@@ -153,14 +157,78 @@ class AcceptedEvidenceSnapshot:
     is_immutable: bool = True
 
     def __post_init__(self):
-        # PR 2 Requirement: LEGACY_EXAMPLE origin observations are strictly rejected from accepted snapshots
+        import types
+        from dataclasses import is_dataclass
+
+        if not self.owner or not str(self.owner).strip():
+            raise ValueError("AcceptedEvidenceSnapshot requires an identified owner.")
+        if not self.company or not str(self.company).strip():
+            raise ValueError("AcceptedEvidenceSnapshot requires an identified company.")
+
+        canonical_obs = {}
         for obs_id, obs in self.observations.items():
+            obs_owner = getattr(obs, "owner", None) or (obs.get("owner") if isinstance(obs, dict) else None)
+            obs_company = getattr(obs, "company", None) or (obs.get("company") if isinstance(obs, dict) else None)
+            obs_review_state = getattr(obs, "review_state", None) or (obs.get("review_state") if isinstance(obs, dict) else None)
             obs_origin = getattr(obs, "origin", None) or (obs.get("origin") if isinstance(obs, dict) else None)
+            obs_locator = getattr(obs, "locator", None) or (obs.get("locator") if isinstance(obs, dict) else None)
+
+            # Owner and company isolation
+            if obs_owner and obs_owner != self.owner:
+                raise ValueError(
+                    f"Observation '{obs_id}' owner '{obs_owner}' does not match snapshot owner '{self.owner}'. Cross-owner isolation violation."
+                )
+            if obs_company and obs_company != self.company:
+                raise ValueError(
+                    f"Observation '{obs_id}' company '{obs_company}' does not match snapshot company '{self.company}'. Cross-company isolation violation."
+                )
+
+            # Only ACCEPTED observations may enter accepted snapshot
+            if obs_review_state != "ACCEPTED":
+                raise ValueError(
+                    f"Observation '{obs_id}' has review_state '{obs_review_state}'. "
+                    "Only ACCEPTED observations are eligible to enter an AcceptedEvidenceSnapshot."
+                )
+
+            # Reject LEGACY_EXAMPLE
             if obs_origin == "LEGACY_EXAMPLE":
                 raise ValueError(
                     f"Observation '{obs_id}' has origin 'LEGACY_EXAMPLE'. "
                     "LEGACY_EXAMPLE data is strictly prohibited from entering an accepted evidence snapshot."
                 )
+
+            # Locator physical page bounds
+            if obs_locator:
+                phys_page = getattr(obs_locator, "physical_page", None) or (obs_locator.get("physical_page") if isinstance(obs_locator, dict) else None)
+                if phys_page is not None and phys_page <= 0:
+                    raise ValueError(f"Observation '{obs_id}' has invalid physical_page '{phys_page}'. Physical page must be positive.")
+
+            if is_dataclass(obs):
+                canonical_obs[obs_id] = asdict(obs)
+            elif isinstance(obs, dict):
+                canonical_obs[obs_id] = dict(obs)
+            else:
+                canonical_obs[obs_id] = str(obs)
+
+        # Compute canonical content hash over sorted observations
+        canonical_json = json.dumps(canonical_obs, sort_keys=True, default=str)
+        computed_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+
+        if self.snapshot_hash and self.snapshot_hash != computed_hash:
+            raise ValueError(
+                f"Canonical snapshot hash mismatch: provided '{self.snapshot_hash}', computed '{computed_hash}'. "
+                "Accepted snapshots require cryptographically verified content hashes."
+            )
+        object.__setattr__(self, "snapshot_hash", computed_hash)
+
+        # Enforce read-only observations
+        object.__setattr__(self, "observations", types.MappingProxyType(dict(self.observations)))
+        object.__setattr__(self, "_initialized", True)
+
+    def __setattr__(self, key, value):
+        if getattr(self, "_initialized", False) and getattr(self, "is_immutable", True):
+            raise TypeError(f"AcceptedEvidenceSnapshot is immutable. Cannot modify field '{key}'.")
+        super().__setattr__(key, value)
 
 
 @dataclass
