@@ -774,11 +774,18 @@ def generate_valuation_narrative(dossier: PreIPODealDossier, persona: str = "cfo
     }
 
 
-def generate_persona_decision_view(dossier: PreIPODealDossier, persona: str) -> Dict[str, Any]:
+def generate_persona_decision_view(
+    dossier: PreIPODealDossier,
+    persona: Optional[str] = None,
+    is_blocked: bool = False,
+    blocked_reason: str = "",
+) -> Dict[str, Any]:
     """
     Generates an executive decision synthesis customized for the selected user persona.
     Facts, ratios, and models remain strictly identical; the decision focus, trade-offs,
     and recommended next steps adapt to the user's role.
+    If is_blocked=True, automated committee approvals and investment ratings are strictly
+    purged under P0-08 containment.
     """
     latest = dossier.latest_financials
     ind = dossier.indebtedness
@@ -889,6 +896,19 @@ def generate_persona_decision_view(dossier: PreIPODealDossier, persona: str) -> 
             "trade_offs": "Full transparency and rigorous disclosure prevent regulatory delays but require detailed accounting reconciliations.",
         },
     }
+
+    if is_blocked or getattr(dossier, "is_blocked", False):
+        for p_key, p_val in persona_map.items():
+            p_val["status"] = "BLOCKED"
+            p_val["verdict"] = "DECISION_SUPPORT_ONLY"
+            p_val["recommendation"] = (
+                f"Analysis is BLOCKED under P0 containment ({blocked_reason or 'Filing review incomplete'}). "
+                "Automated approvals, agency credit ratings, and investment recommendations are strictly prohibited "
+                "under P0-08. Refer to factual disclosure provenance in Tab 2 only."
+            )
+
+    if persona is None or persona == "all":
+        return persona_map
 
     return persona_map.get(persona, persona_map["cfo"])
 
@@ -1036,14 +1056,34 @@ def calculate_wacc_and_roic(
     market_risk_premium: float = 0.055,
     beta: float = 1.05,
     corporate_tax_rate: float = 0.2517,
+    is_blocked: bool = False,
+    blocked_reason: str = "",
 ) -> Dict[str, Any]:
     """
     Computes rigorous ROIC vs WACC economic spread and Economic Value Added (EVA).
     ROIC = NOPAT / Invested Capital
     WACC = (E / (E + D)) * Ke + (D / (E + D)) * Kd * (1 - t)
     If underlying financial statements or capital structure are absent/unverified,
-    returns is_computable: False without fabricating numbers.
+    or if blocked under P0 containment, returns is_computable: False without fabricating numbers.
     """
+    if is_blocked or getattr(dossier, "is_blocked", False):
+        return {
+            "is_computable": False,
+            "status": "BLOCKED",
+            "invested_capital_cr": None,
+            "nopat_cr": None,
+            "roic_pct": None,
+            "ke_pct": None,
+            "kd_pre_tax_pct": None,
+            "kd_post_tax_pct": None,
+            "wacc_pct": None,
+            "equity_weight_pct": None,
+            "debt_weight_pct": None,
+            "value_creation_spread_pct": None,
+            "economic_profit_cr": None,
+            "blocked_reason": blocked_reason or "Analysis blocked under P0-07 containment.",
+            "narrative": blocked_reason or "Analysis blocked under P0-07 containment.",
+        }
     latest = dossier.latest_financials
     if latest.revenue_ops_cr <= 0 and latest.ebitda_cr <= 0 and latest.net_worth_cr <= 0:
         return {
@@ -1171,11 +1211,24 @@ def calculate_reverse_dcf_hurdle(
     custom_wacc_pct: Optional[float] = None,
     terminal_growth_pct: float = 5.0,
     forecast_years: int = 5,
+    is_blocked: bool = False,
+    blocked_reason: str = "",
 ) -> Dict[str, Any]:
     """
     Reverse DCF: Solves for the 5-year FCF compound annual growth rate (CAGR)
     strictly required to justify the implied enterprise valuation at the upper price band.
     """
+    if is_blocked or getattr(dossier, "is_blocked", False):
+        return {
+            "status": "BLOCKED",
+            "implied_ev_cr": None,
+            "base_fcf_cr": None,
+            "required_fcf_cagr_pct": None,
+            "implied_fcf_growth_pct": None,
+            "hurdle_difficulty": "BLOCKED",
+            "blocked_reason": blocked_reason or "Offer value not disclosed / unreviewed under P0-07.",
+            "narrative": blocked_reason or "Offer value not disclosed / unreviewed under P0-07.",
+        }
     if not dossier.valuation_comps or dossier.valuation_comps.implied_ev_cr <= 0:
         return {
             "implied_ev_cr": 0.0,

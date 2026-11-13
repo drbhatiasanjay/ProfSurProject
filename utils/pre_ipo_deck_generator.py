@@ -28,11 +28,31 @@ from models.pre_ipo_engine import (
 )
 
 
-def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
+from typing import Optional
+from models.pre_ipo_capability_gate import assert_export_allowed, ExportBlockedError
+
+
+def generate_pre_ipo_board_deck(
+    dossier: PreIPODealDossier,
+    snapshot_id: Optional[str] = None,
+    snapshot_status: Optional[str] = None,
+    snapshot_hash: Optional[str] = None,
+    result_snapshot_hash: Optional[str] = None,
+    is_production: bool = True,
+) -> bytes:
     """
     Builds a vector-grade institutional 8-slide PowerPoint deck for the target deal.
     Returns bytes buffer for Streamlit st.download_button.
+    Enforces fail-closed export gating under P0 containment.
     """
+    assert_export_allowed(
+        dossier=dossier,
+        snapshot_id=snapshot_id,
+        snapshot_status=snapshot_status,
+        snapshot_hash=snapshot_hash,
+        result_snapshot_hash=result_snapshot_hash,
+        is_production=is_production,
+    )
     prs = Presentation()
     prs.slide_width = Inches(13.333)  # 16:9 widescreen
     prs.slide_height = Inches(7.5)

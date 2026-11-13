@@ -20,6 +20,12 @@ import pandas as pd
 import plotly.graph_objects as go
 from models.pre_ipo_data import PRE_IPO_REGISTRY
 from models.pre_ipo_ingest import PreIPOIngestionEngine, assess_analysis_eligibility, ExtractionState
+from models.pre_ipo_capability_gate import (
+    CapabilityType,
+    evaluate_capability_gate,
+    assert_export_allowed,
+    ExportBlockedError,
+)
 from models.pre_ipo_engine import (
     classify_dickinson_stage,
     compute_debt_capacity,
@@ -661,6 +667,24 @@ if selected_deal_key == "custom_upload":
 else:
     dossier = PRE_IPO_REGISTRY[selected_deal_key]
 
+# Evaluate analytical capability gate (PR 1 Containment)
+is_hcch = "coca_cola" in selected_deal_key.lower() or "hcch" in selected_deal_key.lower()
+active_owner = st.session_state.get("authenticated_user", "drbhatia")
+active_snapshot_id = st.session_state.get("pre_ipo_active_snapshot_id")
+active_snapshot_status = st.session_state.get("pre_ipo_active_snapshot_status", "UNREVIEWED")
+dossier_origin = "LEGACY_REGISTRY" if selected_deal_key in PRE_IPO_REGISTRY else "PROCESSED_INTAKE"
+
+gate_decision = evaluate_capability_gate(
+    owner=active_owner,
+    company=selected_deal_key,
+    capability=CapabilityType.FINANCIAL_ANALYSIS,
+    snapshot_id=active_snapshot_id,
+    snapshot_status=active_snapshot_status,
+    origin=dossier_origin,
+    is_production=True,
+    is_unpriced=bool(dossier and (not dossier.total_issue_size_cr or dossier.total_issue_size_cr <= 0)),
+)
+
 eligibility = assess_analysis_eligibility(dossier)
 if not eligibility.allowed:
     with st.container(key="pre_ipo_intake_gate"):
@@ -691,16 +715,35 @@ with col_act:
         "</label>",
         unsafe_allow_html=True,
     )
-    deck_bytes = generate_pre_ipo_board_deck(dossier)
-    st.download_button(
-        label="Export Deck (PPTX)",
-        icon=":material/download:",
-        data=deck_bytes,
-        file_name=f"{dossier.deal_id}_board_pitch_deck.pptx",
-        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        use_container_width=True,
-    )
-    st.caption(":material/download: 1-Click Board PPTX Export")
+    if is_hcch and not gate_decision.allowed:
+        st.button(
+            "Export Blocked (Awaiting Evidence)",
+            icon=":material/block:",
+            disabled=True,
+            use_container_width=True,
+            help="Export is strictly blocked under P0-01 containment until the official 513-page DRHP is reviewed and accepted."
+        )
+        st.caption(":material/block: P0-01 Containment Active")
+    else:
+        try:
+            deck_bytes = generate_pre_ipo_board_deck(
+                dossier=dossier,
+                snapshot_id=active_snapshot_id,
+                snapshot_status=active_snapshot_status,
+                is_production=True,
+            )
+            st.download_button(
+                label="Export Deck (PPTX)",
+                icon=":material/download:",
+                data=deck_bytes,
+                file_name=f"{dossier.deal_id}_board_pitch_deck.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                use_container_width=True,
+            )
+            st.caption(":material/download: 1-Click Board PPTX Export")
+        except ExportBlockedError as e:
+            st.button("Export Blocked", icon=":material/block:", disabled=True, use_container_width=True)
+            st.caption(f":material/block: {str(e)}")
 
 # Feedback toasts on selection change
 prev_deal = st.session_state.get("_prev_pre_ipo_deal")
@@ -735,10 +778,35 @@ scope_bar_html = f"""
 """
 render_html(scope_bar_html)
 
+if is_hcch and not gate_decision.allowed:
+    st.warning(
+        "⚠️ **CORRECTION & AUDIT NOTICE (P0-01 Containment):** "
+        "Hindustan Coca-Cola Holdings Limited's built-in registry dossier has been contained and superseded. "
+        "Under SEBI ICDR 2018 statutory guidelines, real analytical processing (Offer Valuation, WACC/ROIC, Reverse DCF, and Board Deck generation) "
+        "is strictly **BLOCKED** until the 513-page parent DRHP is fully indexed and its evidence ledger reviewed and accepted in Tab 2 (Provenance Ledger). "
+        "All values shown below are candidate unreviewed disclosures and cannot be used for investment, credit, or underwriting decisions."
+    )
+elif dossier_origin == "LEGACY_REGISTRY":
+    st.info(
+        "ℹ️ **SYNTHETIC BENCHMARK EXAMPLE — NOT VERIFIED FILING EVIDENCE:** "
+        "This dossier is loaded from the legacy benchmark suite for interface evaluation. "
+        "It is not accepted regulatory filing evidence."
+    )
+
 # ─────────────────────────────────────────────────────────────────────────────
 # PANEL 1: SOVEREIGN HERO OFFERING DNA (Rendered clean without code blocks)
 # ─────────────────────────────────────────────────────────────────────────────
 badge_class = "badge-emerald" if "Mature" in stage_name else "badge-amber" if "Growth" in stage_name else "badge-rose"
+
+containment_badge = (
+    '<span class="badge-pill badge-rose" style="margin-left:6px;">⚠️ CONTAINED — AWAITING EVIDENCE REVIEW</span>'
+    if (is_hcch and not gate_decision.allowed)
+    else (
+        '<span class="badge-pill badge-purple" style="margin-left:6px;">SYNTHETIC EXAMPLE</span>'
+        if dossier_origin == "LEGACY_REGISTRY"
+        else '<span class="badge-pill badge-purple" style="margin-left:6px;">SEBI ICDR 2018 Restated</span>'
+    )
+)
 
 if dossier.total_issue_size_cr and dossier.total_issue_size_cr > 0:
     offering_title = "Total Offering Value"
@@ -765,7 +833,7 @@ hero_html = f"""
         <div>
             <span class="badge-pill badge-sky">{dossier.filing_type} · {dossier.filing_date}</span>
             <span class="badge-pill {badge_class}" style="margin-left:6px;">Dickinson: {stage_name} {pattern}</span>
-            <span class="badge-pill badge-purple" style="margin-left:6px;">SEBI ICDR 2018 Restated</span>
+            {containment_badge}
             <span class="badge-pill badge-amber" style="margin-left:6px;">Context: {context_options[selected_context]}</span>
             <h1 style="color:#ffffff; font-size:1.85rem; font-weight:800; margin:8px 0 4px 0;">{dossier.company_name}</h1>
             <div style="color:#94a3b8; font-size:0.85rem;">
@@ -796,7 +864,12 @@ render_html(hero_html)
 # ─────────────────────────────────────────────────────────────────────────────
 # EXECUTIVE PERSONA DECISION COCKPIT (Clean rendering with zero-indent lines)
 # ─────────────────────────────────────────────────────────────────────────────
-p_view = generate_persona_decision_view(dossier, persona=selected_persona)
+p_view = generate_persona_decision_view(
+    dossier,
+    persona=selected_persona,
+    is_blocked=bool(is_hcch and not gate_decision.allowed),
+    blocked_reason="Filing review incomplete under P0-01 containment." if (is_hcch and not gate_decision.allowed) else "",
+)
 
 metric_cards_html = "".join([
     f'<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:6px; padding:8px 12px;">'
@@ -1491,8 +1564,16 @@ with tab_workpapers:
         render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
         render_html('<div class="bento-subtitle">Economic Value Creation & Reverse DCF Sizing</div>', unsafe_allow_html=True)
         render_html('<div class="bento-title">ROIC vs WACC Spread & Required Growth Hurdle</div>', unsafe_allow_html=True)
-        wacc_res = calculate_wacc_and_roic(dossier)
-        rev_dcf = calculate_reverse_dcf_hurdle(dossier)
+        wacc_res = calculate_wacc_and_roic(
+            dossier,
+            is_blocked=bool(is_hcch and not gate_decision.allowed),
+            blocked_reason="Unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
+        )
+        rev_dcf = calculate_reverse_dcf_hurdle(
+            dossier,
+            is_blocked=bool(is_hcch and not gate_decision.allowed),
+            blocked_reason="Unpriced / unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
+        )
 
         col_w1, col_w2, col_w3 = st.columns(3)
         with col_w1:
