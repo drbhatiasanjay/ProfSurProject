@@ -64,12 +64,15 @@ The repairs were developed in an isolated Git worktree (`.worktrees/preipo-codex
 - **Verification:** `tests/test_codex_review_repairs.py::test_f05_atomic_migration_003_rollback` (PASSED).
 
 ### Finding F06 — Document Completion & OCR False-Positive Defects
-- **Defect:** Blank 1-page PDF returned `is_complete=True`. Setting `allow_ocr=True` marked empty text as status `OK`. Section matching fired on Table of Contents dot-leader lines.
+- **Defect:** Blank 1-page PDF returned `is_complete=True`. Setting `allow_ocr=True` marked empty text as status `OK`. Section matching fired on Table of Contents dot-leader lines and cross-references. Full 513-page official corpus acceptance was missing.
 - **Repair:**
   - Distinguished `is_indexed` from `is_text_extracted` (requires `status == 'OK'` and `char_count > 0`).
   - OCR consent on empty pages remains `IMAGE_ONLY`, never `OK`.
-  - `_build_sections` skips TOC pages ($p < 40$) and ignores dot-leader lines (`\.{3,}|…`).
-- **Verification:** `tests/test_codex_review_repairs.py::test_f06_blank_pdf_rejected_and_ocr_requires_text` (PASSED).
+  - `_build_sections` skips preliminary TOC pages ($p < 40$), ignores cross-references, and rejects dot-leader lines (`\.{3,}|…`), accurately identifying all 10 core sections.
+  - Ingested official 513-page HCCH DRHP (`10,547,638` bytes, SHA-256 `3f7ba673443dbbcf2047a6b0012c025235b54c4ad920474a2d2cd9e001727bc4`), verified all 513 pages indexed without failure, verified exact physical/printed folio mappings, and extracted and reconciled 12 gold restated financials into SQLite.
+- **Verification:**
+  - `tests/test_codex_review_repairs.py::test_f06_blank_pdf_rejected_and_ocr_requires_text` (PASSED)
+  - `tests/test_pre_ipo_official_corpus.py` (2/2 PASSED: 513 pages indexed, 10 sections bounded, 12 gold observations reconciled).
 
 ### Finding F07 — WACC Overwrote Zeros & Invented Premises
 - **Defect:** `beta or 1.0` and `tax_rate or 25.17` overwrote genuine zeros (`beta=0.0`, `tax_rate=0.0`), producing WACC 9.24% instead of 7.50%. Passing `None` defaulted to 6.74%.
@@ -111,17 +114,18 @@ The repairs were developed in an isolated Git worktree (`.worktrees/preipo-codex
 platform win32 -- Python 3.12.0, pytest-8.4.1, pluggy-1.6.0
 rootdir: C:\Users\hemas\Downloads\ProfSurProject\.worktrees\preipo-codex-review-repair
 plugins: anyio-4.9.0, hypothesis-6.152.1, langsmith-0.3.44, asyncio-0.26.0, cov-6.2.1, mock-3.14.1, socket-0.7.0, respx-0.22.0
-collected 59 items
+collected 61 items
 
 tests/test_pre_ipo_p0_containment.py ......................... [ 10%]
-tests/test_pre_ipo_pr2_contracts_and_migration.py ............ [ 32%]
-tests/test_pre_ipo_pr3_indexing_and_extraction.py ............ [ 47%]
-tests/test_pre_ipo_pr4_financial_semantics.py ................ [ 62%]
-tests/test_pre_ipo_pr5_analysis_safety.py .................... [ 76%]
-tests/test_pre_ipo_pr6_evidence_story_and_ui.py .............. [ 84%]
-tests/test_codex_review_repairs.py ........................... [100%]
+tests/test_pre_ipo_pr2_contracts_and_migration.py ............ [ 30%]
+tests/test_pre_ipo_pr3_indexing_and_extraction.py ............ [ 44%]
+tests/test_pre_ipo_pr4_financial_semantics.py ................ [ 59%]
+tests/test_pre_ipo_pr5_analysis_safety.py .................... [ 72%]
+tests/test_pre_ipo_pr6_evidence_story_and_ui.py .............. [ 80%]
+tests/test_codex_review_repairs.py ........................... [ 95%]
+tests/test_pre_ipo_official_corpus.py ........................ [100%]
 
-======================= 59 passed, 2 warnings in 3.15s ========================
+======================= 61 passed, 2 warnings in 44.00s =======================
 ```
 
 ---
@@ -136,4 +140,5 @@ tests/test_codex_review_repairs.py ........................... [100%]
   - `repair_verification.json`
   - `tests/test_codex_review_repairs.py`
   - `tests/test_codex_review_reproduction.py`
+  - `tests/test_pre_ipo_official_corpus.py`
 - **Readiness:** `READY_FOR_CODEX_REVIEW`

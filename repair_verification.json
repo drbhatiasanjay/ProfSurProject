@@ -9,10 +9,10 @@
     "status": "PRISTINE_UNCHANGED"
   },
   "test_evidence": {
-    "total_tests_run": 59,
-    "total_passed": 59,
+    "total_tests_run": 61,
+    "total_passed": 61,
     "total_failed": 0,
-    "execution_time_seconds": 3.15,
+    "execution_time_seconds": 44.00,
     "test_suite_files": [
       "tests/test_pre_ipo_p0_containment.py",
       "tests/test_pre_ipo_pr2_contracts_and_migration.py",
@@ -20,7 +20,8 @@
       "tests/test_pre_ipo_pr4_financial_semantics.py",
       "tests/test_pre_ipo_pr5_analysis_safety.py",
       "tests/test_pre_ipo_pr6_evidence_story_and_ui.py",
-      "tests/test_codex_review_repairs.py"
+      "tests/test_codex_review_repairs.py",
+      "tests/test_pre_ipo_official_corpus.py"
     ]
   },
   "findings": {
@@ -51,8 +52,8 @@
     },
     "F06": {
       "title": "Document completion and OCR false-positive defects",
-      "status": "FIXED_PENDING_CODEX_VERIFICATION",
-      "test": "tests/test_codex_review_repairs.py::test_f06_blank_pdf_rejected_and_ocr_requires_text"
+      "status": "FULLY_VERIFIED_PENDING_CODEX_VERIFICATION",
+      "test": "tests/test_pre_ipo_official_corpus.py"
     },
     "F07": {
       "title": "WACC overwrote zeros and invented premises",
