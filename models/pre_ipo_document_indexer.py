@@ -606,3 +606,68 @@ class DocumentIndexer:
             cand.reconciliation_error = "Value substring not found on cited page."
 
         return cand
+
+
+def extract_single_page_bytes(pdf_bytes: bytes, physical_page: int) -> bytes:
+    """Extract a single physical page (1-indexed) from a PDF stream into a standalone PDF."""
+    import pypdf
+    import io
+    reader = pypdf.PdfReader(io.BytesIO(pdf_bytes), strict=False)
+    total_pages = len(reader.pages)
+    if physical_page < 1 or physical_page > total_pages:
+        raise ValueError(f"physical_page {physical_page} out of bounds (1-{total_pages})")
+    writer = pypdf.PdfWriter()
+    writer.add_page(reader.pages[physical_page - 1])
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
+def extract_page_slice_text(
+    pages: Dict[int, Any],
+    physical_page: int,
+    quote_target: Optional[str] = None,
+    context_lines: int = 6,
+) -> Dict[str, Any]:
+    """Retrieve indexed text for a page with focal snippet extraction around quote_target."""
+    page_art = pages.get(physical_page)
+    if not page_art:
+        return {
+            "physical_page": physical_page,
+            "found": False,
+            "snippet": f"[No indexed page text available for physical page {physical_page}]",
+            "full_text": "",
+        }
+    text = getattr(page_art, "text", "")
+    lines = text.splitlines()
+    if not quote_target or not quote_target.strip():
+        snippet = "\n".join(lines[:context_lines * 2])
+        return {
+            "physical_page": physical_page,
+            "found": True,
+            "snippet": snippet,
+            "full_text": text,
+        }
+
+    target_clean = quote_target.lower().strip()
+    match_idx = -1
+    for idx, line in enumerate(lines):
+        if target_clean in line.lower():
+            match_idx = idx
+            break
+
+    if match_idx >= 0:
+        start_idx = max(0, match_idx - context_lines)
+        end_idx = min(len(lines), match_idx + context_lines + 1)
+        snippet = "\n".join(lines[start_idx:end_idx])
+    else:
+        snippet = "\n".join(lines[:context_lines * 2])
+
+    return {
+        "physical_page": physical_page,
+        "found": True,
+        "target_matched": (match_idx >= 0),
+        "snippet": snippet,
+        "full_text": text,
+    }
+

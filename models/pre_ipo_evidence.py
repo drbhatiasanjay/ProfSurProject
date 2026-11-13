@@ -1112,3 +1112,86 @@ def snapshots(owner,company):
     actor(owner)
     with connection() as conn:
         return [json.loads(r[0]) for r in conn.execute("SELECT payload FROM pre_ipo_evidence_snapshots WHERE owner=? AND company=? ORDER BY created_at DESC,id",(owner,company))]
+
+
+def record_observation_review(
+    conn: Optional[sqlite3.Connection],
+    owner: str,
+    company: str,
+    observation_id: str,
+    review_state: str,
+    reviewer: str,
+    review_reason: str,
+    revision: int = 1,
+) -> Dict[str, Any]:
+    """Records an auditor sign-off or discrepancy flag on a prospectus observation.
+
+    Enforces fail-closed rules:
+    - Reviewer cannot be empty or whitespace.
+    - review_reason cannot be empty or whitespace.
+    - review_state must be one of REVIEW ("ACCEPTED", "DISPUTED", "REJECTED", "UNREVIEWED", "SUPERSEDED", "WITHDRAWN").
+    - If review_state == 'ACCEPTED', observation must exist or be inserted with valid audit attributes.
+    """
+    if not owner or not str(owner).strip():
+        raise PermissionError("Authenticated owner required for observation review")
+    if not reviewer or not str(reviewer).strip():
+        raise ValueError("Accepted observation requires an identified reviewer. Anonymous review blocked.")
+    if not review_reason or not str(review_reason).strip():
+        raise ValueError("Accepted observation requires an explicit review_reason / rationale.")
+    if review_state not in REVIEW:
+        raise ValueError(f"Invalid review_state '{review_state}'. Must be one of {REVIEW}")
+
+    def _execute(c):
+        row = c.execute(
+            "SELECT * FROM pre_ipo_observations WHERE owner=? AND company=? AND observation_id=? AND revision=?",
+            (owner, company, observation_id, revision)
+        ).fetchone()
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        if not row:
+            c.execute("""
+                INSERT INTO pre_ipo_observations (
+                    owner, company, observation_id, revision, source_id, entity, metric_id,
+                    review_state, reviewer, reviewed_at, review_reason, created_at, origin
+                ) VALUES (?, ?, ?, ?, 'in_app_review', ?, ?, ?, ?, ?, ?, ?, 'FILING_FACT')
+            """, (owner, company, observation_id, revision, company, observation_id,
+                  review_state, reviewer.strip(), now_iso, review_reason.strip(), now_iso))
+        else:
+            c.execute("""
+                UPDATE pre_ipo_observations
+                SET review_state = ?, reviewer = ?, reviewed_at = ?, review_reason = ?
+                WHERE owner = ? AND company = ? AND observation_id = ? AND revision = ?
+            """, (review_state, reviewer.strip(), now_iso, review_reason.strip(),
+                  owner, company, observation_id, revision))
+
+        return {
+            "owner": owner,
+            "company": company,
+            "observation_id": observation_id,
+            "revision": revision,
+            "review_state": review_state,
+            "reviewer": reviewer.strip(),
+            "reviewed_at": now_iso,
+            "review_reason": review_reason.strip(),
+        }
+
+    if conn is not None:
+        return _execute(conn)
+    else:
+        with connection() as c:
+            return _execute(c)
+
+
+def get_observation_review(owner: str, company: str, observation_id: str, revision: int = 1) -> Optional[Dict[str, Any]]:
+    """Fetch the latest review state for an observation."""
+    actor(owner)
+    with connection() as conn:
+        row = conn.execute(
+            "SELECT observation_id, review_state, reviewer, reviewed_at, review_reason FROM pre_ipo_observations "
+            "WHERE owner=? AND company=? AND observation_id=? AND revision=?",
+            (owner, company, observation_id, revision)
+        ).fetchone()
+        if not row:
+            return None
+        return dict(row)
+

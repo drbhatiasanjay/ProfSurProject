@@ -39,11 +39,18 @@ def generate_pre_ipo_board_deck(
     snapshot_hash: Optional[str] = None,
     result_snapshot_hash: Optional[str] = None,
     is_production: bool = True,
+    wacc_result: Optional[dict] = None,
+    reverse_dcf_result: Optional[dict] = None,
+    stress_matrix: Optional[dict] = None,
+    capability_decisions: Optional[dict] = None,
+    decision_support_policy: str = "NEUTRAL_EVIDENCE_BASED",
 ) -> bytes:
     """
     Builds a vector-grade institutional 8-slide PowerPoint deck for the target deal.
     Returns bytes buffer for Streamlit st.download_button.
     Enforces fail-closed export gating under P0 containment.
+    Guarantees 100% numerical parity with screen calculations when precomputed
+    wacc_result, reverse_dcf_result, or stress_matrix are passed by caller.
     """
     assert_export_allowed(
         dossier=dossier,
@@ -110,8 +117,8 @@ def generate_pre_ipo_board_deck(
         current_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
         cash_cr=dossier.indebtedness.cash_and_equivalents_cr,
     )
-    wacc_res = calculate_wacc_and_roic(dossier)
-    rev_dcf = calculate_reverse_dcf_hurdle(dossier)
+    wacc_res = wacc_result if wacc_result is not None else calculate_wacc_and_roic(dossier)
+    rev_dcf = reverse_dcf_result if reverse_dcf_result is not None else calculate_reverse_dcf_hurdle(dossier)
     cross_res = generate_cmie_crosswalk_coverage(dossier)
     eq_findings = generate_equity_question_answers(dossier)
 
@@ -469,12 +476,15 @@ def generate_pre_ipo_board_deck(
         p1.font.color.rgb = accent_gold if r_idx == 4 else text_white
 
     # Stress matrix on right
-    stress_res = generate_2d_sensitivity_matrix(
-        base_ebitda_cr=latest.ebitda_cr,
-        gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-        base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
-        floating_debt_portion_pct=dossier.indebtedness.floating_rate_portion_pct,
-    )
+    if stress_matrix is not None:
+        stress_res = stress_matrix
+    else:
+        stress_res = generate_2d_sensitivity_matrix(
+            base_ebitda_cr=latest.ebitda_cr,
+            gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
+            base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+            floating_debt_portion_pct=dossier.indebtedness.floating_rate_portion_pct,
+        )
     s_table_shape = s6.shapes.add_table(5, 5, Inches(6.8), Inches(1.8), Inches(5.733), Inches(4.8))
     s_table = s_table_shape.table
     hikes = stress_res.get("rate_hikes_bps", [0, 50, 100, 150])
@@ -613,8 +623,13 @@ def generate_pre_ipo_board_deck(
     box_ic.line.color.rgb = accent_gold
     tf_ic = box_ic.text_frame
     tf_ic.word_wrap = True
-    raw_verdict = ic.underwriting_verdict if (ic and ic.underwriting_verdict) else "PENDING_EVIDENCE_REVIEW"
-    clean_verdict = raw_verdict.replace("APPROVE WITH COVENANTS", "CONDITIONAL MONITORING WITH COVENANTS").replace("APPROVE", "CONDITIONAL REVIEW")
+
+    # Resolves Codex Finding F10: Replace string replace hacks with explicit, neutral policy
+    if decision_support_policy == "NEUTRAL_EVIDENCE_BASED" or not ic or not ic.underwriting_verdict:
+        clean_verdict = "CONDITIONAL MONITORING & COVENANT ENFORCEMENT"
+    else:
+        clean_verdict = "CONDITIONAL MONITORING & COVENANT ENFORCEMENT" if "APPROVE" in ic.underwriting_verdict else ic.underwriting_verdict
+
     p = tf_ic.paragraphs[0]
     p.text = f"DECISION SUPPORT STANCE: {clean_verdict}"
     p.font.bold = True

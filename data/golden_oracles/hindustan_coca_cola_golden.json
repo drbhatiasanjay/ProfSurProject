@@ -1,0 +1,107 @@
+{
+  "deal_id": "hindustan_coca_cola",
+  "company_name": "Hindustan Coca-Cola Holdings Limited",
+  "filing_type": "DRHP",
+  "filing_date": "October 2026",
+  "sector": "Non-Alcoholic Ready-to-Drink Beverages",
+  "face_value_inr": 10.0,
+  "offer_details": {
+    "total_issue_size_cr": 0.0,
+    "fresh_issue_cr": 0.0,
+    "ofs_cr": 0.0,
+    "offered_shares_count": 997461456,
+    "fresh_issue_pct": 0.0,
+    "ofs_pct": 100.0
+  },
+  "restated_financials": [
+    {
+      "period": "FY24",
+      "revenue_ops_cr": 14021.55,
+      "ebitda_cr": 1777.94,
+      "pat_cr": 2812.1,
+      "cfo_cr": 284.69,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 8897.18,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 68,
+      "printed_folio": "Page 58",
+      "table_heading": "Restated Summary Statement of Profit and Loss"
+    },
+    {
+      "period": "FY25",
+      "revenue_ops_cr": 12751.29,
+      "ebitda_cr": 1640.02,
+      "pat_cr": 759.9,
+      "cfo_cr": 1572.7,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 9649.8,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 68,
+      "printed_folio": "Page 58",
+      "table_heading": "Restated Summary Statement of Profit and Loss"
+    },
+    {
+      "period": "FY26",
+      "revenue_ops_cr": 11548.58,
+      "ebitda_cr": 1353.04,
+      "pat_cr": 1165.05,
+      "cfo_cr": 2290.19,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 9760.91,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 68,
+      "printed_folio": "Page 58",
+      "table_heading": "Restated Summary Statement of Profit and Loss"
+    }
+  ],
+  "provenance_citations": [
+    {
+      "fact_key": "financials_FY24_revenue",
+      "value": 14021.55,
+      "section": "Section V",
+      "physical_page": 68,
+      "printed_folio": "Page 58",
+      "table_or_paragraph": "Restated Summary Statement of Profit and Loss",
+      "excerpt": "Revenue from Operations for FY24: Rs. 14021.55 Cr"
+    },
+    {
+      "fact_key": "financials_FY25_revenue",
+      "value": 12751.29,
+      "section": "Section V",
+      "physical_page": 68,
+      "printed_folio": "Page 58",
+      "table_or_paragraph": "Restated Summary Statement of Profit and Loss",
+      "excerpt": "Revenue from Operations for FY25: Rs. 12751.29 Cr"
+    },
+    {
+      "fact_key": "financials_FY26_revenue",
+      "value": 11548.58,
+      "section": "Section V",
+      "physical_page": 68,
+      "printed_folio": "Page 58",
+      "table_or_paragraph": "Restated Summary Statement of Profit and Loss",
+      "excerpt": "Revenue from Operations for FY26: Rs. 11548.58 Cr"
+    },
+    {
+      "fact_key": "objects_of_offer_total",
+      "value": 0.0,
+      "section": "Section III",
+      "physical_page": 64,
+      "printed_folio": "Page 54",
+      "table_or_paragraph": "Objects of the Offer",
+      "excerpt": "Total Fresh Issue / Offer Objects: Rs. 0.0 Cr"
+    },
+    {
+      "fact_key": "cap_table_promoter_holding_pre_pct",
+      "value": 100.0,
+      "section": "Section III",
+      "physical_page": 66,
+      "printed_folio": "Page 56",
+      "table_or_paragraph": "Capital Structure",
+      "excerpt": "Promoter pre-issue shareholding: 100.0%"
+    }
+  ]
+}

@@ -728,6 +728,16 @@ with col_act:
         st.caption(":material/block: P0-01 Containment Active")
     else:
         try:
+            wacc_calc = calculate_wacc_and_roic(
+                dossier,
+                is_blocked=bool(is_hcch and not gate_decision.allowed),
+                blocked_reason="P0-01 Containment active: awaiting official DRHP review and acceptance."
+            )
+            dcf_calc = calculate_reverse_dcf_hurdle(
+                dossier,
+                is_blocked=bool(is_hcch and not gate_decision.allowed),
+                blocked_reason="P0-01 Containment active: awaiting official DRHP review and acceptance."
+            )
             deck_bytes = generate_pre_ipo_board_deck(
                 dossier=dossier,
                 snapshot_id=active_snapshot_id,
@@ -735,6 +745,9 @@ with col_act:
                 snapshot_hash=active_snapshot_hash,
                 result_snapshot_hash=active_snapshot_hash,
                 is_production=True,
+                wacc_result=wacc_calc,
+                reverse_dcf_result=dcf_calc,
+                decision_support_policy="NEUTRAL_EVIDENCE_BASED",
             )
             st.download_button(
                 label="Export Deck (PPTX)",
@@ -1457,6 +1470,79 @@ with tab_workpapers:
         st.dataframe(pd.DataFrame(st_rows), use_container_width=True, hide_index=True)
         stress_nar = generate_stress_narrative(dossier, stress_res, persona=selected_persona)
         render_six_point_narrative(stress_nar, persona_title=persona_options[selected_persona])
+
+        # ── Item 2: 3D Multi-Parameter Covenant Sensitivity Grid & Page 28 Bridge ──
+        st.markdown("---")
+        render_html("""
+        <div class="bento-subtitle">3D Multi-Parameter Covenant Headroom Grid</div>
+        <div class="bento-title">EBITDA Margin Shock × Benchmark Rate Hike × Fresh Issue Prepayment Tensor</div>
+        """, unsafe_allow_html=True)
+
+        c_3d1, c_3d2 = st.columns([1.5, 2.5])
+        with c_3d1:
+            sel_prepay_pct = st.select_slider(
+                "Fresh Issue Allocated to Debt Prepayment (%):",
+                options=[0, 25, 50, 75, 100],
+                value=50,
+                key=f"slider_prepay_{dossier.deal_id}",
+                help="Models balance sheet repair by channeling primary IPO proceeds directly into retiring interest-bearing bank debt."
+            )
+        with c_3d2:
+            fresh_cap = dossier.fresh_issue_cr or 0.0
+            retired_debt = fresh_cap * (sel_prepay_pct / 100.0)
+            st.caption(f"💡 **Balance Sheet Sizing:** At **{sel_prepay_pct}%** allocation of **₹{fresh_cap:,.1f} Cr** fresh issue, **₹{retired_debt:,.1f} Cr** of funded debt is retired.")
+
+        from models.pre_ipo_engine import compute_3d_covenant_sensitivity_matrix
+        rev_cr = latest.revenue_ops_cr if latest.revenue_ops_cr else max(0.01, latest.ebitda_cr)
+        sens_3d = compute_3d_covenant_sensitivity_matrix(
+            base_ebitda_cr=latest.ebitda_cr,
+            base_revenue_cr=rev_cr,
+            base_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
+            base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+            fresh_issue_cr=fresh_cap,
+            debt_prepay_allocations_pct=[sel_prepay_pct],
+            covenant_threshold=3.0,
+        )
+
+        slice_data = sens_3d["slices"][0]
+        remaining_debt = slice_data["remaining_debt_cr"]
+        st.markdown(f"**Effective Post-Issue Funded Debt:** `₹{remaining_debt:,.1f} Cr` (Reduced from `₹{dossier.indebtedness.funded_bank_debt_cr:,.1f} Cr`)")
+
+        rate_cols = sens_3d["rate_shocks_bps"]
+        grid_rows = []
+        for r_entry in slice_data["matrix"]:
+            m_bps = r_entry["margin_shock_bps"]
+            m_pct = r_entry["shocked_margin_pct"]
+            row_dict = {"Margin Shock (bps)": f"{m_bps:+d} bps ({m_pct:.1f}%)"}
+            for r_res in r_entry["rate_results"]:
+                r_bps = r_res["rate_shock_bps"]
+                icr_val = r_res["icr"]
+                status = r_res["status"]
+                import math
+                if math.isinf(icr_val):
+                    display_val = "∞ (Exempt)"
+                elif status == "NEGATIVE_EBITDA":
+                    display_val = "0.00x (Loss)"
+                else:
+                    display_val = f"{icr_val:.2f}x"
+                row_dict[f"+{r_bps} bps Rate"] = display_val
+            grid_rows.append(row_dict)
+
+        st.dataframe(pd.DataFrame(grid_rows), use_container_width=True, hide_index=True)
+
+        br_col1, br_col2 = st.columns([2, 1])
+        with br_col1:
+            st.caption("🛡️ **Bank Covenant Benchmark: 3.00x ICR**. Headroom reflects distance above minimum loan covenants.")
+        with br_col2:
+            if st.button("🚀 Bridge to Page 28: 12-Qtr CFADS Engine", key=f"btn_bridge_p28_{dossier.deal_id}", use_container_width=True):
+                st.session_state["covenant_bridge_scenario"] = {
+                    "company_name": dossier.company_name,
+                    "base_ebitda": latest.ebitda_cr,
+                    "funded_debt": remaining_debt,
+                    "wair_pct": dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+                    "prepay_pct": sel_prepay_pct,
+                }
+                st.success("Scenario parameters primed for Page 28. Switch to '28 Covenant Headroom' in sidebar.")
 
     # ── SUBTAB 4: VALUATION, PEERS, DCF & FORENSICS ──
     with subtab_val:

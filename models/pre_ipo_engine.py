@@ -383,6 +383,108 @@ def generate_2d_sensitivity_matrix(
     }
 
 
+def compute_3d_covenant_sensitivity_matrix(
+    base_ebitda_cr: float,
+    base_revenue_cr: float,
+    base_gross_debt_cr: float,
+    base_wair_pct: float = 9.0,
+    fresh_issue_cr: float = 0.0,
+    margin_shocks_bps: Optional[List[int]] = None,
+    rate_shocks_bps: Optional[List[int]] = None,
+    debt_prepay_allocations_pct: Optional[List[int]] = None,
+    covenant_threshold: float = 3.0,
+) -> Dict[str, Any]:
+    """
+    Computes a 3-dimensional multi-parameter covenant sensitivity tensor:
+    1. Operating Margin Shock (bps) -> EBITDA impact
+    2. Benchmark Rate Shock (bps) -> Interest cost impact
+    3. IPO Fresh Issue Debt Prepayment Allocation (%) -> Gross debt reduction
+
+    Evaluates dynamic Interest Coverage Ratio (ICR) and headroom against covenant_threshold.
+    Safely handles zero-debt issuers without ZeroDivisionError (returns float('inf')).
+    """
+    if margin_shocks_bps is None:
+        margin_shocks_bps = [-300, -200, -100, 0, 100]
+    if rate_shocks_bps is None:
+        rate_shocks_bps = [0, 50, 100, 150, 200, 300]
+    if debt_prepay_allocations_pct is None:
+        debt_prepay_allocations_pct = [0, 25, 50, 75, 100]
+
+    denom_rev = base_revenue_cr if base_revenue_cr > 0 else max(0.01, base_ebitda_cr)
+    base_margin = base_ebitda_cr / denom_rev
+
+    slices = []
+    for prepay_pct in debt_prepay_allocations_pct:
+        prepay_amount = fresh_issue_cr * (prepay_pct / 100.0)
+        shocked_debt = max(0.0, base_gross_debt_cr - prepay_amount)
+
+        slice_matrix = []
+        for m_shock in margin_shocks_bps:
+            shocked_margin = base_margin + (m_shock / 10000.0)
+            shocked_ebitda = denom_rev * shocked_margin
+            
+            rate_results = []
+            for r_shock in rate_shocks_bps:
+                shocked_rate = (base_wair_pct + (r_shock / 100.0)) / 100.0
+                total_interest = shocked_debt * shocked_rate
+
+                if shocked_ebitda <= 0.0:
+                    icr = 0.0
+                    status = "NEGATIVE_EBITDA"
+                    headroom = -covenant_threshold
+                elif shocked_debt == 0.0 or total_interest == 0.0:
+                    icr = float("inf")
+                    status = "COVENANT_EXEMPT_ZERO_DEBT"
+                    headroom = float("inf")
+                else:
+                    raw_icr = shocked_ebitda / total_interest
+                    icr = round(raw_icr, 2)
+                    headroom = round(icr - covenant_threshold, 2)
+                    if icr >= covenant_threshold:
+                        status = "COMPLIANT"
+                    elif icr >= 1.50:
+                        status = "WATCHLIST"
+                    else:
+                        status = "BREACH"
+
+                rate_results.append({
+                    "rate_shock_bps": r_shock,
+                    "shocked_rate_pct": round((base_wair_pct + (r_shock / 100.0)), 2),
+                    "interest_expense_cr": round(total_interest, 2),
+                    "icr": icr,
+                    "headroom": headroom,
+                    "status": status,
+                })
+
+            slice_matrix.append({
+                "margin_shock_bps": m_shock,
+                "shocked_margin_pct": round(shocked_margin * 100.0, 2),
+                "shocked_ebitda_cr": round(shocked_ebitda, 2),
+                "rate_results": rate_results,
+            })
+
+        slices.append({
+            "debt_prepay_allocation_pct": prepay_pct,
+            "prepay_amount_cr": round(prepay_amount, 2),
+            "remaining_debt_cr": round(shocked_debt, 2),
+            "matrix": slice_matrix,
+        })
+
+    return {
+        "base_ebitda_cr": base_ebitda_cr,
+        "base_revenue_cr": base_revenue_cr,
+        "base_gross_debt_cr": base_gross_debt_cr,
+        "base_wair_pct": base_wair_pct,
+        "fresh_issue_cr": fresh_issue_cr,
+        "covenant_threshold": covenant_threshold,
+        "margin_shocks_bps": margin_shocks_bps,
+        "rate_shocks_bps": rate_shocks_bps,
+        "debt_prepay_allocations_pct": debt_prepay_allocations_pct,
+        "slices": slices,
+    }
+
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # 6-POINT INSTITUTIONAL FINDINGS & PERSONA DECISION ENGINE
 # ─────────────────────────────────────────────────────────────────────────────

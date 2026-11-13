@@ -1,0 +1,107 @@
+{
+  "deal_id": "ntpc_green",
+  "company_name": "NTPC Green Energy Limited (NGEL)",
+  "filing_type": "RHP",
+  "filing_date": "November 2024",
+  "sector": "Renewable Energy Utilities & Solar/Wind Power",
+  "face_value_inr": 10.0,
+  "offer_details": {
+    "total_issue_size_cr": 10000.0,
+    "fresh_issue_cr": 10000.0,
+    "ofs_cr": 0.0,
+    "offered_shares_count": null,
+    "fresh_issue_pct": 100.0,
+    "ofs_pct": 0.0
+  },
+  "restated_financials": [
+    {
+      "period": "FY22",
+      "revenue_ops_cr": 910.42,
+      "ebitda_cr": 795.1,
+      "pat_cr": 94.74,
+      "cfo_cr": 680.2,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 2150.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "RHP Section V",
+      "physical_page": 182,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Statement of Profit and Loss"
+    },
+    {
+      "period": "FY23",
+      "revenue_ops_cr": 1169.7,
+      "ebitda_cr": 1025.4,
+      "pat_cr": 171.23,
+      "cfo_cr": 890.5,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 4800.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "RHP Section V",
+      "physical_page": 182,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Statement of Profit and Loss"
+    },
+    {
+      "period": "FY24",
+      "revenue_ops_cr": 1962.6,
+      "ebitda_cr": 1746.5,
+      "pat_cr": 344.72,
+      "cfo_cr": 1480.1,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 7500.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "RHP Section V",
+      "physical_page": 182,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Statement of Profit and Loss"
+    }
+  ],
+  "provenance_citations": [
+    {
+      "fact_key": "financials_FY22_revenue",
+      "value": 910.42,
+      "section": "RHP Section V",
+      "physical_page": 182,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Statement of Profit and Loss",
+      "excerpt": "Revenue from Operations for FY22: Rs. 910.42 Cr"
+    },
+    {
+      "fact_key": "financials_FY23_revenue",
+      "value": 1169.7,
+      "section": "RHP Section V",
+      "physical_page": 182,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Statement of Profit and Loss",
+      "excerpt": "Revenue from Operations for FY23: Rs. 1169.7 Cr"
+    },
+    {
+      "fact_key": "financials_FY24_revenue",
+      "value": 1962.6,
+      "section": "RHP Section V",
+      "physical_page": 182,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Statement of Profit and Loss",
+      "excerpt": "Revenue from Operations for FY24: Rs. 1962.6 Cr"
+    },
+    {
+      "fact_key": "objects_of_offer_total",
+      "value": 0.0,
+      "section": "RHP Section III",
+      "physical_page": 74,
+      "printed_folio": "",
+      "table_or_paragraph": "Objects of the Offer",
+      "excerpt": "Total Fresh Issue / Offer Objects: Rs. 0.0 Cr"
+    },
+    {
+      "fact_key": "cap_table_promoter_holding_pre_pct",
+      "value": 100.0,
+      "section": "RHP Section III",
+      "physical_page": 68,
+      "printed_folio": "",
+      "table_or_paragraph": "Capital Structure",
+      "excerpt": "Promoter pre-issue shareholding: 100.0%"
+    }
+  ]
+}
