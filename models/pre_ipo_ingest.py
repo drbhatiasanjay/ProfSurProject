@@ -658,10 +658,31 @@ class PreIPOIngestionEngine:
 
                     reader = pypdf.PdfReader(stream)
                     page_count = len(reader.pages)
-                    pages_to_read = min(page_count, 60)
-                    for i in range(pages_to_read):
-                        p_text = reader.pages[i].extract_text() or ""
-                        pages_text.append((i + 1, p_text))
+                    if page_count <= 60:
+                        for i in range(page_count):
+                            p_text = reader.pages[i].extract_text() or ""
+                            pages_text.append((i + 1, p_text))
+                    else:
+                        # Section-aware streaming indexer for massive 400-900 page statutory DRHPs
+                        from models.prospectus_indexer import ProspectusSectionIndexer
+                        try:
+                            if hasattr(stream, "seek"):
+                                stream.seek(0)
+                            raw_bytes = stream.read() if hasattr(stream, "read") else bytes(stream)
+                            indexer = ProspectusSectionIndexer(raw_bytes)
+                            scanned_indices = set(range(min(25, page_count)))
+                            for sec in ["FINANCIALS", "OBJECTS", "CAPITAL_STRUCTURE", "INDEBTEDNESS"]:
+                                scanned_indices.update(indexer.get_section_pages(sec))
+                            for idx in sorted(list(scanned_indices))[:85]:
+                                try:
+                                    p_text = reader.pages[idx].extract_text() or ""
+                                    pages_text.append((idx + 1, p_text))
+                                except Exception:
+                                    continue
+                        except Exception:
+                            for i in range(min(page_count, 60)):
+                                p_text = reader.pages[i].extract_text() or ""
+                                pages_text.append((i + 1, p_text))
                     extracted_text = "\n".join([pt[1] for pt in pages_text])
 
                     if isinstance(document_source, (str, os.PathLike)) and hasattr(stream, "close"):
@@ -965,6 +986,30 @@ class PreIPOIngestionEngine:
                 lines = [l.strip() for l in ptext.split("\n") if l.strip()]
                 for i, line in enumerate(lines):
                     for mkey, mpat in METRIC_PATTERNS:
+                        # 1. Inline multi-column row: e.g. "Revenue from operations 140215.45 127512.93 115485.80"
+                        m_inline = re.match(r"^(" + mpat + r")(?:\s*\([^\)]*\))?\s+(.*)$", line, re.IGNORECASE)
+                        if m_inline:
+                            parts = m_inline.group(2).split()
+                            part_nums = [(cls._clean_financial_number(p), p) for p in parts]
+                            valid_nums = [p for p in part_nums if p[0] is not None]
+                            if len(valid_nums) >= 2:
+                                for p_idx, p_name in enumerate(detected_periods):
+                                    if p_idx < len(valid_nums):
+                                        num_val, raw_str = valid_nums[p_idx]
+                                        local_scale = scale
+                                        line_lower = line.lower()
+                                        if "mn" in line_lower or "million" in line_lower:
+                                            local_scale = 0.1
+                                        elif "lakh" in line_lower or "lac" in line_lower:
+                                            local_scale = 0.01
+                                        elif "cr" in line_lower or "crore" in line_lower:
+                                            local_scale = 1.0
+                                        scaled_val = round(num_val * local_scale, 2)
+                                        periods_data[p_name][mkey] = scaled_val
+                                        provenance_map[p_name][mkey] = (page_num, line, raw_str)
+                                continue
+
+                        # 2. Metric on standalone line followed by numbers on subsequent lines
                         if re.search(r"^" + mpat + r"$", line, re.IGNORECASE) or re.search(r"^" + mpat + r"\s*[:\(\[]", line, re.IGNORECASE):
                             collected_nums = []
                             j = i + 1
@@ -1149,13 +1194,15 @@ class PreIPOIngestionEngine:
                         )
                     )
                 elif m_key in p_dict:
+                    item_page = p_prov[m_key][0] if m_key in p_prov else None
+                    page_cite = f"DRHP Section V, Page {item_page}" if item_page else f"Audited Statement ({p})"
                     audit_items.append(
                         IngestionAuditItem(
                             field_name=f"{m_name} ({p})",
                             raw_extracted_value=f"{m_val:,.2f}" if m_val is not None else "0.00",
                             normalized_metric=f"₹{m_val:,.2f} Cr" if m_val is not None else "₹0.00 Cr",
                             status="FOUND_AND_RECONCILED",
-                            citation=f"Audited Statement ({p})",
+                            citation=page_cite,
                             confidence_score=1.0,
                         )
                     )

@@ -102,9 +102,21 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
     set_slide_background(s1)
     add_header(s1, f"{dossier.company_name} — Pre-IPO Deal Anatomy", f"{dossier.filing_type} Filed {dossier.filing_date} · SEBI (ICDR) 2018 Analysis", 1)
 
+    offer_size_card = (
+        f"Rs. {dossier.total_issue_size_cr:,.2f} Cr"
+        if (dossier.total_issue_size_cr and dossier.total_issue_size_cr > 0)
+        else (f"{dossier.offered_shares_count:,} Shares" if dossier.offered_shares_count else "Undisclosed [●]")
+    )
+    offer_split_card = (
+        f"{dossier.fresh_issue_pct:.0f}% Fresh / {dossier.ofs_pct:.0f}% OFS"
+        if (dossier.total_issue_size_cr and dossier.total_issue_size_cr > 0)
+        else ("100% OFS (Nil Fresh Issue)" if dossier.offered_shares_count else "Awaiting RHP Discovery")
+    )
+    offer_sub_card = "100% Offering Value" if (dossier.total_issue_size_cr and dossier.total_issue_size_cr > 0) else "Book-Building Discovery [●]"
+
     cards = [
-        ("TOTAL OFFER SIZE", f"Rs. {dossier.total_issue_size_cr:,.2f} Cr", "100% Offering Value"),
-        ("OFFER SPLIT", f"{dossier.fresh_issue_pct:.0f}% Fresh / {dossier.ofs_pct:.0f}% OFS", "Proceeds Allocation"),
+        ("TOTAL OFFER SIZE", offer_size_card, offer_sub_card),
+        ("OFFER SPLIT", offer_split_card, "Proceeds Allocation"),
         ("LATEST REVENUE (ANN.)", f"Rs. {latest.revenue_ops_cr:,.1f} Cr", "Restated Consolidated"),
         ("RESTATED EBITDA", f"Rs. {latest.ebitda_cr:,.1f} Cr", f"Margin: {(latest.ebitda_cr/max(1,latest.revenue_ops_cr))*100:.1f}%"),
         ("DICKINSON STAGE", stage_name, f"Triplet: {pattern}"),
@@ -361,8 +373,10 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
     add_header(s5, "Use of Proceeds & Debt Deleveraging Waterfall", "SEBI Reg 7 GCP <= 25% Compliance & Pro-Forma EPS Accretion", 5)
 
     obj = dossier.objects_of_offer
+    fresh_val_str = f"Rs. {dossier.fresh_issue_cr:,.1f} Cr" if dossier.fresh_issue_cr > 0 else "Nil (Pure OFS)"
+    fresh_sub_str = "100% Primary Proceeds" if dossier.fresh_issue_cr > 0 else "Company Proceeds: Rs. 0.0"
     waterfall_cards = [
-        ("GROSS FRESH ISSUE", f"Rs. {dossier.fresh_issue_cr:,.1f} Cr", "100% Primary Proceeds"),
+        ("GROSS FRESH ISSUE", fresh_val_str, fresh_sub_str),
         ("DEBT PREPAYMENT", f"Rs. {obj.debt_prepayment_cr:,.1f} Cr" if obj else "Rs. 0.0 Cr", "Principal Retired"),
         ("CAPEX EXPANSION", f"Rs. {obj.capex_expansion_cr:,.1f} Cr" if obj else "Rs. 0.0 Cr", "Growth Investment"),
         ("GCP EXPENSES", f"Rs. {obj.general_corporate_purposes_cr:,.1f} Cr" if obj else "Rs. 0.0 Cr", f"{obj.gcp_pct_of_gross:.1f}% of Gross (SEBI <=25%)" if obj else "N/A"),
@@ -488,12 +502,20 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
     wacc_val = wacc_res.get("wacc_pct") if wacc_res else None
     roic_sub = f"ROIC: {roic_val:.1f}% | WACC: {wacc_val:.1f}%" if (roic_val is not None and wacc_val is not None) else "Insufficient Disclosures"
 
+    is_priced = dossier.is_price_disclosed and (val and val.price_band_upper_inr > 0)
+    implied_ev_str = f"Rs. {val.implied_ev_cr:,.1f} Cr" if (is_priced and val and val.implied_ev_cr is not None) else "Undisclosed [●]"
+    implied_pe_str = f"{val.implied_pe_ratio:.1f}x" if (is_priced and val and val.implied_pe_ratio is not None) else "Undisclosed [●]"
+    pe_sub = f"Peer Median: {val.peer_median_pe or 'N/A'}x" if (val and val.peer_median_pe) else "Peer Discovery"
+    ev_sub = "Upper Price Band EV" if is_priced else "SEBI Book-Building [●]"
+    dcf_str = f"{rev_dcf.get('required_fcf_cagr_pct', 'N/A')}%" if (is_priced and rev_dcf and rev_dcf.get('required_fcf_cagr_pct') is not None) else "Unpriced [●]"
+    dcf_sub = rev_dcf.get("hurdle_difficulty", "") if is_priced else "Awaiting Price Band"
+
     v_cards = [
-        ("IMPLIED ENTERPRISE VALUE", f"Rs. {val.implied_ev_cr:,.1f} Cr" if (val and val.implied_ev_cr is not None) else "N/A", "Upper Price Band EV"),
-        ("IMPLIED P/E RATIO", f"{val.implied_pe_ratio:.1f}x" if (val and val.implied_pe_ratio is not None) else "N/A", f"Peer Median: {val.peer_median_pe or 'N/A'}x" if val else "N/A"),
+        ("IMPLIED ENTERPRISE VALUE", implied_ev_str, ev_sub),
+        ("IMPLIED P/E RATIO", implied_pe_str, pe_sub),
         ("ROIC VS WACC SPREAD", spread_str, roic_sub),
         ("ECONOMIC PROFIT (EVA)", eva_str, "Annual Value Creation"),
-        ("REVERSE DCF 5-YR CAGR", f"{rev_dcf.get('required_fcf_cagr_pct', 'N/A')}%" if (rev_dcf and rev_dcf.get('required_fcf_cagr_pct') is not None) else "High Risk", rev_dcf.get("hurdle_difficulty", "") if rev_dcf else ""),
+        ("REVERSE DCF 5-YR CAGR", dcf_str, dcf_sub),
         ("VALUATION VERDICT", val.valuation_verdict if val else "FAIR_VALUE", "Peer Relative Multiple Stance"),
     ]
     for idx, (label, val_txt, sub) in enumerate(v_cards):

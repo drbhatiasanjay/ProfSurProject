@@ -40,6 +40,7 @@ from models.pre_ipo_engine import (
     generate_equity_question_answers,
 )
 from utils.pre_ipo_deck_generator import generate_pre_ipo_board_deck
+from components.pre_ipo_provenance_ledger import render_provenance_ledger_tab
 
 # Page Configuration
 st.set_page_config(
@@ -739,6 +740,25 @@ render_html(scope_bar_html)
 # ─────────────────────────────────────────────────────────────────────────────
 badge_class = "badge-emerald" if "Mature" in stage_name else "badge-amber" if "Growth" in stage_name else "badge-rose"
 
+if dossier.total_issue_size_cr and dossier.total_issue_size_cr > 0:
+    offering_title = "Total Offering Value"
+    offering_main = f"₹{dossier.total_issue_size_cr:,.2f} Cr"
+    offering_split = (
+        f'Split: <strong style="color:#10b981;">{dossier.fresh_issue_pct:.0f}% Fresh</strong> (₹{dossier.fresh_issue_cr:,.1f} Cr) · '
+        f'<strong style="color:#f59e0b;">{dossier.ofs_pct:.0f}% OFS</strong> (₹{dossier.ofs_cr:,.1f} Cr)'
+    )
+elif dossier.offered_shares_count:
+    offering_title = "Offering Size (Equity Shares)"
+    offering_main = f"{dossier.offered_shares_count:,} Shares"
+    offering_split = (
+        f'Structure: <strong style="color:#f59e0b;">100% OFS</strong> (₹[●] Undisclosed) · '
+        f'<strong style="color:#10b981;">0% Fresh</strong> (Nil Issue)'
+    )
+else:
+    offering_title = "Total Offering Value"
+    offering_main = "Undisclosed [●]"
+    offering_split = "Statutory Book-Building Discovery at RHP Stage"
+
 hero_html = f"""
 <div class="bento-card" style="border-left: 4px solid #38bdf8;">
     <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
@@ -753,13 +773,12 @@ hero_html = f"""
             </div>
         </div>
         <div style="text-align:right;">
-            <div style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Total Offering Value</div>
+            <div style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">{offering_title}</div>
             <div class="metric-value" style="color:#38bdf8; font-size:2.0rem; font-weight:800; line-height:1.1;">
-                ₹{dossier.total_issue_size_cr:,.2f} Cr
+                {offering_main}
             </div>
             <div style="color:#cbd5e1; font-size:0.80rem; margin-top:4px;">
-                Split: <strong style="color:#10b981;">{dossier.fresh_issue_pct:.0f}% Fresh</strong> (₹{dossier.fresh_issue_cr:,.1f} Cr) · 
-                <strong style="color:#f59e0b;">{dossier.ofs_pct:.0f}% OFS</strong> (₹{dossier.ofs_cr:,.1f} Cr)
+                {offering_split}
             </div>
         </div>
     </div>
@@ -835,6 +854,7 @@ render_html(cockpit_html)
 # ─────────────────────────────────────────────────────────────────────────────
 (
     tab_overview,
+    tab_provenance,
     tab_disclosures,
     tab_equity_thesis,
     tab_workpapers,
@@ -842,7 +862,8 @@ render_html(cockpit_html)
     tab_ic_action,
 ) = st.tabs([
     ":material/domain: Company Overview",
-    ":material/fact_check: Extracted Disclosures & Audit",
+    ":material/verified: Extracted Disclosures & Provenance Ledger",
+    ":material/fact_check: Lineage Audit Card",
     f":material/quiz: Investor Questions & Thesis ({'14 Questions' if selected_context != 'PUBLIC_IPO' else '10 Core'})",
     ":material/analytics: Detailed Workpapers",
     ":material/sync_alt: CMIE Reference Crosswalk",
@@ -953,10 +974,13 @@ with tab_overview:
         render_html(dep_html)
 
 # ═════════════════════════════════════════════════════════════════════════════
-# LEVEL 1 - TAB 2: INVESTOR QUESTIONS & EQUITY THESIS (Q01-Q10 + PX01-PX04)
+# LEVEL 1 - TAB 2: EXTRACTED DISCLOSURES & STATUTORY PROVENANCE LEDGER
 # ═════════════════════════════════════════════════════════════════════════════
+with tab_provenance:
+    render_provenance_ledger_tab(dossier)
+
 # ═════════════════════════════════════════════════════════════════════════════
-# LEVEL 1 - TAB 2: EXTRACTED DISCLOSURES & AUDIT
+# LEVEL 1 - TAB 3: EXTRACTED CANDIDATE DISCLOSURES & LINEAGE AUDIT CARD
 # ═════════════════════════════════════════════════════════════════════════════
 with tab_disclosures:
     render_html('<div class="bento-subtitle">Automated Provenance & Anti-Fabrication Verification · SEBI ICDR 2018</div>', unsafe_allow_html=True)
@@ -1360,7 +1384,69 @@ with tab_workpapers:
     # ── SUBTAB 4: VALUATION, PEERS, DCF & FORENSICS ──
     with subtab_val:
         val = dossier.valuation_comps
-        if val:
+        if not dossier.is_price_disclosed or (val and val.price_band_upper_inr <= 0):
+            render_html("""
+            <div class="bento-card" style="border-left:4px solid #38bdf8; margin-bottom:16px;">
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;">
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">info</span>STATUTORY PRICING NOTICE · SEBI ICDR 2018 (BOOK BUILDING PROCESS)
+                </div>
+                <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.6; margin-top:6px;">
+                    This filing is a <strong>Draft Red Herring Prospectus (DRHP)</strong>. Under statutory SEBI regulations, the 
+                    <strong>Offer Price, Price Band, and aggregate Offer Value are explicitly left blank [●]</strong> and will be determined through 
+                    the book-building bidding process at the Red Herring Prospectus (RHP) stage.<br>
+                    Use the <strong>Interactive Scenario Valuation Sandbox</strong> below to simulate enterprise multiples, dilution, and DCF hurdles.
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("##### :material/tune: Interactive Scenario Valuation Sandbox")
+            c_sc1, c_sc2 = st.columns([1.5, 2.5])
+            with c_sc1:
+                scenario_price = st.slider(
+                    "Hypothetical Issue Price (₹ / share)",
+                    min_value=100.0,
+                    max_value=1000.0,
+                    value=390.0,
+                    step=5.0,
+                    key=f"scenario_slider_{dossier.deal_id}"
+                )
+            with c_sc2:
+                # Derive shares count safely from dossier without hardcoded constants
+                shares_pre_cr = getattr(dossier.objects_of_offer, 'shares_pre_issue_cr', None) if dossier.objects_of_offer else None
+                if not shares_pre_cr and getattr(dossier, 'cap_table', None) and getattr(dossier.cap_table, 'pre_offer_equity_shares_cr', None):
+                    shares_pre_cr = dossier.cap_table.pre_offer_equity_shares_cr
+                if not shares_pre_cr and dossier.offered_shares_count:
+                    shares_pre_cr = dossier.offered_shares_count / 1e7
+
+                latest_pat = dossier.history[-1].pat_cr if (dossier.history and len(dossier.history) > 0) else None
+                latest_ebitda = dossier.history[-1].ebitda_cr if (dossier.history and len(dossier.history) > 0) else None
+
+                sc_debt = dossier.indebtedness.total_economic_indebtedness_cr if dossier.indebtedness else 0.0
+                sc_cash = dossier.indebtedness.cash_and_equivalents_cr if dossier.indebtedness else 0.0
+
+                if shares_pre_cr and shares_pre_cr > 0:
+                    sc_mcap = shares_pre_cr * scenario_price
+                    sc_ev = sc_mcap + sc_debt - sc_cash
+                    sc_mcap_str = f"₹{sc_mcap:,.1f} Cr"
+                    sc_ev_str = f"₹{sc_ev:,.1f} Cr"
+                    sc_pe_str = f"{sc_mcap / latest_pat:.1f}x" if (latest_pat and latest_pat > 0) else "N/A"
+                    sc_ev_ebitda_str = f"{sc_ev / latest_ebitda:.1f}x" if (latest_ebitda and latest_ebitda > 0) else "N/A"
+                else:
+                    sc_mcap_str = "Undisclosed"
+                    sc_ev_str = "Undisclosed"
+                    sc_pe_str = "N/A"
+                    sc_ev_ebitda_str = "N/A"
+
+                render_html(f"""
+                <div style="display:flex; gap:16px; flex-wrap:wrap; background:rgba(30,41,59,0.7); border-radius:8px; padding:12px; border:1px solid rgba(56,189,248,0.2);">
+                    <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO MCAP:</span><br><strong style="font-size:1.1rem; color:#38bdf8;">{sc_mcap_str}</strong></div>
+                    <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO EV:</span><br><strong style="font-size:1.1rem; color:#38bdf8;">{sc_ev_str}</strong></div>
+                    <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO P/E:</span><br><strong style="font-size:1.1rem; color:#f8fafc;">{sc_pe_str}</strong></div>
+                    <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO EV/EBITDA:</span><br><strong style="font-size:1.1rem; color:#f8fafc;">{sc_ev_ebitda_str}</strong></div>
+                    <div><span class="badge-pill badge-amber" style="font-size:0.75rem;">USER SCENARIO ASSUMPTION</span></div>
+                </div>
+                """, unsafe_allow_html=True)
+        elif val:
             v_badge = "badge-emerald" if "DISCOUNT" in val.valuation_verdict else "badge-sky"
             val_box_html = f"""
             <div class="bento-card" style="margin-bottom:16px;">

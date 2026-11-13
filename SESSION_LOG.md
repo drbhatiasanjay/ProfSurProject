@@ -1,5 +1,49 @@
 # ProfSurProject — Session Log
 
+## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
+
+- **Branch:** `master` · **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Core Deliverables Completed:**
+  1. **Equity Questions Q07, Q08 & Q10 Unpriced DRHP Rectification (`models/pre_ipo_engine.py`):**
+     - **Q07:** Purged literal `0% Fresh (₹0.0 Cr) and 100% OFS (₹0.0 Cr)` for unpriced pure OFS prospectuses; wired dynamic output: `Issue is 100% OFS (997,461,456 Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders.`
+     - **Q08:** Fixed false `ANSWERED_WITH_EVIDENCE` status and `Implied P/E of 0.0x and EV/EBITDA of 0.0x`. Set `status="BLOCKED_PRICE_NOT_DISCLOSED"` with statutory explanation under SEBI ICDR 2018 Regulation 26(1) and cross-link to Interactive Scenario Valuation Sandbox.
+     - **Q10:** Eliminated `₹0.0 Cr` in unlock windows; wired statutory percentage schedule (`Day-30 50% anchor unlock`, `Day-90 100% anchor unlock`).
+  2. **Board Deck PowerPoint Generator Rectification (`utils/pre_ipo_deck_generator.py`):**
+     - Slide 1 (Deal Anatomy): Replaced `Rs. 0.00 Cr` with `997,461,456 Shares (100% OFS · Unpriced [●])` and `100% OFS (Nil Fresh Issue)`.
+     - Slide 5 (Use of Proceeds Waterfall): Formatted `Gross Fresh Issue` as `Nil (Pure OFS)` with `Company Proceeds: Rs. 0.0`.
+     - Slide 7 (Valuation): Replaced `Rs. 0.0 Cr` EV and `0.0x` P/E with `Undisclosed [●] (Awaiting RHP Book-Building)`.
+  3. **Statutory Computational Integrity Suite (`tests/test_hcch_computational_integrity.py`):**
+     - Implemented 6 end-to-end tests covering unpriced circuit breakers, equity questions, EBITDA/Net Worth reconciliations, Dickinson cash-flow transitions, deck extraction inspection, and full 6-dossier regression check.
+     - Result: `6 passed, 2 warnings in 3.89s`.
+  4. **Regression Verification:**
+     - Fast Smoke Suite: `52 passed in 11.06s` (`py -3.12 scripts/project_ops.py test --fast`).
+     - Pre-IPO Comprehensive Suite: `60 passed in 8.64s`.
+     - Database Budget: `capital_structure.db` preserved at **45.64 MB** (< 50 MB budget).
+
+---
+
+## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
+
+- **Branch:** `master` · **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Core Deliverables Completed:**
+  1. **Equity Questions Q07, Q08 & Q10 Unpriced DRHP Rectification (`models/pre_ipo_engine.py`):**
+     - **Q07:** Purged literal `0% Fresh (₹0.0 Cr) and 100% OFS (₹0.0 Cr)` for unpriced pure OFS prospectuses; wired dynamic output: `Issue is 100% OFS (997,461,456 Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders.`
+     - **Q08:** Fixed false `ANSWERED_WITH_EVIDENCE` status and `Implied P/E of 0.0x and EV/EBITDA of 0.0x`. Set `status="BLOCKED_PRICE_NOT_DISCLOSED"` with statutory explanation under SEBI ICDR 2018 Regulation 26(1) and cross-link to Interactive Scenario Valuation Sandbox.
+     - **Q10:** Eliminated `₹0.0 Cr` in unlock windows; wired statutory percentage schedule (`Day-30 50% anchor unlock`, `Day-90 100% anchor unlock`).
+  2. **Board Deck PowerPoint Generator Rectification (`utils/pre_ipo_deck_generator.py`):**
+     - Slide 1 (Deal Anatomy): Replaced `Rs. 0.00 Cr` with `997,461,456 Shares (100% OFS · Unpriced [●])` and `100% OFS (Nil Fresh Issue)`.
+     - Slide 5 (Use of Proceeds Waterfall): Formatted `Gross Fresh Issue` as `Nil (Pure OFS)` with `Company Proceeds: Rs. 0.0`.
+     - Slide 7 (Valuation): Replaced `Rs. 0.0 Cr` EV and `0.0x` P/E with `Undisclosed [●] (Awaiting RHP Book-Building)`.
+  3. **Statutory Computational Integrity Suite (`tests/test_hcch_computational_integrity.py`):**
+     - Implemented 6 end-to-end tests covering unpriced circuit breakers, equity questions, EBITDA/Net Worth reconciliations, Dickinson cash-flow transitions, deck extraction inspection, and full 6-dossier regression check.
+     - Result: `6 passed, 2 warnings in 3.89s`.
+  4. **Regression Verification:**
+     - Fast Smoke Suite: `52 passed in 11.06s` (`py -3.12 scripts/project_ops.py test --fast`).
+     - Pre-IPO Comprehensive Suite: `60 passed in 8.64s`.
+     - Database Budget: `capital_structure.db` preserved at **45.64 MB** (< 50 MB budget).
+
+---
+
 ## DAY CLOSE CHECKPOINT — Production Deployment & Release v2.4.2 (2026-11-09 19:30 IST)
 
 - **Branch:** `master` · **HEAD:** `a78aa84` (In Sync with `origin/master`)
@@ -645,6 +689,28 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log (2026-09-06 Recovery & Context Consolidation)
 
+## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
+
+- **Branch:** `master` · **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Core Deliverables Completed:**
+  1. **Equity Questions Q07, Q08 & Q10 Unpriced DRHP Rectification (`models/pre_ipo_engine.py`):**
+     - **Q07:** Purged literal `0% Fresh (₹0.0 Cr) and 100% OFS (₹0.0 Cr)` for unpriced pure OFS prospectuses; wired dynamic output: `Issue is 100% OFS (997,461,456 Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders.`
+     - **Q08:** Fixed false `ANSWERED_WITH_EVIDENCE` status and `Implied P/E of 0.0x and EV/EBITDA of 0.0x`. Set `status="BLOCKED_PRICE_NOT_DISCLOSED"` with statutory explanation under SEBI ICDR 2018 Regulation 26(1) and cross-link to Interactive Scenario Valuation Sandbox.
+     - **Q10:** Eliminated `₹0.0 Cr` in unlock windows; wired statutory percentage schedule (`Day-30 50% anchor unlock`, `Day-90 100% anchor unlock`).
+  2. **Board Deck PowerPoint Generator Rectification (`utils/pre_ipo_deck_generator.py`):**
+     - Slide 1 (Deal Anatomy): Replaced `Rs. 0.00 Cr` with `997,461,456 Shares (100% OFS · Unpriced [●])` and `100% OFS (Nil Fresh Issue)`.
+     - Slide 5 (Use of Proceeds Waterfall): Formatted `Gross Fresh Issue` as `Nil (Pure OFS)` with `Company Proceeds: Rs. 0.0`.
+     - Slide 7 (Valuation): Replaced `Rs. 0.0 Cr` EV and `0.0x` P/E with `Undisclosed [●] (Awaiting RHP Book-Building)`.
+  3. **Statutory Computational Integrity Suite (`tests/test_hcch_computational_integrity.py`):**
+     - Implemented 6 end-to-end tests covering unpriced circuit breakers, equity questions, EBITDA/Net Worth reconciliations, Dickinson cash-flow transitions, deck extraction inspection, and full 6-dossier regression check.
+     - Result: `6 passed, 2 warnings in 3.89s`.
+  4. **Regression Verification:**
+     - Fast Smoke Suite: `52 passed in 11.06s` (`py -3.12 scripts/project_ops.py test --fast`).
+     - Pre-IPO Comprehensive Suite: `60 passed in 8.64s`.
+     - Database Budget: `capital_structure.db` preserved at **45.64 MB** (< 50 MB budget).
+
+---
+
 ## 1. Forensic Recovery & Historical Reconciliation
 - **Historical Recovery Source:** Fully recovered pre-shutdown Antigravity conversation and artifact directory (`C:\Users\hemas\.gemini\antigravity-ide\brain\dfad8734-d349-4cab-bff4-d88cf51c2925`).
 - **Filesystem Timestamps Confirmed:**
@@ -684,6 +750,28 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log (2026-09-07 Stata Studio Compatibility & Error Hardening)
 
+## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
+
+- **Branch:** `master` · **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Core Deliverables Completed:**
+  1. **Equity Questions Q07, Q08 & Q10 Unpriced DRHP Rectification (`models/pre_ipo_engine.py`):**
+     - **Q07:** Purged literal `0% Fresh (₹0.0 Cr) and 100% OFS (₹0.0 Cr)` for unpriced pure OFS prospectuses; wired dynamic output: `Issue is 100% OFS (997,461,456 Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders.`
+     - **Q08:** Fixed false `ANSWERED_WITH_EVIDENCE` status and `Implied P/E of 0.0x and EV/EBITDA of 0.0x`. Set `status="BLOCKED_PRICE_NOT_DISCLOSED"` with statutory explanation under SEBI ICDR 2018 Regulation 26(1) and cross-link to Interactive Scenario Valuation Sandbox.
+     - **Q10:** Eliminated `₹0.0 Cr` in unlock windows; wired statutory percentage schedule (`Day-30 50% anchor unlock`, `Day-90 100% anchor unlock`).
+  2. **Board Deck PowerPoint Generator Rectification (`utils/pre_ipo_deck_generator.py`):**
+     - Slide 1 (Deal Anatomy): Replaced `Rs. 0.00 Cr` with `997,461,456 Shares (100% OFS · Unpriced [●])` and `100% OFS (Nil Fresh Issue)`.
+     - Slide 5 (Use of Proceeds Waterfall): Formatted `Gross Fresh Issue` as `Nil (Pure OFS)` with `Company Proceeds: Rs. 0.0`.
+     - Slide 7 (Valuation): Replaced `Rs. 0.0 Cr` EV and `0.0x` P/E with `Undisclosed [●] (Awaiting RHP Book-Building)`.
+  3. **Statutory Computational Integrity Suite (`tests/test_hcch_computational_integrity.py`):**
+     - Implemented 6 end-to-end tests covering unpriced circuit breakers, equity questions, EBITDA/Net Worth reconciliations, Dickinson cash-flow transitions, deck extraction inspection, and full 6-dossier regression check.
+     - Result: `6 passed, 2 warnings in 3.89s`.
+  4. **Regression Verification:**
+     - Fast Smoke Suite: `52 passed in 11.06s` (`py -3.12 scripts/project_ops.py test --fast`).
+     - Pre-IPO Comprehensive Suite: `60 passed in 8.64s`.
+     - Database Budget: `capital_structure.db` preserved at **45.64 MB** (< 50 MB budget).
+
+---
+
 ## 1. Issues Identified & Fully Resolved
 1. **`xtset <panelvar> <timevar>` Implementation:**
    - Added `"companycode": "company_code"`, `"companyid": "company_code"`, `"company_id": "company_code"` to `COMMON_VAR_ALIASES`.
@@ -711,6 +799,28 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log (2026-09-07 Local Online Verification)
 
+## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
+
+- **Branch:** `master` · **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Core Deliverables Completed:**
+  1. **Equity Questions Q07, Q08 & Q10 Unpriced DRHP Rectification (`models/pre_ipo_engine.py`):**
+     - **Q07:** Purged literal `0% Fresh (₹0.0 Cr) and 100% OFS (₹0.0 Cr)` for unpriced pure OFS prospectuses; wired dynamic output: `Issue is 100% OFS (997,461,456 Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders.`
+     - **Q08:** Fixed false `ANSWERED_WITH_EVIDENCE` status and `Implied P/E of 0.0x and EV/EBITDA of 0.0x`. Set `status="BLOCKED_PRICE_NOT_DISCLOSED"` with statutory explanation under SEBI ICDR 2018 Regulation 26(1) and cross-link to Interactive Scenario Valuation Sandbox.
+     - **Q10:** Eliminated `₹0.0 Cr` in unlock windows; wired statutory percentage schedule (`Day-30 50% anchor unlock`, `Day-90 100% anchor unlock`).
+  2. **Board Deck PowerPoint Generator Rectification (`utils/pre_ipo_deck_generator.py`):**
+     - Slide 1 (Deal Anatomy): Replaced `Rs. 0.00 Cr` with `997,461,456 Shares (100% OFS · Unpriced [●])` and `100% OFS (Nil Fresh Issue)`.
+     - Slide 5 (Use of Proceeds Waterfall): Formatted `Gross Fresh Issue` as `Nil (Pure OFS)` with `Company Proceeds: Rs. 0.0`.
+     - Slide 7 (Valuation): Replaced `Rs. 0.0 Cr` EV and `0.0x` P/E with `Undisclosed [●] (Awaiting RHP Book-Building)`.
+  3. **Statutory Computational Integrity Suite (`tests/test_hcch_computational_integrity.py`):**
+     - Implemented 6 end-to-end tests covering unpriced circuit breakers, equity questions, EBITDA/Net Worth reconciliations, Dickinson cash-flow transitions, deck extraction inspection, and full 6-dossier regression check.
+     - Result: `6 passed, 2 warnings in 3.89s`.
+  4. **Regression Verification:**
+     - Fast Smoke Suite: `52 passed in 11.06s` (`py -3.12 scripts/project_ops.py test --fast`).
+     - Pre-IPO Comprehensive Suite: `60 passed in 8.64s`.
+     - Database Budget: `capital_structure.db` preserved at **45.64 MB** (< 50 MB budget).
+
+---
+
 ## 1. Full Browser & UI Verification (Workstream 1 Feature Worktree `bbe6e80`)
 
 **Target:** `c:\Users\hemas\Downloads\ProfSurProject\.worktrees\stata-cli-nlp-integration`  
@@ -732,6 +842,28 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 ---
 
 # ProfSurProject — Session Log (2026-09-07 Wave 1 ModelResultContext Verification)
+
+## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
+
+- **Branch:** `master` · **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Core Deliverables Completed:**
+  1. **Equity Questions Q07, Q08 & Q10 Unpriced DRHP Rectification (`models/pre_ipo_engine.py`):**
+     - **Q07:** Purged literal `0% Fresh (₹0.0 Cr) and 100% OFS (₹0.0 Cr)` for unpriced pure OFS prospectuses; wired dynamic output: `Issue is 100% OFS (997,461,456 Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders.`
+     - **Q08:** Fixed false `ANSWERED_WITH_EVIDENCE` status and `Implied P/E of 0.0x and EV/EBITDA of 0.0x`. Set `status="BLOCKED_PRICE_NOT_DISCLOSED"` with statutory explanation under SEBI ICDR 2018 Regulation 26(1) and cross-link to Interactive Scenario Valuation Sandbox.
+     - **Q10:** Eliminated `₹0.0 Cr` in unlock windows; wired statutory percentage schedule (`Day-30 50% anchor unlock`, `Day-90 100% anchor unlock`).
+  2. **Board Deck PowerPoint Generator Rectification (`utils/pre_ipo_deck_generator.py`):**
+     - Slide 1 (Deal Anatomy): Replaced `Rs. 0.00 Cr` with `997,461,456 Shares (100% OFS · Unpriced [●])` and `100% OFS (Nil Fresh Issue)`.
+     - Slide 5 (Use of Proceeds Waterfall): Formatted `Gross Fresh Issue` as `Nil (Pure OFS)` with `Company Proceeds: Rs. 0.0`.
+     - Slide 7 (Valuation): Replaced `Rs. 0.0 Cr` EV and `0.0x` P/E with `Undisclosed [●] (Awaiting RHP Book-Building)`.
+  3. **Statutory Computational Integrity Suite (`tests/test_hcch_computational_integrity.py`):**
+     - Implemented 6 end-to-end tests covering unpriced circuit breakers, equity questions, EBITDA/Net Worth reconciliations, Dickinson cash-flow transitions, deck extraction inspection, and full 6-dossier regression check.
+     - Result: `6 passed, 2 warnings in 3.89s`.
+  4. **Regression Verification:**
+     - Fast Smoke Suite: `52 passed in 11.06s` (`py -3.12 scripts/project_ops.py test --fast`).
+     - Pre-IPO Comprehensive Suite: `60 passed in 8.64s`.
+     - Database Budget: `capital_structure.db` preserved at **45.64 MB** (< 50 MB budget).
+
+---
 
 ## 1. Full Browser & UI Verification (Wave 1 Worktree `0f828a9`)
 
@@ -765,6 +897,28 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 ---
 
 # ProfSurProject — Session Log (2026-09-07 Workstream 2 Citation Inspector Verification)
+
+## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
+
+- **Branch:** `master` · **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Core Deliverables Completed:**
+  1. **Equity Questions Q07, Q08 & Q10 Unpriced DRHP Rectification (`models/pre_ipo_engine.py`):**
+     - **Q07:** Purged literal `0% Fresh (₹0.0 Cr) and 100% OFS (₹0.0 Cr)` for unpriced pure OFS prospectuses; wired dynamic output: `Issue is 100% OFS (997,461,456 Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders.`
+     - **Q08:** Fixed false `ANSWERED_WITH_EVIDENCE` status and `Implied P/E of 0.0x and EV/EBITDA of 0.0x`. Set `status="BLOCKED_PRICE_NOT_DISCLOSED"` with statutory explanation under SEBI ICDR 2018 Regulation 26(1) and cross-link to Interactive Scenario Valuation Sandbox.
+     - **Q10:** Eliminated `₹0.0 Cr` in unlock windows; wired statutory percentage schedule (`Day-30 50% anchor unlock`, `Day-90 100% anchor unlock`).
+  2. **Board Deck PowerPoint Generator Rectification (`utils/pre_ipo_deck_generator.py`):**
+     - Slide 1 (Deal Anatomy): Replaced `Rs. 0.00 Cr` with `997,461,456 Shares (100% OFS · Unpriced [●])` and `100% OFS (Nil Fresh Issue)`.
+     - Slide 5 (Use of Proceeds Waterfall): Formatted `Gross Fresh Issue` as `Nil (Pure OFS)` with `Company Proceeds: Rs. 0.0`.
+     - Slide 7 (Valuation): Replaced `Rs. 0.0 Cr` EV and `0.0x` P/E with `Undisclosed [●] (Awaiting RHP Book-Building)`.
+  3. **Statutory Computational Integrity Suite (`tests/test_hcch_computational_integrity.py`):**
+     - Implemented 6 end-to-end tests covering unpriced circuit breakers, equity questions, EBITDA/Net Worth reconciliations, Dickinson cash-flow transitions, deck extraction inspection, and full 6-dossier regression check.
+     - Result: `6 passed, 2 warnings in 3.89s`.
+  4. **Regression Verification:**
+     - Fast Smoke Suite: `52 passed in 11.06s` (`py -3.12 scripts/project_ops.py test --fast`).
+     - Pre-IPO Comprehensive Suite: `60 passed in 8.64s`.
+     - Database Budget: `capital_structure.db` preserved at **45.64 MB** (< 50 MB budget).
+
+---
 
 ## 1. Workstream 2: Academic Citation Inspector & Literature Vault (`3245356`)
 

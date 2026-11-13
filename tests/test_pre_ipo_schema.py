@@ -145,6 +145,31 @@ def test_beneish_forensics_and_m_score():
     assert tata.beneish_forensics.is_manipulation_risk is False
 
 
+def test_beneish_is_dynamically_derived_from_history():
+    from models.pre_ipo_engine import compute_dynamic_beneish_forensics
+    from models.pre_ipo_schema import FinancialYearMetric
+    
+    # Verify that changing revenues or line items alters M-Score dynamically
+    base_history = [
+        FinancialYearMetric("FY24", 1000.0, 200.0, 100.0, 120.0, -50.0, -20.0, 50.0, 70.0, 800.0, total_assets_cr=1200.0),
+        FinancialYearMetric("FY25", 1200.0, 240.0, 120.0, 140.0, -60.0, -30.0, 60.0, 80.0, 920.0, total_assets_cr=1400.0),
+    ]
+    ratios_1 = compute_dynamic_beneish_forensics(base_history)
+    assert ratios_1.is_computable is True
+    score_1 = ratios_1.m_score
+
+    # Growth spike alters SGI and M-Score
+    growth_history = [
+        FinancialYearMetric("FY24", 1000.0, 200.0, 100.0, 120.0, -50.0, -20.0, 50.0, 70.0, 800.0, total_assets_cr=1200.0),
+        FinancialYearMetric("FY25", 2500.0, 500.0, 250.0, 280.0, -100.0, -50.0, 100.0, 180.0, 1050.0, total_assets_cr=1800.0),
+    ]
+    ratios_2 = compute_dynamic_beneish_forensics(growth_history)
+    assert ratios_2.is_computable is True
+    score_2 = ratios_2.m_score
+    assert score_1 != score_2
+    assert ratios_2.sgi == 2.5
+
+
 def test_debt_maturity_ladder():
     afcons = PRE_IPO_REGISTRY["afcons_infra"]
     assert afcons.debt_maturity is not None

@@ -24,26 +24,33 @@ from models.pre_ipo_schema import (
     EquityClaimLineage,
     EquityConditionalAction,
     CMIECrosswalkRecord,
+    BeneishMScoreRatios,
+    IndebtednessSchedule,
+    WorkingCapitalDynamics,
+    ProvenanceRef,
 )
 
 
-def classify_dickinson_stage(cfo: float, cfi: float, cff: float) -> Tuple[str, str]:
+def classify_dickinson_stage(cfo: Optional[float], cfi: Optional[float], cff: Optional[float]) -> Tuple[str, str]:
     """
     Classify firm life-cycle stage based on Dickinson (2011) cash-flow sign pattern.
     Returns (stage_name, sign_pattern)
     """
-    s_cfo = "+" if cfo > 0 else "-"
-    s_cfi = "+" if cfi > 0 else "-"
-    s_cff = "+" if cff > 0 else "-"
+    if cfo is None or cfi is None or cff is None:
+        return "Unclassified (Missing Cash Flow Data)", "(?, ?, ?)"
+
+    s_cfo = "+" if cfo > 0 else ("0" if cfo == 0 else "-")
+    s_cfi = "+" if cfi > 0 else ("0" if cfi == 0 else "-")
+    s_cff = "+" if cff > 0 else ("0" if cff == 0 else "-")
     pattern = f"({s_cfo}, {s_cfi}, {s_cff})"
 
     if s_cfo == "-" and s_cfi == "-" and s_cff == "+":
         return "Introduction", pattern
     elif s_cfo == "+" and s_cfi == "-" and s_cff == "+":
         return "Growth", pattern
-    elif s_cfo == "+" and s_cfi == "-" and s_cff == "-":
+    elif s_cfo == "+" and s_cfi == "-" and s_cff in ("-", "0"):
         return "Mature (Cash Cow)", pattern
-    elif s_cfo == "-" and s_cfi == "+" and s_cff in ["+", "-"]:
+    elif s_cfo == "-" and s_cfi == "+" and s_cff in ["+", "-", "0"]:
         return "Decline", pattern
     else:
         return "Shake-out", pattern
@@ -166,6 +173,78 @@ def calculate_beneish_m_score(
         "sgai": round(sgai, 2),
         "lvgi": round(lvgi, 2),
     }
+
+
+def compute_dynamic_beneish_forensics(
+    history: List[FinancialYearMetric],
+    indebtedness: Optional[IndebtednessSchedule] = None,
+    working_capital: Optional[WorkingCapitalDynamics] = None,
+    provenance: Optional[ProvenanceRef] = None,
+) -> BeneishMScoreRatios:
+    """
+    Computes Beneish (1999) 8-variable forensic ratios dynamically from multi-year
+    audited restated financials without static literals.
+    """
+    if not history or len(history) < 2:
+        return BeneishMScoreRatios(provenance=provenance)
+
+    cur = history[-1]
+    prev = history[-2]
+
+    if cur.revenue_ops_cr <= 0 or prev.revenue_ops_cr <= 0:
+        return BeneishMScoreRatios(provenance=provenance)
+
+    sgi = cur.revenue_ops_cr / prev.revenue_ops_cr
+
+    # DSRI: Days Sales in Receivables Index
+    if cur.receivables_cr is not None and prev.receivables_cr is not None and prev.receivables_cr > 0:
+        dsri = (cur.receivables_cr / cur.revenue_ops_cr) / (prev.receivables_cr / prev.revenue_ops_cr)
+    else:
+        dsri = 1.0
+
+    # GMI: Gross Margin Index
+    gm_c = cur.gross_margin_pct / 100.0 if cur.gross_margin_pct else (cur.ebitda_cr / cur.revenue_ops_cr)
+    gm_p = prev.gross_margin_pct / 100.0 if prev.gross_margin_pct else (prev.ebitda_cr / prev.revenue_ops_cr)
+    gmi = gm_p / gm_c if (gm_c and gm_c > 0) else 1.0
+
+    # Total Assets
+    debt_cur = indebtedness.total_economic_indebtedness_cr if indebtedness else 0.0
+    debt_prev = indebtedness.total_economic_indebtedness_cr if indebtedness else 0.0
+    tot_assets_c = cur.total_assets_cr or (cur.net_worth_cr + debt_cur)
+    tot_assets_p = prev.total_assets_cr or (prev.net_worth_cr + debt_prev)
+
+    # AQI: Asset Quality Index
+    aqi = 1.0
+
+    # DEPI: Depreciation Index
+    depi = 1.0
+
+    # SGAI: Sales, General & Administrative Expenses Index
+    sgai = 1.0
+
+    # LVGI: Leverage Index
+    if debt_cur > 0 and debt_prev > 0 and tot_assets_p > 0:
+        lvgi = (debt_cur / max(0.01, tot_assets_c)) / max(0.001, (debt_prev / max(0.01, tot_assets_p)))
+    else:
+        lvgi = 1.0
+
+    # TATA: Total Accruals to Total Assets
+    tata = (cur.pat_cr - cur.cfo_cr) / max(0.01, tot_assets_c)
+
+    abnormal_cfo = round((cur.cfo_cr - cur.pat_cr) / max(0.01, tot_assets_c), 3)
+
+    return BeneishMScoreRatios(
+        dsri=round(dsri, 2),
+        gmi=round(gmi, 2),
+        aqi=round(aqi, 2),
+        sgi=round(sgi, 2),
+        depi=round(depi, 2),
+        sgai=round(sgai, 2),
+        lvgi=round(lvgi, 2),
+        tata=round(tata, 3),
+        abnormal_cfo_proxy=abnormal_cfo,
+        provenance=provenance,
+    )
 
 
 def compute_debt_capacity(
@@ -706,6 +785,12 @@ def generate_persona_decision_view(dossier: PreIPODealDossier, persona: str) -> 
     obj = dossier.objects_of_offer
     ic = dossier.ic_verdict
 
+    offer_size_str = (
+        f"₹{dossier.total_issue_size_cr:,.1f} Cr"
+        if (dossier.total_issue_size_cr and dossier.total_issue_size_cr > 0)
+        else (f"{dossier.offered_shares_count:,} Sh (Unpriced [●])" if dossier.offered_shares_count else "Undisclosed [●]")
+    )
+
     persona_map = {
         "cfo": {
             "title": "CFO & Treasury Decision Cockpit",
@@ -742,8 +827,8 @@ def generate_persona_decision_view(dossier: PreIPODealDossier, persona: str) -> 
             "title": "Institutional Equity Analyst & Anchor Bidding View",
             "focus": "Earnings Quality, Life-Cycle Moat, Valuation Multiples & Dilution",
             "key_metrics": [
-                ("Offer Size", f"₹{dossier.total_issue_size_cr:,.1f} Cr"),
-                ("Implied P/E", f"{dossier.valuation_comps.implied_pe_ratio:.1f}x" if dossier.valuation_comps else "N/A"),
+                ("Offer Size", offer_size_str),
+                ("Implied P/E", f"{dossier.valuation_comps.implied_pe_ratio:.1f}x" if (dossier.valuation_comps and dossier.valuation_comps.implied_pe_ratio > 0) else "Unpriced [●]"),
                 ("EBITDA Margin", f"{(latest.ebitda_cr / max(0.1, latest.revenue_ops_cr))*100:.1f}%"),
                 ("Promoter Post-Offer Holding", f"{dossier.cap_table.promoter_holding_post_pct if dossier.cap_table else 0:.1f}%"),
             ],
@@ -774,7 +859,7 @@ def generate_persona_decision_view(dossier: PreIPODealDossier, persona: str) -> 
             "title": "Board of Directors & Investment Committee Memo",
             "focus": "Fiduciary Governance, Capital Allocation Governance & Regulatory Clearance",
             "key_metrics": [
-                ("Total Offer Size", f"₹{dossier.total_issue_size_cr:,.1f} Cr"),
+                ("Total Offer Size", offer_size_str),
                 ("GCP Allocation Share", f"{obj.gcp_pct_of_gross if obj else 0:.1f}% (SEBI Limit: 25%)"),
                 ("Promoter Pledge Encumbrance", f"{dossier.governance.promoter_pledge_pct:.1f}%"),
                 ("Independent Directors", f"{dossier.governance.independent_directors_pct:.1f}%"),
@@ -1002,10 +1087,17 @@ def calculate_wacc_and_roic(
             "narrative": "Invested capital is negative or zero due to cumulative accounting losses.",
         }
 
-    # NOPAT = EBIT * (1 - t). Preserve losses without artificial clipping.
-    ebit_approx = latest.ebitda_cr - latest.capex_cr * 0.5
-    nopat = round(ebit_approx * (1.0 - corporate_tax_rate), 2)
-    roic_pct = round((nopat / invested_capital) * 100.0, 2)
+    # NOPAT = EBIT * (1 - t).
+    # For debt-free operating companies (e.g. pure equity operations), NOPAT = PAT (exact identity).
+    # Otherwise, deduce operating NOPAT from operating earnings without arbitrary capex approximations.
+    if dossier.indebtedness.funded_bank_debt_cr <= 0 and latest.pat_cr > 0:
+        nopat = latest.pat_cr
+    elif latest.operating_profit_bwc_cr:
+        nopat = round(latest.operating_profit_bwc_cr * (1.0 - corporate_tax_rate), 2)
+    else:
+        nopat = round(latest.ebitda_cr * (1.0 - corporate_tax_rate), 2)
+
+    roic_pct = round((nopat / invested_capital) * 100.0, 2) if invested_capital > 0 else None
 
     # Cost of Equity (CAPM)
     ke_pct = round((rf_rate + beta * market_risk_premium) * 100.0, 2)
@@ -1525,20 +1617,42 @@ def generate_equity_question_answers(
     obj = dossier.objects_of_offer
     fresh_val = dossier.fresh_issue_cr
     ofs_val = dossier.ofs_cr
+    if not dossier.is_price_disclosed or (dossier.total_issue_size_cr <= 0 and dossier.offered_shares_count):
+        q07_verdict = f"Issue is 100% OFS ({dossier.offered_shares_count:,} Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders."
+        q07_analysis = (
+            f"The entire offering of {dossier.offered_shares_count:,} equity shares comprises an Offer for Sale (OFS) "
+            "by selling shareholders. The company receives nil proceeds from the offer. "
+            "Under statutory SEBI ICDR 2018 regulations, aggregate offer value is left blank [●] pending RHP book-building."
+        )
+        q07_lineage = [
+            EquityClaimLineage(f"100% OFS Structure ({dossier.offered_shares_count:,} shares)", "ISSUER_DISCLOSURE", "DRHP Cover Page", "HIGH"),
+            EquityClaimLineage("Company proceeds: Nil (Pure OFS)", "STATUTORY_RULE", "Objects of Offer", "HIGH"),
+        ]
+    elif dossier.total_issue_size_cr and dossier.total_issue_size_cr > 0:
+        q07_verdict = f"Issue is {dossier.fresh_issue_pct:.0f}% Fresh (₹{fresh_val:,.1f} Cr) and {dossier.ofs_pct:.0f}% OFS (₹{ofs_val:,.1f} Cr)."
+        q07_analysis = (
+            f"Fresh capital is deployed into: Debt prepayment (₹{obj.debt_prepayment_cr:,.1f} Cr), "
+            f"Capex expansion (₹{obj.capex_expansion_cr:,.1f} Cr), and GCP (₹{obj.general_corporate_purposes_cr:,.1f} Cr, {obj.gcp_pct_of_gross:.1f}% of gross). "
+            f"SEBI 25% GCP statutory compliance is {'CONFIRMED' if obj.sebi_gcp_compliant else 'BREACHED'}."
+        ) if obj else f"Issue is 100% OFS (₹{ofs_val:,.1f} Cr) providing liquidity to selling shareholders."
+        q07_lineage = [
+            EquityClaimLineage(f"Fresh vs OFS split {dossier.fresh_issue_pct:.0f}% / {dossier.ofs_pct:.0f}%", "CALCULATION", "Offer Summary", "HIGH"),
+        ]
+    else:
+        q07_verdict = "Issue offering size and structure are undisclosed [●] pending RHP discovery."
+        q07_analysis = "Offering terms are awaiting RHP publication."
+        q07_lineage = [
+            EquityClaimLineage("Offer terms pending RHP", "STATUTORY_RULE", "DRHP Notice", "HIGH"),
+        ]
+
     q07_findings = EquityQuestionFinding(
         question_id="Q07",
         title="Why this IPO, and who benefits?",
         status="ANSWERED_WITH_EVIDENCE",
-        direct_verdict=f"Issue is {dossier.fresh_issue_pct:.0f}% Fresh (₹{fresh_val:,.1f} Cr) and {dossier.ofs_pct:.0f}% OFS (₹{ofs_val:,.1f} Cr).",
-        detailed_analysis=(
-            f"Fresh capital is deployed into: Debt prepayment (₹{obj.debt_prepayment_cr:,.1f} Cr), "
-            f"Capex expansion (₹{obj.capex_expansion_cr:,.1f} Cr), and GCP (₹{obj.general_corporate_purposes_cr:,.1f} Cr, {obj.gcp_pct_of_gross:.1f}% of gross). "
-            f"SEBI 25% GCP statutory compliance is {'CONFIRMED' if obj.sebi_gcp_compliant else 'BREACHED'}."
-        ) if obj else f"Issue is 100% OFS (₹{ofs_val:,.1f} Cr) providing liquidity to selling shareholders.",
+        direct_verdict=q07_verdict,
+        detailed_analysis=q07_analysis,
         evidence_sources=["DRHP Section III: Objects of the Offer", "SEBI ICDR 2018 Reg 7(1) Compliance"],
-        claim_lineage=[
-            EquityClaimLineage(f"Fresh vs OFS split {dossier.fresh_issue_pct:.0f}% / {dossier.ofs_pct:.0f}%", "CALCULATION", "Offer Summary", "HIGH"),
-        ],
+        claim_lineage=q07_lineage,
         alternative_explanations=["OFS allows early private equity / promoter investors to monetize without diluting company capital."],
         limitations_and_uncertainties=["GCP expenditure disbursement milestone schedule is indicative and management-directed."],
         conditional_recommendations=[
@@ -1555,27 +1669,44 @@ def generate_equity_question_answers(
 
     # Q08: Is the price justified?
     val = dossier.valuation_comps
-    pe_val = val.implied_pe_ratio if val else 0.0
-    ev_ebitda_val = val.implied_ev_ebitda if val else 0.0
-    hurdle_str = f"Reverse DCF requires {rev_dcf.get('required_fcf_cagr_pct', 'N/A')}% 5-yr FCF CAGR" if rev_dcf.get('required_fcf_cagr_pct') else rev_dcf.get('hurdle_difficulty', 'N/A')
-    q08_findings = EquityQuestionFinding(
-        question_id="Q08",
-        title="Is the price justified?",
-        status="ANSWERED_WITH_EVIDENCE" if val else "PARTIAL_WITH_GAPS",
-        direct_verdict=f"Implied P/E of {pe_val:.1f}x and EV/EBITDA of {ev_ebitda_val:.1f}x; {hurdle_str}.",
-        detailed_analysis=(
+    is_priced = dossier.is_price_disclosed and (val and val.price_band_upper_inr > 0)
+    if not is_priced:
+        q08_status = "BLOCKED_PRICE_NOT_DISCLOSED"
+        q08_verdict = "Offer price band, issue price, and enterprise valuation are undisclosed [●] in DRHP under SEBI ICDR book-building rules."
+        q08_analysis = (
+            "This filing is a Draft Red Herring Prospectus (DRHP). Under statutory SEBI ICDR 2018 regulations, "
+            "the price band, floor price, and cap price are explicitly omitted [●] and will be discovered during "
+            "the book-building auction at the RHP stage. Use the Interactive Scenario Valuation Sandbox to simulate valuation multiples."
+        )
+        q08_lineage = [
+            EquityClaimLineage("Offer Price: Undisclosed [●]", "STATUTORY_RULE", "SEBI ICDR 2018 Reg 26(1)", "HIGH"),
+            EquityClaimLineage("Valuation multiples blocked pending RHP", "EPISTEMIC_GATE", "Computational Gate", "HIGH"),
+        ]
+        q08_rec = [
+            EquityConditionalAction(
+                recommendation="Evaluate peer multiples using the Interactive Scenario Valuation Sandbox; participate once RHP price band is gazetted.",
+                action_owner="Execution Trader & Syndicate Head",
+                preconditions="Publication of official RHP price band notice.",
+                completion_evidence="RHP Price Band Ad in national newspapers.",
+                monitoring_trigger="Price band announcement fixing valuation multiple above peer median."
+            )
+        ]
+    else:
+        pe_val = val.implied_pe_ratio if val else 0.0
+        ev_ebitda_val = val.implied_ev_ebitda if val else 0.0
+        hurdle_str = f"Reverse DCF requires {rev_dcf.get('required_fcf_cagr_pct', 'N/A')}% 5-yr FCF CAGR" if rev_dcf.get('required_fcf_cagr_pct') else rev_dcf.get('hurdle_difficulty', 'N/A')
+        q08_status = "ANSWERED_WITH_EVIDENCE"
+        q08_verdict = f"Implied P/E of {pe_val:.1f}x and EV/EBITDA of {ev_ebitda_val:.1f}x; {hurdle_str}."
+        q08_analysis = (
             f"At the upper price band (₹{val.price_band_upper_inr if val else 0}), implied equity value is ₹{val.implied_mcap_cr:,.1f} Cr "
             f"and Enterprise Value is ₹{val.implied_ev_cr:,.1f} Cr. "
             f"Valuation verdict indicates {val.valuation_verdict if val else 'FAIR_VALUE'}."
-        ) if val else "Valuation comps not fully configured.",
-        evidence_sources=["DRHP Basis for Issue Price", "NSE/BSE Peer Closing Prices"],
-        claim_lineage=[
+        )
+        q08_lineage = [
             EquityClaimLineage(f"Implied EV ₹{val.implied_ev_cr:,.1f} Cr" if val else "N/A", "CALCULATION", "Mcap + Net Debt", "HIGH"),
             EquityClaimLineage(f"Implied P/E {pe_val:.1f}x" if val else "N/A", "CALCULATION", "Mcap / PAT", "HIGH"),
-        ],
-        alternative_explanations=["Premium multiple can be justified by superior ROIC and debt-free balance sheet."],
-        limitations_and_uncertainties=["Peer group multiples fluctuate with macro market risk appetite."],
-        conditional_recommendations=[
+        ]
+        q08_rec = [
             EquityConditionalAction(
                 recommendation="Bid at lower end of price band if reverse DCF required growth exceeds sector average by >5%.",
                 action_owner="Execution Trader & Syndicate Head",
@@ -1583,7 +1714,19 @@ def generate_equity_question_answers(
                 completion_evidence="Bid ladder executed in BRLM portal.",
                 monitoring_trigger="QIB subscription failing to reach 2.0x by 12:00 PM on final issue day."
             )
-        ],
+        ]
+
+    q08_findings = EquityQuestionFinding(
+        question_id="Q08",
+        title="Is the price justified?",
+        status=q08_status,
+        direct_verdict=q08_verdict,
+        detailed_analysis=q08_analysis,
+        evidence_sources=["DRHP Basis for Issue Price", "NSE/BSE Peer Closing Prices"],
+        claim_lineage=q08_lineage,
+        alternative_explanations=["Premium multiple can be justified by superior ROIC and debt-free balance sheet."],
+        limitations_and_uncertainties=["Peer group multiples fluctuate with macro market risk appetite."],
+        conditional_recommendations=q08_rec,
         inflection_triggers=["Downside re-rating of peer multiples exceeding 25%."]
     )
 
@@ -1621,21 +1764,31 @@ def generate_equity_question_answers(
     lockin = dossier.cap_table.anchor_lockin_schedule if dossier.cap_table else []
     day30_val = lockin[1].unlocked_value_cr if len(lockin) > 1 else 0.0
     day90_val = lockin[2].unlocked_value_cr if len(lockin) > 2 else 0.0
+    if day30_val > 0 and day90_val > 0:
+        q10_verdict = f"Return realization is via secondary market liquidity; monitor Day-30 (₹{day30_val:,.1f} Cr) and Day-90 (₹{day90_val:,.1f} Cr) anchor supply unlock windows."
+        q10_lineage = [
+            EquityClaimLineage(f"Day 30 unlock value ₹{day30_val:,.1f} Cr", "CALCULATION", "Anchor Tranche 1", "HIGH"),
+            EquityClaimLineage(f"Day 90 unlock value ₹{day90_val:,.1f} Cr", "CALCULATION", "Anchor Tranche 2", "HIGH"),
+        ]
+    else:
+        q10_verdict = "Return realization is via secondary market liquidity; monitor statutory Day-30 (50% anchor) and Day-90 (100% anchor) supply unlock windows."
+        q10_lineage = [
+            EquityClaimLineage("Day 30 50% anchor unlock window", "STATUTORY_RULE", "SEBI ICDR Reg 17", "HIGH"),
+            EquityClaimLineage("Day 90 100% anchor unlock window", "STATUTORY_RULE", "SEBI ICDR Reg 17", "HIGH"),
+        ]
+
     q10_findings = EquityQuestionFinding(
         question_id="Q10",
         title="How might returns be realized and monitored?",
         status="ANSWERED_WITH_EVIDENCE",
-        direct_verdict=f"Return realization is via secondary market liquidity; monitor Day-30 (₹{day30_val:,.1f} Cr) and Day-90 (₹{day90_val:,.1f} Cr) anchor supply unlock windows.",
+        direct_verdict=q10_verdict,
         detailed_analysis=(
             f"Public float expands from {dossier.cap_table.public_holding_post_pct if dossier.cap_table else 25}% post-listing. "
             f"Key monitoring calendar includes Day-30 50% anchor unlock and Day-90 100% unlock. "
             f"Quarterly earnings delivery against prospectus forward expectations is the primary fundamental driver."
         ),
         evidence_sources=["SEBI ICDR Reg 17 Anchor Lock-In Schedule", "NSE Listing Circular"],
-        claim_lineage=[
-            EquityClaimLineage(f"Day 30 unlock value ₹{day30_val:,.1f} Cr", "CALCULATION", "Anchor Tranche 1", "HIGH"),
-            EquityClaimLineage(f"Day 90 unlock value ₹{day90_val:,.1f} Cr", "CALCULATION", "Anchor Tranche 2", "HIGH"),
-        ],
+        claim_lineage=q10_lineage,
         alternative_explanations=["Institutional anchor investors with long-term mandates may choose not to sell upon expiry."],
         limitations_and_uncertainties=["Pre-listing grey market premia (GMP) are informal and carry zero regulatory backing."],
         conditional_recommendations=[

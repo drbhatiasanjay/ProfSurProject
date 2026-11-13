@@ -16,6 +16,8 @@ class ProvenanceRef:
     page: int
     table_or_note: str
     anchor_text: str
+    printed_page: Optional[str] = None
+    raw_quote: Optional[str] = None
 
 
 @dataclass
@@ -34,6 +36,10 @@ class FinancialYearMetric:
     receivables_cr: Optional[float] = None
     gross_margin_pct: Optional[float] = None
     provenance: Optional[ProvenanceRef] = None
+    statutory_kpi_ebitda_cr: Optional[float] = None
+    operating_profit_bwc_cr: Optional[float] = None
+    parent_net_worth_cr: Optional[float] = None
+    non_controlling_interest_cr: Optional[float] = None
 
 
 @dataclass
@@ -432,6 +438,13 @@ class IngestionAuditItem:
     status: str  # FOUND_AND_RECONCILED, CONVERTED_AND_NORMALIZED, MISSING_UNDISCLOSED
     citation: str
     confidence_score: float = 1.0
+    domain: str = "FINANCIAL"  # FINANCIAL, INDEBTEDNESS, WORKING_CAPITAL, CAP_TABLE, OBJECTS_OF_OFFER, GOVERNANCE
+    period: str = "FY24"
+    physical_page: Optional[int] = None
+    printed_page: Optional[str] = None
+    section_name: Optional[str] = None
+    table_anchor: Optional[str] = None
+    accounting_note: Optional[str] = None
 
 
 @dataclass
@@ -501,9 +514,9 @@ class PreIPODealDossier:
     sector: str
     filing_type: str  # DRHP, RHP
     filing_date: str
-    total_issue_size_cr: float
+    total_issue_size_cr: Optional[float]
     fresh_issue_cr: float
-    ofs_cr: float
+    ofs_cr: Optional[float]
     face_value_inr: float
     brlm_bankers: List[str]
     exchange_listing: List[str]
@@ -525,6 +538,8 @@ class PreIPODealDossier:
     listing_date: Optional[str] = None
     issue_status: str = "COMPLETED"  # COMPLETED, RUNNING_PIPELINE, AWAITING_LISTING, PRE_IPO_DRHP
     anchor_calendar_active: bool = True
+    offered_shares_count: Optional[int] = None
+    is_price_disclosed: bool = True
 
     @property
     def latest_financials(self) -> FinancialYearMetric:
@@ -534,12 +549,31 @@ class PreIPODealDossier:
 
     @property
     def fresh_issue_pct(self) -> float:
-        if self.total_issue_size_cr <= 0:
+        if not self.total_issue_size_cr or self.total_issue_size_cr <= 0:
             return 0.0
         return (self.fresh_issue_cr / self.total_issue_size_cr) * 100.0
 
     @property
     def ofs_pct(self) -> float:
-        if self.total_issue_size_cr <= 0:
+        if not self.total_issue_size_cr or not self.ofs_cr or self.total_issue_size_cr <= 0:
+            if self.offered_shares_count and self.fresh_issue_cr == 0.0:
+                return 100.0
             return 0.0
         return (self.ofs_cr / self.total_issue_size_cr) * 100.0
+
+    def __post_init__(self):
+        if self.history and len(self.history) >= 2:
+            try:
+                from models.pre_ipo_engine import compute_dynamic_beneish_forensics
+                prov = self.beneish_forensics.provenance if self.beneish_forensics else None
+                dynamic_beneish = compute_dynamic_beneish_forensics(
+                    history=self.history,
+                    indebtedness=self.indebtedness,
+                    working_capital=self.working_capital,
+                    provenance=prov,
+                )
+                if dynamic_beneish and dynamic_beneish.is_computable:
+                    self.beneish_forensics = dynamic_beneish
+            except Exception:
+                pass
+
