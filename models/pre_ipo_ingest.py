@@ -109,7 +109,7 @@ class PreIPOIngestionEngine:
         return os.getenv("GEMINI_VISION_MODEL", "gemini-2.5-flash")
 
     @staticmethod
-    def extract_text_from_pdf(source: Any, max_pages: int = 60) -> Tuple[str, int]:
+    def extract_text_from_pdf(source: Any, max_pages: int = 1500) -> Tuple[str, int]:
         """
         Extracts raw text using pypdf.
         Supports file path strings, bytes, and file-like objects (BytesIO / Streamlit UploadedFile).
@@ -658,31 +658,13 @@ class PreIPOIngestionEngine:
 
                     reader = pypdf.PdfReader(stream)
                     page_count = len(reader.pages)
-                    if page_count <= 60:
-                        for i in range(page_count):
+                    # Bounded streaming full-document indexing up to MAX_PAGES (1500)
+                    for i in range(min(page_count, 1500)):
+                        try:
                             p_text = reader.pages[i].extract_text() or ""
                             pages_text.append((i + 1, p_text))
-                    else:
-                        # Section-aware streaming indexer for massive 400-900 page statutory DRHPs
-                        from models.prospectus_indexer import ProspectusSectionIndexer
-                        try:
-                            if hasattr(stream, "seek"):
-                                stream.seek(0)
-                            raw_bytes = stream.read() if hasattr(stream, "read") else bytes(stream)
-                            indexer = ProspectusSectionIndexer(raw_bytes)
-                            scanned_indices = set(range(min(25, page_count)))
-                            for sec in ["FINANCIALS", "OBJECTS", "CAPITAL_STRUCTURE", "INDEBTEDNESS"]:
-                                scanned_indices.update(indexer.get_section_pages(sec))
-                            for idx in sorted(list(scanned_indices))[:85]:
-                                try:
-                                    p_text = reader.pages[idx].extract_text() or ""
-                                    pages_text.append((idx + 1, p_text))
-                                except Exception:
-                                    continue
                         except Exception:
-                            for i in range(min(page_count, 60)):
-                                p_text = reader.pages[i].extract_text() or ""
-                                pages_text.append((i + 1, p_text))
+                            pages_text.append((i + 1, ""))
                     extracted_text = "\n".join([pt[1] for pt in pages_text])
 
                     if isinstance(document_source, (str, os.PathLike)) and hasattr(stream, "close"):

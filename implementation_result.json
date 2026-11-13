@@ -1,26 +1,30 @@
 {
   "verdict": "READY_FOR_CODEX_REVIEW",
   "repository": "drbhatiasanjay/ProfSurProject",
-  "worktree": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\.worktrees\\preipo-evidence-contract",
-  "branch": "fix/preipo-evidence-contract-2026-11-13",
-  "base_sha": "160326adca43a052f159dac5f54cf09107db406a",
+  "worktree": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\.worktrees\\preipo-full-document-extraction",
+  "branch": "fix/preipo-full-document-extraction-2026-11-13",
+  "base_sha": "40d47d908fcbeac52b1adadf7b16a8fa1c88470e",
   "origin_master_sha": "6462cbbefcb71dfdca8cebfe7a1b068778f72cf9",
   "changed_files": [
-    "models/migrations/003_evidence_contract_normalization.sql",
-    "models/pre_ipo_migrations.py",
-    "models/pre_ipo_evidence.py",
-    "models/pre_ipo_schema.py",
+    "models/pre_ipo_document_indexer.py",
     "models/pre_ipo_ingest.py",
-    "tests/test_pre_ipo_pr2_contracts_and_migration.py",
-    "tests/test_pre_ipo_migrations.py",
-    "tests/test_pre_ipo_remediation_a01_b04.py",
-    "docs/review-evidence/PR2_IMPLEMENTATION_REPORT.md",
+    "tests/test_pre_ipo_pr3_indexing_and_extraction.py",
+    "docs/review-evidence/PR3_IMPLEMENTATION_REPORT.md",
     "implementation_result.json"
   ],
   "production_db_sha_before": "ca696195a5c541b56e0533de6c69a3bec4e501a232fd2b18a1b09d15d6fa7873",
   "production_db_sha_after": "ca696195a5c541b56e0533de6c69a3bec4e501a232fd2b18a1b09d15d6fa7873",
   "production_db_unchanged": true,
   "tests": [
+    {
+      "command": "py -3.12 -m pytest tests/test_pre_ipo_pr3_indexing_and_extraction.py -v",
+      "exit_code": 0,
+      "collected": 9,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 2
+    },
     {
       "command": "py -3.12 -m pytest tests/test_pre_ipo_pr2_contracts_and_migration.py -v",
       "exit_code": 0,
@@ -38,15 +42,6 @@
       "failed": 0,
       "skipped": 0,
       "warnings": 2
-    },
-    {
-      "command": "py -3.12 -m pytest tests/test_hcch_computational_integrity.py -q",
-      "exit_code": 0,
-      "collected": 6,
-      "passed": 6,
-      "failed": 0,
-      "skipped": 0,
-      "warnings": 2
     }
   ],
   "browser_acceptance": "NOT_IN_PACKET",
@@ -54,26 +49,26 @@
   "official_corpus_acceptance": "NOT_IN_PACKET",
   "defects": {
     "P0_01_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
-    "P0_02_STATUS": "OPEN",
+    "P0_02_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
     "P0_03_STATUS": "OPEN_CONTAINED",
     "P0_04_STATUS": "OPEN",
     "P0_05_STATUS": "OPEN",
     "P0_06_STATUS": "OPEN",
     "P0_07_STATUS": "OPEN_CONTAINED",
     "P0_08_STATUS": "OPEN_CONTAINED",
-    "P1_01_STATUS": "OPEN_PARTIALLY_ADDRESSED",
+    "P1_01_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
     "P1_02_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION"
   },
   "unresolved_risks": [
-    "Full 513-page parent DRHP extraction and financial semantics corrections remain to be executed in subsequent authorized packets PR 3 and PR 4.",
-    "Official HCCH parent PDF (10.5 MB) must be provided in PR 3 for full 513-page section indexing."
+    "Full HCCH financial semantics (EBITDA, CFI/CFF, net-worth) to be implemented in PR 4.",
+    "Official HCCH parent PDF (10.5 MB) required for end-to-end extraction against official corpus."
   ],
   "non_claims": [
-    "No merge performed.",
+    "No merge to master performed.",
     "No deployment performed.",
     "No production database mutation performed.",
     "No defect self-classified CLOSED_VERIFIED.",
     "No scientific or investment validation inferred from test success."
   ],
-  "next_codex_action": "Independently inspect diff on branch fix/preipo-evidence-contract-2026-11-13, rerun tests in isolated test environment, verify additive migration 003 and legacy example rejection, and authorize PR 3 (Full 513-Page Indexing and Extraction)."
+  "next_codex_action": "Independently inspect diff on branch fix/preipo-full-document-extraction-2026-11-13, rerun tests in isolated test environment, verify document indexer bounds, and authorize PR 4 (Correct HCCH Financial Semantics)."
 }
