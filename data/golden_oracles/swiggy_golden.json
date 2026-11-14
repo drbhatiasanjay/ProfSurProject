@@ -1,0 +1,107 @@
+{
+  "deal_id": "swiggy",
+  "company_name": "Swiggy Limited",
+  "filing_type": "RHP",
+  "filing_date": "September 2024",
+  "sector": "Consumer Internet & Hyperlocal Commerce",
+  "face_value_inr": 1.0,
+  "offer_details": {
+    "total_issue_size_cr": 11327.43,
+    "fresh_issue_cr": 4499.0,
+    "ofs_cr": 6828.43,
+    "offered_shares_count": null,
+    "fresh_issue_pct": 39.717747097090864,
+    "ofs_pct": 60.282252902909136
+  },
+  "restated_financials": [
+    {
+      "period": "FY22",
+      "revenue_ops_cr": 5704.9,
+      "ebitda_cr": -3420.5,
+      "pat_cr": -3628.9,
+      "cfo_cr": -2850.1,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 8450.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Financials"
+    },
+    {
+      "period": "FY23",
+      "revenue_ops_cr": 8264.6,
+      "ebitda_cr": -2150.2,
+      "pat_cr": -2350.5,
+      "cfo_cr": -1680.0,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 7200.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Financials"
+    },
+    {
+      "period": "FY24",
+      "revenue_ops_cr": 11247.39,
+      "ebitda_cr": -220.4,
+      "pat_cr": -2350.24,
+      "cfo_cr": -410.2,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 7420.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Financials"
+    }
+  ],
+  "provenance_citations": [
+    {
+      "fact_key": "financials_FY22_revenue",
+      "value": 5704.9,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Financials",
+      "excerpt": "Revenue from Operations for FY22: Rs. 5704.9 Cr"
+    },
+    {
+      "fact_key": "financials_FY23_revenue",
+      "value": 8264.6,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Financials",
+      "excerpt": "Revenue from Operations for FY23: Rs. 8264.6 Cr"
+    },
+    {
+      "fact_key": "financials_FY24_revenue",
+      "value": 11247.39,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Financials",
+      "excerpt": "Revenue from Operations for FY24: Rs. 11247.39 Cr"
+    },
+    {
+      "fact_key": "objects_of_offer_total",
+      "value": 0.0,
+      "section": "Section III",
+      "physical_page": 72,
+      "printed_folio": "",
+      "table_or_paragraph": "Objects of the Offer",
+      "excerpt": "Total Fresh Issue / Offer Objects: Rs. 0.0 Cr"
+    },
+    {
+      "fact_key": "cap_table_promoter_holding_pre_pct",
+      "value": 0.0,
+      "section": "Section IV",
+      "physical_page": 95,
+      "printed_folio": "",
+      "table_or_paragraph": "Capital Structure",
+      "excerpt": "Promoter pre-issue shareholding: 0.0%"
+    }
+  ]
+}

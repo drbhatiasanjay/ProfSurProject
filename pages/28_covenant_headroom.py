@@ -128,6 +128,16 @@ def render_covenant_headroom_page():
     """)
 
     catalog = example_catalog()
+
+    bridge_scenario = st.session_state.get("covenant_bridge_scenario")
+    if bridge_scenario:
+        st.info(
+            f"🔗 **Pre-IPO Bridge Active:** Primed from Page 27 for **{bridge_scenario.get('company_name')}** · "
+            f"Base EBITDA: ₹{bridge_scenario.get('base_ebitda', 0):,.1f} Cr · "
+            f"Funded Debt: ₹{bridge_scenario.get('funded_debt', 0):,.1f} Cr · "
+            f"Prepayment Allocation: {bridge_scenario.get('prepay_pct', 0)}%"
+        )
+
     company_options = {
         "tata-steel-fy2025": "Tata Steel Ltd. (Consolidated Metals / Heavy Industrial)",
         "indigo-fy2025": "InterGlobe Aviation Ltd. (IndiGo) (Aviation / Capitalized Fleet Leases)",

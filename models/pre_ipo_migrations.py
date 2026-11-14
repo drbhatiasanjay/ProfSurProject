@@ -17,6 +17,31 @@ def compute_checksum(content: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
+def _execute_sql_script_transactional(conn: sqlite3.Connection, sql: str) -> None:
+    """Executes multiple SQL statements sequentially within an active transaction without implicit commit."""
+    statements = []
+    current = []
+    for line in sql.splitlines():
+        line_clean = line.strip()
+        if line_clean.startswith("--") or not line_clean:
+            continue
+        current.append(line)
+        if ";" in line:
+            full_stmt = "\n".join(current)
+            for part in full_stmt.split(";"):
+                part_clean = part.strip()
+                if part_clean:
+                    statements.append(part_clean)
+            current = []
+    if current:
+        remaining = "\n".join(current).strip()
+        if remaining:
+            statements.append(remaining)
+
+    for stmt in statements:
+        conn.execute(stmt)
+
+
 def _get_table_columns(conn: sqlite3.Connection, table_name: str) -> List[str]:
     """Retrieve list of column names for a table."""
     try:
@@ -113,7 +138,7 @@ def apply_migrations(conn: sqlite3.Connection) -> List[int]:
         chk = compute_checksum(sql)
         conn.execute("BEGIN IMMEDIATE")
         try:
-            conn.executescript(sql)
+            _execute_sql_script_transactional(conn, sql)
             conn.execute(
                 "INSERT INTO pre_ipo_schema_migrations(version, name, checksum, status) VALUES(?, ?, ?, ?)",
                 (1, "001_baseline_evidence_schema", chk, "APPLIED")
@@ -171,7 +196,7 @@ def apply_migrations(conn: sqlite3.Connection) -> List[int]:
                     conn.execute("ALTER TABLE pre_ipo_decision_actions ADD COLUMN company_id TEXT")
 
             # Execute SQL script for newly defined tables and indexes
-            conn.executescript(sql)
+            _execute_sql_script_transactional(conn, sql)
 
             # Ensure decision versions index is created after columns exist
             conn.execute("CREATE INDEX IF NOT EXISTS idx_decision_versions_company ON pre_ipo_decision_versions(owner, company_id)")
@@ -182,6 +207,63 @@ def apply_migrations(conn: sqlite3.Connection) -> List[int]:
             )
             conn.commit()
             newly_applied.append(2)
+        except Exception:
+            conn.rollback()
+            raise
+
+    # 4. Migration 3: Evidence Contract Normalization and Audit Attributes
+    if 3 not in applied_records:
+        m3_file = MIGRATIONS_DIR / "003_evidence_contract_normalization.sql"
+        if not m3_file.exists():
+            raise RuntimeError("Required migration file 003_evidence_contract_normalization.sql missing from disk.")
+        sql = m3_file.read_text(encoding="utf-8")
+        chk = compute_checksum(sql)
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            # 1. Additive columns to pre_ipo_observations
+            obs_cols = _get_table_columns(conn, "pre_ipo_observations")
+            if obs_cols:
+                cols_to_add = [
+                    ("definition_id", "TEXT"),
+                    ("physical_page", "INTEGER"),
+                    ("printed_page", "TEXT"),
+                    ("table_id", "TEXT"),
+                    ("row_label", "TEXT"),
+                    ("column_label", "TEXT"),
+                    ("raw_text", "TEXT"),
+                    ("extraction_run_id", "TEXT"),
+                    ("method_version", "TEXT"),
+                    ("reviewer", "TEXT"),
+                    ("reviewed_at", "TEXT"),
+                    ("review_reason", "TEXT"),
+                    ("origin", "TEXT NOT NULL DEFAULT 'FILING_FACT'"),
+                ]
+                for col_name, col_type in cols_to_add:
+                    if col_name not in obs_cols:
+                        conn.execute(f"ALTER TABLE pre_ipo_observations ADD COLUMN {col_name} {col_type}")
+
+            # 2. Additive columns to pre_ipo_evidence_snapshots
+            snap_cols = _get_table_columns(conn, "pre_ipo_evidence_snapshots")
+            if snap_cols:
+                snap_to_add = [
+                    ("status", "TEXT NOT NULL DEFAULT 'UNREVIEWED'"),
+                    ("snapshot_hash", "TEXT"),
+                    ("accepted_by", "TEXT"),
+                    ("accepted_at", "TEXT"),
+                ]
+                for col_name, col_type in snap_to_add:
+                    if col_name not in snap_cols:
+                        conn.execute(f"ALTER TABLE pre_ipo_evidence_snapshots ADD COLUMN {col_name} {col_type}")
+
+            # Execute SQL script for indexes
+            _execute_sql_script_transactional(conn, sql)
+
+            conn.execute(
+                "INSERT INTO pre_ipo_schema_migrations(version, name, checksum, status) VALUES(?, ?, ?, ?)",
+                (3, "003_evidence_contract_normalization", chk, "APPLIED")
+            )
+            conn.commit()
+            newly_applied.append(3)
         except Exception:
             conn.rollback()
             raise
@@ -226,18 +308,33 @@ def backfill_projections(conn: sqlite3.Connection) -> Dict[str, int]:
                 counts["quarantined_orphans"] += 1
                 continue
 
-            conn.execute("""
-                INSERT OR REPLACE INTO pre_ipo_observations (
-                    owner, company, observation_id, revision, source_id, entity, metric_id,
-                    period, duration, basis, framework, currency, unit, value, presence,
-                    review_state, provenance_json, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                owner, company, fact_id, rev, src_id, ctx.get("entity", company),
-                fact_id, ctx.get("period"), ctx.get("duration"), ctx.get("basis"),
-                ctx.get("framework"), ctx.get("currency"), ctx.get("unit"), val,
-                pres, review, json.dumps(src), created_at
-            ))
+            obs_cols = _get_table_columns(conn, "pre_ipo_observations")
+            if "origin" in obs_cols:
+                conn.execute("""
+                    INSERT OR REPLACE INTO pre_ipo_observations (
+                        owner, company, observation_id, revision, source_id, entity, metric_id,
+                        period, duration, basis, framework, currency, unit, value, presence,
+                        review_state, provenance_json, created_at, origin
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'LEGACY_EXAMPLE')
+                """, (
+                    owner, company, fact_id, rev, src_id, ctx.get("entity", company),
+                    fact_id, ctx.get("period"), ctx.get("duration"), ctx.get("basis"),
+                    ctx.get("framework"), ctx.get("currency"), ctx.get("unit"), val,
+                    pres, review, json.dumps(src), created_at
+                ))
+            else:
+                conn.execute("""
+                    INSERT OR REPLACE INTO pre_ipo_observations (
+                        owner, company, observation_id, revision, source_id, entity, metric_id,
+                        period, duration, basis, framework, currency, unit, value, presence,
+                        review_state, provenance_json, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    owner, company, fact_id, rev, src_id, ctx.get("entity", company),
+                    fact_id, ctx.get("period"), ctx.get("duration"), ctx.get("basis"),
+                    ctx.get("framework"), ctx.get("currency"), ctx.get("unit"), val,
+                    pres, review, json.dumps(src), created_at
+                ))
             counts["observations"] += 1
         except Exception:
             counts["quarantined_orphans"] += 1

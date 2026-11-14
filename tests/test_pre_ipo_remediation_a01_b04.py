@@ -212,6 +212,7 @@ def test_a09_overallocated_offer_rejected_and_savings_blocked():
         capex_expansion_cr=0.0,
         inorganic_acquisition_cr=0.0,
         general_corporate_purposes_cr=0.0,
+        interest_rate_on_retired_debt_pct=9.0,
     )
     assert obj.is_allocation_valid is False
     assert obj.sebi_gcp_compliant is False

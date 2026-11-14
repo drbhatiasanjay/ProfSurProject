@@ -1,5 +1,6 @@
 import uuid
 """Private, append-only Pre-IPO source and fact ledger. No cloud model calls."""
+from typing import Optional, Dict, List, Any
 from contextlib import contextmanager
 from dataclasses import dataclass, field, asdict
 from datetime import date, datetime, timezone
@@ -56,6 +57,203 @@ class EvidenceProfile:
     cmie_crosswalk: list = field(default_factory=list)
     background: object = None
     generation: int = 1
+
+
+@dataclass
+class SourceLocator:
+    physical_page: Optional[int] = None
+    printed_page: Optional[str] = None
+    table_id: Optional[str] = None
+    row_label: Optional[str] = None
+    column_label: Optional[str] = None
+    raw_text: Optional[str] = None
+    source_id: Optional[str] = None
+    document_name: Optional[str] = None
+    text_hash: Optional[str] = None
+
+    def is_valid(self) -> bool:
+        if self.physical_page is not None and self.physical_page <= 0:
+            return False
+        return bool(self.physical_page is not None or self.raw_text or self.table_id)
+
+
+@dataclass
+class Observation:
+    observation_id: str
+    owner: str
+    company: str
+    metric_id: str
+    entity: str
+    revision: int = 1
+    period: Optional[str] = None
+    duration: Optional[str] = None
+    basis: Optional[str] = None
+    framework: Optional[str] = None
+    currency: Optional[str] = None
+    unit: Optional[str] = None
+    value: Optional[str] = None
+    presence: str = "OBSERVED_VALUE"
+    review_state: str = "UNREVIEWED"
+    origin: str = "FILING_FACT"
+    definition_id: Optional[str] = None
+    locator: Optional[SourceLocator] = None
+    extraction_run_id: Optional[str] = None
+    method_version: Optional[str] = None
+    reviewer: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    review_reason: Optional[str] = None
+    created_at: Optional[str] = None
+
+    def __post_init__(self):
+        if self.presence not in PRESENCE:
+            raise ValueError(f"Invalid presence '{self.presence}'. Must be one of {PRESENCE}")
+        if self.review_state not in REVIEW:
+            raise ValueError(f"Invalid review_state '{self.review_state}'. Must be one of {REVIEW}")
+        if self.origin not in ORIGINS:
+            raise ValueError(f"Invalid origin '{self.origin}'. Must be one of {ORIGINS}")
+
+        # PR 2 Requirement: Accepted observation requires valid locator, reviewer, and review_reason
+        if self.review_state == "ACCEPTED":
+            if not self.locator or not self.locator.is_valid():
+                raise ValueError("Accepted observation requires a valid SourceLocator (physical_page, table_id, or raw_text).")
+            if self.locator.physical_page is not None and self.locator.physical_page <= 0:
+                raise ValueError("Accepted observation requires positive physical page bounds.")
+            if not self.reviewer or not str(self.reviewer).strip():
+                raise ValueError("Accepted observation requires an identified reviewer.")
+            if not self.review_reason or not str(self.review_reason).strip():
+                raise ValueError("Accepted observation requires an explicit review_reason.")
+
+    @property
+    def numeric_value(self) -> Optional[float]:
+        if self.presence == "EXPLICIT_NIL":
+            return 0.0
+        if self.presence == "NOT_DISCLOSED" or self.value is None:
+            return None
+        try:
+            return float(str(self.value).replace(",", ""))
+        except (ValueError, TypeError):
+            return None
+
+    @property
+    def is_observed(self) -> bool:
+        return self.presence == "OBSERVED_VALUE" and self.value is not None
+
+    @property
+    def is_explicit_zero(self) -> bool:
+        return self.presence == "EXPLICIT_NIL" or (self.presence == "OBSERVED_VALUE" and self.numeric_value == 0.0)
+
+
+@dataclass
+class AcceptedEvidenceSnapshot:
+    snapshot_id: str
+    owner: str
+    company: str
+    snapshot_hash: str = ""
+    observations: dict = field(default_factory=dict)
+    accepted_by: str = ""
+    accepted_at: str = ""
+    created_at: str = ""
+    status: str = "ACCEPTED_FOR_ANALYSIS"
+    is_immutable: bool = True
+
+    def __post_init__(self):
+        import types
+        from dataclasses import is_dataclass
+
+        if not self.owner or not str(self.owner).strip():
+            raise ValueError("AcceptedEvidenceSnapshot requires an identified owner.")
+        if not self.company or not str(self.company).strip():
+            raise ValueError("AcceptedEvidenceSnapshot requires an identified company.")
+
+        canonical_obs = {}
+        for obs_id, obs in self.observations.items():
+            obs_owner = getattr(obs, "owner", None) or (obs.get("owner") if isinstance(obs, dict) else None)
+            obs_company = getattr(obs, "company", None) or (obs.get("company") if isinstance(obs, dict) else None)
+            obs_review_state = getattr(obs, "review_state", None) or (obs.get("review_state") if isinstance(obs, dict) else None)
+            obs_origin = getattr(obs, "origin", None) or (obs.get("origin") if isinstance(obs, dict) else None)
+            obs_locator = getattr(obs, "locator", None) or (obs.get("locator") if isinstance(obs, dict) else None)
+
+            # Owner and company isolation
+            if obs_owner and obs_owner != self.owner:
+                raise ValueError(
+                    f"Observation '{obs_id}' owner '{obs_owner}' does not match snapshot owner '{self.owner}'. Cross-owner isolation violation."
+                )
+            if obs_company and obs_company != self.company:
+                raise ValueError(
+                    f"Observation '{obs_id}' company '{obs_company}' does not match snapshot company '{self.company}'. Cross-company isolation violation."
+                )
+
+            # Only ACCEPTED observations may enter accepted snapshot
+            if obs_review_state != "ACCEPTED":
+                raise ValueError(
+                    f"Observation '{obs_id}' has review_state '{obs_review_state}'. "
+                    "Only ACCEPTED observations are eligible to enter an AcceptedEvidenceSnapshot."
+                )
+
+            # Reject LEGACY_EXAMPLE
+            if obs_origin == "LEGACY_EXAMPLE":
+                raise ValueError(
+                    f"Observation '{obs_id}' has origin 'LEGACY_EXAMPLE'. "
+                    "LEGACY_EXAMPLE data is strictly prohibited from entering an accepted evidence snapshot."
+                )
+
+            # Locator physical page bounds
+            if obs_locator:
+                phys_page = getattr(obs_locator, "physical_page", None) or (obs_locator.get("physical_page") if isinstance(obs_locator, dict) else None)
+                if phys_page is not None and phys_page <= 0:
+                    raise ValueError(f"Observation '{obs_id}' has invalid physical_page '{phys_page}'. Physical page must be positive.")
+
+            if is_dataclass(obs):
+                canonical_obs[obs_id] = asdict(obs)
+            elif isinstance(obs, dict):
+                canonical_obs[obs_id] = dict(obs)
+            else:
+                canonical_obs[obs_id] = str(obs)
+
+        # Compute canonical content hash over sorted observations
+        canonical_json = json.dumps(canonical_obs, sort_keys=True, default=str)
+        computed_hash = hashlib.sha256(canonical_json.encode("utf-8")).hexdigest()
+
+        if self.snapshot_hash and self.snapshot_hash != computed_hash:
+            raise ValueError(
+                f"Canonical snapshot hash mismatch: provided '{self.snapshot_hash}', computed '{computed_hash}'. "
+                "Accepted snapshots require cryptographically verified content hashes."
+            )
+        object.__setattr__(self, "snapshot_hash", computed_hash)
+
+        # Enforce read-only observations
+        object.__setattr__(self, "observations", types.MappingProxyType(dict(self.observations)))
+        object.__setattr__(self, "_initialized", True)
+
+    def __setattr__(self, key, value):
+        if getattr(self, "_initialized", False) and getattr(self, "is_immutable", True):
+            raise TypeError(f"AcceptedEvidenceSnapshot is immutable. Cannot modify field '{key}'.")
+        super().__setattr__(key, value)
+
+
+@dataclass
+class DerivedResult:
+    capability: str
+    metric_id: str
+    value: object
+    status: str = "COMPUTED"
+    snapshot_id: str = ""
+    snapshot_hash: str = ""
+    input_observation_ids: list = field(default_factory=list)
+    formula: Optional[str] = None
+    assumptions: dict = field(default_factory=dict)
+    created_at: Optional[str] = None
+
+
+@dataclass
+class BlockedResult:
+    capability: str
+    metric_id: str
+    status: str = "BLOCKED"
+    reason: str = ""
+    next_action: str = ""
+    missing_inputs: list = field(default_factory=list)
+    snapshot_id: Optional[str] = None
 
 
 def dump(value):
@@ -914,3 +1112,86 @@ def snapshots(owner,company):
     actor(owner)
     with connection() as conn:
         return [json.loads(r[0]) for r in conn.execute("SELECT payload FROM pre_ipo_evidence_snapshots WHERE owner=? AND company=? ORDER BY created_at DESC,id",(owner,company))]
+
+
+def record_observation_review(
+    conn: Optional[sqlite3.Connection],
+    owner: str,
+    company: str,
+    observation_id: str,
+    review_state: str,
+    reviewer: str,
+    review_reason: str,
+    revision: int = 1,
+) -> Dict[str, Any]:
+    """Records an auditor sign-off or discrepancy flag on a prospectus observation.
+
+    Enforces fail-closed rules:
+    - Reviewer cannot be empty or whitespace.
+    - review_reason cannot be empty or whitespace.
+    - review_state must be one of REVIEW ("ACCEPTED", "DISPUTED", "REJECTED", "UNREVIEWED", "SUPERSEDED", "WITHDRAWN").
+    - If review_state == 'ACCEPTED', observation must exist or be inserted with valid audit attributes.
+    """
+    if not owner or not str(owner).strip():
+        raise PermissionError("Authenticated owner required for observation review")
+    if not reviewer or not str(reviewer).strip():
+        raise ValueError("Accepted observation requires an identified reviewer. Anonymous review blocked.")
+    if not review_reason or not str(review_reason).strip():
+        raise ValueError("Accepted observation requires an explicit review_reason / rationale.")
+    if review_state not in REVIEW:
+        raise ValueError(f"Invalid review_state '{review_state}'. Must be one of {REVIEW}")
+
+    def _execute(c):
+        row = c.execute(
+            "SELECT * FROM pre_ipo_observations WHERE owner=? AND company=? AND observation_id=? AND revision=?",
+            (owner, company, observation_id, revision)
+        ).fetchone()
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        if not row:
+            c.execute("""
+                INSERT INTO pre_ipo_observations (
+                    owner, company, observation_id, revision, source_id, entity, metric_id,
+                    review_state, reviewer, reviewed_at, review_reason, created_at, origin
+                ) VALUES (?, ?, ?, ?, 'in_app_review', ?, ?, ?, ?, ?, ?, ?, 'FILING_FACT')
+            """, (owner, company, observation_id, revision, company, observation_id,
+                  review_state, reviewer.strip(), now_iso, review_reason.strip(), now_iso))
+        else:
+            c.execute("""
+                UPDATE pre_ipo_observations
+                SET review_state = ?, reviewer = ?, reviewed_at = ?, review_reason = ?
+                WHERE owner = ? AND company = ? AND observation_id = ? AND revision = ?
+            """, (review_state, reviewer.strip(), now_iso, review_reason.strip(),
+                  owner, company, observation_id, revision))
+
+        return {
+            "owner": owner,
+            "company": company,
+            "observation_id": observation_id,
+            "revision": revision,
+            "review_state": review_state,
+            "reviewer": reviewer.strip(),
+            "reviewed_at": now_iso,
+            "review_reason": review_reason.strip(),
+        }
+
+    if conn is not None:
+        return _execute(conn)
+    else:
+        with connection() as c:
+            return _execute(c)
+
+
+def get_observation_review(owner: str, company: str, observation_id: str, revision: int = 1) -> Optional[Dict[str, Any]]:
+    """Fetch the latest review state for an observation."""
+    actor(owner)
+    with connection() as conn:
+        row = conn.execute(
+            "SELECT observation_id, review_state, reviewer, reviewed_at, review_reason FROM pre_ipo_observations "
+            "WHERE owner=? AND company=? AND observation_id=? AND revision=?",
+            (owner, company, observation_id, revision)
+        ).fetchone()
+        if not row:
+            return None
+        return dict(row)
+

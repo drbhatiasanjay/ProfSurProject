@@ -32,6 +32,7 @@ from models.pre_ipo_schema import (
     ProvenanceRef,
 )
 from models.pre_ipo_data import PRE_IPO_REGISTRY
+from models.pre_ipo_document_indexer import DocumentIndexer, DocumentIndex
 
 
 from enum import Enum
@@ -109,7 +110,7 @@ class PreIPOIngestionEngine:
         return os.getenv("GEMINI_VISION_MODEL", "gemini-2.5-flash")
 
     @staticmethod
-    def extract_text_from_pdf(source: Any, max_pages: int = 60) -> Tuple[str, int]:
+    def extract_text_from_pdf(source: Any, max_pages: int = 1500) -> Tuple[str, int]:
         """
         Extracts raw text using pypdf.
         Supports file path strings, bytes, and file-like objects (BytesIO / Streamlit UploadedFile).
@@ -450,9 +451,9 @@ class PreIPOIngestionEngine:
                     total_issue_size_cr=0.0,
                     fresh_issue_cr=0.0,
                     ofs_cr=0.0,
-                    face_value_inr=10.0,
-                    brlm_bankers=["Unverified"],
-                    exchange_listing=["BSE", "NSE"],
+                    face_value_inr=None,
+                    brlm_bankers=[],
+                    exchange_listing=[],
                     history=[FinancialYearMetric("FY--", 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)],
                     indebtedness=IndebtednessSchedule(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                     working_capital=WorkingCapitalDynamics(0.0, 0.0, 0.0, 0.0),
@@ -571,9 +572,9 @@ class PreIPOIngestionEngine:
                 total_issue_size_cr=float(data.get("total_issue_size_cr", 0.0)),
                 fresh_issue_cr=float(data.get("fresh_issue_cr", 0.0)),
                 ofs_cr=float(data.get("ofs_cr", 0.0)),
-                face_value_inr=float(data.get("face_value_inr", 10.0)),
-                brlm_bankers=data.get("brlm_bankers", ["Syndicate Bankers"]),
-                exchange_listing=data.get("exchange_listing", ["BSE", "NSE"]),
+                face_value_inr=float(data["face_value_inr"]) if (data.get("face_value_inr") is not None and str(data.get("face_value_inr")).strip() != "") else None,
+                brlm_bankers=data.get("brlm_bankers", []),
+                exchange_listing=data.get("exchange_listing", []),
                 history=hist,
                 indebtedness=ind,
                 working_capital=wc,
@@ -643,50 +644,19 @@ class PreIPOIngestionEngine:
                 page_count = 1
             else:
                 try:
-                    import pypdf
-                    stream = document_source
-                    if isinstance(document_source, (str, os.PathLike)):
-                        if os.path.exists(document_source):
-                            stream = open(document_source, "rb")
-                    elif hasattr(document_source, "read"):
-                        pos = document_source.tell() if hasattr(document_source, "tell") else 0
-                        stream = document_source
-                        if hasattr(document_source, "seek"):
-                            document_source.seek(pos)
-                    elif isinstance(document_source, bytes):
-                        stream = io.BytesIO(document_source)
-
-                    reader = pypdf.PdfReader(stream)
-                    page_count = len(reader.pages)
-                    if page_count <= 60:
-                        for i in range(page_count):
-                            p_text = reader.pages[i].extract_text() or ""
-                            pages_text.append((i + 1, p_text))
+                    pdf_bytes = cls.get_source_bytes(document_source)
+                    if pdf_bytes:
+                        indexer = DocumentIndexer()
+                        doc_index = indexer.index_pdf_stream(
+                            pdf_bytes,
+                            source_id=deal_id_hint or "uploaded_drhp",
+                            allow_ocr=allow_external_cloud_ocr
+                        )
+                        page_count = doc_index.total_pages
+                        pages_text = [(p, art.text) for p, art in sorted(doc_index.pages.items())]
+                        extracted_text = "\n".join([pt[1] for pt in pages_text])
                     else:
-                        # Section-aware streaming indexer for massive 400-900 page statutory DRHPs
-                        from models.prospectus_indexer import ProspectusSectionIndexer
-                        try:
-                            if hasattr(stream, "seek"):
-                                stream.seek(0)
-                            raw_bytes = stream.read() if hasattr(stream, "read") else bytes(stream)
-                            indexer = ProspectusSectionIndexer(raw_bytes)
-                            scanned_indices = set(range(min(25, page_count)))
-                            for sec in ["FINANCIALS", "OBJECTS", "CAPITAL_STRUCTURE", "INDEBTEDNESS"]:
-                                scanned_indices.update(indexer.get_section_pages(sec))
-                            for idx in sorted(list(scanned_indices))[:85]:
-                                try:
-                                    p_text = reader.pages[idx].extract_text() or ""
-                                    pages_text.append((idx + 1, p_text))
-                                except Exception:
-                                    continue
-                        except Exception:
-                            for i in range(min(page_count, 60)):
-                                p_text = reader.pages[i].extract_text() or ""
-                                pages_text.append((i + 1, p_text))
-                    extracted_text = "\n".join([pt[1] for pt in pages_text])
-
-                    if isinstance(document_source, (str, os.PathLike)) and hasattr(stream, "close"):
-                        stream.close()
+                        extracted_text, page_count = "", 0
                 except Exception:
                     extracted_text, page_count = "", 0
 
@@ -839,9 +809,9 @@ class PreIPOIngestionEngine:
                 total_issue_size_cr=0.0,
                 fresh_issue_cr=0.0,
                 ofs_cr=0.0,
-                face_value_inr=10.0,
-                brlm_bankers=["Not extracted"],
-                exchange_listing=["BSE", "NSE"],
+                face_value_inr=None,
+                brlm_bankers=[],
+                exchange_listing=[],
                 history=hist_not_extracted,
                 indebtedness=IndebtednessSchedule(
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -1409,9 +1379,9 @@ class PreIPOIngestionEngine:
             total_issue_size_cr=total_issue_cr,
             fresh_issue_cr=fresh_cr,
             ofs_cr=ofs_cr,
-            face_value_inr=10.0,
-            brlm_bankers=["Unverified"],
-            exchange_listing=["BSE", "NSE"],
+            face_value_inr=None,
+            brlm_bankers=[],
+            exchange_listing=[],
             history=history,
             indebtedness=indebtedness_obj,
             working_capital=working_cap_obj,

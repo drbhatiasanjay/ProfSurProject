@@ -1,0 +1,107 @@
+{
+  "deal_id": "tata_technologies",
+  "company_name": "Tata Technologies Limited",
+  "filing_type": "RHP",
+  "filing_date": "November 2023",
+  "sector": "Engineering Research & Development (ER&D)",
+  "face_value_inr": 2.0,
+  "offer_details": {
+    "total_issue_size_cr": 3042.51,
+    "fresh_issue_cr": 0.0,
+    "ofs_cr": 3042.51,
+    "offered_shares_count": null,
+    "fresh_issue_pct": 0.0,
+    "ofs_pct": 100.0
+  },
+  "restated_financials": [
+    {
+      "period": "FY21",
+      "revenue_ops_cr": 2380.91,
+      "ebitda_cr": 446.3,
+      "pat_cr": 239.17,
+      "cfo_cr": 380.2,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 1650.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Financials"
+    },
+    {
+      "period": "FY22",
+      "revenue_ops_cr": 3529.57,
+      "ebitda_cr": 711.2,
+      "pat_cr": 437.0,
+      "cfo_cr": 590.4,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 2120.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Financials"
+    },
+    {
+      "period": "FY23",
+      "revenue_ops_cr": 4414.18,
+      "ebitda_cr": 1046.2,
+      "pat_cr": 624.03,
+      "cfo_cr": 810.5,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 2680.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Financials"
+    }
+  ],
+  "provenance_citations": [
+    {
+      "fact_key": "financials_FY21_revenue",
+      "value": 2380.91,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Financials",
+      "excerpt": "Revenue from Operations for FY21: Rs. 2380.91 Cr"
+    },
+    {
+      "fact_key": "financials_FY22_revenue",
+      "value": 3529.57,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Financials",
+      "excerpt": "Revenue from Operations for FY22: Rs. 3529.57 Cr"
+    },
+    {
+      "fact_key": "financials_FY23_revenue",
+      "value": 4414.18,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Financials",
+      "excerpt": "Revenue from Operations for FY23: Rs. 4414.18 Cr"
+    },
+    {
+      "fact_key": "objects_of_offer_total",
+      "value": 0.0,
+      "section": "Section III",
+      "physical_page": 55,
+      "printed_folio": "",
+      "table_or_paragraph": "Objects of the Offer",
+      "excerpt": "Total Fresh Issue / Offer Objects: Rs. 0.0 Cr"
+    },
+    {
+      "fact_key": "cap_table_promoter_holding_pre_pct",
+      "value": 66.8,
+      "section": "Section IV",
+      "physical_page": 85,
+      "printed_folio": "",
+      "table_or_paragraph": "Capital Structure",
+      "excerpt": "Promoter pre-issue shareholding: 66.8%"
+    }
+  ]
+}

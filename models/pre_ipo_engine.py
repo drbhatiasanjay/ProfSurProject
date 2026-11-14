@@ -29,6 +29,21 @@ from models.pre_ipo_schema import (
     WorkingCapitalDynamics,
     ProvenanceRef,
 )
+from models.pre_ipo_analysis_safety import (
+    compute_safe_wacc,
+    compute_safe_roic,
+    compute_safe_reverse_dcf,
+    SafeWACCResult,
+    SafeROICResult,
+    SafeReverseDCFResult,
+    BlockedResult,
+)
+from models.pre_ipo_financial_contracts import (
+    validate_offer_contract,
+    validate_cash_flow_inputs,
+    validate_ebitda_metric,
+    validate_net_worth_contract,
+)
 
 
 def classify_dickinson_stage(cfo: Optional[float], cfi: Optional[float], cff: Optional[float]) -> Tuple[str, str]:
@@ -366,6 +381,108 @@ def generate_2d_sensitivity_matrix(
         "floating_debt_considered_cr": fl_debt,
         "fixed_debt_considered_cr": fx_debt,
     }
+
+
+def compute_3d_covenant_sensitivity_matrix(
+    base_ebitda_cr: float,
+    base_revenue_cr: float,
+    base_gross_debt_cr: float,
+    base_wair_pct: float = 9.0,
+    fresh_issue_cr: float = 0.0,
+    margin_shocks_bps: Optional[List[int]] = None,
+    rate_shocks_bps: Optional[List[int]] = None,
+    debt_prepay_allocations_pct: Optional[List[int]] = None,
+    covenant_threshold: float = 3.0,
+) -> Dict[str, Any]:
+    """
+    Computes a 3-dimensional multi-parameter covenant sensitivity tensor:
+    1. Operating Margin Shock (bps) -> EBITDA impact
+    2. Benchmark Rate Shock (bps) -> Interest cost impact
+    3. IPO Fresh Issue Debt Prepayment Allocation (%) -> Gross debt reduction
+
+    Evaluates dynamic Interest Coverage Ratio (ICR) and headroom against covenant_threshold.
+    Safely handles zero-debt issuers without ZeroDivisionError (returns float('inf')).
+    """
+    if margin_shocks_bps is None:
+        margin_shocks_bps = [-300, -200, -100, 0, 100]
+    if rate_shocks_bps is None:
+        rate_shocks_bps = [0, 50, 100, 150, 200, 300]
+    if debt_prepay_allocations_pct is None:
+        debt_prepay_allocations_pct = [0, 25, 50, 75, 100]
+
+    denom_rev = base_revenue_cr if base_revenue_cr > 0 else max(0.01, base_ebitda_cr)
+    base_margin = base_ebitda_cr / denom_rev
+
+    slices = []
+    for prepay_pct in debt_prepay_allocations_pct:
+        prepay_amount = fresh_issue_cr * (prepay_pct / 100.0)
+        shocked_debt = max(0.0, base_gross_debt_cr - prepay_amount)
+
+        slice_matrix = []
+        for m_shock in margin_shocks_bps:
+            shocked_margin = base_margin + (m_shock / 10000.0)
+            shocked_ebitda = denom_rev * shocked_margin
+            
+            rate_results = []
+            for r_shock in rate_shocks_bps:
+                shocked_rate = (base_wair_pct + (r_shock / 100.0)) / 100.0
+                total_interest = shocked_debt * shocked_rate
+
+                if shocked_ebitda <= 0.0:
+                    icr = 0.0
+                    status = "NEGATIVE_EBITDA"
+                    headroom = -covenant_threshold
+                elif shocked_debt == 0.0 or total_interest == 0.0:
+                    icr = float("inf")
+                    status = "COVENANT_EXEMPT_ZERO_DEBT"
+                    headroom = float("inf")
+                else:
+                    raw_icr = shocked_ebitda / total_interest
+                    icr = round(raw_icr, 2)
+                    headroom = round(icr - covenant_threshold, 2)
+                    if icr >= covenant_threshold:
+                        status = "COMPLIANT"
+                    elif icr >= 1.50:
+                        status = "WATCHLIST"
+                    else:
+                        status = "BREACH"
+
+                rate_results.append({
+                    "rate_shock_bps": r_shock,
+                    "shocked_rate_pct": round((base_wair_pct + (r_shock / 100.0)), 2),
+                    "interest_expense_cr": round(total_interest, 2),
+                    "icr": icr,
+                    "headroom": headroom,
+                    "status": status,
+                })
+
+            slice_matrix.append({
+                "margin_shock_bps": m_shock,
+                "shocked_margin_pct": round(shocked_margin * 100.0, 2),
+                "shocked_ebitda_cr": round(shocked_ebitda, 2),
+                "rate_results": rate_results,
+            })
+
+        slices.append({
+            "debt_prepay_allocation_pct": prepay_pct,
+            "prepay_amount_cr": round(prepay_amount, 2),
+            "remaining_debt_cr": round(shocked_debt, 2),
+            "matrix": slice_matrix,
+        })
+
+    return {
+        "base_ebitda_cr": base_ebitda_cr,
+        "base_revenue_cr": base_revenue_cr,
+        "base_gross_debt_cr": base_gross_debt_cr,
+        "base_wair_pct": base_wair_pct,
+        "fresh_issue_cr": fresh_issue_cr,
+        "covenant_threshold": covenant_threshold,
+        "margin_shocks_bps": margin_shocks_bps,
+        "rate_shocks_bps": rate_shocks_bps,
+        "debt_prepay_allocations_pct": debt_prepay_allocations_pct,
+        "slices": slices,
+    }
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -774,11 +891,18 @@ def generate_valuation_narrative(dossier: PreIPODealDossier, persona: str = "cfo
     }
 
 
-def generate_persona_decision_view(dossier: PreIPODealDossier, persona: str) -> Dict[str, Any]:
+def generate_persona_decision_view(
+    dossier: PreIPODealDossier,
+    persona: Optional[str] = None,
+    is_blocked: bool = False,
+    blocked_reason: str = "",
+) -> Dict[str, Any]:
     """
     Generates an executive decision synthesis customized for the selected user persona.
     Facts, ratios, and models remain strictly identical; the decision focus, trade-offs,
     and recommended next steps adapt to the user's role.
+    If is_blocked=True, automated committee approvals and investment ratings are strictly
+    purged under P0-08 containment.
     """
     latest = dossier.latest_financials
     ind = dossier.indebtedness
@@ -889,6 +1013,19 @@ def generate_persona_decision_view(dossier: PreIPODealDossier, persona: str) -> 
             "trade_offs": "Full transparency and rigorous disclosure prevent regulatory delays but require detailed accounting reconciliations.",
         },
     }
+
+    if is_blocked or getattr(dossier, "is_blocked", False):
+        for p_key, p_val in persona_map.items():
+            p_val["status"] = "BLOCKED"
+            p_val["verdict"] = "DECISION_SUPPORT_ONLY"
+            p_val["recommendation"] = (
+                f"Analysis is BLOCKED under P0 containment ({blocked_reason or 'Filing review incomplete'}). "
+                "Automated approvals, agency credit ratings, and investment recommendations are strictly prohibited "
+                "under P0-08. Refer to factual disclosure provenance in Tab 2 only."
+            )
+
+    if persona is None or persona == "all":
+        return persona_map
 
     return persona_map.get(persona, persona_map["cfo"])
 
@@ -1036,14 +1173,34 @@ def calculate_wacc_and_roic(
     market_risk_premium: float = 0.055,
     beta: float = 1.05,
     corporate_tax_rate: float = 0.2517,
+    is_blocked: bool = False,
+    blocked_reason: str = "",
 ) -> Dict[str, Any]:
     """
     Computes rigorous ROIC vs WACC economic spread and Economic Value Added (EVA).
     ROIC = NOPAT / Invested Capital
     WACC = (E / (E + D)) * Ke + (D / (E + D)) * Kd * (1 - t)
     If underlying financial statements or capital structure are absent/unverified,
-    returns is_computable: False without fabricating numbers.
+    or if blocked under P0 containment, returns is_computable: False without fabricating numbers.
     """
+    if is_blocked or getattr(dossier, "is_blocked", False):
+        return {
+            "is_computable": False,
+            "status": "BLOCKED",
+            "invested_capital_cr": None,
+            "nopat_cr": None,
+            "roic_pct": None,
+            "ke_pct": None,
+            "kd_pre_tax_pct": None,
+            "kd_post_tax_pct": None,
+            "wacc_pct": None,
+            "equity_weight_pct": None,
+            "debt_weight_pct": None,
+            "value_creation_spread_pct": None,
+            "economic_profit_cr": None,
+            "blocked_reason": blocked_reason or "Analysis blocked under P0-07 containment.",
+            "narrative": blocked_reason or "Analysis blocked under P0-07 containment.",
+        }
     latest = dossier.latest_financials
     if latest.revenue_ops_cr <= 0 and latest.ebitda_cr <= 0 and latest.net_worth_cr <= 0:
         return {
@@ -1087,67 +1244,113 @@ def calculate_wacc_and_roic(
             "narrative": "Invested capital is negative or zero due to cumulative accounting losses.",
         }
 
-    # NOPAT = EBIT * (1 - t).
-    # For debt-free operating companies (e.g. pure equity operations), NOPAT = PAT (exact identity).
-    # Otherwise, deduce operating NOPAT from operating earnings without arbitrary capex approximations.
-    if dossier.indebtedness.funded_bank_debt_cr <= 0 and latest.pat_cr > 0:
-        nopat = latest.pat_cr
-    elif latest.operating_profit_bwc_cr:
-        nopat = round(latest.operating_profit_bwc_cr * (1.0 - corporate_tax_rate), 2)
+    # 1. Evaluate ROIC via verified EBIT and Invested Capital
+    ebit_val = getattr(latest, "ebit_cr", None)
+    if ebit_val is None and latest.pat_cr > 0 and dossier.indebtedness.funded_bank_debt_cr <= 0:
+        # Exact debt-free operating equivalence: NOPAT = PAT, implied EBIT = PAT / (1 - t)
+        ebit_val = round(latest.pat_cr / max(0.01, (1.0 - corporate_tax_rate)), 2)
+
+    safe_roic = compute_safe_roic(
+        ebit_cr=ebit_val,
+        invested_capital_cr=invested_capital,
+        tax_rate_pct=round(corporate_tax_rate * 100.0, 2),
+    )
+    if isinstance(safe_roic, BlockedResult):
+        nopat = None
+        roic_pct = None
     else:
-        nopat = round(latest.ebitda_cr * (1.0 - corporate_tax_rate), 2)
+        nopat = safe_roic.nopat_cr
+        roic_pct = safe_roic.roic_pct
 
-    roic_pct = round((nopat / invested_capital) * 100.0, 2) if invested_capital > 0 else None
-
-    # Cost of Equity (CAPM)
-    ke_pct = round((rf_rate + beta * market_risk_premium) * 100.0, 2)
-
-    # Cost of Debt (Post-Tax)
-    kd_pre_tax = dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0
-    kd_post_tax_pct = round(kd_pre_tax * (1.0 - corporate_tax_rate), 2)
-
-    # Capital weights based on implied Mcap if available, else Net Worth book equity
+    # 2. Evaluate WACC via market equity (strictly prohibiting book equity / net worth substitution)
     if dossier.valuation_comps and dossier.valuation_comps.implied_mcap_cr > 0:
         mcap = dossier.valuation_comps.implied_mcap_cr
-    elif net_worth > 0:
-        mcap = net_worth
     else:
-        mcap = 0.0
-
-    net_debt = max(0.0, dossier.indebtedness.net_economic_debt_cr)
-    tot_firm_val = mcap + net_debt
-
-    if tot_firm_val <= 0:
+        # Under P0-07, book equity cannot be substituted for market equity
         return {
             "is_computable": False,
             "invested_capital_cr": round(invested_capital, 2),
             "nopat_cr": nopat,
             "roic_pct": roic_pct,
-            "ke_pct": ke_pct,
-            "kd_pre_tax_pct": kd_pre_tax,
-            "kd_post_tax_pct": kd_post_tax_pct,
+            "ke_pct": round((rf_rate + beta * market_risk_premium) * 100.0, 2),
+            "kd_pre_tax_pct": dossier.indebtedness.weighted_avg_interest_rate_pct,
+            "kd_post_tax_pct": None,
             "wacc_pct": None,
             "equity_weight_pct": None,
             "debt_weight_pct": None,
             "value_creation_spread_pct": None,
             "economic_profit_cr": None,
-            "status": "INSUFFICIENT_DATA",
-            "narrative": "Total capitalization base is zero or negative.",
+            "status": "UNPRICED_DISCLOSURE",
+            "narrative": "Market equity valuation undisclosed in DRHP; book equity substitution is strictly prohibited under P0-07.",
         }
 
-    w_e = mcap / tot_firm_val
-    w_d = net_debt / tot_firm_val
-    wacc_pct = round(w_e * ke_pct + w_d * kd_post_tax_pct, 2)
+    # Cost of Debt without 9.0% default
+    kd_pre_tax = dossier.indebtedness.weighted_avg_interest_rate_pct
+    if kd_pre_tax is None:
+        return {
+            "is_computable": False,
+            "invested_capital_cr": round(invested_capital, 2),
+            "nopat_cr": nopat,
+            "roic_pct": roic_pct,
+            "ke_pct": round((rf_rate + beta * market_risk_premium) * 100.0, 2),
+            "kd_pre_tax_pct": None,
+            "kd_post_tax_pct": None,
+            "wacc_pct": None,
+            "equity_weight_pct": None,
+            "debt_weight_pct": None,
+            "value_creation_spread_pct": None,
+            "economic_profit_cr": None,
+            "status": "DEBT_COST_UNDISCLOSED",
+            "narrative": "Weighted average interest rate undisclosed in DRHP; 9.0% default fallback is prohibited under P0-07.",
+        }
 
-    spread_pct = round(roic_pct - wacc_pct, 2)
-    economic_profit_cr = round(invested_capital * (spread_pct / 100.0), 2)
-
-    value_creation_status = (
-        "SUBSTANTIAL_VALUE_CREATOR" if spread_pct > 5.0
-        else "MODERATE_VALUE_CREATOR" if spread_pct > 0.0
-        else "VALUE_NEUTRAL" if spread_pct > -2.0
-        else "ECONOMIC_VALUE_DESTROYER"
+    safe_wacc = compute_safe_wacc(
+        market_equity_cr=mcap,
+        total_debt_cr=tot_debt,
+        cost_of_debt_pct=kd_pre_tax,
+        risk_free_rate_pct=round(rf_rate * 100.0, 2),
+        beta=beta,
+        market_risk_premium_pct=round(market_risk_premium * 100.0, 2),
+        tax_rate_pct=round(corporate_tax_rate * 100.0, 2),
     )
+
+    if isinstance(safe_wacc, BlockedResult):
+        return {
+            "is_computable": False,
+            "invested_capital_cr": round(invested_capital, 2),
+            "nopat_cr": nopat,
+            "roic_pct": roic_pct,
+            "ke_pct": None,
+            "kd_pre_tax_pct": kd_pre_tax,
+            "kd_post_tax_pct": None,
+            "wacc_pct": None,
+            "equity_weight_pct": None,
+            "debt_weight_pct": None,
+            "value_creation_spread_pct": None,
+            "economic_profit_cr": None,
+            "status": "BLOCKED",
+            "narrative": safe_wacc.reason,
+        }
+
+    wacc_pct = safe_wacc.wacc_pct
+    ke_pct = safe_wacc.cost_of_equity_pct
+    kd_post_tax_pct = safe_wacc.after_tax_cost_of_debt_pct
+    w_e = safe_wacc.equity_weight_pct / 100.0
+    w_d = safe_wacc.debt_weight_pct / 100.0
+
+    if roic_pct is not None and wacc_pct is not None:
+        spread_pct = round(roic_pct - wacc_pct, 2)
+        economic_profit_cr = round(invested_capital * (spread_pct / 100.0), 2)
+        value_creation_status = (
+            "SUBSTANTIAL_VALUE_CREATOR" if spread_pct > 5.0
+            else "MODERATE_VALUE_CREATOR" if spread_pct > 0.0
+            else "VALUE_NEUTRAL" if spread_pct > -2.0
+            else "ECONOMIC_VALUE_DESTROYER"
+        )
+    else:
+        spread_pct = None
+        economic_profit_cr = None
+        value_creation_status = "PARTIAL_CALCULATION"
 
     return {
         "is_computable": True,
@@ -1158,8 +1361,8 @@ def calculate_wacc_and_roic(
         "kd_pre_tax_pct": kd_pre_tax,
         "kd_post_tax_pct": kd_post_tax_pct,
         "wacc_pct": wacc_pct,
-        "equity_weight_pct": round(w_e * 100.0, 1),
-        "debt_weight_pct": round(w_d * 100.0, 1),
+        "equity_weight_pct": safe_wacc.equity_weight_pct,
+        "debt_weight_pct": safe_wacc.debt_weight_pct,
         "value_creation_spread_pct": spread_pct,
         "economic_profit_cr": economic_profit_cr,
         "status": value_creation_status,
@@ -1171,11 +1374,24 @@ def calculate_reverse_dcf_hurdle(
     custom_wacc_pct: Optional[float] = None,
     terminal_growth_pct: float = 5.0,
     forecast_years: int = 5,
+    is_blocked: bool = False,
+    blocked_reason: str = "",
 ) -> Dict[str, Any]:
     """
     Reverse DCF: Solves for the 5-year FCF compound annual growth rate (CAGR)
     strictly required to justify the implied enterprise valuation at the upper price band.
     """
+    if is_blocked or getattr(dossier, "is_blocked", False):
+        return {
+            "status": "BLOCKED",
+            "implied_ev_cr": None,
+            "base_fcf_cr": None,
+            "required_fcf_cagr_pct": None,
+            "implied_fcf_growth_pct": None,
+            "hurdle_difficulty": "BLOCKED",
+            "blocked_reason": blocked_reason or "Offer value not disclosed / unreviewed under P0-07.",
+            "narrative": blocked_reason or "Offer value not disclosed / unreviewed under P0-07.",
+        }
     if not dossier.valuation_comps or dossier.valuation_comps.implied_ev_cr <= 0:
         return {
             "implied_ev_cr": 0.0,
@@ -1201,89 +1417,55 @@ def calculate_reverse_dcf_hurdle(
             ),
         }
 
-    wacc = (custom_wacc_pct or 12.0) / 100.0
-    g = terminal_growth_pct / 100.0
-
-    if wacc <= g:
-        wacc = g + 0.04
-
-    # Verify feasibility within realistic bounds (-50% to +100%)
-    pv_max = sum((base_fcf * ((1.0 + 1.0) ** y)) / ((1.0 + wacc) ** y) for y in range(1, forecast_years + 1))
-    tv_max = (base_fcf * ((1.0 + 1.0) ** forecast_years) * (1.0 + g)) / (wacc - g)
-    max_ev = pv_max + (tv_max / ((1.0 + wacc) ** forecast_years))
-    if max_ev < implied_ev:
+    if custom_wacc_pct is None:
         return {
             "implied_ev_cr": round(implied_ev, 2),
             "base_fcf_cr": round(base_fcf, 2),
-            "wacc_assumed_pct": round(wacc * 100.0, 1),
-            "terminal_growth_assumed_pct": round(g * 100.0, 1),
             "required_fcf_cagr_pct": None,
-            "hurdle_difficulty": "MATHEMATICALLY_OUT_OF_BOUNDS",
-            "is_feasible": False,
-            "narrative": (
-                f"Implied EV of ₹{implied_ev:,.1f} Cr cannot be mathematically justified within realistic cash flow growth bounds (>100% CAGR needed)."
-            ),
+            "hurdle_difficulty": "MISSING_DISCOUNT_RATE",
+            "narrative": "Explicit WACC discount rate required; default substitution is prohibited under P0-07.",
         }
 
-    # Binary search for required CAGR between -50% and +100%
-    low_cagr, high_cagr = -0.50, 1.00
-    best_cagr = None
+    safe_dcf = compute_safe_reverse_dcf(
+        market_valuation_cr=implied_ev,
+        wacc_pct=custom_wacc_pct,
+        current_fcf_cr=base_fcf,
+        terminal_growth_pct=terminal_growth_pct,
+        forecast_years=forecast_years,
+    )
 
-    for _ in range(35):
-        mid_cagr = (low_cagr + high_cagr) / 2.0
-        # Compute PV of 5-year cash flows
-        pv_fcfs = 0.0
-        curr_fcf = base_fcf
-        for y in range(1, forecast_years + 1):
-            curr_fcf *= (1.0 + mid_cagr)
-            pv_fcfs += curr_fcf / ((1.0 + wacc) ** y)
-        
-        # Terminal value at year 5
-        terminal_val = (curr_fcf * (1.0 + g)) / (wacc - g)
-        pv_terminal = terminal_val / ((1.0 + wacc) ** forecast_years)
-        model_ev = pv_fcfs + pv_terminal
-
-        if model_ev >= implied_ev:
-            best_cagr = mid_cagr
-            high_cagr = mid_cagr
-        else:
-            low_cagr = mid_cagr
-
-    if best_cagr is None:
+    if isinstance(safe_dcf, BlockedResult):
         return {
+            "status": "BLOCKED",
             "implied_ev_cr": round(implied_ev, 2),
             "base_fcf_cr": round(base_fcf, 2),
-            "wacc_assumed_pct": round(wacc * 100.0, 1),
-            "terminal_growth_assumed_pct": round(g * 100.0, 1),
             "required_fcf_cagr_pct": None,
-            "hurdle_difficulty": "MATHEMATICALLY_OUT_OF_BOUNDS",
-            "is_feasible": False,
-            "narrative": f"Implied EV of ₹{implied_ev:,.1f} Cr cannot be justified.",
+            "implied_fcf_growth_pct": None,
+            "hurdle_difficulty": "BLOCKED",
+            "blocked_reason": safe_dcf.reason,
+            "narrative": safe_dcf.reason,
         }
 
-    req_cagr_pct = round(best_cagr * 100.0, 1)
-
-    if req_cagr_pct < 12.0:
-        difficulty = "ACHIEVABLE_LOW_BAR"
-        nar = f"Valuation requires only {req_cagr_pct}% FCF CAGR over 5 years — conservative relative to market expectations."
-    elif req_cagr_pct <= 22.0:
-        difficulty = "REALISTIC_MODERATE"
-        nar = f"Valuation requires {req_cagr_pct}% 5-year FCF CAGR — in line with historical execution and sector median."
-    elif req_cagr_pct <= 32.0:
-        difficulty = "AGGRESSIVE_STRETCH"
-        nar = f"Valuation requires {req_cagr_pct}% FCF CAGR — high execution bar requiring flawless capacity or market share expansion."
-    else:
-        difficulty = "HERCULEAN_HIGH_RISK"
-        nar = f"Valuation demands {req_cagr_pct}% FCF CAGR — priced for perfection with minimal margin of safety."
+    cagr_pct = safe_dcf.implied_fcf_growth_cagr_pct
+    hurdle = (
+        "MODERATE_REALISTIC" if cagr_pct < 15.0
+        else "CHALLENGING_AGGRESSIVE" if cagr_pct < 30.0
+        else "HERCULEAN_HIGH_RISK"
+    )
 
     return {
         "implied_ev_cr": round(implied_ev, 2),
         "base_fcf_cr": round(base_fcf, 2),
-        "wacc_assumed_pct": round(wacc * 100.0, 1),
-        "terminal_growth_assumed_pct": round(g * 100.0, 1),
-        "required_fcf_cagr_pct": req_cagr_pct,
-        "hurdle_difficulty": difficulty,
-        "narrative": nar,
+        "wacc_assumed_pct": custom_wacc_pct,
+        "terminal_growth_assumed_pct": terminal_growth_pct,
+        "required_fcf_cagr_pct": cagr_pct,
+        "implied_fcf_growth_pct": cagr_pct,
+        "implied_terminal_fcf_cr": safe_dcf.implied_terminal_fcf_cr,
+        "repriced_valuation_cr": safe_dcf.repriced_valuation_cr,
+        "repricing_error_pct": safe_dcf.repricing_error_pct,
+        "hurdle_difficulty": hurdle,
+        "is_feasible": True,
+        "narrative": f"To justify enterprise valuation of ₹{implied_ev:,.1f} Cr at {custom_wacc_pct}% WACC, FCF must compound at {cagr_pct}% annually over {forecast_years} years.",
     }
 
 

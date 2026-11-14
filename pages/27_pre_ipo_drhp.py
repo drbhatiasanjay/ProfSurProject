@@ -20,6 +20,13 @@ import pandas as pd
 import plotly.graph_objects as go
 from models.pre_ipo_data import PRE_IPO_REGISTRY
 from models.pre_ipo_ingest import PreIPOIngestionEngine, assess_analysis_eligibility, ExtractionState
+from models.pre_ipo_capability_gate import (
+    CapabilityType,
+    evaluate_capability_gate,
+    assert_export_allowed,
+    ExportBlockedError,
+    is_hcch_entity,
+)
 from models.pre_ipo_engine import (
     classify_dickinson_stage,
     compute_debt_capacity,
@@ -661,6 +668,25 @@ if selected_deal_key == "custom_upload":
 else:
     dossier = PRE_IPO_REGISTRY[selected_deal_key]
 
+# Evaluate analytical capability gate (PR 1 Containment)
+is_hcch = is_hcch_entity(selected_deal_key, getattr(dossier, "company_name", ""), getattr(dossier, "cin", ""))
+active_owner = st.session_state.get("authenticated_user", "drbhatia")
+active_snapshot_id = st.session_state.get("pre_ipo_active_snapshot_id")
+active_snapshot_status = st.session_state.get("pre_ipo_active_snapshot_status", "UNREVIEWED")
+active_snapshot_hash = st.session_state.get("pre_ipo_active_snapshot_hash")
+dossier_origin = "LEGACY_REGISTRY" if selected_deal_key in PRE_IPO_REGISTRY else "PROCESSED_INTAKE"
+
+gate_decision = evaluate_capability_gate(
+    owner=active_owner,
+    company=selected_deal_key,
+    capability=CapabilityType.FINANCIAL_ANALYSIS,
+    snapshot_id=active_snapshot_id,
+    snapshot_status=active_snapshot_status,
+    origin=dossier_origin,
+    is_production=True,
+    is_unpriced=bool(dossier and (not dossier.total_issue_size_cr or dossier.total_issue_size_cr <= 0)),
+)
+
 eligibility = assess_analysis_eligibility(dossier)
 if not eligibility.allowed:
     with st.container(key="pre_ipo_intake_gate"):
@@ -691,16 +717,50 @@ with col_act:
         "</label>",
         unsafe_allow_html=True,
     )
-    deck_bytes = generate_pre_ipo_board_deck(dossier)
-    st.download_button(
-        label="Export Deck (PPTX)",
-        icon=":material/download:",
-        data=deck_bytes,
-        file_name=f"{dossier.deal_id}_board_pitch_deck.pptx",
-        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        use_container_width=True,
-    )
-    st.caption(":material/download: 1-Click Board PPTX Export")
+    if is_hcch and not gate_decision.allowed:
+        st.button(
+            "Export Blocked (Awaiting Evidence)",
+            icon=":material/block:",
+            disabled=True,
+            use_container_width=True,
+            help="Export is strictly blocked under P0-01 containment until the official 513-page DRHP is reviewed and accepted."
+        )
+        st.caption(":material/block: P0-01 Containment Active")
+    else:
+        try:
+            wacc_calc = calculate_wacc_and_roic(
+                dossier,
+                is_blocked=bool(is_hcch and not gate_decision.allowed),
+                blocked_reason="P0-01 Containment active: awaiting official DRHP review and acceptance."
+            )
+            dcf_calc = calculate_reverse_dcf_hurdle(
+                dossier,
+                is_blocked=bool(is_hcch and not gate_decision.allowed),
+                blocked_reason="P0-01 Containment active: awaiting official DRHP review and acceptance."
+            )
+            deck_bytes = generate_pre_ipo_board_deck(
+                dossier=dossier,
+                snapshot_id=active_snapshot_id,
+                snapshot_status=active_snapshot_status,
+                snapshot_hash=active_snapshot_hash,
+                result_snapshot_hash=active_snapshot_hash,
+                is_production=True,
+                wacc_result=wacc_calc,
+                reverse_dcf_result=dcf_calc,
+                decision_support_policy="NEUTRAL_EVIDENCE_BASED",
+            )
+            st.download_button(
+                label="Export Deck (PPTX)",
+                icon=":material/download:",
+                data=deck_bytes,
+                file_name=f"{dossier.deal_id}_board_pitch_deck.pptx",
+                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                use_container_width=True,
+            )
+            st.caption(":material/download: 1-Click Board PPTX Export")
+        except ExportBlockedError as e:
+            st.button("Export Blocked", icon=":material/block:", disabled=True, use_container_width=True)
+            st.caption(f":material/block: {str(e)}")
 
 # Feedback toasts on selection change
 prev_deal = st.session_state.get("_prev_pre_ipo_deal")
@@ -735,10 +795,35 @@ scope_bar_html = f"""
 """
 render_html(scope_bar_html)
 
+if is_hcch and not gate_decision.allowed:
+    st.warning(
+        "⚠️ **CORRECTION & AUDIT NOTICE (P0-01 Containment):** "
+        "Hindustan Coca-Cola Holdings Limited's built-in registry dossier has been contained and superseded. "
+        "Under SEBI ICDR 2018 statutory guidelines, real analytical processing (Offer Valuation, WACC/ROIC, Reverse DCF, and Board Deck generation) "
+        "is strictly **BLOCKED** until the 513-page parent DRHP is fully indexed and its evidence ledger reviewed and accepted in Tab 2 (Provenance Ledger). "
+        "All values shown below are candidate unreviewed disclosures and cannot be used for investment, credit, or underwriting decisions."
+    )
+elif dossier_origin == "LEGACY_REGISTRY":
+    st.info(
+        "ℹ️ **SYNTHETIC BENCHMARK EXAMPLE — NOT VERIFIED FILING EVIDENCE:** "
+        "This dossier is loaded from the legacy benchmark suite for interface evaluation. "
+        "It is not accepted regulatory filing evidence."
+    )
+
 # ─────────────────────────────────────────────────────────────────────────────
 # PANEL 1: SOVEREIGN HERO OFFERING DNA (Rendered clean without code blocks)
 # ─────────────────────────────────────────────────────────────────────────────
 badge_class = "badge-emerald" if "Mature" in stage_name else "badge-amber" if "Growth" in stage_name else "badge-rose"
+
+containment_badge = (
+    '<span class="badge-pill badge-rose" style="margin-left:6px;">⚠️ CONTAINED — AWAITING EVIDENCE REVIEW</span>'
+    if (is_hcch and not gate_decision.allowed)
+    else (
+        '<span class="badge-pill badge-purple" style="margin-left:6px;">SYNTHETIC EXAMPLE</span>'
+        if dossier_origin == "LEGACY_REGISTRY"
+        else '<span class="badge-pill badge-purple" style="margin-left:6px;">SEBI ICDR 2018 Restated</span>'
+    )
+)
 
 if dossier.total_issue_size_cr and dossier.total_issue_size_cr > 0:
     offering_title = "Total Offering Value"
@@ -765,7 +850,7 @@ hero_html = f"""
         <div>
             <span class="badge-pill badge-sky">{dossier.filing_type} · {dossier.filing_date}</span>
             <span class="badge-pill {badge_class}" style="margin-left:6px;">Dickinson: {stage_name} {pattern}</span>
-            <span class="badge-pill badge-purple" style="margin-left:6px;">SEBI ICDR 2018 Restated</span>
+            {containment_badge}
             <span class="badge-pill badge-amber" style="margin-left:6px;">Context: {context_options[selected_context]}</span>
             <h1 style="color:#ffffff; font-size:1.85rem; font-weight:800; margin:8px 0 4px 0;">{dossier.company_name}</h1>
             <div style="color:#94a3b8; font-size:0.85rem;">
@@ -796,7 +881,12 @@ render_html(hero_html)
 # ─────────────────────────────────────────────────────────────────────────────
 # EXECUTIVE PERSONA DECISION COCKPIT (Clean rendering with zero-indent lines)
 # ─────────────────────────────────────────────────────────────────────────────
-p_view = generate_persona_decision_view(dossier, persona=selected_persona)
+p_view = generate_persona_decision_view(
+    dossier,
+    persona=selected_persona,
+    is_blocked=bool(is_hcch and not gate_decision.allowed),
+    blocked_reason="Filing review incomplete under P0-01 containment." if (is_hcch and not gate_decision.allowed) else "",
+)
 
 metric_cards_html = "".join([
     f'<div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:6px; padding:8px 12px;">'
@@ -1381,6 +1471,79 @@ with tab_workpapers:
         stress_nar = generate_stress_narrative(dossier, stress_res, persona=selected_persona)
         render_six_point_narrative(stress_nar, persona_title=persona_options[selected_persona])
 
+        # ── Item 2: 3D Multi-Parameter Covenant Sensitivity Grid & Page 28 Bridge ──
+        st.markdown("---")
+        render_html("""
+        <div class="bento-subtitle">3D Multi-Parameter Covenant Headroom Grid</div>
+        <div class="bento-title">EBITDA Margin Shock × Benchmark Rate Hike × Fresh Issue Prepayment Tensor</div>
+        """, unsafe_allow_html=True)
+
+        c_3d1, c_3d2 = st.columns([1.5, 2.5])
+        with c_3d1:
+            sel_prepay_pct = st.select_slider(
+                "Fresh Issue Allocated to Debt Prepayment (%):",
+                options=[0, 25, 50, 75, 100],
+                value=50,
+                key=f"slider_prepay_{dossier.deal_id}",
+                help="Models balance sheet repair by channeling primary IPO proceeds directly into retiring interest-bearing bank debt."
+            )
+        with c_3d2:
+            fresh_cap = dossier.fresh_issue_cr or 0.0
+            retired_debt = fresh_cap * (sel_prepay_pct / 100.0)
+            st.caption(f"💡 **Balance Sheet Sizing:** At **{sel_prepay_pct}%** allocation of **₹{fresh_cap:,.1f} Cr** fresh issue, **₹{retired_debt:,.1f} Cr** of funded debt is retired.")
+
+        from models.pre_ipo_engine import compute_3d_covenant_sensitivity_matrix
+        rev_cr = latest.revenue_ops_cr if latest.revenue_ops_cr else max(0.01, latest.ebitda_cr)
+        sens_3d = compute_3d_covenant_sensitivity_matrix(
+            base_ebitda_cr=latest.ebitda_cr,
+            base_revenue_cr=rev_cr,
+            base_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
+            base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+            fresh_issue_cr=fresh_cap,
+            debt_prepay_allocations_pct=[sel_prepay_pct],
+            covenant_threshold=3.0,
+        )
+
+        slice_data = sens_3d["slices"][0]
+        remaining_debt = slice_data["remaining_debt_cr"]
+        st.markdown(f"**Effective Post-Issue Funded Debt:** `₹{remaining_debt:,.1f} Cr` (Reduced from `₹{dossier.indebtedness.funded_bank_debt_cr:,.1f} Cr`)")
+
+        rate_cols = sens_3d["rate_shocks_bps"]
+        grid_rows = []
+        for r_entry in slice_data["matrix"]:
+            m_bps = r_entry["margin_shock_bps"]
+            m_pct = r_entry["shocked_margin_pct"]
+            row_dict = {"Margin Shock (bps)": f"{m_bps:+d} bps ({m_pct:.1f}%)"}
+            for r_res in r_entry["rate_results"]:
+                r_bps = r_res["rate_shock_bps"]
+                icr_val = r_res["icr"]
+                status = r_res["status"]
+                import math
+                if math.isinf(icr_val):
+                    display_val = "∞ (Exempt)"
+                elif status == "NEGATIVE_EBITDA":
+                    display_val = "0.00x (Loss)"
+                else:
+                    display_val = f"{icr_val:.2f}x"
+                row_dict[f"+{r_bps} bps Rate"] = display_val
+            grid_rows.append(row_dict)
+
+        st.dataframe(pd.DataFrame(grid_rows), use_container_width=True, hide_index=True)
+
+        br_col1, br_col2 = st.columns([2, 1])
+        with br_col1:
+            st.caption("🛡️ **Bank Covenant Benchmark: 3.00x ICR**. Headroom reflects distance above minimum loan covenants.")
+        with br_col2:
+            if st.button("🚀 Bridge to Page 28: 12-Qtr CFADS Engine", key=f"btn_bridge_p28_{dossier.deal_id}", use_container_width=True):
+                st.session_state["covenant_bridge_scenario"] = {
+                    "company_name": dossier.company_name,
+                    "base_ebitda": latest.ebitda_cr,
+                    "funded_debt": remaining_debt,
+                    "wair_pct": dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+                    "prepay_pct": sel_prepay_pct,
+                }
+                st.success("Scenario parameters primed for Page 28. Switch to '28 Covenant Headroom' in sidebar.")
+
     # ── SUBTAB 4: VALUATION, PEERS, DCF & FORENSICS ──
     with subtab_val:
         val = dossier.valuation_comps
@@ -1491,8 +1654,16 @@ with tab_workpapers:
         render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
         render_html('<div class="bento-subtitle">Economic Value Creation & Reverse DCF Sizing</div>', unsafe_allow_html=True)
         render_html('<div class="bento-title">ROIC vs WACC Spread & Required Growth Hurdle</div>', unsafe_allow_html=True)
-        wacc_res = calculate_wacc_and_roic(dossier)
-        rev_dcf = calculate_reverse_dcf_hurdle(dossier)
+        wacc_res = calculate_wacc_and_roic(
+            dossier,
+            is_blocked=bool(is_hcch and not gate_decision.allowed),
+            blocked_reason="Unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
+        )
+        rev_dcf = calculate_reverse_dcf_hurdle(
+            dossier,
+            is_blocked=bool(is_hcch and not gate_decision.allowed),
+            blocked_reason="Unpriced / unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
+        )
 
         col_w1, col_w2, col_w3 = st.columns(3)
         with col_w1:
@@ -1649,34 +1820,117 @@ with tab_ic_action:
     render_html('<div class="bento-subtitle">Institutional Governance & Decision Protocol</div>', unsafe_allow_html=True)
     render_html('<div class="bento-title">Investment Committee Underwriting Stance & Action Register</div>', unsafe_allow_html=True)
 
-    ic = dossier.ic_verdict
-    if ic:
+    # P0-08 Containment: Evaluate recommendation capability gate
+    gate_ic = evaluate_capability_gate(
+        owner=active_owner,
+        company=getattr(dossier, "company_name", selected_deal_key),
+        capability=CapabilityType.RECOMMENDATIONS,
+        snapshot_id=active_snapshot_id,
+        snapshot_status=active_snapshot_status,
+        origin=dossier_origin,
+        is_production=True,
+    )
+
+    if not gate_ic.allowed:
+        render_html(f"""
+        <div class="bento-card" style="border:1px solid #ef4444; background:rgba(239, 68, 68, 0.08); padding:16px; border-radius:8px; margin-bottom:16px;">
+            <div style="font-size:0.85rem; font-weight:700; color:#f87171; text-transform:uppercase; margin-bottom:6px;">
+                <span class="material-symbols-rounded" style="font-size:16px; vertical-align:-3px; margin-right:4px;">gavel</span>
+                P0-08 Containment Active: Automated IC Verdict & Agency Ratings Prohibited
+            </div>
+            <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.5;">
+                {gate_ic.reason}
+                <br><em>Policy Directive:</em> {gate_ic.next_action}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
         col_ic1, col_ic2 = st.columns([2, 3])
         with col_ic1:
-            v_color = "#10b981" if "APPROVE" in ic.underwriting_verdict else "#f59e0b"
-            rating_display = (
-                f"External Rating: <strong style='color:#ffffff;'>{ic.external_rating_symbol} ({ic.external_rating_agency})</strong>"
-                if (ic.external_rating_symbol and ic.external_rating_agency)
-                else f"Internal Screening Grade: <strong style='color:#ffffff;'>{ic.internal_screening_grade or 'UNRATED'}</strong>"
-            )
-            ic_box_html = f"""
-            <div class="bento-card" style="border:2px solid {v_color}; text-align:center;">
-                <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">IC Underwriting Verdict</div>
-                <div style="font-size:1.5rem; font-weight:800; color:{v_color}; margin:8px 0; line-height:1.2;">
-                    {ic.underwriting_verdict}
+            neutral_box_html = f"""
+            <div class="bento-card" style="border:2px solid #3b82f6; text-align:center;">
+                <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">Institutional Governance Protocol</div>
+                <div style="font-size:1.3rem; font-weight:800; color:#60a5fa; margin:8px 0; line-height:1.2;">
+                    DECISION-SUPPORT ONLY
                 </div>
                 <div style="font-size:0.85rem; color:#cbd5e1; margin-top:8px;">
-                    {rating_display}<br>
-                    Max Rec. Leverage Ceiling: <strong style="color:#ffffff;">{ic.max_recommended_leverage_ratio:.2f}x EBITDA</strong>
+                    Underwriting Verdict: <strong style="color:#ffffff;">MANUAL_IC_DELIBERATION_REQUIRED</strong><br>
+                    External Rating: <strong style="color:#ffffff;">NO_AUTOMATED_SYNTHESIS (SEBI CRA 1999)</strong>
                 </div>
                 <div style="font-size:0.70rem; color:#94a3b8; margin-top:6px;">
-                    *Statutory Notice: Internal screening grade is derived from financial metrics, not a Credit Rating Agency opinion under SEBI CRA Regulations 1999.
+                    *Statutory Mandate: No automated committee approval or synthetic credit agency rating is provided.
                 </div>
             </div>
             """
-            render_html(ic_box_html)
+            render_html(neutral_box_html)
         with col_ic2:
-            ic_str_html = f"""
+            ic = dossier.ic_verdict if dossier else None
+            strengths = (
+                getattr(ic, "key_credit_strengths", None) or
+                getattr(ic, "strengths", None) or
+                [
+                    "Track record of cash operating profitability across evaluated fiscal periods.",
+                    "Established market footprint in domestic consumer categories.",
+                    "Parentage and brand support from established institutional sponsors."
+                ]
+            )
+            risks = (
+                getattr(ic, "key_downside_risks", None) or
+                getattr(ic, "key_underwriting_risks", None) or
+                getattr(ic, "key_credit_risks", None) or
+                [
+                    "Execution risks on planned capital expenditure expansion.",
+                    "Working capital fluctuations and raw material commodity pricing exposure.",
+                    "Competitive dynamics from both organized and unorganized sector participants."
+                ]
+            )
+            neutral_str_html = f"""
+            <div class="bento-card">
+                <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:6px;">
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">verified</span>Diligence Observations & Transaction Strengths
+                </div>
+                <div style="font-size:0.84rem; color:#e2e8f0; line-height:1.45;">
+                    {'<br>'.join(['• ' + s for s in strengths])}
+                </div>
+                <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
+                <div style="font-size:0.80rem; font-weight:700; color:#f43f5e; text-transform:uppercase; margin-bottom:6px;">
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">warning</span>Key Diligence Vulnerabilities & Downside Considerations
+                </div>
+                <div style="font-size:0.84rem; color:#cbd5e1; line-height:1.45;">
+                    {'<br>'.join(['• ' + r for r in risks])}
+                </div>
+            </div>
+            """
+            render_html(neutral_str_html)
+    else:
+        ic = dossier.ic_verdict
+        if ic:
+            col_ic1, col_ic2 = st.columns([2, 3])
+            with col_ic1:
+                v_color = "#10b981" if "APPROVE" in ic.underwriting_verdict else "#f59e0b"
+                rating_display = (
+                    f"External Rating: <strong style='color:#ffffff;'>{ic.external_rating_symbol} ({ic.external_rating_agency})</strong>"
+                    if (ic.external_rating_symbol and ic.external_rating_agency)
+                    else f"Internal Screening Grade: <strong style='color:#ffffff;'>{ic.internal_screening_grade or 'UNRATED'}</strong>"
+                )
+                ic_box_html = f"""
+                <div class="bento-card" style="border:2px solid {v_color}; text-align:center;">
+                    <div style="font-size:0.75rem; color:#94a3b8; text-transform:uppercase;">IC Underwriting Verdict</div>
+                    <div style="font-size:1.5rem; font-weight:800; color:{v_color}; margin:8px 0; line-height:1.2;">
+                        {ic.underwriting_verdict}
+                    </div>
+                    <div style="font-size:0.85rem; color:#cbd5e1; margin-top:8px;">
+                        {rating_display}<br>
+                        Max Rec. Leverage Ceiling: <strong style="color:#ffffff;">{ic.max_recommended_leverage_ratio:.2f}x EBITDA</strong>
+                    </div>
+                    <div style="font-size:0.70rem; color:#94a3b8; margin-top:6px;">
+                        *Statutory Notice: Internal screening grade is derived from financial metrics, not a Credit Rating Agency opinion under SEBI CRA Regulations 1999.
+                    </div>
+                </div>
+                """
+                render_html(ic_box_html)
+            with col_ic2:
+                ic_str_html = f"""
             <div class="bento-card">
                 <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:6px;">
                     <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">verified</span>Key Transaction & Credit Strengths

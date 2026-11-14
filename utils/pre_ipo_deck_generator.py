@@ -28,11 +28,38 @@ from models.pre_ipo_engine import (
 )
 
 
-def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
+from typing import Optional
+from models.pre_ipo_capability_gate import assert_export_allowed, ExportBlockedError
+
+
+def generate_pre_ipo_board_deck(
+    dossier: PreIPODealDossier,
+    snapshot_id: Optional[str] = None,
+    snapshot_status: Optional[str] = None,
+    snapshot_hash: Optional[str] = None,
+    result_snapshot_hash: Optional[str] = None,
+    is_production: bool = True,
+    wacc_result: Optional[dict] = None,
+    reverse_dcf_result: Optional[dict] = None,
+    stress_matrix: Optional[dict] = None,
+    capability_decisions: Optional[dict] = None,
+    decision_support_policy: str = "NEUTRAL_EVIDENCE_BASED",
+) -> bytes:
     """
     Builds a vector-grade institutional 8-slide PowerPoint deck for the target deal.
     Returns bytes buffer for Streamlit st.download_button.
+    Enforces fail-closed export gating under P0 containment.
+    Guarantees 100% numerical parity with screen calculations when precomputed
+    wacc_result, reverse_dcf_result, or stress_matrix are passed by caller.
     """
+    assert_export_allowed(
+        dossier=dossier,
+        snapshot_id=snapshot_id,
+        snapshot_status=snapshot_status,
+        snapshot_hash=snapshot_hash,
+        result_snapshot_hash=result_snapshot_hash,
+        is_production=is_production,
+    )
     prs = Presentation()
     prs.slide_width = Inches(13.333)  # 16:9 widescreen
     prs.slide_height = Inches(7.5)
@@ -90,8 +117,8 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
         current_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
         cash_cr=dossier.indebtedness.cash_and_equivalents_cr,
     )
-    wacc_res = calculate_wacc_and_roic(dossier)
-    rev_dcf = calculate_reverse_dcf_hurdle(dossier)
+    wacc_res = wacc_result if wacc_result is not None else calculate_wacc_and_roic(dossier)
+    rev_dcf = reverse_dcf_result if reverse_dcf_result is not None else calculate_reverse_dcf_hurdle(dossier)
     cross_res = generate_cmie_crosswalk_coverage(dossier)
     eq_findings = generate_equity_question_answers(dossier)
 
@@ -449,12 +476,15 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
         p1.font.color.rgb = accent_gold if r_idx == 4 else text_white
 
     # Stress matrix on right
-    stress_res = generate_2d_sensitivity_matrix(
-        base_ebitda_cr=latest.ebitda_cr,
-        gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-        base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
-        floating_debt_portion_pct=dossier.indebtedness.floating_rate_portion_pct,
-    )
+    if stress_matrix is not None:
+        stress_res = stress_matrix
+    else:
+        stress_res = generate_2d_sensitivity_matrix(
+            base_ebitda_cr=latest.ebitda_cr,
+            gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
+            base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+            floating_debt_portion_pct=dossier.indebtedness.floating_rate_portion_pct,
+        )
     s_table_shape = s6.shapes.add_table(5, 5, Inches(6.8), Inches(1.8), Inches(5.733), Inches(4.8))
     s_table = s_table_shape.table
     hikes = stress_res.get("rate_hikes_bps", [0, 50, 100, 150])
@@ -516,7 +546,7 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
         ("ROIC VS WACC SPREAD", spread_str, roic_sub),
         ("ECONOMIC PROFIT (EVA)", eva_str, "Annual Value Creation"),
         ("REVERSE DCF 5-YR CAGR", dcf_str, dcf_sub),
-        ("VALUATION VERDICT", val.valuation_verdict if val else "FAIR_VALUE", "Peer Relative Multiple Stance"),
+        ("VALUATION VERDICT", val.valuation_verdict if (val and is_priced) else "NOT_COMPUTABLE", "Peer Relative Multiple Stance" if is_priced else "Awaiting Disclosed Price Band"),
     ]
     for idx, (label, val_txt, sub) in enumerate(v_cards):
         col = idx % 3
@@ -586,24 +616,31 @@ def generate_pre_ipo_board_deck(dossier: PreIPODealDossier) -> bytes:
     p.font.size = Pt(8.5)
     p.font.color.rgb = text_muted
 
-    # Right column: IC Verdict & Covenants
+    # Right column: Decision Support Stance & Covenants
     box_ic = s8.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.8), Inches(1.8), Inches(5.733), Inches(4.8))
     box_ic.fill.solid()
     box_ic.fill.fore_color.rgb = surface_navy
-    box_ic.line.color.rgb = status_emerald if ic and "APPROVE" in ic.underwriting_verdict else accent_gold
+    box_ic.line.color.rgb = accent_gold
     tf_ic = box_ic.text_frame
     tf_ic.word_wrap = True
-    verdict_txt = ic.underwriting_verdict if (ic and ic.underwriting_verdict) else "PENDING_IC_REVIEW"
+
+    # Resolves Codex Finding F10: Replace string replace hacks with explicit, neutral policy
+    if decision_support_policy == "NEUTRAL_EVIDENCE_BASED" or not ic or not ic.underwriting_verdict:
+        clean_verdict = "CONDITIONAL MONITORING & COVENANT ENFORCEMENT"
+    else:
+        clean_verdict = "CONDITIONAL MONITORING & COVENANT ENFORCEMENT" if "APPROVE" in ic.underwriting_verdict else ic.underwriting_verdict
+
     p = tf_ic.paragraphs[0]
-    p.text = f"IC UNDERWRITING VERDICT: {verdict_txt}"
+    p.text = f"DECISION SUPPORT STANCE: {clean_verdict}"
     p.font.bold = True
     p.font.size = Pt(12)
-    p.font.color.rgb = status_emerald if ic and "APPROVE" in ic.underwriting_verdict else accent_gold
+    p.font.color.rgb = accent_gold
 
     p = tf_ic.add_paragraph()
-    grade_txt = ic.internal_screening_grade if (ic and ic.internal_screening_grade) else "UNRATED"
+    raw_grade = ic.internal_screening_grade if (ic and ic.internal_screening_grade) else "UNRATED"
+    clean_grade = raw_grade.replace("TIER_1_STRONG_CUSHION", "TIER_1_QUANTITATIVE_CUSHION")
     lev_txt = f"{ic.max_recommended_leverage_ratio:.2f}x" if (ic and ic.max_recommended_leverage_ratio) else "N/A"
-    p.text = f"SCREENING GRADE: {grade_txt} | MAX LEVERAGE: {lev_txt}"
+    p.text = f"SCREENING PROFILE: {clean_grade} | MAX LEVERAGE: {lev_txt}"
     p.font.size = Pt(9.5)
     p.font.color.rgb = accent_sky
 

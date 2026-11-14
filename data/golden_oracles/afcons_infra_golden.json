@@ -1,0 +1,107 @@
+{
+  "deal_id": "afcons_infra",
+  "company_name": "Afcons Infrastructure Limited",
+  "filing_type": "RHP",
+  "filing_date": "October 2024",
+  "sector": "Infrastructure Engineering & Construction (EPC)",
+  "face_value_inr": 10.0,
+  "offer_details": {
+    "total_issue_size_cr": 5430.0,
+    "fresh_issue_cr": 1250.0,
+    "ofs_cr": 4180.0,
+    "offered_shares_count": null,
+    "fresh_issue_pct": 23.02025782688766,
+    "ofs_pct": 76.97974217311234
+  },
+  "restated_financials": [
+    {
+      "period": "FY22",
+      "revenue_ops_cr": 11018.97,
+      "ebitda_cr": 1092.3,
+      "pat_cr": 357.65,
+      "cfo_cr": 840.5,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 2650.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Financials"
+    },
+    {
+      "period": "FY23",
+      "revenue_ops_cr": 12637.38,
+      "ebitda_cr": 1214.5,
+      "pat_cr": 410.86,
+      "cfo_cr": 980.2,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 3080.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Financials"
+    },
+    {
+      "period": "FY24",
+      "revenue_ops_cr": 13267.49,
+      "ebitda_cr": 1384.8,
+      "pat_cr": 449.74,
+      "cfo_cr": 1040.8,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 3540.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_heading": "Restated Summary Financials"
+    }
+  ],
+  "provenance_citations": [
+    {
+      "fact_key": "financials_FY22_revenue",
+      "value": 11018.97,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Financials",
+      "excerpt": "Revenue from Operations for FY22: Rs. 11018.97 Cr"
+    },
+    {
+      "fact_key": "financials_FY23_revenue",
+      "value": 12637.38,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Financials",
+      "excerpt": "Revenue from Operations for FY23: Rs. 12637.38 Cr"
+    },
+    {
+      "fact_key": "financials_FY24_revenue",
+      "value": 13267.49,
+      "section": "Section V",
+      "physical_page": 0,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Summary Financials",
+      "excerpt": "Revenue from Operations for FY24: Rs. 13267.49 Cr"
+    },
+    {
+      "fact_key": "objects_of_offer_total",
+      "value": 0.0,
+      "section": "Section III",
+      "physical_page": 84,
+      "printed_folio": "",
+      "table_or_paragraph": "Objects of the Offer",
+      "excerpt": "Total Fresh Issue / Offer Objects: Rs. 0.0 Cr"
+    },
+    {
+      "fact_key": "cap_table_promoter_holding_pre_pct",
+      "value": 99.4,
+      "section": "Section IV",
+      "physical_page": 102,
+      "printed_folio": "",
+      "table_or_paragraph": "Capital Structure",
+      "excerpt": "Promoter pre-issue shareholding: 99.4%"
+    }
+  ]
+}

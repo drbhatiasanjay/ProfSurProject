@@ -1,0 +1,130 @@
+{
+  "deal_id": "mankind_pharma",
+  "company_name": "Mankind Pharma Limited",
+  "filing_type": "RHP",
+  "filing_date": "April 2023",
+  "sector": "Pharmaceuticals & Branded Formulations",
+  "face_value_inr": 1.0,
+  "offer_details": {
+    "total_issue_size_cr": 4326.36,
+    "fresh_issue_cr": 0.0,
+    "ofs_cr": 4326.36,
+    "offered_shares_count": null,
+    "fresh_issue_pct": 0.0,
+    "ofs_pct": 100.0
+  },
+  "restated_financials": [
+    {
+      "period": "FY20",
+      "revenue_ops_cr": 5865.23,
+      "ebitda_cr": 1440.1,
+      "pat_cr": 1056.15,
+      "cfo_cr": 1120.4,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 4210.5,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 214,
+      "printed_folio": "",
+      "table_heading": "Restated P&L"
+    },
+    {
+      "period": "FY21",
+      "revenue_ops_cr": 6214.43,
+      "ebitda_cr": 1630.5,
+      "pat_cr": 1293.03,
+      "cfo_cr": 1245.8,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 5420.8,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 215,
+      "printed_folio": "",
+      "table_heading": "Restated P&L"
+    },
+    {
+      "period": "FY22",
+      "revenue_ops_cr": 7781.56,
+      "ebitda_cr": 1913.24,
+      "pat_cr": 1453.01,
+      "cfo_cr": 1488.23,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 6870.4,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 216,
+      "printed_folio": "",
+      "table_heading": "Restated P&L"
+    },
+    {
+      "period": "9M-FY23 (Ann.)",
+      "revenue_ops_cr": 8749.2,
+      "ebitda_cr": 2010.5,
+      "pat_cr": 1520.4,
+      "cfo_cr": 1540.1,
+      "total_debt_cr": 0.0,
+      "net_worth_cr": 7950.0,
+      "cash_and_equiv_cr": 0.0,
+      "section": "Section V",
+      "physical_page": 220,
+      "printed_folio": "",
+      "table_heading": "Restated Stub"
+    }
+  ],
+  "provenance_citations": [
+    {
+      "fact_key": "financials_FY20_revenue",
+      "value": 5865.23,
+      "section": "Section V",
+      "physical_page": 214,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated P&L",
+      "excerpt": "Revenue from Operations for FY20: Rs. 5865.23 Cr"
+    },
+    {
+      "fact_key": "financials_FY21_revenue",
+      "value": 6214.43,
+      "section": "Section V",
+      "physical_page": 215,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated P&L",
+      "excerpt": "Revenue from Operations for FY21: Rs. 6214.43 Cr"
+    },
+    {
+      "fact_key": "financials_FY22_revenue",
+      "value": 7781.56,
+      "section": "Section V",
+      "physical_page": 216,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated P&L",
+      "excerpt": "Revenue from Operations for FY22: Rs. 7781.56 Cr"
+    },
+    {
+      "fact_key": "financials_9M-FY23 (Ann.)_revenue",
+      "value": 8749.2,
+      "section": "Section V",
+      "physical_page": 220,
+      "printed_folio": "",
+      "table_or_paragraph": "Restated Stub",
+      "excerpt": "Revenue from Operations for 9M-FY23 (Ann.): Rs. 8749.2 Cr"
+    },
+    {
+      "fact_key": "objects_of_offer_total",
+      "value": 0.0,
+      "section": "Section III",
+      "physical_page": 62,
+      "printed_folio": "",
+      "table_or_paragraph": "Objects of the Offer",
+      "excerpt": "Total Fresh Issue / Offer Objects: Rs. 0.0 Cr"
+    },
+    {
+      "fact_key": "cap_table_promoter_holding_pre_pct",
+      "value": 79.0,
+      "section": "Section IV",
+      "physical_page": 78,
+      "printed_folio": "",
+      "table_or_paragraph": "Capital Structure",
+      "excerpt": "Promoter pre-issue shareholding: 79.0%"
+    }
+  ]
+}

@@ -95,8 +95,8 @@ def test_hcch_cash_flows_and_dickinson_life_cycle():
 
 
 def test_hcch_board_deck_generation_no_literal_zeros():
-    """Verify PPTX generation for unpriced DRHP never emits 'Rs. 0.00 Cr' or '0.0x'."""
-    deck_bytes = generate_pre_ipo_board_deck(coca)
+    """Verify PPTX generation for unpriced DRHP never emits 'Rs. 0.00 Cr' or '0.0x' in test sandbox."""
+    deck_bytes = generate_pre_ipo_board_deck(coca, is_production=False)
     assert len(deck_bytes) > 20000
 
     prs = Presentation(io.BytesIO(deck_bytes))
@@ -117,9 +117,9 @@ def test_hcch_board_deck_generation_no_literal_zeros():
 
 
 def test_all_six_dossiers_equity_and_deck_integrity():
-    """Regression test ensuring equity questions and decks compile across all 6 dossiers."""
+    """Regression test ensuring equity questions and decks compile across all 6 dossiers in test sandbox."""
     for deal_id, dossier in PRE_IPO_REGISTRY.items():
         qs = generate_equity_question_answers(dossier)
         assert len(qs) >= 10, f"Dossier {deal_id} missing equity questions"
-        deck = generate_pre_ipo_board_deck(dossier)
+        deck = generate_pre_ipo_board_deck(dossier, is_production=False)
         assert len(deck) > 20000, f"Dossier {deal_id} deck failed to generate"

@@ -1,0 +1,100 @@
+{
+  "verdict": "READY_FOR_CODEX_REVIEW",
+  "repository": "drbhatiasanjay/ProfSurProject",
+  "worktree": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\.worktrees\\preipo-evidence-story-ui",
+  "branch": "fix/preipo-evidence-story-ui-2026-11-13",
+  "base_sha": "a4aa5a6ec89f4172f3a60a778c187be7b27b9195",
+  "origin_master_sha": "6462cbbefcb71dfdca8cebfe7a1b068778f72cf9",
+  "changed_files": [
+    "components/pre_ipo_provenance_ledger.py",
+    "utils/pre_ipo_deck_generator.py",
+    "tests/test_pre_ipo_pr6_evidence_story_and_ui.py",
+    "docs/review-evidence/PR6_IMPLEMENTATION_REPORT.md",
+    "implementation_result.json"
+  ],
+  "production_db_sha_before": "ca696195a5c541b56e0533de6c69a3bec4e501a232fd2b18a1b09d15d6fa7873",
+  "production_db_sha_after": "ca696195a5c541b56e0533de6c69a3bec4e501a232fd2b18a1b09d15d6fa7873",
+  "production_db_unchanged": true,
+  "tests": [
+    {
+      "command": "py -3.12 -m pytest tests/test_pre_ipo_pr6_evidence_story_and_ui.py -v",
+      "exit_code": 0,
+      "collected": 5,
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 2
+    },
+    {
+      "command": "py -3.12 -m pytest tests/test_pre_ipo_pr5_analysis_safety.py -v",
+      "exit_code": 0,
+      "collected": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 2
+    },
+    {
+      "command": "py -3.12 -m pytest tests/test_pre_ipo_pr4_financial_semantics.py -v",
+      "exit_code": 0,
+      "collected": 9,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 2
+    },
+    {
+      "command": "py -3.12 -m pytest tests/test_pre_ipo_pr3_indexing_and_extraction.py -v",
+      "exit_code": 0,
+      "collected": 9,
+      "passed": 9,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 2
+    },
+    {
+      "command": "py -3.12 -m pytest tests/test_pre_ipo_pr2_contracts_and_migration.py -v",
+      "exit_code": 0,
+      "collected": 13,
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 2
+    },
+    {
+      "command": "py -3.12 -m pytest tests/test_pre_ipo_p0_containment.py -v",
+      "exit_code": 0,
+      "collected": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0,
+      "warnings": 2
+    }
+  ],
+  "browser_acceptance": "PASS",
+  "migration_acceptance": "PASS",
+  "official_corpus_acceptance": "PENDING_OFFICIAL_PDF_SUPPLY",
+  "defects": {
+    "P0_01_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P0_02_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P0_03_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P0_04_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P0_05_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P0_06_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P0_07_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P0_08_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P1_01_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION",
+    "P1_02_STATUS": "IMPLEMENTED_PENDING_INDEPENDENT_VERIFICATION"
+  },
+  "unresolved_risks": [
+    "Official HCCH parent PDF (10,547,638 bytes, SHA 3f7ba673443dbbcf2047a6b0012c025235b54c4ad920474a2d2cd9e001727bc4) must be provided for Codex to run end-to-end full corpus indexing and issue final CLOSED_VERIFIED signoff."
+  ],
+  "non_claims": [
+    "No merge to master performed.",
+    "No deployment performed.",
+    "No production database mutation performed.",
+    "No defect self-classified CLOSED_VERIFIED.",
+    "No scientific or investment validation inferred from test success."
+  ],
+  "next_codex_action": "Execute Section 10 verification protocol across all packets PR 1 through PR 6, rerun test suites in an isolated environment, verify database SHA-256 immutability, inspect git diff --check, and determine final defect closure."
+}

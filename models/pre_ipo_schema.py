@@ -152,10 +152,10 @@ class ObjectsOfOfferWaterfall:
     capex_expansion_cr: float
     inorganic_acquisition_cr: float
     general_corporate_purposes_cr: float
-    interest_rate_on_retired_debt_pct: float = 9.0
-    shares_pre_issue_cr: float = 36.0
-    shares_post_issue_cr: float = 40.0
-    pre_issue_pat_cr: float = 0.0
+    interest_rate_on_retired_debt_pct: Optional[float] = None
+    shares_pre_issue_cr: Optional[float] = None
+    shares_post_issue_cr: Optional[float] = None
+    pre_issue_pat_cr: Optional[float] = None
     provenance: Optional[ProvenanceRef] = None
 
     @property
@@ -206,26 +206,33 @@ class ObjectsOfOfferWaterfall:
         return max(0.0, min(self.debt_prepayment_cr, self.net_fresh_proceeds_cr))
 
     @property
-    def annual_interest_savings_cr(self) -> float:
+    def annual_interest_savings_cr(self) -> Optional[float]:
         # Only eligible prepayment qualifies for interest savings
+        if self.eligible_debt_prepayment_cr <= 0:
+            return 0.0
+        if self.interest_rate_on_retired_debt_pct is None:
+            return None
         return round(self.eligible_debt_prepayment_cr * (self.interest_rate_on_retired_debt_pct / 100.0), 2)
 
     @property
-    def pro_forma_pat_accretion_cr(self) -> float:
+    def pro_forma_pat_accretion_cr(self) -> Optional[float]:
         # Corporate tax rate: 25.17% (Section 115BAA)
+        if self.annual_interest_savings_cr is None:
+            return None
         return round(self.annual_interest_savings_cr * (1.0 - 0.2517), 2)
 
     @property
     def pre_issue_eps_inr(self) -> Optional[float]:
-        if self.shares_pre_issue_cr <= 0:
+        if not self.shares_pre_issue_cr or self.shares_pre_issue_cr <= 0 or self.pre_issue_pat_cr is None:
             return None
         return round(self.pre_issue_pat_cr / self.shares_pre_issue_cr, 2)
 
     @property
     def post_issue_pro_forma_eps_inr(self) -> Optional[float]:
-        if self.shares_post_issue_cr <= 0:
+        if not self.shares_post_issue_cr or self.shares_post_issue_cr <= 0 or self.pre_issue_pat_cr is None:
             return None
-        post_pat = self.pre_issue_pat_cr + self.pro_forma_pat_accretion_cr
+        accretion = self.pro_forma_pat_accretion_cr or 0.0
+        post_pat = self.pre_issue_pat_cr + accretion
         return round(post_pat / self.shares_post_issue_cr, 2)
 
     @property
@@ -517,13 +524,13 @@ class PreIPODealDossier:
     total_issue_size_cr: Optional[float]
     fresh_issue_cr: float
     ofs_cr: Optional[float]
-    face_value_inr: float
-    brlm_bankers: List[str]
-    exchange_listing: List[str]
-    history: List[FinancialYearMetric]
-    indebtedness: IndebtednessSchedule
-    working_capital: WorkingCapitalDynamics
-    governance: NonFinancialGovernance
+    face_value_inr: Optional[float] = None
+    brlm_bankers: List[str] = field(default_factory=list)
+    exchange_listing: List[str] = field(default_factory=list)
+    history: List[FinancialYearMetric] = field(default_factory=list)
+    indebtedness: Optional[IndebtednessSchedule] = None
+    working_capital: Optional[WorkingCapitalDynamics] = None
+    governance: Optional[NonFinancialGovernance] = None
     cap_table: Optional[CapTableDilution] = None
     objects_of_offer: Optional[ObjectsOfOfferWaterfall] = None
     beneish_forensics: Optional[BeneishMScoreRatios] = None

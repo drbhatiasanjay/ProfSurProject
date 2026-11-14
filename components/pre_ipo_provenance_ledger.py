@@ -75,8 +75,8 @@ def _get_complete_extraction_ledger(dossier: PreIPODealDossier) -> List[dict]:
         "domain": "Offer Structure & Terms",
         "variable": "Equity Share Face Value",
         "period": "Statutory Term",
-        "normalized_value": f"₹ {dossier.face_value_inr:.2f} per share",
-        "raw_quote": f"Face value of Rs. {dossier.face_value_inr:.0f} each",
+        "normalized_value": f"₹ {dossier.face_value_inr:.2f} per share" if dossier.face_value_inr is not None else "Undisclosed [●]",
+        "raw_quote": f"Face value of Rs. {dossier.face_value_inr:.0f} each" if dossier.face_value_inr is not None else "Face value undisclosed in preliminary summary",
         "physical_page": 1,
         "printed_page": "Page 1",
         "section": "Section III: Cover Page",
@@ -507,7 +507,7 @@ def render_provenance_ledger_tab(dossier: PreIPODealDossier) -> None:
 
     # ── Interactive Raw Citation Inspector Drilldown ────────────────────────
     st.markdown("##### :material/manage_search: Deep-Dive Raw Citation Inspector")
-    with st.expander("🔍 Click to inspect raw prospectus coordinates and audit trail for a specific disclosure", expanded=False):
+    with st.expander("🔍 Click to inspect raw prospectus coordinates and audit trail for a specific disclosure", expanded=True):
         metric_options = filtered_df["variable"].unique().tolist() if not filtered_df.empty else []
         if metric_options:
             sel_metric = st.selectbox(
@@ -530,6 +530,123 @@ def render_provenance_ledger_tab(dossier: PreIPODealDossier) -> None:
                 st.code(match_row["raw_quote"], language="text")
                 st.markdown("**Auditor Verification & Epistemic Rationale:**")
                 st.info(match_row["note"])
+
+                # ── Item 1: In-App Interactive Auditor Sign-Off Workflow ───
+                st.markdown("---")
+                st.markdown("**Auditor Sign-Off & Verification Gate:**")
+                from models.pre_ipo_evidence import record_observation_review, get_observation_review
+                active_user = st.session_state.get("authenticated_user", "drbhatia")
+                obs_key = f"obs_{dossier.deal_id}_{match_row['variable'].lower().replace(' ', '_')}"
+                
+                # Check persistent review state
+                current_review = None
+                try:
+                    current_review = get_observation_review(active_user, dossier.deal_id, obs_key)
+                except Exception:
+                    pass
+
+                state_label = current_review.get("review_state", "UNREVIEWED") if current_review else "UNREVIEWED"
+                if state_label == "ACCEPTED":
+                    st.success(f"🟢 **Fact Signed Off as Verified** by `{current_review.get('reviewer', active_user)}` on `{current_review.get('reviewed_at', 'Session')[:19]}`\n\n*Rationale:* {current_review.get('review_reason', 'Reconciled against statutory filing')}")
+                elif state_label in ("DISPUTED", "REJECTED"):
+                    st.warning(f"⚠️ **Discrepancy Flagged** by `{current_review.get('reviewer', active_user)}`: {current_review.get('review_reason', 'Discrepancy detected')}")
+
+                btn_col1, btn_col2 = st.columns(2)
+                with btn_col1:
+                    if st.button("✓ Approve & Sign-Off Fact", key=f"btn_appr_{dossier.deal_id}_{match_row['variable']}", use_container_width=True):
+                        try:
+                            record_observation_review(
+                                conn=None,
+                                owner=active_user,
+                                company=dossier.deal_id,
+                                observation_id=obs_key,
+                                review_state="ACCEPTED",
+                                reviewer=active_user,
+                                review_reason=f"Verified against {match_row['section']} ({match_row['printed_page']})",
+                            )
+                            st.session_state[f"review_state_{obs_key}"] = "ACCEPTED"
+                            st.success(f"Fact verified and recorded in institutional audit trail by {active_user}.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Sign-off error: {e}")
+
+                with btn_col2:
+                    flag_clicked = st.button("⚠ Flag Discrepancy", key=f"btn_disc_{dossier.deal_id}_{match_row['variable']}", use_container_width=True)
+
+                if flag_clicked or st.session_state.get(f"show_flag_box_{obs_key}", False):
+                    st.session_state[f"show_flag_box_{obs_key}"] = True
+                    disc_reason = st.text_input(
+                        "Discrepancy Rationale / Footnote Variance:",
+                        key=f"input_disc_{obs_key}",
+                        placeholder="e.g. Footnote 12 discloses contingent liability not captured in headline figure"
+                    )
+                    if st.button("Confirm Discrepancy Flag", key=f"btn_conf_disc_{obs_key}"):
+                        if disc_reason.strip():
+                            try:
+                                record_observation_review(
+                                    conn=None,
+                                    owner=active_user,
+                                    company=dossier.deal_id,
+                                    observation_id=obs_key,
+                                    review_state="DISPUTED",
+                                    reviewer=active_user,
+                                    review_reason=disc_reason.strip(),
+                                )
+                                st.session_state[f"show_flag_box_{obs_key}"] = False
+                                st.warning("Discrepancy recorded in audit trail.")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error flagging discrepancy: {e}")
+                        else:
+                            st.error("Please provide a non-empty discrepancy rationale.")
+
+            # ── Item 4: Interactive Dual-Pane PDF Document Slice Grounding ───
+            st.markdown("---")
+            st.markdown("###### :material/picture_as_pdf: Statutory Document Slice & Verbatim Grounding")
+            p_slice = int(match_row["physical_page"]) if match_row["physical_page"] else 1
+            p_print = str(match_row["printed_page"])
+            sec_name = str(match_row["section"])
+            tbl_ref = str(match_row["table_anchor"])
+            
+            slice_box_style = """
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 12px 16px; margin: 8px 0;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #38BDF8; font-weight: 600;">
+                    Official Statutory Filing Excerpt · Physical Page {p_slice} ({p_print})
+                </div>
+                <div style="font-size: 13px; color: #F8FAFC; margin-top: 4px; font-weight: 500;">
+                    {sec_name} · <em>{tbl_ref}</em>
+                </div>
+            </div>
+            """.format(p_slice=p_slice, p_print=p_print, sec_name=sec_name, tbl_ref=tbl_ref)
+            render_html(slice_box_style, unsafe_allow_html=True)
+
+            doc_c1, doc_c2 = st.columns([2.2, 0.8])
+            with doc_c1:
+                st.caption(f"Verbatim statutory coordinates for **{match_row['variable']}**:")
+                st.code(f"Section: {sec_name}\nLocation: Physical Page {p_slice} ({p_print}) / {tbl_ref}\nExtracted Disclosure Quote:\n\"{match_row['raw_quote']}\"", language="text")
+            with doc_c2:
+                # PDF slice download if file available
+                from pathlib import Path
+                from models.pre_ipo_document_indexer import extract_single_page_bytes
+                drhp_path = Path("data/drhp/Hindustan_Coca_Cola_Holdings_DRHP.pdf")
+                if dossier.deal_id == "hindustan_coca_cola" and drhp_path.exists():
+                    try:
+                        with open(drhp_path, "rb") as f_pdf:
+                            pdf_bytes = f_pdf.read()
+                        single_page_pdf = extract_single_page_bytes(pdf_bytes, physical_page=p_slice)
+                        st.download_button(
+                            label=f"📥 Page {p_slice} PDF Slice",
+                            data=single_page_pdf,
+                            file_name=f"{dossier.deal_id}_page_{p_slice}_slice.pdf",
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"dl_slice_{dossier.deal_id}_{p_slice}",
+                        )
+                    except Exception as e:
+                        st.caption(f"Slice export: {e}")
+                else:
+                    st.info(f"Filing slice bounded to Page {p_slice} ({p_print})")
+
         else:
             st.info("No line items match the current filter criteria.")
 
