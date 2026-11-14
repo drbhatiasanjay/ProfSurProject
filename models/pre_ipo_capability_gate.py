@@ -1,13 +1,15 @@
 """
-Pre-IPO Analytical Capability Gate (PR 1 — P0 Containment)
+Pre-IPO Analytical Capability Gate (PR 1 — P0 Containment & Codex Standard)
 Provides fail-closed capability-specific gating for Pre-IPO analysis:
 - Blocks built-in registry dossiers from bypassing evidence review (P0-01)
 - Blocks unpriced offer valuation and market cap computation (P0-03)
 - Blocks unsupported WACC, ROIC, and reverse DCF estimation (P0-07)
 - Blocks automated investment committee approvals and agency ratings (P0-08)
 - Rejects LEGACY_EXAMPLE origins from analysis eligibility (P1-02)
+- Enforces strict relational authority and 3-way hash equality on analytical export
 """
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional, Dict, Any
@@ -27,6 +29,13 @@ class ExportBlockedError(Exception):
     pass
 
 
+def is_valid_hex_sha256(val: Optional[str]) -> bool:
+    """Validate that val is a lowercase 64-character hexadecimal SHA-256 hash."""
+    if not val or not isinstance(val, str):
+        return False
+    return bool(re.match(r"^[0-9a-f]{64}$", val))
+
+
 def is_hcch_entity(company_identifier: str = "", company_name: str = "", cin: str = "") -> bool:
     """Robust detection of Hindustan Coca-Cola across keys, names, and regulatory CIN."""
     blob = f"{company_identifier} {company_name} {cin}".lower().replace("-", "_")
@@ -35,16 +44,26 @@ def is_hcch_entity(company_identifier: str = "", company_name: str = "", cin: st
 
 def _get_persisted_snapshot_data(
     snapshot_id: Optional[str],
-    owner: str,
-    company: str,
+    owner: Optional[str],
+    company: Optional[str],
     conn: Optional[Any] = None,
 ) -> Optional[Dict[str, Any]]:
     """
     Strictly scoped persistence resolver for evidence snapshots.
-    Scopes query by (id, owner, company).
-    Fail-closed: Returns None if snapshot_id is absent, not found, or DB fails.
+    Scopes query strictly by exact (id, owner, company) equality.
+    Removes fuzzy company matching and default owner behavior.
+    Requires relational columns: status, snapshot_hash, accepted_by, accepted_at.
+    Treats relational fields as authoritative over JSON payload.
+    Duplicate keys in payload must strictly match relational fields.
+    Validates lowercase 64-char hex SHA-256 hash (never row ID fallback).
+    Fail-closed: Returns None if snapshot_id, owner, or company is absent/blank,
+    not found, or DB/schema validation fails.
     """
-    if not snapshot_id:
+    if not snapshot_id or not isinstance(snapshot_id, str) or not snapshot_id.strip():
+        return None
+    if not owner or not isinstance(owner, str) or not owner.strip():
+        return None
+    if not company or not isinstance(company, str) or not company.strip():
         return None
 
     db_conn = conn
@@ -58,44 +77,70 @@ def _get_persisted_snapshot_data(
             return None
 
     try:
-        # Check if table exists
+        # Check relational columns exist in table schema
+        cursor = db_conn.execute("PRAGMA table_info(pre_ipo_evidence_snapshots)")
+        cols = {row[1] for row in cursor.fetchall()}
+        required_cols = {"id", "owner", "company", "payload", "status", "snapshot_hash", "accepted_by", "accepted_at"}
+        if not required_cols.issubset(cols):
+            return None
+
+        # Scoped query strictly by exact (id, owner, company) equality
         cursor = db_conn.execute(
-            "SELECT id, owner, company, payload FROM pre_ipo_evidence_snapshots WHERE id=? AND owner=? AND company=?",
-            (snapshot_id, owner, company)
+            "SELECT id, owner, company, payload, status, snapshot_hash, accepted_by, accepted_at "
+            "FROM pre_ipo_evidence_snapshots WHERE id=? AND owner=? AND company=?",
+            (snapshot_id.strip(), owner.strip(), company.strip())
         )
         row = cursor.fetchone()
         if not row:
-            # Check normalized company key
-            norm_company = company.lower().replace("-", "_")
-            cursor = db_conn.execute(
-                "SELECT id, owner, company, payload FROM pre_ipo_evidence_snapshots WHERE id=? AND owner=? AND (company=? OR company LIKE ?)",
-                (snapshot_id, owner, norm_company, f"%{norm_company}%")
-            )
-            row = cursor.fetchone()
-
-        if not row:
             return None
 
-        payload_raw = row[3]
+        r_id, r_owner, r_company, payload_raw, r_status, r_hash, r_accepted_by, r_accepted_at = row
+
         import json
         if isinstance(payload_raw, str):
             try:
                 payload = json.loads(payload_raw)
             except Exception:
-                payload = {}
+                return None
         elif isinstance(payload_raw, dict):
             payload = payload_raw
         else:
-            payload = {}
+            return None
+
+        # Relational fields are strictly authoritative
+        rel_status = str(r_status) if r_status is not None else "UNREVIEWED"
+        rel_hash = str(r_hash) if r_hash is not None else ""
+        rel_by = str(r_accepted_by) if r_accepted_by is not None else ""
+        rel_at = str(r_accepted_at) if r_accepted_at is not None else ""
+
+        # Require exact agreement if duplicate fields exist in payload
+        if "status" in payload and str(payload["status"]) != rel_status:
+            return None
+        if "snapshot_hash" in payload and str(payload["snapshot_hash"]) != rel_hash:
+            return None
+        if "owner" in payload and str(payload["owner"]) != r_owner:
+            return None
+        if "company" in payload and str(payload["company"]) != r_company:
+            return None
+
+        # Status validation: Only ACCEPTED_FOR_ANALYSIS is accepted (generic ACCEPTED is rejected)
+        if rel_status == "ACCEPTED_FOR_ANALYSIS":
+            if not is_valid_hex_sha256(rel_hash):
+                return None
+            if not rel_by.strip():
+                return None
+            if not rel_at.strip():
+                return None
 
         return {
-            "id": row[0],
-            "owner": row[1],
-            "company": row[2],
+            "id": r_id,
+            "owner": r_owner,
+            "company": r_company,
             "payload": payload,
-            # FAIL-CLOSED: Missing status in payload is strictly UNREVIEWED, never ACCEPTED_FOR_ANALYSIS
-            "status": payload.get("status") or "UNREVIEWED",
-            "snapshot_hash": payload.get("snapshot_hash") or payload.get("id") or row[0],
+            "status": rel_status,
+            "snapshot_hash": rel_hash,
+            "accepted_by": rel_by,
+            "accepted_at": rel_at,
         }
     except Exception:
         return None
@@ -136,13 +181,27 @@ def evaluate_capability_gate(
     """
     Evaluates whether an analytical capability is authorized to run.
     Strict fail-closed architecture:
-    1. LEGACY_EXAMPLE is never accepted for analytical processing.
-    2. HCCH is blocked from unreviewed production analysis (P0-01) regardless of selector avenue.
-    3. Any unreviewed snapshot status blocks analytical capabilities.
-    4. Unpriced filings block valuation, WACC, and reverse DCF (P0-03/P0-07).
-    5. Committee approval and agency rating generation is prohibited (P0-08).
+    1. Recommendation / Approval ban (P0-08) is unconditional and evaluated first.
+    2. LEGACY_EXAMPLE is never accepted for analytical processing (P1-02).
+    3. HCCH is blocked from unreviewed production analysis (P0-01) regardless of selector avenue.
+    4. Persistence verification: scopes by exact (id, owner, company); binds caller hash to persisted hash.
+    5. Any unreviewed snapshot status blocks analytical capabilities.
+    6. Unpriced filings block valuation, WACC, and reverse DCF (P0-03/P0-07).
     """
-    # 1. Reject LEGACY_EXAMPLE unconditionally
+    # 1. Recommendation / Approval ban (P0-08) is unconditional
+    if capability == CapabilityType.RECOMMENDATIONS:
+        return CapabilityDecision(
+            allowed=False,
+            capability=capability,
+            status="BLOCKED",
+            reason="Automated investment committee approvals, agency credit ratings, and definitive anchor recommendations are strictly prohibited under P0-08 (unreviewed automated decisions not accepted).",
+            next_action="Refer to factual diligence observations, risk factor catalog, and neutral decision support summary only.",
+            snapshot_id=snapshot_id,
+            snapshot_hash=snapshot_hash,
+            blocked_metrics=["ic_verdict", "rating_grade", "recommendation_action"],
+        )
+
+    # 2. Reject LEGACY_EXAMPLE unconditionally
     if origin == "LEGACY_EXAMPLE":
         return CapabilityDecision(
             allowed=False,
@@ -155,7 +214,7 @@ def evaluate_capability_gate(
             blocked_metrics=["*"],
         )
 
-    # 2. Block production HCCH across all identifier avenues (key, name, CIN) without accepted snapshot (P0-01)
+    # 3. Block production HCCH across all identifier avenues (key, name, CIN) without accepted snapshot (P0-01)
     is_hcch = is_hcch_entity(company, company, cin)
     if is_hcch and (origin == "LEGACY_REGISTRY" or not snapshot_id):
         return CapabilityDecision(
@@ -169,7 +228,7 @@ def evaluate_capability_gate(
             blocked_metrics=["valuation", "wacc", "roic", "dcf", "recommendations", "board_deck"],
         )
 
-    # 3. Persistence verification: never trust caller-supplied snapshot_status in production
+    # 4. Persistence verification: never trust caller-supplied snapshot_status in production
     effective_status = snapshot_status
     if is_production and snapshot_id:
         persisted = _get_persisted_snapshot_data(snapshot_id, owner, company, conn=conn)
@@ -185,6 +244,23 @@ def evaluate_capability_gate(
                 blocked_metrics=["*"],
             )
         effective_status = persisted.get("status")
+        persisted_hash = persisted.get("snapshot_hash")
+
+        # Bind caller-supplied hash to persisted hash
+        if snapshot_hash:
+            if snapshot_hash != persisted_hash:
+                return CapabilityDecision(
+                    allowed=False,
+                    capability=capability,
+                    status="BLOCKED",
+                    reason=f"Caller-supplied snapshot hash '{snapshot_hash}' does not match persisted hash '{persisted_hash}'.",
+                    next_action="Verify snapshot hash integrity in Tab 2 Provenance Ledger.",
+                    snapshot_id=snapshot_id,
+                    snapshot_hash=snapshot_hash,
+                    blocked_metrics=["*"],
+                )
+        else:
+            snapshot_hash = persisted_hash
 
     if not snapshot_id or effective_status != "ACCEPTED_FOR_ANALYSIS":
         return CapabilityDecision(
@@ -196,19 +272,6 @@ def evaluate_capability_gate(
             snapshot_id=snapshot_id,
             snapshot_hash=snapshot_hash,
             blocked_metrics=["*"],
-        )
-
-    # 4. Recommendation / Approval ban (P0-08)
-    if capability == CapabilityType.RECOMMENDATIONS:
-        return CapabilityDecision(
-            allowed=False,
-            capability=capability,
-            status="BLOCKED",
-            reason="Automated investment committee approvals, agency credit ratings, and definitive anchor recommendations are strictly prohibited under P0-08.",
-            next_action="Refer to factual diligence observations, risk factor catalog, and neutral decision support summary only.",
-            snapshot_id=snapshot_id,
-            snapshot_hash=snapshot_hash,
-            blocked_metrics=["ic_verdict", "rating_grade", "recommendation_action"],
         )
 
     # 5. Unpriced book-building circuit breaker (P0-03, P0-07)
@@ -244,29 +307,30 @@ def assert_export_allowed(
     result_snapshot_hash: Optional[str] = None,
     is_production: bool = True,
     owner: Optional[str] = None,
+    company: Optional[str] = None,
     conn: Optional[Any] = None,
 ) -> None:
     """
     Fail-closed exporter assertion:
     Verifies that the dossier and snapshot are authorized for presentation/export.
-    Resolves snapshot from persistence; never trusts arbitrary caller-provided status strings.
-    Validates snapshot hashes and rejects absent hashes, invented snapshots, mismatches, or unaccepted data.
+    Resolves snapshot strictly from persistence; never trusts arbitrary caller-provided status strings.
+    Requires explicit authenticated owner and exact company matching.
+    Enforces 3-way hash equality: persisted_hash == snapshot_hash == result_snapshot_hash.
+    Accepts strictly status ACCEPTED_FOR_ANALYSIS (rejects generic ACCEPTED).
     Raises ExportBlockedError if unreviewed, blocked, nonexistent, or hash mismatch occurs.
     """
     company_name = getattr(dossier, "company_name", str(dossier))
     deal_id = getattr(dossier, "deal_id", "")
-    cin = getattr(dossier, "cin", "")
-    target_company = deal_id or company_name
+    target_company = company or deal_id or company_name
 
-    # In production, analytical export unconditionally requires a verified snapshot_id
+    # In production, analytical export unconditionally requires verified persistence & 3-way hash equality
     if is_production:
+        effective_owner = owner or ""
         if not snapshot_id:
             raise ExportBlockedError(
                 f"Export blocked: snapshot_id required for verified analytical export of {company_name}."
             )
 
-        # Scoped lookup
-        effective_owner = owner or "drbhatia"
         persisted = _get_persisted_snapshot_data(
             snapshot_id=snapshot_id,
             owner=effective_owner,
@@ -276,37 +340,40 @@ def assert_export_allowed(
 
         if persisted is None:
             raise ExportBlockedError(
-                f"Export blocked: verified evidence snapshot '{snapshot_id}' not found in persistence "
+                f"Export blocked: verified evidence snapshot '{snapshot_id}' does not exist in persistence "
                 f"for owner '{effective_owner}' and company '{target_company}'. "
                 "Invented, unpersisted, un-scoped, or mock snapshot IDs are strictly rejected."
             )
 
         persisted_status = persisted.get("status")
-        # FAIL-CLOSED: Snapshot status must be explicitly ACCEPTED_FOR_ANALYSIS or ACCEPTED
-        if persisted_status not in ("ACCEPTED_FOR_ANALYSIS", "ACCEPTED"):
+        # FAIL-CLOSED: Snapshot status must be strictly ACCEPTED_FOR_ANALYSIS (never generic ACCEPTED)
+        if persisted_status != "ACCEPTED_FOR_ANALYSIS":
             raise ExportBlockedError(
                 f"Export blocked: snapshot '{snapshot_id}' in persistence has status '{persisted_status or 'UNREVIEWED'}'. "
                 "Only ACCEPTED_FOR_ANALYSIS snapshots may be exported."
             )
 
-        # Check hash consistency
         persisted_hash = persisted.get("snapshot_hash")
         if not snapshot_hash or not result_snapshot_hash:
             raise ExportBlockedError(
                 "Export blocked: snapshot_hash and result_snapshot_hash are mandatory for verified analytical exports."
+            )
+        if not is_valid_hex_sha256(snapshot_hash):
+            raise ExportBlockedError(
+                f"Export blocked: snapshot_hash '{snapshot_hash}' is not a valid 64-character lowercase hex SHA-256."
             )
         if snapshot_hash != result_snapshot_hash:
             raise ExportBlockedError(
                 f"Export blocked: snapshot hash mismatch ({snapshot_hash} != {result_snapshot_hash}). "
                 "Data integrity validation failed."
             )
-        if persisted_hash and snapshot_hash != persisted_hash:
+        if snapshot_hash != persisted_hash:
             raise ExportBlockedError(
                 f"Export blocked: provided snapshot hash '{snapshot_hash}' does not match persisted hash '{persisted_hash}'."
             )
 
     # 3. Caller status sanity check
-    if snapshot_status and snapshot_status not in ("ACCEPTED_FOR_ANALYSIS", "ACCEPTED"):
+    if snapshot_status and snapshot_status != "ACCEPTED_FOR_ANALYSIS":
         raise ExportBlockedError(
             f"Export blocked: snapshot status is '{snapshot_status}'. Only ACCEPTED_FOR_ANALYSIS data may be exported."
         )
@@ -317,4 +384,3 @@ def assert_export_allowed(
             f"Export blocked: snapshot hash mismatch ({snapshot_hash} != {result_snapshot_hash}). "
             "Data integrity validation failed."
         )
-

@@ -1449,13 +1449,15 @@ def calculate_reverse_dcf_hurdle(
     )
 
     if isinstance(safe_dcf, BlockedResult):
+        is_oob = "admissible_growth_domain" in getattr(safe_dcf, "missing_premises", [])
+        status_val = "MATHEMATICALLY_OUT_OF_BOUNDS" if is_oob else "BLOCKED"
         hurdle_diff = (
             "UNFEASIBLE_IMPLIED_VALUATION"
-            if "admissible_growth_domain" in getattr(safe_dcf, "missing_premises", [])
+            if is_oob
             else "BLOCKED"
         )
         return {
-            "status": "BLOCKED",
+            "status": status_val,
             "implied_ev_cr": round(implied_ev, 2),
             "base_fcf_cr": round(base_fcf, 2),
             "required_fcf_cagr_pct": None,

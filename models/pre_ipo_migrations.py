@@ -272,6 +272,45 @@ def apply_migrations(conn: sqlite3.Connection) -> List[int]:
             conn.rollback()
             raise
 
+    # 5. Migration 4: Legacy Evidence Origin Remediation
+    if 4 not in applied_records:
+        m4_file = MIGRATIONS_DIR / "004_legacy_evidence_origin_remediation.sql"
+        if not m4_file.exists():
+            raise RuntimeError("Required migration file 004_legacy_evidence_origin_remediation.sql missing from disk.")
+        sql = m4_file.read_text(encoding="utf-8")
+        chk = compute_checksum(sql)
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            # Execute SQL script for remediation
+            _execute_sql_script_transactional(conn, sql)
+
+            # Python-level verification: Downgrade any non-hex64 snapshot_hash or invalid acceptance fields
+            cursor = conn.execute(
+                "SELECT owner, company, id, status, snapshot_hash, accepted_by, accepted_at "
+                "FROM pre_ipo_evidence_snapshots WHERE status = 'ACCEPTED_FOR_ANALYSIS'"
+            )
+            rows = cursor.fetchall()
+            for r in rows:
+                s_owner, s_comp, s_id, s_stat, s_hash, s_by, s_at = r
+                is_valid_hash = bool(s_hash and len(s_hash) == 64 and all(c in '0123456789abcdef' for c in str(s_hash)))
+                is_valid_by = bool(s_by and str(s_by).strip())
+                is_valid_at = bool(s_at and str(s_at).strip())
+                if not (is_valid_hash and is_valid_by and is_valid_at):
+                    conn.execute(
+                        "UPDATE pre_ipo_evidence_snapshots SET status = 'UNREVIEWED' WHERE owner=? AND company=? AND id=?",
+                        (s_owner, s_comp, s_id)
+                    )
+
+            conn.execute(
+                "INSERT INTO pre_ipo_schema_migrations(version, name, checksum, status) VALUES(?, ?, ?, ?)",
+                (4, "004_legacy_evidence_origin_remediation", chk, "APPLIED")
+            )
+            conn.commit()
+            newly_applied.append(4)
+        except Exception:
+            conn.rollback()
+            raise
+
     return newly_applied
 
 

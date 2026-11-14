@@ -31,7 +31,7 @@ from models.pre_ipo_engine import (
 
 import os
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Any
 from models.pre_ipo_capability_gate import assert_export_allowed, ExportBlockedError
 
 
@@ -56,6 +56,9 @@ def generate_pre_ipo_board_deck(
     snapshot_hash: Optional[str] = None,
     result_snapshot_hash: Optional[str] = None,
     is_production: Optional[bool] = None,
+    owner: Optional[str] = None,
+    company: Optional[str] = None,
+    conn: Optional[Any] = None,
     wacc_result: Optional[dict] = None,
     reverse_dcf_result: Optional[dict] = None,
     stress_matrix: Optional[dict] = None,
@@ -91,6 +94,9 @@ def generate_pre_ipo_board_deck(
         snapshot_hash=snapshot_hash,
         result_snapshot_hash=result_snapshot_hash,
         is_production=effective_is_production,
+        owner=owner,
+        company=company,
+        conn=conn,
     )
     prs = Presentation()
     prs.slide_width = Inches(13.333)  # 16:9 widescreen
