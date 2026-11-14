@@ -1,0 +1,104 @@
+{
+  "task_id": "AGENT_GOVERNANCE_HARDENING_2026_11_14",
+  "worker_status": "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW",
+  "base_sha": "6b52836f3ff1d3ab13729bdb5d1bdb0f33677aa1",
+  "head_sha": "6b52836f3ff1d3ab13729bdb5d1bdb0f33677aa1",
+  "changed_files_from_git": [
+    ".agents/examples/task-contract.example.json",
+    ".agents/rules/pre_ipo_evidence_integrity.md",
+    ".agents/rules/worker_completion_contract.md",
+    ".agents/schemas/task-contract.schema.json",
+    ".gitignore",
+    "AGENTS.md",
+    "CURRENT_STATUS.md",
+    "SESSION_HANDOFF.md",
+    "docs/agent-governance/AGENT_POLICY_PRECEDENCE.md",
+    "docs/agent-governance/TASK_CONTRACT_PROTOCOL.md",
+    "docs/archive/SESSION_HANDOFF_2026-09-30.md",
+    "docs/review-evidence/AGENT_GOVERNANCE_HARDENING_2026-11-14.md",
+    "governance_implementation_result.json",
+    "scripts/project_status.py",
+    "scripts/validate_project_governance.py",
+    "scripts/verify_agent_scope.py",
+    "tests/test_agent_scope_verifier.py",
+    "tests/test_project_governance.py",
+    "tests/test_project_status.py"
+  ],
+  "tests": [
+    {
+      "command": "py -3.12 -m pytest tests/test_project_status.py -v",
+      "exit_code": 0,
+      "collected": 7,
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "py -3.12 -m pytest tests/test_agent_scope_verifier.py -v",
+      "exit_code": 0,
+      "collected": 13,
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "py -3.12 -m pytest tests/test_project_governance.py -v",
+      "exit_code": 0,
+      "collected": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "command": "py -3.12 -m pytest tests/test_project_status.py tests/test_agent_scope_verifier.py tests/test_project_governance.py -v",
+      "exit_code": 0,
+      "collected": 30,
+      "passed": 30,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "project_status": {
+    "repository_root": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\.worktrees\\agent-governance-hardening",
+    "repository_name": "ProfSurProject",
+    "branch": "chore/agent-governance-hardening-2026-11-14",
+    "head_sha": "6b52836f3ff1d3ab13729bdb5d1bdb0f33677aa1",
+    "origin_master_sha": "6b52836f3ff1d3ab13729bdb5d1bdb0f33677aa1",
+    "upstream": "origin/master",
+    "ahead": 0,
+    "behind": 0,
+    "capital_structure_db_exists": true,
+    "capital_structure_db_sha256": "CA696195A5C541B56E0533DE6C69A3BEC4E501A232FD2B18A1B09D15D6FA7873"
+  },
+  "governance_scan": {
+    "status": "FINDINGS_PRESENT",
+    "errors": 1,
+    "warnings": 0,
+    "informational": 0,
+    "findings_summary": [
+      {
+        "rule_id": "PRODUCTION_REGISTRY_USAGE",
+        "severity": "ERROR",
+        "file": "pages/27_pre_ipo_drhp.py",
+        "line": 669,
+        "message": "Production page route resolves dossier from unreviewed PRE_IPO_REGISTRY."
+      }
+    ]
+  },
+  "production_database": {
+    "sha256_before": "CA696195A5C541B56E0533DE6C69A3BEC4E501A232FD2B18A1B09D15D6FA7873",
+    "sha256_after": "CA696195A5C541B56E0533DE6C69A3BEC4E501A232FD2B18A1B09D15D6FA7873",
+    "unchanged": true
+  },
+  "external_actions": {
+    "push": false,
+    "pull_request": false,
+    "merge": false,
+    "deployment": false
+  },
+  "scope_violations": [],
+  "unresolved_risks": [
+    "Production routes in pages/27_pre_ipo_drhp.py still resolve from PRE_IPO_REGISTRY (recorded as finding, requires authorized repair packet)",
+    "Historical test scripts on remote branches contain credentials requiring security containment"
+  ]
+}
