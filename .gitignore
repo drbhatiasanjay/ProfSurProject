@@ -30,7 +30,8 @@ videos/*
 # Secrets (NEVER commit)
 .streamlit/secrets.toml
 
-# Crash dumps
+# Active Task Contracts (externally supplied, never committed)
+.agents/task-contract.json
 *.stackdump
 
 # CMIE API test artifacts (raw ZIPs + extracted .txt + per-run report)

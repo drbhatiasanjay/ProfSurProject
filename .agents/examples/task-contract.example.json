@@ -1,0 +1,44 @@
+{
+  "schema_version": "2026-11-14",
+  "task_id": "EXAMPLE_DOCUMENTATION_ONLY_001",
+  "authority": "CODEX_INDEPENDENT_REVIEWER",
+  "mode": "WORKER_IMPLEMENTATION_ONLY",
+  "repository": "ProfSurProject",
+  "workspace": "C:\\Users\\hemas\\Downloads\\ProfSurProject\\.worktrees\\example-doc-worktree",
+  "base_branch": "master",
+  "base_sha": "6b52836f3ff1d3ab13729bdb5d1bdb0f33677aa1",
+  "worker_branch": "docs/example-documentation-task",
+  "authorized_packet": "EXAMPLE_PACKET_DO_NOT_EXECUTE",
+  "allowed_objectives": [
+    "Update architecture documentation in docs/architecture.md"
+  ],
+  "forbidden_objectives": [
+    "Modify any application logic, database, models, or test code"
+  ],
+  "allowed_paths": [
+    "docs/architecture.md",
+    "docs/review-evidence/*"
+  ],
+  "forbidden_paths": [
+    "app.py",
+    "pages/**",
+    "models/**",
+    "capital_structure.db"
+  ],
+  "required_tests": [
+    "tests/test_project_governance.py"
+  ],
+  "stop_conditions": [
+    "Documentation completed and review evidence generated"
+  ],
+  "maximum_new_commits": 1,
+  "push_authorized": false,
+  "pr_creation_authorized": false,
+  "merge_authorized": false,
+  "deployment_authorized": false,
+  "protected_artifacts": {
+    "capital_structure.db": "CA696195A5C541B56E0533DE6C69A3BEC4E501A232FD2B18A1B09D15D6FA7873"
+  },
+  "created_at": "2026-11-14T10:00:00Z",
+  "expires_at": "2026-11-15T10:00:00Z"
+}
