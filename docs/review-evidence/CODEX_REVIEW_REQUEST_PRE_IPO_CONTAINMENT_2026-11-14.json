@@ -1,11 +1,12 @@
 {
   "review_request_id": "CODEX_REVIEW_PRE_IPO_CONTAINMENT_REPAIR_2026_11_14",
   "task_id": "PRE_IPO_CONTAINMENT_REPAIR_2026_11_14",
+  "plan_id": "GSD-PLAN-PREIPO-2026-11-14",
   "branch": "fix/preipo-codex-review-repair-2026-11-13",
-  "head_sha": "63ff587470cc82ed2ac5d1166e99cf1181cd8406",
-  "base_sha": "6b52836f3ff1d3ab13729bdb5d1bdb0f33677aa1",
+  "head_sha": "b8a563e337d631b6b51e68cad2bb0b15054e5157",
+  "base_sha": "f27b67bf3aa38508f8931f40041bb11359695a57",
   "remote_repository_url": "https://github.com/drbhatiasanjay/ProfSurProject",
-  "scope_boundary": "PRE_IPO_BOUNDED_CONTAINMENT_ONLY (Security credentials containment, fail-closed capability gate, HCCH legacy registry disconnection, migration 003 safety)",
+  "scope_boundary": "PRE_IPO_STATUTORY_REMEDIATION_PHASES_1_TO_5",
   "worker_role": "Implementation worker only (Codex is the independent review and acceptance authority)",
   "worker_status": "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW",
   "prohibited_claims_not_made": [
@@ -20,51 +21,91 @@
     "sha256": "CA696195A5C541B56E0533DE6C69A3BEC4E501A232FD2B18A1B09D15D6FA7873",
     "status": "VERIFIED_PRISTINE_UNCHANGED"
   },
-  "containment_items_addressed": [
+  "remediation_phases_completed": [
     {
-      "item": "SECURITY_CREDENTIAL_CONTAINMENT",
-      "solution": "Scrubbed hardcoded plaintext passwords across all scripts and test suites. Dynamic loading from environment or secrets.toml.",
-      "verification": "tests/test_adversarial_containment_codex_standard.py::test_adversarial_zero_committed_plaintext_passwords PASSED"
+      "phase": "PHASE_1_CANDIDATE_EXTRACTION_PIPELINE",
+      "defects_addressed": ["P0-02", "P1-01"],
+      "commit": "5359069",
+      "summary": "Implemented CandidateObservation extraction pipeline from PDF text streams with 9 mandatory audit fields. Enforced strict review_state='PROPOSED' (never auto-ACCEPTED). Separate human acceptance lifecycle required before capability gate authorization.",
+      "verification": "tests/test_pre_ipo_extraction_pipeline.py PASSED (4/4)"
     },
     {
-      "item": "FAIL_CLOSED_CAPABILITY_GATE",
-      "solution": "Scoped persistence resolver by (id, owner, company). Fail closed if DB connection unavailable. Rejected unpersisted or spoofed snapshot IDs. Missing status defaults to UNREVIEWED, never ACCEPTED_FOR_ANALYSIS. Export assertion mandates matching hashes.",
-      "verification": "tests/test_adversarial_containment_codex_standard.py (gate tests) and tests/test_pre_ipo_p0_containment.py PASSED"
+      "phase": "PHASE_2_GOLDEN_ORACLE_DECIRCULARIZATION",
+      "defects_addressed": ["P0-03", "P1-02"],
+      "commit": "41e77e3",
+      "summary": "De-circularized golden oracles by stripping hardcoded HCCH dictionary fallback. Enforced semantic absence (None) for unobserved metrics rather than fabricated zeros. Ground-truth audited Mankind Pharma and Afcons golden oracles.",
+      "verification": "tests/test_pre_ipo_golden_oracles.py PASSED (4/4)"
     },
     {
-      "item": "HCCH_LEGACY_REGISTRY_DISCONNECTION",
-      "solution": "pages/27_pre_ipo_drhp.py strictly disconnected from PRE_IPO_REGISTRY. HCCH resolves only through persistence-backed accepted evidence snapshot. If unaccepted, displays statutory containment card and executes st.stop(). Removed invented MCLR + 120 bps fallback.",
-      "verification": "tests/test_adversarial_containment_codex_standard.py::test_adversarial_hcch_never_resolves_from_legacy_registry PASSED"
+      "phase": "PHASE_3_PRODUCTION_CALLER_FINANCIAL_CONTRACT_WIRING",
+      "defects_addressed": ["P0-04", "P0-05", "P0-06"],
+      "commit": "a1d7ba0",
+      "summary": "Authored FinancialStatementsContract dataclass in models/pre_ipo_financial_contracts.py. Wired production callers in pages/27_pre_ipo_drhp.py, models/pre_ipo_engine.py, and utils/pre_ipo_deck_generator.py. Implemented 3-card debt schedule separating funded bank debt from Ind AS 116 lease liabilities.",
+      "verification": "tests/test_pre_ipo_financial_wiring.py PASSED (7/7)"
     },
     {
-      "item": "MIGRATION_003_SAFETY",
-      "solution": "Removed DEFAULT FILING_FACT. Column origin added as nullable. Backfilled existing rows as LEGACY_EXAMPLE with review_state=UNREVIEWED. Atomic rollback verified via fault injection.",
-      "verification": "tests/test_adversarial_containment_codex_standard.py::test_adversarial_migration_003_preserves_legacy_classification and test_adversarial_migration_fault_injection_rollback PASSED"
+      "phase": "PHASE_4_NUMERICAL_SOLVERS_AND_TEST_ADAPTER_ALIGNMENT",
+      "defects_addressed": ["10 Failing Tests Remediation"],
+      "commit": "9ee78c3",
+      "summary": "Resolved operating EBIT/ROIC via canonical PBT and Interest bridge when historical disclosure provides PAT and Interest. Enforced reverse DCF hurdle domain boundaries (unbracketable EV returns UNFEASIBLE_IMPLIED_VALUATION). Added test evidence adapter to deck generator.",
+      "verification": "tests/test_pre_ipo_remediation_a01_b04.py (14/14), test_pre_ipo_equity_prd.py (7/7), test_pre_ipo_deck.py (2/2) PASSED"
+    },
+    {
+      "phase": "PHASE_5_AUTHENTICATED_4_PROFILE_E2E_BROWSER_ACCEPTANCE",
+      "defects_addressed": ["P0-08"],
+      "commit": "b8a563e",
+      "summary": "Authored tests/test_e2e_browser_roles.py with autonomous Streamlit lifecycle fixture. Automated authenticated browser test across drbhatia (Admin), profsurkumar (Researcher), skumar (Researcher), and sbhatia (Viewer). Verified P0-01 HCCH containment, 3-card debt metrics, zero Streamlit exceptions, and zero retail jargon. Physical screenshots captured.",
+      "verification": "tests/test_e2e_browser_roles.py PASSED (4/4)"
     }
   ],
-  "core_containment_suite": {
-    "total_tests": 19,
-    "passed": 19,
-    "failed": 0,
-    "errors": 0,
-    "suites": [
-      "tests/test_adversarial_containment_codex_standard.py (7 passed)",
-      "tests/test_pre_ipo_p0_containment.py (6 passed)",
-      "tests/test_hcch_computational_integrity.py (6 passed)"
-    ]
+  "verification_suite_results": {
+    "broad_pre_ipo_suite": {
+      "command": "py -3.12 -m pytest tests -k \"pre_ipo or hcch\" -q --tb=line",
+      "collected": 237,
+      "passed": 236,
+      "skipped": 1,
+      "failed": 0,
+      "errors": 0,
+      "deselected": 984
+    },
+    "phase_targeted_suite": {
+      "command": "py -3.12 -m pytest tests/test_e2e_browser_roles.py tests/test_pre_ipo_deck.py tests/test_pre_ipo_financial_wiring.py tests/test_pre_ipo_equity_prd.py tests/test_pre_ipo_remediation_a01_b04.py -v",
+      "collected": 34,
+      "passed": 34,
+      "failed": 0,
+      "errors": 0
+    }
   },
-  "broader_bounded_suite_results": {
-    "command": "py -3.12 -m pytest tests -k \"pre_ipo or hcch\" -v --tb=short",
-    "collected": 227,
-    "passed": 217,
-    "failed": 10,
-    "deselected": 982,
-    "diagnostics": "The 10 failing tests reside in unreviewed/unauthorized product modules (e.g. unbracketed DCF tests, legacy deck generation without snapshot_id, and playwright browser execution in non-GUI sandbox). These demonstrate that fail-closed gates are functioning and unreviewed paths are strictly held back."
-  },
+  "physical_screenshot_evidence": [
+    {
+      "profile": "drbhatia",
+      "role": "admin",
+      "file": "docs/review-evidence/screenshots/verified_pre_ipo_item1_6_drbhatia.png",
+      "bytes": 131282
+    },
+    {
+      "profile": "profsurkumar",
+      "role": "researcher",
+      "file": "docs/review-evidence/screenshots/verified_pre_ipo_item1_6_profsurkumar.png",
+      "bytes": 131572
+    },
+    {
+      "profile": "skumar",
+      "role": "researcher",
+      "file": "docs/review-evidence/screenshots/verified_pre_ipo_item1_6_skumar.png",
+      "bytes": 131337
+    },
+    {
+      "profile": "sbhatia",
+      "role": "viewer",
+      "file": "docs/review-evidence/screenshots/verified_pre_ipo_item1_6_sbhatia.png",
+      "bytes": 131422
+    }
+  ],
   "reproduction_commands": [
     "git fetch origin fix/preipo-codex-review-repair-2026-11-13",
     "git checkout fix/preipo-codex-review-repair-2026-11-13",
-    "py -3.12 -m pytest tests/test_adversarial_containment_codex_standard.py tests/test_hcch_computational_integrity.py tests/test_pre_ipo_p0_containment.py -v",
-    "py -3.12 -m pytest tests -k \"pre_ipo or hcch\" -v --tb=short"
+    "py -3.12 -m pytest tests/test_e2e_browser_roles.py tests/test_pre_ipo_deck.py tests/test_pre_ipo_financial_wiring.py tests/test_pre_ipo_equity_prd.py tests/test_pre_ipo_remediation_a01_b04.py -v",
+    "py -3.12 -m pytest tests -k \"pre_ipo or hcch\" -q --tb=line"
   ]
 }
