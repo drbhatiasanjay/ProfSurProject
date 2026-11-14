@@ -166,3 +166,4 @@ def test_extract_single_page_bytes_out_of_bounds():
 
     with pytest.raises(ValueError, match="out of bounds"):
         extract_single_page_bytes(pdf_bytes, physical_page=999)
+

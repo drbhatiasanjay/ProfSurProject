@@ -115,3 +115,4 @@ def load_golden_oracle(deal_id: str, verify_hash: bool = True) -> Dict[str, Any]
 def get_all_oracles() -> Dict[str, Dict[str, Any]]:
     """Load all 6 canonical golden oracles in a dictionary keyed by deal_id."""
     return {deal_id: load_golden_oracle(deal_id) for deal_id in EXPECTED_ORACLE_DEALS}
+

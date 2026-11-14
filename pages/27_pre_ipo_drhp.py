@@ -1865,16 +1865,25 @@ with tab_ic_action:
             render_html(neutral_box_html)
         with col_ic2:
             ic = dossier.ic_verdict if dossier else None
-            strengths = ic.key_credit_strengths if ic else [
-                "Track record of cash operating profitability across evaluated fiscal periods.",
-                "Established market footprint in domestic consumer categories.",
-                "Parentage and brand support from established institutional sponsors."
-            ]
-            risks = ic.key_underwriting_risks if ic else [
-                "Execution risks on planned capital expenditure expansion.",
-                "Working capital fluctuations and raw material commodity pricing exposure.",
-                "Competitive dynamics from both organized and unorganized sector participants."
-            ]
+            strengths = (
+                getattr(ic, "key_credit_strengths", None) or
+                getattr(ic, "strengths", None) or
+                [
+                    "Track record of cash operating profitability across evaluated fiscal periods.",
+                    "Established market footprint in domestic consumer categories.",
+                    "Parentage and brand support from established institutional sponsors."
+                ]
+            )
+            risks = (
+                getattr(ic, "key_downside_risks", None) or
+                getattr(ic, "key_underwriting_risks", None) or
+                getattr(ic, "key_credit_risks", None) or
+                [
+                    "Execution risks on planned capital expenditure expansion.",
+                    "Working capital fluctuations and raw material commodity pricing exposure.",
+                    "Competitive dynamics from both organized and unorganized sector participants."
+                ]
+            )
             neutral_str_html = f"""
             <div class="bento-card">
                 <div style="font-size:0.80rem; font-weight:700; color:#10b981; text-transform:uppercase; margin-bottom:6px;">

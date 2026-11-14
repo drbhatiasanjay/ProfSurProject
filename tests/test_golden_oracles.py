@@ -107,3 +107,4 @@ def test_fail_closed_on_nonexistent_deal():
     """Verify non-existent deal ID raises FileNotFoundError / GoldenOracleError."""
     with pytest.raises(GoldenOracleError, match="not found|does not exist"):
         load_golden_oracle("nonexistent_deal_xyz")
+

@@ -100,3 +100,4 @@ def test_negative_ebitda_fails_closed():
     assert r["icr"] == 0.0
     assert r["status"] == "NEGATIVE_EBITDA"
     assert r["headroom"] < 0
+
