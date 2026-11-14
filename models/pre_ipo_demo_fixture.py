@@ -320,12 +320,13 @@ def seed_hcch_demo_fixture(
         except Exception:
             pass
 
+    source_id = "hcch_drhp_official_corpus"
     try:
         extractor = CanonicalExtractionService()
         req = ExtractionRequest(
             company=company,
             owner=owner,
-            source_id="hcch_drhp_official_corpus",
+            source_id=source_id,
             extractor_version="v1.0.0-canonical-513p",
         )
         res = extractor.extract_from_official_corpus(req, conn=conn)
@@ -354,6 +355,8 @@ def seed_hcch_demo_fixture(
                 document_sha256=d["document_sha256"],
                 extraction_method=d["extraction_method"],
                 extractor_version=d["extractor_version"],
+                confidence_diagnostic=1.0,
+                warnings=(),
             )
             for d in CANONICAL_HCCH_DEMO_FACTS
         ]
@@ -456,7 +459,7 @@ def seed_hcch_demo_fixture(
                         ?, 'PRESENT', 'ACCEPTED', ?
                     )
                 """, (
-                    owner, company, cand.observation_id, req.source_id, cand.entity,
+                    owner, company, cand.observation_id, source_id, cand.entity,
                     cand.metric_id, cand.period or "FY24", cand.unit,
                     float(cand.value) if cand.value is not None else 0.0,
                     json.dumps(prov)

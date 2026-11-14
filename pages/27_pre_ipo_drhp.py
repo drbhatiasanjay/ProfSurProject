@@ -698,8 +698,9 @@ else:
             st.session_state["pre_ipo_active_snapshot_status"] = active_snapshot_status
             st.session_state["pre_ipo_active_snapshot_hash"] = active_snapshot_hash
             _conn.close()
-        except Exception:
-            pass
+        except Exception as _e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to seed HCCH demo fixture: {_e}")
 
     from models.pre_ipo_dossier_resolver import resolve_dossier, DossierResolutionStatus
     resolution = resolve_dossier(
