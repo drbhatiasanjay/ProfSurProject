@@ -57,18 +57,53 @@ def seed_hcch_demo_fixture(
         except Exception:
             pass
 
-    extractor = CanonicalExtractionService()
-    req = ExtractionRequest(
-        company=company,
-        owner=owner,
-        source_id="hcch_drhp_official_corpus",
-        extractor_version="v1.0.0-canonical-513p",
-    )
-    res = extractor.extract_from_official_corpus(req, conn=conn)
+    try:
+        extractor = CanonicalExtractionService()
+        req = ExtractionRequest(
+            company=company,
+            owner=owner,
+            source_id="hcch_drhp_official_corpus",
+            extractor_version="v1.0.0-canonical-513p",
+        )
+        res = extractor.extract_from_official_corpus(req, conn=conn)
+        candidates = res.candidates
+    except Exception:
+        # Fallback to pre-extracted canonical facts for demo environments where PDF is excluded
+        facts_path = os.path.join(os.path.dirname(__file__), "data", "hcch_canonical_facts.json")
+        if os.path.exists(facts_path):
+            with open(facts_path, "r", encoding="utf-8") as f:
+                facts_data = json.load(f)
+            from decimal import Decimal
+            from models.pre_ipo_extraction_service import CandidateFact, PresenceState
+            candidates = [
+                CandidateFact(
+                    observation_id=d["observation_id"],
+                    metric_id=d["metric_id"],
+                    entity=d["entity"],
+                    entity_basis=d["entity_basis"],
+                    period=d["period"],
+                    duration=d["duration"],
+                    unit=d["unit"],
+                    value=Decimal(d["value"]) if d["value"] is not None else None,
+                    presence=PresenceState(d["presence"]),
+                    physical_page=d["physical_page"],
+                    printed_page=d["printed_page"],
+                    table_id=d["table_id"],
+                    row_label=d["row_label"],
+                    column_label=d["column_label"],
+                    raw_text=d["raw_text"],
+                    document_sha256=d["document_sha256"],
+                    extraction_method=d["extraction_method"],
+                    extractor_version=d["extractor_version"],
+                )
+                for d in facts_data
+            ]
+        else:
+            raise
 
     # Convert candidate facts to observation format for canonical hashing
     obs_for_hash = []
-    for cand in res.candidates:
+    for cand in candidates:
         if cand.metric_id == "offer_price_inr":
             continue  # Do not include unpriced blank in financial metrics
         val_str = str(cand.value) if cand.value is not None else "0.0"
@@ -109,7 +144,7 @@ def seed_hcch_demo_fixture(
         ))
 
         # 2. Snapshot bindings & review actions
-        for cand in res.candidates:
+        for cand in candidates:
             if cand.metric_id == "offer_price_inr":
                 continue
             conn.execute("""
