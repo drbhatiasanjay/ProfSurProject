@@ -27,6 +27,7 @@ from models.pre_ipo_capability_gate import (
     ExportBlockedError,
     is_hcch_entity,
 )
+from models.pre_ipo_financial_contracts import FinancialStatementsContract
 from models.pre_ipo_engine import (
     classify_dickinson_stage,
     compute_debt_capacity,
@@ -752,7 +753,8 @@ if not eligibility.allowed:
     st.stop()
 
 latest = dossier.latest_financials
-stage_name, pattern = classify_dickinson_stage(latest.cfo_cr, latest.cfi_cr, latest.cff_cr)
+latest_contract = FinancialStatementsContract.from_financial_metric(latest, dossier.indebtedness)
+stage_name, pattern = latest_contract.dickinson_classification
 
 with col_act:
     render_html(
@@ -1335,15 +1337,16 @@ with tab_workpapers:
         render_html('<div class="bento-title">3-to-4 Year Restated Performance</div>', unsafe_allow_html=True)
         fin_rows = []
         for f_item in dossier.history:
+            fc = FinancialStatementsContract.from_financial_metric(f_item, dossier.indebtedness)
             fin_rows.append({
-                "Fiscal Year": f_item.fiscal_year,
-                "Revenue (₹ Cr)": f"₹{f_item.revenue_ops_cr:,.1f}",
-                "Restated EBITDA (₹ Cr)": f"₹{f_item.ebitda_cr:,.1f}",
-                "EBITDA Margin (%)": f"{(f_item.ebitda_cr / max(0.1, f_item.revenue_ops_cr))*100:.1f}%",
-                "PAT (₹ Cr)": f"₹{f_item.pat_cr:,.1f}",
-                "CFO (₹ Cr)": f"₹{f_item.cfo_cr:,.1f}",
-                "Capex (₹ Cr)": f"₹{f_item.capex_cr:,.1f}",
-                "Free Cash Flow (₹ Cr)": f"₹{f_item.fcf_cr:,.1f}",
+                "Fiscal Year": fc.fiscal_year,
+                "Revenue (₹ Cr)": f"₹{fc.revenue_ops_cr:,.1f}",
+                "Restated EBITDA (₹ Cr)": f"₹{fc.statutory_ebitda_cr:,.1f}",
+                "EBITDA Margin (%)": f"{fc.ebitda_margin_pct:.1f}%",
+                "PAT (₹ Cr)": f"₹{fc.pat_cr:,.1f}",
+                "CFO (₹ Cr)": f"₹{fc.cfo_cr:,.1f}" if fc.cfo_cr is not None else "N/A",
+                "Capex (₹ Cr)": f"₹{fc.capex_cr:,.1f}" if fc.capex_cr is not None else "N/A",
+                "Free Cash Flow (₹ Cr)": f"₹{fc.fcf_cr:,.1f}" if fc.fcf_cr is not None else "N/A",
             })
         st.dataframe(pd.DataFrame(fin_rows), use_container_width=True, hide_index=True)
 
@@ -1353,7 +1356,7 @@ with tab_workpapers:
             fig_trend = go.Figure()
             yrs = [f.fiscal_year for f in dossier.history]
             revs = [f.revenue_ops_cr for f in dossier.history]
-            ebitdas = [f.ebitda_cr for f in dossier.history]
+            ebitdas = [FinancialStatementsContract.from_financial_metric(f, dossier.indebtedness).statutory_ebitda_cr for f in dossier.history]
             fig_trend.add_trace(go.Bar(x=yrs, y=revs, name="Revenue", marker_color="#38bdf8", opacity=0.75))
             fig_trend.add_trace(go.Scatter(x=yrs, y=ebitdas, name="Restated EBITDA", line=dict(color="#10b981", width=3), mode="lines+markers"))
             fig_trend.update_layout(
@@ -1366,6 +1369,9 @@ with tab_workpapers:
 
         with col_f2:
             render_html('<div class="bento-subtitle" style="margin-top:14px;">Empirical Benchmark (N=8,677 CMIE Database)</div>', unsafe_allow_html=True)
+            cfo_val_str = f"₹{latest_contract.cfo_cr:,.1f} Cr" if latest_contract.cfo_cr is not None else "N/A"
+            cfi_val_str = f"₹{latest_contract.cfi_cr:,.1f} Cr" if latest_contract.cfi_cr is not None else "N/A"
+            cff_val_str = f"₹{latest_contract.cff_cr:,.1f} Cr" if latest_contract.cff_cr is not None else "N/A"
             dickinson_html = f"""
             <div class="bento-card" style="margin-top:4px;">
                 <div style="font-size:0.85rem; color:#94a3b8;">Classified Stage:</div>
@@ -1373,9 +1379,11 @@ with tab_workpapers:
                 <div style="font-size:0.90rem; color:#cbd5e1; font-family:monospace;">Cash Flow Sign Triplet: {pattern}</div>
                 <hr style="border-color:rgba(255,255,255,0.08); margin:10px 0;">
                 <div style="font-size:0.82rem; line-height:1.45; color:#cbd5e1;">
-                    • <strong>Operating Cash Flow:</strong> ₹{latest.cfo_cr:,.1f} Cr<br>
-                    • <strong>Investing Accrual:</strong> ₹{latest.cfi_cr:,.1f} Cr<br>
-                    • <strong>Financing Accrual:</strong> ₹{latest.cff_cr:,.1f} Cr<br>
+                    • <strong>Operating Cash Flow:</strong> {cfo_val_str}<br>
+                    • <strong>Investing Accrual:</strong> {cfi_val_str}<br>
+                    • <strong>Financing Accrual:</strong> {cff_val_str}<br>
+                    • <strong>Statutory EBITDA:</strong> ₹{latest_contract.statutory_ebitda_cr:,.1f} Cr<br>
+                    • <strong>Attributable Net Worth:</strong> ₹{latest_contract.net_worth_cr:,.1f} Cr<br>
                     • <strong>Empirical Attribution:</strong> Dickinson (2011) cash-flow pattern; descriptive classification.
                 </div>
             </div>
@@ -1424,6 +1432,33 @@ with tab_workpapers:
 
     # ── SUBTAB 2: INDEBTEDNESS & DEBT MATURITY ──
     with subtab_debt:
+        # 3 Canonical Debt Cards (P0-05: Strict separation of funded bank debt and Ind AS 116 leases)
+        c_d1, c_d2, c_d3 = st.columns(3)
+        with c_d1:
+            render_html(f"""
+            <div class="bento-card" style="margin-bottom:12px;">
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Funded Bank Borrowings</div>
+                <div style="font-size:1.6rem; font-weight:800; color:#38bdf8; margin:2px 0;">₹{latest_contract.funded_bank_debt_cr:,.1f} Cr</div>
+                <div style="font-size:0.75rem; color:#64748b;">Term Loans + WC Facilities + NCDs + Unsecured</div>
+            </div>
+            """)
+        with c_d2:
+            render_html(f"""
+            <div class="bento-card" style="margin-bottom:12px;">
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Ind AS 116 Lease Liabilities</div>
+                <div style="font-size:1.6rem; font-weight:800; color:#f59e0b; margin:2px 0;">₹{latest_contract.lease_liabilities_cr:,.1f} Cr</div>
+                <div style="font-size:0.75rem; color:#64748b;">Operating lease contractual payment obligations</div>
+            </div>
+            """)
+        with c_d3:
+            render_html(f"""
+            <div class="bento-card" style="margin-bottom:12px;">
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Total Economic Indebtedness</div>
+                <div style="font-size:1.6rem; font-weight:800; color:#10b981; margin:2px 0;">₹{latest_contract.total_economic_indebtedness_cr:,.1f} Cr</div>
+                <div style="font-size:0.75rem; color:#64748b;">Funded bank debt + Capitalized lease obligations</div>
+            </div>
+            """)
+
         col_d1, col_d2 = st.columns([3, 2])
         ind = dossier.indebtedness
         with col_d1:
@@ -1434,11 +1469,11 @@ with tab_workpapers:
                 {"Debt Category": "Working Capital Loans (Cash Credit/OD)", "Amount (₹ Cr)": f"₹{ind.working_capital_loans_cr:,.1f}", "Type": "Funded Debt"},
                 {"Debt Category": "NCD Bonds & Capital Debt", "Amount (₹ Cr)": f"₹{ind.ncd_bonds_cr:,.1f}", "Type": "Funded Debt"},
                 {"Debt Category": "Unsecured Loans", "Amount (₹ Cr)": f"₹{ind.unsecured_loans_cr:,.1f}", "Type": "Funded Debt"},
-                {"Debt Category": "Total Funded Bank Debt", "Amount (₹ Cr)": f"₹{ind.funded_bank_debt_cr:,.1f}", "Type": "Subtotal"},
-                {"Debt Category": "Ind AS 116 Lease Liabilities", "Amount (₹ Cr)": f"₹{ind.lease_liabilities_ind_as_116_cr:,.1f}", "Type": "Economic Obligation"},
-                {"Debt Category": "Total Economic Indebtedness", "Amount (₹ Cr)": f"₹{ind.total_economic_indebtedness_cr:,.1f}", "Type": "Total"},
-                {"Debt Category": "Less: Cash & Cash Equivalents", "Amount (₹ Cr)": f"₹{ind.cash_and_equivalents_cr:,.1f}", "Type": "Liquid Treasury"},
-                {"Debt Category": "Net Economic Indebtedness", "Amount (₹ Cr)": f"₹{ind.net_economic_debt_cr:,.1f}", "Type": "Net Economic Debt"},
+                {"Debt Category": "Total Funded Bank Debt", "Amount (₹ Cr)": f"₹{latest_contract.funded_bank_debt_cr:,.1f}", "Type": "Subtotal"},
+                {"Debt Category": "Ind AS 116 Lease Liabilities", "Amount (₹ Cr)": f"₹{latest_contract.lease_liabilities_cr:,.1f}", "Type": "Economic Obligation"},
+                {"Debt Category": "Total Economic Indebtedness", "Amount (₹ Cr)": f"₹{latest_contract.total_economic_indebtedness_cr:,.1f}", "Type": "Total"},
+                {"Debt Category": "Less: Cash & Cash Equivalents", "Amount (₹ Cr)": f"₹{latest_contract.cash_and_equivalents_cr:,.1f}", "Type": "Liquid Treasury"},
+                {"Debt Category": "Net Economic Indebtedness", "Amount (₹ Cr)": f"₹{latest_contract.net_economic_debt_cr:,.1f}", "Type": "Net Economic Debt"},
             ]
             st.dataframe(pd.DataFrame(debt_items), use_container_width=True, hide_index=True)
 
@@ -1502,8 +1537,8 @@ with tab_workpapers:
         render_html('<div class="bento-title">EBITDA Contraction vs Floating Rate Hike Sensitivity</div>', unsafe_allow_html=True)
         wair_val = dossier.indebtedness.weighted_avg_interest_rate_pct if dossier.indebtedness.weighted_avg_interest_rate_pct is not None else 9.0
         stress_res = generate_2d_sensitivity_matrix(
-            base_ebitda_cr=latest.ebitda_cr,
-            gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
+            base_ebitda_cr=latest_contract.statutory_ebitda_cr,
+            gross_debt_cr=latest_contract.funded_bank_debt_cr,
             base_wair_pct=wair_val,
             floating_debt_portion_pct=dossier.indebtedness.floating_rate_portion_pct,
         )
@@ -1542,11 +1577,11 @@ with tab_workpapers:
             st.caption(f"💡 **Balance Sheet Sizing:** At **{sel_prepay_pct}%** allocation of **₹{fresh_cap:,.1f} Cr** fresh issue, **₹{retired_debt:,.1f} Cr** of funded debt is retired.")
 
         from models.pre_ipo_engine import compute_3d_covenant_sensitivity_matrix
-        rev_cr = latest.revenue_ops_cr if latest.revenue_ops_cr else max(0.01, latest.ebitda_cr)
+        rev_cr = latest_contract.revenue_ops_cr if latest_contract.revenue_ops_cr else max(0.01, latest_contract.statutory_ebitda_cr)
         sens_3d = compute_3d_covenant_sensitivity_matrix(
-            base_ebitda_cr=latest.ebitda_cr,
+            base_ebitda_cr=latest_contract.statutory_ebitda_cr,
             base_revenue_cr=rev_cr,
-            base_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
+            base_gross_debt_cr=latest_contract.funded_bank_debt_cr,
             base_wair_pct=wair_val,
             fresh_issue_cr=fresh_cap,
             debt_prepay_allocations_pct=[sel_prepay_pct],
@@ -1586,7 +1621,7 @@ with tab_workpapers:
             if st.button("🚀 Bridge to Page 28: 12-Qtr CFADS Engine", key=f"btn_bridge_p28_{dossier.deal_id}", use_container_width=True):
                 st.session_state["covenant_bridge_scenario"] = {
                     "company_name": dossier.company_name,
-                    "base_ebitda": latest.ebitda_cr,
+                    "base_ebitda": latest_contract.statutory_ebitda_cr,
                     "funded_debt": remaining_debt,
                     "wair_pct": wair_val,
                     "prepay_pct": sel_prepay_pct,
@@ -1630,11 +1665,11 @@ with tab_workpapers:
                 if not shares_pre_cr and dossier.offered_shares_count:
                     shares_pre_cr = dossier.offered_shares_count / 1e7
 
-                latest_pat = dossier.history[-1].pat_cr if (dossier.history and len(dossier.history) > 0) else None
-                latest_ebitda = dossier.history[-1].ebitda_cr if (dossier.history and len(dossier.history) > 0) else None
+                latest_pat = latest_contract.pat_cr if latest_contract.pat_cr is not None else None
+                latest_ebitda = latest_contract.statutory_ebitda_cr if latest_contract.statutory_ebitda_cr is not None else None
 
-                sc_debt = dossier.indebtedness.total_economic_indebtedness_cr if dossier.indebtedness else 0.0
-                sc_cash = dossier.indebtedness.cash_and_equivalents_cr if dossier.indebtedness else 0.0
+                sc_debt = latest_contract.total_economic_indebtedness_cr
+                sc_cash = latest_contract.cash_and_equivalents_cr
 
                 if shares_pre_cr and shares_pre_cr > 0:
                     sc_mcap = shares_pre_cr * scenario_price

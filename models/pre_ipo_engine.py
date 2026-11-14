@@ -43,6 +43,7 @@ from models.pre_ipo_financial_contracts import (
     validate_cash_flow_inputs,
     validate_ebitda_metric,
     validate_net_worth_contract,
+    FinancialStatementsContract,
 )
 
 
@@ -50,25 +51,20 @@ def classify_dickinson_stage(cfo: Optional[float], cfi: Optional[float], cff: Op
     """
     Classify firm life-cycle stage based on Dickinson (2011) cash-flow sign pattern.
     Returns (stage_name, sign_pattern)
+    Delegates strictly to canonical FinancialStatementsContract validation.
     """
-    if cfo is None or cfi is None or cff is None:
-        return "Unclassified (Missing Cash Flow Data)", "(?, ?, ?)"
+    contract = FinancialStatementsContract(
+        fiscal_year="N/A",
+        revenue_ops_cr=0.0,
+        pat_cr=0.0,
+        cfo_cr=cfo,
+        cfi_cr=cfi,
+        cff_cr=cff,
+        statutory_ebitda_cr=0.0,
+        net_worth_cr=0.0,
+    )
+    return contract.dickinson_classification
 
-    s_cfo = "+" if cfo > 0 else ("0" if cfo == 0 else "-")
-    s_cfi = "+" if cfi > 0 else ("0" if cfi == 0 else "-")
-    s_cff = "+" if cff > 0 else ("0" if cff == 0 else "-")
-    pattern = f"({s_cfo}, {s_cfi}, {s_cff})"
-
-    if s_cfo == "-" and s_cfi == "-" and s_cff == "+":
-        return "Introduction", pattern
-    elif s_cfo == "+" and s_cfi == "-" and s_cff == "+":
-        return "Growth", pattern
-    elif s_cfo == "+" and s_cfi == "-" and s_cff in ("-", "0"):
-        return "Mature (Cash Cow)", pattern
-    elif s_cfo == "-" and s_cfi == "+" and s_cff in ["+", "-", "0"]:
-        return "Decline", pattern
-    else:
-        return "Shake-out", pattern
 
 
 def calculate_beneish_m_score(
@@ -496,16 +492,16 @@ def generate_financials_narrative(dossier: PreIPODealDossier, persona: str = "cf
     Generates 6-point evidence-backed analytical synthesis for Restated Financials tailored to user persona.
     """
     hist = dossier.history
-    first_fy = hist[0]
-    latest_fy = hist[-1]
+    first_contract = FinancialStatementsContract.from_financial_metric(hist[0], dossier.indebtedness)
+    latest_contract = FinancialStatementsContract.from_financial_metric(hist[-1], dossier.indebtedness)
     n_years = max(1, len(hist) - 1)
-    rev_cagr = ((latest_fy.revenue_ops_cr / max(0.1, first_fy.revenue_ops_cr)) ** (1.0 / n_years) - 1.0) * 100.0
-    ebitda_margin = (latest_fy.ebitda_cr / max(0.1, latest_fy.revenue_ops_cr)) * 100.0
-    cfo_conversion = (latest_fy.cfo_cr / max(0.1, latest_fy.ebitda_cr)) * 100.0 if latest_fy.ebitda_cr > 0 else 0.0
+    rev_cagr = ((latest_contract.revenue_ops_cr / max(0.1, first_contract.revenue_ops_cr)) ** (1.0 / n_years) - 1.0) * 100.0
+    ebitda_margin = latest_contract.ebitda_margin_pct
+    cfo_conversion = (latest_contract.cfo_cr / max(0.1, latest_contract.statutory_ebitda_cr)) * 100.0 if (latest_contract.cfo_cr is not None and latest_contract.statutory_ebitda_cr > 0) else 0.0
 
     what_you_see = (
-        f"Revenue grew at a {rev_cagr:.1f}% CAGR from ₹{first_fy.revenue_ops_cr:,.1f} Cr ({first_fy.fiscal_year}) "
-        f"to ₹{latest_fy.revenue_ops_cr:,.1f} Cr ({latest_fy.fiscal_year}), with EBITDA margins reaching {ebitda_margin:.1f}%. "
+        f"Revenue grew at a {rev_cagr:.1f}% CAGR from ₹{first_contract.revenue_ops_cr:,.1f} Cr ({first_contract.fiscal_year}) "
+        f"to ₹{latest_contract.revenue_ops_cr:,.1f} Cr ({latest_contract.fiscal_year}), with EBITDA margins reaching {ebitda_margin:.1f}%. "
         f"Cash flow conversion (CFO / EBITDA) registered at {cfo_conversion:.1f}%."
     )
 
@@ -514,7 +510,7 @@ def generate_financials_narrative(dossier: PreIPODealDossier, persona: str = "cf
         f"{'High cash conversion (>70%) demonstrates that reported accounting profits represent unencumbered liquidity.' if cfo_conversion >= 70 else 'Sub-70% conversion indicates working capital absorption or revenue timing lags that increase reliance on short-term bank credit.'}"
     )
 
-    evidence_basis = f"DRHP Section V Restated Consolidated P&L and Cash Flow Statements ({first_fy.fiscal_year} to {latest_fy.fiscal_year})."
+    evidence_basis = f"DRHP Section V Restated Consolidated P&L and Cash Flow Statements ({first_contract.fiscal_year} to {latest_contract.fiscal_year})."
 
     alternative_explanations = (
         "Conversion variance can reflect seasonal year-end customer billings, advance tax payments under Ind AS 12, "
@@ -538,7 +534,7 @@ def generate_financials_narrative(dossier: PreIPODealDossier, persona: str = "cf
         )
 
     dso = dossier.working_capital.debtor_days_dso if dossier.working_capital else 0.0
-    rev = latest_fy.revenue_ops_cr
+    rev = latest_contract.revenue_ops_cr
     if dso > 0 and rev > 0:
         wc_impact_cr = round((0.15 * dso / 365.0) * rev, 1)
         margin_impact_cr = round(rev * 0.02, 1)
@@ -563,12 +559,12 @@ def generate_indebtedness_narrative(dossier: PreIPODealDossier, debt_cap: Dict[s
     """
     Generates 6-point evidence-backed analytical synthesis for Indebtedness & Leases.
     """
-    ind = dossier.indebtedness
-    funded_debt = ind.funded_bank_debt_cr
-    leases = ind.lease_liabilities_ind_as_116_cr
-    total_debt = ind.total_economic_indebtedness_cr
-    cash = ind.cash_and_equivalents_cr
-    net_economic_debt = max(0.0, total_debt - cash)
+    contract = FinancialStatementsContract.from_financial_metric(dossier.latest_financials, dossier.indebtedness)
+    funded_debt = contract.funded_bank_debt_cr
+    leases = contract.lease_liabilities_cr
+    total_debt = contract.total_economic_indebtedness_cr
+    cash = contract.cash_and_equivalents_cr
+    net_economic_debt = contract.net_economic_debt_cr
     lease_share = (leases / max(0.1, total_debt)) * 100.0
 
     what_you_see = (

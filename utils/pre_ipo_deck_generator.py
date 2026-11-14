@@ -17,6 +17,7 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
 from models.pre_ipo_schema import PreIPODealDossier
+from models.pre_ipo_financial_contracts import FinancialStatementsContract
 from models.pre_ipo_engine import (
     compute_debt_capacity,
     classify_dickinson_stage,
@@ -108,14 +109,20 @@ def generate_pre_ipo_board_deck(
         sp.font.color.rgb = accent_gold
 
     latest = dossier.latest_financials
-    stage_name, pattern = classify_dickinson_stage(latest.cfo_cr, latest.cfi_cr, latest.cff_cr)
+    latest_contract = FinancialStatementsContract.from_financial_metric(latest, dossier.indebtedness)
+    stage_name, pattern = latest_contract.dickinson_classification
+    wair_val = (
+        dossier.indebtedness.weighted_avg_interest_rate_pct
+        if (dossier.indebtedness and dossier.indebtedness.weighted_avg_interest_rate_pct is not None)
+        else 8.5
+    )
     debt_cap = compute_debt_capacity(
-        ebitda_cr=latest.ebitda_cr,
-        cfo_cr=latest.cfo_cr,
-        capex_cr=latest.capex_cr,
-        wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 8.5,
-        current_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-        cash_cr=dossier.indebtedness.cash_and_equivalents_cr,
+        ebitda_cr=latest_contract.statutory_ebitda_cr,
+        cfo_cr=latest_contract.cfo_cr if latest_contract.cfo_cr is not None else 0.0,
+        capex_cr=latest_contract.capex_cr if latest_contract.capex_cr is not None else 0.0,
+        wair_pct=wair_val,
+        current_gross_debt_cr=latest_contract.funded_bank_debt_cr,
+        cash_cr=latest_contract.cash_and_equivalents_cr,
     )
     wacc_res = wacc_result if wacc_result is not None else calculate_wacc_and_roic(dossier)
     rev_dcf = reverse_dcf_result if reverse_dcf_result is not None else calculate_reverse_dcf_hurdle(dossier)
@@ -145,7 +152,7 @@ def generate_pre_ipo_board_deck(
         ("TOTAL OFFER SIZE", offer_size_card, offer_sub_card),
         ("OFFER SPLIT", offer_split_card, "Proceeds Allocation"),
         ("LATEST REVENUE (ANN.)", f"Rs. {latest.revenue_ops_cr:,.1f} Cr", "Restated Consolidated"),
-        ("RESTATED EBITDA", f"Rs. {latest.ebitda_cr:,.1f} Cr", f"Margin: {(latest.ebitda_cr/max(1,latest.revenue_ops_cr))*100:.1f}%"),
+        ("RESTATED EBITDA", f"Rs. {latest_contract.statutory_ebitda_cr:,.1f} Cr", f"Margin: {latest_contract.ebitda_margin_pct:.1f}%"),
         ("DICKINSON STAGE", stage_name, f"Triplet: {pattern}"),
         ("M&A DEBT HEADROOM", f"Rs. {debt_cap['incremental_mna_headroom_cr']:,.1f} Cr", f"Ceiling: {debt_cap['binding_constraint']}"),
     ]
@@ -343,14 +350,15 @@ def generate_pre_ipo_board_deck(
         p.font.color.rgb = accent_gold
 
     for r_idx, f_item in enumerate(dossier.history):
+        fc = FinancialStatementsContract.from_financial_metric(f_item, dossier.indebtedness)
         data = [
-            f_item.fiscal_year,
-            f"Rs. {f_item.revenue_ops_cr:,.1f}",
-            f"Rs. {f_item.ebitda_cr:,.1f}",
-            f"{(f_item.ebitda_cr/max(1,f_item.revenue_ops_cr))*100:.1f}%",
-            f"Rs. {f_item.pat_cr:,.1f}",
-            f"Rs. {f_item.cfo_cr:,.1f}",
-            f"Rs. {f_item.capex_cr:,.1f}",
+            fc.fiscal_year,
+            f"Rs. {fc.revenue_ops_cr:,.1f}",
+            f"Rs. {fc.statutory_ebitda_cr:,.1f}",
+            f"{fc.ebitda_margin_pct:.1f}%",
+            f"Rs. {fc.pat_cr:,.1f}",
+            f"Rs. {fc.cfo_cr:,.1f}" if fc.cfo_cr is not None else "N/A",
+            f"Rs. {fc.capex_cr:,.1f}" if fc.capex_cr is not None else "N/A",
         ]
         for c_idx, val in enumerate(data):
             cell = table.cell(r_idx + 1, c_idx)
@@ -444,7 +452,7 @@ def generate_pre_ipo_board_deck(
     add_header(s6, "Indebtedness, Leases & 2D Adversarial Stress Matrix", "Floating vs Fixed Rate Debt Sensitivity & Leverage Ceiling Headroom", 6)
 
     # Indebtedness table on left
-    ind_table_shape = s6.shapes.add_table(6, 2, Inches(0.8), Inches(1.8), Inches(5.6), Inches(4.8))
+    ind_table_shape = s6.shapes.add_table(7, 2, Inches(0.8), Inches(1.8), Inches(5.6), Inches(4.8))
     ind_table = ind_table_shape.table
     ind_table.columns[0].width = Inches(3.6)
     ind_table.columns[1].width = Inches(2.0)
@@ -452,9 +460,10 @@ def generate_pre_ipo_board_deck(
         ("Secured Bank Borrowings", f"Rs. {dossier.indebtedness.secured_term_loans_cr:,.1f} Cr"),
         ("Working Capital Facilities", f"Rs. {dossier.indebtedness.working_capital_loans_cr:,.1f} Cr"),
         ("NCD Bonds & Capital Debt", f"Rs. {dossier.indebtedness.ncd_bonds_cr:,.1f} Cr"),
-        ("Ind AS 116 Lease Liabilities", f"Rs. {dossier.indebtedness.lease_liabilities_ind_as_116_cr:,.1f} Cr"),
-        ("Total Economic Indebtedness", f"Rs. {dossier.indebtedness.total_economic_indebtedness_cr:,.1f} Cr"),
-        ("Cash & Liquid Equivalents", f"Rs. {dossier.indebtedness.cash_and_equivalents_cr:,.1f} Cr"),
+        ("Total Funded Bank Debt", f"Rs. {latest_contract.funded_bank_debt_cr:,.1f} Cr"),
+        ("Ind AS 116 Lease Liabilities", f"Rs. {latest_contract.lease_liabilities_cr:,.1f} Cr"),
+        ("Total Economic Indebtedness", f"Rs. {latest_contract.total_economic_indebtedness_cr:,.1f} Cr"),
+        ("Cash & Liquid Equivalents", f"Rs. {latest_contract.cash_and_equivalents_cr:,.1f} Cr"),
     ]
     for r_idx, (k, v) in enumerate(ind_data):
         c0 = ind_table.cell(r_idx, 0)
@@ -463,8 +472,8 @@ def generate_pre_ipo_board_deck(
         p0 = c0.text_frame.paragraphs[0]
         p0.text = k
         p0.font.size = Pt(10)
-        p0.font.bold = (r_idx == 4)
-        p0.font.color.rgb = accent_sky if r_idx == 4 else text_white
+        p0.font.bold = (r_idx in (3, 5))
+        p0.font.color.rgb = accent_sky if r_idx == 5 else text_white
 
         c1 = ind_table.cell(r_idx, 1)
         c1.fill.solid()
@@ -472,17 +481,22 @@ def generate_pre_ipo_board_deck(
         p1 = c1.text_frame.paragraphs[0]
         p1.text = v
         p1.font.size = Pt(10)
-        p1.font.bold = (r_idx == 4)
-        p1.font.color.rgb = accent_gold if r_idx == 4 else text_white
+        p1.font.bold = (r_idx in (3, 5))
+        p1.font.color.rgb = accent_gold if r_idx == 5 else text_white
 
     # Stress matrix on right
     if stress_matrix is not None:
         stress_res = stress_matrix
     else:
+        wair_base = (
+            dossier.indebtedness.weighted_avg_interest_rate_pct
+            if (dossier.indebtedness and dossier.indebtedness.weighted_avg_interest_rate_pct is not None)
+            else 9.0
+        )
         stress_res = generate_2d_sensitivity_matrix(
-            base_ebitda_cr=latest.ebitda_cr,
-            gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-            base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+            base_ebitda_cr=latest_contract.statutory_ebitda_cr,
+            gross_debt_cr=latest_contract.funded_bank_debt_cr,
+            base_wair_pct=wair_base,
             floating_debt_portion_pct=dossier.indebtedness.floating_rate_portion_pct,
         )
     s_table_shape = s6.shapes.add_table(5, 5, Inches(6.8), Inches(1.8), Inches(5.733), Inches(4.8))

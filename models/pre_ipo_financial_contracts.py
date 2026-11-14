@@ -257,3 +257,241 @@ def validate_net_worth_contract(
         "accepted": False,
         "error": f"REJECTED: Metric {metric_id} is not valid for Net Worth.",
     }
+
+
+@dataclass
+class FinancialStatementsContract:
+    """Canonical verified financial statements contract.
+
+    Provides strongly-typed, audited access to P&L, balance sheet, cash flows,
+    and indebtedness metrics. Enforces strict statutory EBITDA perimeters,
+    segregation of funded bank debt from Ind AS 116 operating lease obligations,
+    and Dickinson (2011) cash-flow life cycle classification.
+    """
+    fiscal_year: str
+    revenue_ops_cr: float
+    pat_cr: float
+    cfo_cr: Optional[float]
+    cfi_cr: Optional[float]
+    cff_cr: Optional[float]
+
+    # Statutory EBITDA perimeter:
+    # Operating profit before exceptional items, finance costs, depreciation & amortisation
+    statutory_ebitda_cr: float
+
+    # Net worth: Owners' equity attributable to parent shareholders, strictly excluding NCI
+    net_worth_cr: float
+    total_assets_cr: Optional[float] = None
+    receivables_cr: Optional[float] = None
+    capex_cr: Optional[float] = None
+    fcf_cr: Optional[float] = None
+
+    # Debt separation
+    funded_bank_debt_cr: float = 0.0
+    lease_liabilities_cr: float = 0.0
+    cash_and_equivalents_cr: float = 0.0
+
+    # Non-controlling interest
+    non_controlling_interest_cr: float = 0.0
+
+    # Verification and provenance
+    is_verified: bool = True
+    provenance: Optional[Dict[str, Any]] = None
+
+    @property
+    def total_economic_indebtedness_cr(self) -> float:
+        """Total economic indebtedness = Funded bank debt + Ind AS 116 lease liabilities."""
+        return round(self.funded_bank_debt_cr + self.lease_liabilities_cr, 2)
+
+    @property
+    def net_economic_debt_cr(self) -> float:
+        """Net economic indebtedness = Total economic indebtedness - cash & equivalents."""
+        return round(self.total_economic_indebtedness_cr - self.cash_and_equivalents_cr, 2)
+
+    @property
+    def net_funded_debt_cr(self) -> float:
+        """Net funded bank debt = Funded bank debt - cash & equivalents."""
+        return round(self.funded_bank_debt_cr - self.cash_and_equivalents_cr, 2)
+
+    @property
+    def ebitda_margin_pct(self) -> float:
+        """Statutory EBITDA margin (%) = (statutory_ebitda_cr / revenue_ops_cr) * 100."""
+        if self.revenue_ops_cr and self.revenue_ops_cr > 0:
+            return round((self.statutory_ebitda_cr / self.revenue_ops_cr) * 100.0, 2)
+        return 0.0
+
+    @property
+    def dickinson_classification(self) -> Tuple[str, str]:
+        """Dickinson (2011) cash-flow stage classification.
+
+        Requires strictly verified, non-null (CFO, CFI, CFF) totals.
+        Returns (stage_name, pattern_string).
+        If any cash flow sign cannot be established, halts with Unclassified.
+        """
+        if self.cfo_cr is None or self.cfi_cr is None or self.cff_cr is None:
+            return "Unclassified (Missing Cash Flow Data)", "(?, ?, ?)"
+
+        res = validate_cash_flow_inputs(self.cfo_cr, self.cfi_cr, self.cff_cr)
+        if not res.get("valid"):
+            return "Unclassified (Missing Cash Flow Data)", "(?, ?, ?)"
+
+        signs = res.get("signs", ("?", "?", "?"))
+        pattern = f"({signs[0]}, {signs[1]}, {signs[2]})"
+        stage_val = res.get("dickinson_stage", "Inconclusive")
+        if stage_val == DickinsonLifeCycle.GROWTH.value:
+            stage_name = "Growth"
+        elif stage_val == DickinsonLifeCycle.MATURE.value:
+            stage_name = "Mature (Cash Cow)"
+        elif stage_val == DickinsonLifeCycle.INTRODUCTION.value:
+            stage_name = "Introduction"
+        elif stage_val == DickinsonLifeCycle.DECLINE.value:
+            stage_name = "Decline"
+        else:
+            stage_name = "Shake-out"
+        return stage_name, pattern
+
+    @classmethod
+    def from_financial_metric(
+        cls,
+        f: Any,
+        indebtedness: Optional[Any] = None,
+    ) -> "FinancialStatementsContract":
+        """Instantiate contract from FinancialYearMetric or dict, enforcing canonical contracts."""
+        if isinstance(f, dict):
+            fy = str(f.get("fiscal_year") or f.get("period") or "FY_UNKNOWN")
+            rev = float(f.get("revenue_ops_cr") or 0.0)
+            pat = float(f.get("pat_cr") or 0.0)
+            cfo = f.get("cfo_cr")
+            cfi = f.get("cfi_cr")
+            cff = f.get("cff_cr")
+            ebitda = float(f.get("statutory_kpi_ebitda_cr") or f.get("ebitda_cr") or 0.0)
+            nw = float(f.get("parent_net_worth_cr") or f.get("net_worth_cr") or 0.0)
+            tot_assets = f.get("total_assets_cr")
+            rec = f.get("receivables_cr")
+            capex = f.get("capex_cr")
+            fcf = f.get("fcf_cr")
+            nci = float(f.get("non_controlling_interest_cr") or 0.0)
+        else:
+            fy = getattr(f, "fiscal_year", "FY_UNKNOWN")
+            rev = float(getattr(f, "revenue_ops_cr", 0.0) or 0.0)
+            pat = float(getattr(f, "pat_cr", 0.0) or 0.0)
+            cfo = getattr(f, "cfo_cr", None)
+            cfi = getattr(f, "cfi_cr", None)
+            cff = getattr(f, "cff_cr", None)
+            ebitda = float(getattr(f, "statutory_kpi_ebitda_cr", None) or getattr(f, "ebitda_cr", 0.0) or 0.0)
+            nw = float(getattr(f, "parent_net_worth_cr", None) or getattr(f, "net_worth_cr", 0.0) or 0.0)
+            tot_assets = getattr(f, "total_assets_cr", None)
+            rec = getattr(f, "receivables_cr", None)
+            capex = getattr(f, "capex_cr", None)
+            fcf = getattr(f, "fcf_cr", None)
+            nci = float(getattr(f, "non_controlling_interest_cr", 0.0) or 0.0)
+
+        # Funded bank debt vs leases from indebtedness
+        funded = 0.0
+        leases = 0.0
+        cash = 0.0
+        if indebtedness is not None:
+            if hasattr(indebtedness, "funded_bank_debt_cr") and indebtedness.funded_bank_debt_cr is not None:
+                funded = float(indebtedness.funded_bank_debt_cr)
+            else:
+                sec = float(getattr(indebtedness, "secured_term_loans_cr", 0.0) or 0.0)
+                wc = float(getattr(indebtedness, "working_capital_loans_cr", 0.0) or 0.0)
+                ncd = float(getattr(indebtedness, "ncd_bonds_cr", 0.0) or 0.0)
+                unsec = float(getattr(indebtedness, "unsecured_loans_cr", 0.0) or 0.0)
+                funded = round(sec + wc + ncd + unsec, 2)
+            leases = float(getattr(indebtedness, "lease_liabilities_ind_as_116_cr", 0.0) or 0.0)
+            cash = float(getattr(indebtedness, "cash_and_equivalents_cr", 0.0) or 0.0)
+
+        return cls(
+            fiscal_year=fy,
+            revenue_ops_cr=rev,
+            pat_cr=pat,
+            cfo_cr=cfo,
+            cfi_cr=cfi,
+            cff_cr=cff,
+            statutory_ebitda_cr=ebitda,
+            net_worth_cr=nw,
+            total_assets_cr=tot_assets,
+            receivables_cr=rec,
+            capex_cr=capex,
+            fcf_cr=fcf,
+            funded_bank_debt_cr=funded,
+            lease_liabilities_cr=leases,
+            cash_and_equivalents_cr=cash,
+            non_controlling_interest_cr=nci,
+        )
+
+    @classmethod
+    def from_history_and_indebtedness(
+        cls,
+        hist_item: Any,
+        indebtedness: Optional[Any] = None,
+    ) -> "FinancialStatementsContract":
+        """Convenience alias for from_financial_metric."""
+        return cls.from_financial_metric(hist_item, indebtedness)
+
+    @classmethod
+    def from_accepted_snapshot(
+        cls,
+        snapshot_payload: Union[Dict[str, Any], Any],
+        period: str = "FY24",
+    ) -> "FinancialStatementsContract":
+        """Instantiate contract directly from an accepted snapshot's restated financials."""
+        if not isinstance(snapshot_payload, dict):
+            if hasattr(snapshot_payload, "to_dict"):
+                snapshot_payload = snapshot_payload.to_dict()
+            elif hasattr(snapshot_payload, "__dict__"):
+                snapshot_payload = snapshot_payload.__dict__
+            else:
+                snapshot_payload = dict(snapshot_payload)
+
+        # Look in restated_financials (list or dict)
+        restated = snapshot_payload.get("restated_financials", [])
+        target_rec = None
+        if isinstance(restated, list):
+            for r in restated:
+                if str(r.get("period") or r.get("fiscal_year")) == period:
+                    target_rec = r
+                    break
+        elif isinstance(restated, dict):
+            target_rec = restated.get(period)
+
+        if target_rec is None:
+            raise KeyError(f"Period '{period}' not found in accepted snapshot restated financials.")
+
+        cfo = target_rec.get("cfo_cr")
+        cfi = target_rec.get("cfi_cr")
+        cff = target_rec.get("cff_cr")
+        rev = float(target_rec.get("revenue_ops_cr") or 0.0)
+        pat = float(target_rec.get("pat_cr") or 0.0)
+        ebitda = float(target_rec.get("statutory_kpi_ebitda_cr") or target_rec.get("ebitda_cr") or 0.0)
+        nw = float(target_rec.get("parent_net_worth_cr") or target_rec.get("net_worth_cr") or 0.0)
+        tot_debt = float(target_rec.get("total_debt_cr") or target_rec.get("funded_bank_debt_cr") or 0.0)
+        cash = float(target_rec.get("cash_and_equiv_cr") or target_rec.get("cash_and_equivalents_cr") or 0.0)
+        leases = float(target_rec.get("lease_liabilities_cr") or target_rec.get("lease_liabilities_ind_as_116_cr") or 0.0)
+        nci = float(target_rec.get("non_controlling_interest_cr") or 0.0)
+
+        return cls(
+            fiscal_year=period,
+            revenue_ops_cr=rev,
+            pat_cr=pat,
+            cfo_cr=cfo,
+            cfi_cr=cfi,
+            cff_cr=cff,
+            statutory_ebitda_cr=ebitda,
+            net_worth_cr=nw,
+            total_assets_cr=target_rec.get("total_assets_cr"),
+            receivables_cr=target_rec.get("receivables_cr"),
+            capex_cr=target_rec.get("capex_cr"),
+            fcf_cr=target_rec.get("fcf_cr"),
+            funded_bank_debt_cr=tot_debt,
+            lease_liabilities_cr=leases,
+            cash_and_equivalents_cr=cash,
+            non_controlling_interest_cr=nci,
+            provenance={
+                "section": target_rec.get("section"),
+                "physical_page": target_rec.get("physical_page"),
+                "printed_folio": target_rec.get("printed_folio"),
+            },
+        )
+
