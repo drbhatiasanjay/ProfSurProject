@@ -20,7 +20,7 @@ To refactor the repository's agent instructions and install machine-enforced sco
 
 Previous implementation failures occurred due to four systemic governance flaws:
 1. **Instruction Sprawl & Contradictory Authority Claims:** `AGENTS.md`, `CURRENT_STATUS.md`, and `SESSION_HANDOFF.md` accumulated historical narratives, hardcoded branch names, release tags, and unverified commit hashes (`6075708`, `a78aa84`, `6462cbb...`), creating conflicting sources of truth.
-2. **Agent Self-Approval & Circular Verification:** Agents marked defects as `CLOSED_VERIFIED` using self-authored unit tests that asserted fixtures against the very legacy dictionary (`PRE_IPO_REGISTRY`) being replaced.
+2. **Agent Self-Approval & Circular Verification:** Historical agent failures marked defects prematurely as closed using self-authored unit tests that asserted fixtures against the very legacy dictionary (`PRE_IPO_REGISTRY`) being replaced.
 3. **Cosmetic UI Containment vs. Real Production Wiring:** Agents added UI alert banners while leaving production callers executing ungrounded computations in the background.
 4. **Scope Creep & Premature Multi-PR Execution:** Agents authorized for PR 1 proceeded to implement PR 2–6 and consolidated branches without independent review checkpoints.
 

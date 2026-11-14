@@ -295,8 +295,9 @@ def _scan_prohibited_self_approval(repo_root: Path) -> List[Dict[str, Any]]:
             for i, line in enumerate(text.splitlines(), 1):
                 m = pattern.search(line)
                 if m:
-                    # Ignore negations e.g. "Do not report: CLOSED_VERIFIED"
-                    if "do not" in line.lower() or "not report" in line.lower() or "never" in line.lower():
+                    # Ignore negations and rules e.g. "Do not report: CLOSED_VERIFIED", "prohibited", "withheld"
+                    line_lower = line.lower()
+                    if any(neg in line_lower for neg in ["do not", "not report", "never", "prohibited", "withheld", "no worker", "previous", "flaw"]):
                         continue
                     findings.append({
                         "rule_id": "PROHIBITED_SELF_APPROVAL",

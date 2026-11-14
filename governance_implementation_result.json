@@ -16,6 +16,8 @@
     "docs/agent-governance/TASK_CONTRACT_PROTOCOL.md",
     "docs/archive/SESSION_HANDOFF_2026-09-30.md",
     "docs/review-evidence/AGENT_GOVERNANCE_HARDENING_2026-11-14.md",
+    "docs/review-evidence/CODEX_REVIEW_REQUEST_GOVERNANCE_2026-11-14.json",
+    "docs/review-evidence/CODEX_REVIEW_REQUEST_GOVERNANCE_2026-11-14.md",
     "governance_implementation_result.json",
     "scripts/project_status.py",
     "scripts/validate_project_governance.py",

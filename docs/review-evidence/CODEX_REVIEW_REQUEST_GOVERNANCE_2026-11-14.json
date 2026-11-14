@@ -1,0 +1,76 @@
+{
+  "review_request_id": "CODEX_REVIEW_AGENT_GOVERNANCE_HARDENING_2026_11_14",
+  "task_id": "AGENT_GOVERNANCE_HARDENING_PUBLICATION_2026_11_14",
+  "parent_task_id": "AGENT_GOVERNANCE_HARDENING_2026_11_14",
+  "repository": "ProfSurProject",
+  "remote_repository_url": "https://github.com/drbhatiasanjay/ProfSurProject",
+  "branch": "chore/agent-governance-hardening-2026-11-14",
+  "base_sha": "6b52836f3ff1d3ab13729bdb5d1bdb0f33677aa1",
+  "upstream_target": "origin/master",
+  "scope_boundary": "GOVERNANCE_HARDENING_ONLY (Zero product code modifications, zero Pre-IPO extraction changes, zero DB alterations)",
+  "database_ground_truth": {
+    "file": "capital_structure.db",
+    "sha256": "CA696195A5C541B56E0533DE6C69A3BEC4E501A232FD2B18A1B09D15D6FA7873",
+    "status": "VERIFIED_PRISTINE_UNCHANGED"
+  },
+  "worker_role": "Implementation worker only (Codex is the independent review and acceptance authority)",
+  "worker_status": "IMPLEMENTED_PENDING_INDEPENDENT_REVIEW",
+  "prohibited_claims_not_made": [
+    "CLOSED_VERIFIED",
+    "PRODUCTION_SAFE",
+    "SCIENTIFICALLY_VALIDATED",
+    "READY_TO_MERGE",
+    "READY_TO_DEPLOY"
+  ],
+  "verification_evidence": {
+    "total_tests_collected": 30,
+    "passed": 30,
+    "failed": 0,
+    "skipped": 0,
+    "suites": [
+      {
+        "suite": "tests/test_project_status.py",
+        "count": 7,
+        "status": "PASSED",
+        "description": "Dynamic repository and git status inspection with non-mutation verification"
+      },
+      {
+        "suite": "tests/test_agent_scope_verifier.py",
+        "count": 13,
+        "status": "PASSED",
+        "description": "Fail-closed scope verifier enforcing task contracts, allowed paths, base SHA, and expiry"
+      },
+      {
+        "suite": "tests/test_project_governance.py",
+        "count": 10,
+        "status": "PASSED",
+        "description": "Governance linter checking for hardcoded SHAs, plaintext secrets, permissive defaults, and circular tests"
+      }
+    ]
+  },
+  "runtime_verification_commands": [
+    "git checkout chore/agent-governance-hardening-2026-11-14",
+    "py -3.12 -m pytest tests/test_project_status.py tests/test_agent_scope_verifier.py tests/test_project_governance.py -v",
+    "py -3.12 scripts/project_status.py --json",
+    "py -3.12 scripts/validate_project_governance.py --json"
+  ],
+  "governance_linter_findings": {
+    "pre_existing_defects_detected": [
+      {
+        "rule_id": "PRODUCTION_REGISTRY_USAGE",
+        "file": "pages/27_pre_ipo_drhp.py",
+        "line": 669,
+        "message": "Production page route resolves dossier from unreviewed PRE_IPO_REGISTRY.",
+        "action_taken": "Recorded as finding. Left untouched per strict governance-hardening scope boundary."
+      }
+    ]
+  },
+  "documentation_references": [
+    "docs/review-evidence/AGENT_GOVERNANCE_HARDENING_2026-11-14.md",
+    "docs/agent-governance/AGENT_POLICY_PRECEDENCE.md",
+    "docs/agent-governance/TASK_CONTRACT_PROTOCOL.md",
+    ".agents/rules/worker_completion_contract.md",
+    ".agents/rules/pre_ipo_evidence_integrity.md",
+    "AGENTS.md"
+  ]
+}
