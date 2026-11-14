@@ -262,17 +262,30 @@ def evaluate_capability_gate(
         else:
             snapshot_hash = persisted_hash
 
-    if not snapshot_id or effective_status != "ACCEPTED_FOR_ANALYSIS":
-        return CapabilityDecision(
-            allowed=False,
-            capability=capability,
-            status="BLOCKED",
-            reason=f"Evidence snapshot '{snapshot_id or 'None'}' is unreviewed or in status '{effective_status or 'UNREVIEWED'}'. Only ACCEPTED_FOR_ANALYSIS snapshots are eligible for analytical processing.",
-            next_action="Audit and accept all candidate observations in Tab 2 Provenance Ledger to authorize downstream analysis.",
-            snapshot_id=snapshot_id,
-            snapshot_hash=snapshot_hash,
-            blocked_metrics=["*"],
-        )
+        if effective_status != "ACCEPTED_FOR_ANALYSIS":
+            return CapabilityDecision(
+                allowed=False,
+                capability=capability,
+                status="BLOCKED",
+                reason=f"Evidence snapshot '{snapshot_id}' is unreviewed or in status '{effective_status or 'UNREVIEWED'}'. Only ACCEPTED_FOR_ANALYSIS snapshots are eligible for analytical processing.",
+                next_action="Audit and accept all candidate observations in Tab 2 Provenance Ledger to authorize downstream analysis.",
+                snapshot_id=snapshot_id,
+                snapshot_hash=snapshot_hash,
+                blocked_metrics=["*"],
+            )
+    elif is_production and not snapshot_id:
+        # Non-HCCH demonstration issuers (DEMO_DOSSIER) preserve demonstration analysis without snapshot
+        if origin != "DEMO_DOSSIER":
+            return CapabilityDecision(
+                allowed=False,
+                capability=capability,
+                status="BLOCKED",
+                reason="Production analysis requires an accepted evidence snapshot in persistence.",
+                next_action="Audit and accept candidate observations in Tab 2 Provenance Ledger to authorize downstream analysis.",
+                snapshot_id=None,
+                snapshot_hash=None,
+                blocked_metrics=["*"],
+            )
 
     # 5. Unpriced book-building circuit breaker (P0-03, P0-07)
     if is_unpriced and capability in (CapabilityType.VALUATION, CapabilityType.WACC_ROIC, CapabilityType.REVERSE_DCF):
