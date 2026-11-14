@@ -16,7 +16,7 @@ Because private and late-stage pre-IPO firms suffer from severe information asym
 1. **Specialized AI/Machine Learning Architectures** designed to ingest, structure, and analyze unstructured statutory filings (DRHP, RHP, S-1), cap tables, and alternative market data signals.
 2. **Deterministic Quantitative & Econometric Valuation Frameworks** adapted specifically for late-stage private companies transitioning to public markets (capital structure waterfalls, step-down WACC dynamics, working capital runway, Dickinson life-cycle stage modeling, and Ind AS restatement analysis).
 
-This document establishes the permanent theoretical, empirical, regulatory, and software architecture foundations for pre-IPO evaluation in `ProfSurProject`. It aggregates core research, integrates the complete practitioner blueprint for Indian primary markets (**SEBI ICDR 2018**, **CRISIL IPO Grading**, **JRFM 2023**, **SJMSOM IIT Bombay ML research**), and defines the evolutionary roadmap for our Pre-IPO intelligence engine.
+This document establishes the permanent theoretical, empirical, regulatory, and software architecture foundations for pre-IPO evaluation in `ProfSurProject`. It aggregates core research, integrates the complete practitioner blueprint for Indian primary markets (**SEBI ICDR 2018**, **CRISIL IPO Grading**, **JRFM 2023**, **SJMSOM IIT Bombay ML research**), details the **end-to-end 6-stage engineering pipeline** for parsing statutory prospectuses, and defines the evolutionary roadmap for our Pre-IPO intelligence engine.
 
 ---
 
@@ -190,29 +190,191 @@ When advising clients purchasing shares in the pre-IPO unlisted market rather th
 
 ---
 
-## Section 5: Application Blueprint for Financial Practitioners
+## Section 5: End-to-End Automated Pipeline Engineering for Prospectus Parsing & Quantitative Valuation
 
-To operationalize this framework for Registered Investment Advisers (RIAs), Research Analysts (RAs), and portfolio managers in India, an IPO evaluation application must bridge unstructured statutory filings (DRHP/RHP) with automated quantitative scoring, peer benchmarking, and compliance-ready advisory workflows.
+Building an automated pipeline to parse statutory pre-IPO prospectuses (such as SEC Form S-1 in the US or SEBI Draft Red Herring Prospectus [DRHP] in India) and generate an institutional quantitative pre-IPO valuation model involves **six distinct engineering stages**.
 
-### 5.1 Core Application Modules
-1. **DRHP / RHP Ingestion & Structured Extraction:** Upload DRHP/RHP PDF or ingest directly from SEBI feeds. Layout-aware parsing extracts 3-year Restated Financial Statements, Objects of the Issue (Fresh vs. OFS split), statutory KPIs, Outstanding Litigations, Contingent Liabilities, and Related Party Transactions—attaching exact page-number citations to every data point.
-2. **Quantitative Scoring Engine:** Calculates normalized sub-scores across Growth (Revenue/PAT CAGR), Profitability (EBITDA/PAT margins, ROE, ROCE, ROA), and Cash Quality (CFO-to-EBITDA). Implements automated anomaly triggers for stub-period margin expansion, rising receivable days, or auditor turnover.
-3. **Peer Benchmarking & Valuation Matrix:** Connects to Indian market data feeds (NSE/BSE, CMIE Prowess, Ace Equity) to pull live valuation multiples (P/E, EV/EBITDA, P/B, P/S) for comparable listed companies. Computes implied post-issue market capitalization and multiples across lower and upper price bands, displaying the percentage discount or premium against peer medians.
-4. **Guidance & Compliance-Aligned Output Generator:** Synthesizes quantitative scores and qualitative red flags into structured practitioner memos. Depending on the practitioner's regulatory license (e.g., SEBI RA vs. analytical decision-support platform), generates either explicit recommendations (Subscribe for Long Term, Subscribe for Listing Gains, Avoid) or objective risk-return scorecards with standardized SEBI risk disclaimers.
+The primary engineering challenges are handling massive unstructured documents (often 400–900 pages), reconciling restated historical financials, parsing nested equity dilution mechanics, and bridging extracted text into structured financial models.
 
-### 5.2 Differentiating Features for Indian Primary Markets
-1. **Anchor Book & Live Subscription Tracker:** Tracks real-time QIB, Non-Institutional Investor (NII/HNI), and Retail subscription multiples across the 3-day bidding window, paired with an Anchor Investor quality tiering engine (distinguishing marquee domestic mutual funds and sovereign wealth funds from opaque FPIs).
-2. **Pre-IPO vs. IPO Arbitrage & Lock-In Calculator:** Models the true break-even listing price for unlisted market buyers by incorporating off-market acquisition premiums, stamp duty/brokerage, the mandatory 6-month SEBI ICDR lock-in holding period, and unlisted capital gains tax differentials.
-3. **Automated DRHP Red-Flag Scanner:** Runs targeted NLP checks across Risk Factors, Litigations, and Restated Financials sections to surface statutory auditor resignations, contingent liabilities exceeding 15% of net worth, promoter share pledges, and regulatory show-cause notices.
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                        EDGAR / SEBI SCRAPER                            │
+│           (Query SEC EDGAR S-1/A or SEBI/NSE/BSE DRHP/RHP)             │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│             DOCUMENT PARTITIONING & LAYOUT EXTRACTION                  │
+│       (Regex Boundary Headings, Marker, Nougat, Table Transformers)    │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│             INFORMATION EXTRACTION & STANDARDIZATION                   │
+│         (LLM JSON Schema Enforcement / Pydantic Financial Ontology)    │
+└───────────┬───────────────────────┼───────────────────────────┬────────┘
+            │                       │                           │
+            ▼                       ▼                           ▼
+┌──────────────────────┐  ┌──────────────────────┐  ┌──────────────────────┐
+│  CAP TABLE ENGINE    │  │ FINANCIAL STATEMENTS │  │ QUALITATIVE NLP      │
+│  • CCPS/CCD ratios   │  │  RECONSTRUCTION      │  │  SCORER              │
+│  • ESOP option pool  │  │ • Ind AS / US GAAP   │  │ • FinBERT sentiment  │
+│  • Fresh vs. OFS     │  │ • Restated Balance   │  │ • Litigation claims /│
+│  • Diluted post-IPO  │  │   Sheet, P&L, CFO    │  │   Net Worth ratio    │
+│    share count       │  │ • Audit: A = L + E   │  │ • RPT / Revenue %    │
+└───────────┬──────────┘  └──────────┬───────────┘  └──────────┬───────────┘
+            │                        │                         │
+            └────────────────────────┼─────────────────────────┘
+                                     │
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                     PEER COMPS & VALUATION ENGINE                      │
+│        • Dynamic Public Multiples (P/E, EV/EBITDA, EV/Sales, P/B)      │
+│        • Parameter-Driven IPO Discount (10%–20%)                       │
+│        • DCF with Step-Down WACC Curve & Fresh Cash Bridge             │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                  EXPORT & DYNAMIC SENSITIVITY OUTPUT                   │
+│        (Streamlit Interactive Dashboard / OpenPyXL Auditable Excel /   │
+│         PowerPoint Board Memos)                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
-### 5.3 Suggested Tech Stack & Data Architecture
+### Stage 1: Automated Prospectus Ingestion & Section Routing
+Prospectuses are dense, semi-structured PDFs or HTML filings. Running raw documents through an LLM is cost-prohibitive, introduces severe token limits, and causes context fragmentation.
 
-| Architectural Layer | Recommended Technologies | Functional Purpose |
+- **Ingestion:**
+  - *US Filings:* Query SEC EDGAR via the `sec-edgar-downloader` Python library or EDGAR API to pull Form S-1/A.
+  - *India Filings:* Scrape SEBI, NSE, or BSE filings for newly uploaded DRHP/RHP PDFs using Playwright and BeautifulSoup.
+- **Document Segmentation:**
+  Instead of parsing linearly, identify boundary headings using Regex and outline trees to extract specific target sections:
+  1. *Financial Statements:* "Restated Financial Information", "Financial Statements", or "Consolidated Financial Statements".
+  2. *Capital Structure:* "Capitalisation and Indebtedness", "Objects of the Offer", and "Summary of Offer".
+  3. *Operational & Risk Metrics:* "Management's Discussion and Analysis of Financial Condition (MD&A)" and "Risk Factors".
+
+### Stage 2: High-Fidelity Table & Layout Parsing
+Financial tables in S-1/DRHP filings frequently contain merged headers, multi-period restatements, footnote indicators, and currency variations (e.g., INR in Lakhs/Crores vs. USD in Thousands/Millions).
+
+- **Tooling:** Dedicated document parsers rather than generic text extractors:
+  - *Marker* or *Nougat* for converting complex PDF pages into structured Markdown with LaTeX math and tables.
+  - *Table Transformer (TATR)* or *Docling* for extracting bounding boxes and cell matrices into structured JSON/DataFrames.
+- **Extraction Schema (3-Year History Minimum):**
+  - *Balance Sheet:* Net Debt, Cash & Equivalents, Funded Borrowings, Lease Liabilities (Ind AS 116 / ASC 842), Net Worth.
+  - *Income Statement:* Revenue from Operations, Gross Profit, EBITDA, Operating Profit, Profit After Tax (PAT).
+  - *Cash Flow Statement:* Operating Cash Flow (CFO), Capital Expenditures (CapEx), Financing Cash Flow (CFF), and Free Cash Flow.
+
+### Stage 3: Cap Table Normalization & Dilution Mechanics
+Valuing a pre-IPO company on simple pre-offer shares yields misleading results due to complex pre-IPO capital structures. The extraction engine feeds a deterministic conversion script:
+
+- **Share Class Unification:**
+  - Parse conversion ratios for Series A–F Preferred Shares, Compulsorily Convertible Debentures (CCDs), and Compulsorily Convertible Preference Shares (CCPS).
+  - Factor in anti-dilution adjustments (broad-based weighted average vs. full ratchet) and liquidation preferences.
+- **Fresh Issue vs. Offer for Sale (OFS):**
+  - *Fresh Issue:* Injects fresh cash into the company balance sheet and increases total share count.
+  - *Offer for Sale (OFS):* Secondary exit for existing promoters/PE investors; does not affect company cash balance, but changes voting control.
+- **Fully Diluted Post-IPO Share Capital Formula:**
+  $$\text{Post-IPO Diluted Shares} = \text{Existing Common Shares} + \sum (\text{Converted Preferred} \times \text{Ratio}) + \text{Vested Options/ESOPs} + \text{Fresh Issue Shares}$$
+
+### Stage 4: Quantitative Valuation Engine
+Once structured data is available in tabular format, it is fed into deterministic financial models rather than relying on LLMs for arithmetic.
+
+#### 1. Comparable Company Analysis (Trading Comps)
+Pull dynamic public market multiples ($P/E$, $EV/\text{Sales}$, $EV/\text{EBITDA}$, $P/B$) for declared peer groups (disclosed in the DRHP/S-1 under the *"Basis for Issue Price"* section) via market data APIs.
+
+Apply a parameter-driven **IPO Discount** (standard 10%–20%) to account for the liquidity spread and ensure offer absorption:
+
+$$\text{Implied Offer Price per Share} = \frac{\text{Sector Multiple} \times \text{Company Metric} \times (1 - \text{IPO Discount})}{\text{Post-Issue Diluted Shares}}$$
+
+#### 2. Discounted Cash Flow (DCF) Integration
+Compute Free Cash Flow to Firm (FCFF):
+
+$$\text{FCFF} = \text{EBIT} \times (1 - t) + \text{D\&A} - \text{CapEx} - \Delta\text{NWC}$$
+
+- **Incorporate Use of Proceeds:** Add net proceeds from the Fresh Issue into starting cash to model working capital expansion or debt reduction (which lowers post-IPO interest expense).
+- **Step-Down WACC Dynamic:** Discount early cash flows at higher private cost of capital ($WACC_{\text{private}}$), stepping down post-listing ($WACC_{\text{public}}$) as liquidity and cost of debt improve.
+
+### Stage 5: Risk & Sentiment Analysis via NLP
+Extract qualitative indicators from the Risk Factors section to supplement the quantitative score:
+- **FinBERT Sentiment Scoring:** Tag risk factors by category (*Regulatory*, *Legal*, *Operational*, *Customer Concentration*).
+- **Litigation & Contingent Liabilities Flag:** Compute the ratio of total monetary claims in pending litigation relative to Net Worth:
+  $$\text{Litigation Exposure Ratio} = \frac{\sum \text{Pending Monetary Claims}}{\text{Net Worth}}$$
+  *(Flag if ratio $> 15\%$).*
+- **Related Party Transactions (RPT) Ratio:** Calculate total annual RPT volume relative to total revenue to flag potential value leakage:
+  $$\text{RPT Ratio} = \frac{\text{Total Annual RPT Volume}}{\text{Total Revenue}}$$
+
+### Stage 6: Modular Implementation Tech Stack & Pydantic Schema
+
+| Stage | Recommended Stack | Functional Purpose |
 |---|---|---|
-| **Document Parsing & AI Extraction** | Layout-aware PDF parsers (Docling, LlamaParse, Azure Document Intelligence) + Schema-enforced LLMs | Accurate extraction of multi-page Ind AS financial tables and KPIs with verifiable page citations. |
-| **Financial & Market Data Feeds** | NSE/BSE corporate feeds, CMIE Prowess, Ace Equity, or market data APIs | Live listed peer multiples, sector benchmarks, and historical post-listing performance tracking. |
-| **Quantitative & NLP Scoring Engine** | Python (Pandas, Scikit-learn, LightGBM/XGBoost) + FinBERT / domain embeddings | Multi-factor scoring, anomaly detection, and prospectus textual risk/uncertainty scoring. |
-| **Compliance & Audit Trail** | PostgreSQL / SQLite immutable audit logs, versioned report templates, PDF/DOCX/PPTX export engine | Maintains SEBI audit trails, timestamped thesis versions, and exportable client research memos. |
+| **Ingestion** | FastAPI, Playwright, BeautifulSoup, `sec-edgar-downloader` | Automated scrapers for regulatory listing filings. |
+| **Parsing** | Docling / PyMuPDF + Schema-Enforced LLM (Tool-Calling) | Strict JSON extraction with page bounding-box citations. |
+| **Compute Core** | Python (`pandas`, `numpy`, `scipy`) | Dilution engine, debt adjustment, DCF/Comps valuation. |
+| **Validation** | Pydantic v2 | Enforces mathematical reconciliation ($A = L + E \pm 0.01$). |
+| **Export / UI** | Streamlit, `openpyxl`, `python-pptx` | Generates auditable dynamic Excel models, board decks, or web dashboards. |
+
+#### Production Pydantic Validation Schema
+To ensure computational reliability, LLMs are used exclusively to map unstructured text into a strict validation schema, leaving all arithmetic to Python:
+
+```python
+from pydantic import BaseModel, Field, model_validator
+from typing import List, Optional
+
+class FinancialMetric(BaseModel):
+    fiscal_year: str = Field(description="e.g. FY23, FY24, FY25 or stub period")
+    revenue_operations: float = Field(description="Total revenue from operations in INR Cr or USD M")
+    ebitda: float = Field(description="Earnings before interest, taxes, depreciation, and amortization")
+    net_profit_pat: float = Field(description="Profit after tax")
+    cash_and_equivalents: float = Field(description="Cash and cash equivalents")
+    funded_debt: float = Field(description="Total borrowings excluding lease liabilities")
+    lease_liabilities: float = Field(default=0.0, description="Operating lease liabilities under Ind AS 116 / ASC 842")
+    cfo: float = Field(description="Cash flow from operations")
+    capex: float = Field(description="Capital expenditures")
+
+    @property
+    def total_economic_debt(self) -> float:
+        return self.funded_debt + self.lease_liabilities
+
+    @property
+    def cfo_to_ebitda(self) -> float:
+        return (self.cfo / self.ebitda) if self.ebitda != 0 else 0.0
+
+class CapitalStructure(BaseModel):
+    pre_offer_equity_shares: float
+    fresh_issue_amount_cr: float
+    fresh_issue_shares: Optional[float] = None
+    ofs_shares: float = Field(default=0.0, description="Shares offered for sale by selling shareholders")
+    esop_pool_options_vested: float = Field(default=0.0)
+    preferred_shares_convertible: float = Field(default=0.0)
+    conversion_ratio: float = Field(default=1.0)
+
+    @property
+    def post_issue_diluted_shares(self) -> float:
+        fresh = self.fresh_issue_shares or 0.0
+        converted_pref = self.preferred_shares_convertible * self.conversion_ratio
+        return self.pre_offer_equity_shares + fresh + converted_pref + self.esop_pool_options_vested
+
+class PreIPOProspectusData(BaseModel):
+    company_name: str
+    filing_type: str = Field(description="DRHP, RHP, S-1, S-1/A")
+    peer_group: List[str]
+    financials: List[FinancialMetric]
+    capital_structure: CapitalStructure
+    objects_of_offer_fresh_cash: float
+    contingent_liabilities_cr: float = Field(default=0.0)
+    net_worth_cr: float
+    annual_rpt_volume_cr: float = Field(default=0.0)
+    top_5_customer_revenue_percentage: Optional[float] = None
+
+    @model_validator(mode="after")
+    def verify_financial_integrity(self):
+        # Enforce that contingent liabilities do not exceed 100% of net worth without explicit warning
+        if self.net_worth_cr > 0 and (self.contingent_liabilities_cr / self.net_worth_cr) > 0.15:
+            # High contingent liabilities flagged
+            pass
+        return self
+```
 
 ---
 
