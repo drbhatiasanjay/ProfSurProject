@@ -24,7 +24,8 @@ def verify_live():
         user_input.wait_for(state="visible", timeout=30000)
         print("[2] Filling credentials for drbhatia...")
         user_input.fill("drbhatia")
-        page.locator('input[type="password"]').fill("Pass@123")
+        auth_pass = os.environ.get("PROFSUR_ADMIN_PASS") or os.environ.get("PROFSUR_AUTH_PASS", "")
+        page.locator('input[type="password"]').fill(auth_pass)
         
         submit_btn = page.locator("[data-testid='stFormSubmitButton'] button").first
         submit_btn.click()

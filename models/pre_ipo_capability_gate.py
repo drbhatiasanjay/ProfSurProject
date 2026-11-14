@@ -33,6 +33,80 @@ def is_hcch_entity(company_identifier: str = "", company_name: str = "", cin: st
     return any(k in blob for k in ("coca_cola", "coca cola", "hcch", "hccb", "u15549dl1997ptc085183"))
 
 
+def _get_persisted_snapshot_data(
+    snapshot_id: Optional[str],
+    owner: str,
+    company: str,
+    conn: Optional[Any] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Strictly scoped persistence resolver for evidence snapshots.
+    Scopes query by (id, owner, company).
+    Fail-closed: Returns None if snapshot_id is absent, not found, or DB fails.
+    """
+    if not snapshot_id:
+        return None
+
+    db_conn = conn
+    close_after = False
+    if db_conn is None:
+        try:
+            from db import get_connection
+            db_conn = get_connection()
+            close_after = True
+        except Exception:
+            return None
+
+    try:
+        # Check if table exists
+        cursor = db_conn.execute(
+            "SELECT id, owner, company, payload FROM pre_ipo_evidence_snapshots WHERE id=? AND owner=? AND company=?",
+            (snapshot_id, owner, company)
+        )
+        row = cursor.fetchone()
+        if not row:
+            # Check normalized company key
+            norm_company = company.lower().replace("-", "_")
+            cursor = db_conn.execute(
+                "SELECT id, owner, company, payload FROM pre_ipo_evidence_snapshots WHERE id=? AND owner=? AND (company=? OR company LIKE ?)",
+                (snapshot_id, owner, norm_company, f"%{norm_company}%")
+            )
+            row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        payload_raw = row[3]
+        import json
+        if isinstance(payload_raw, str):
+            try:
+                payload = json.loads(payload_raw)
+            except Exception:
+                payload = {}
+        elif isinstance(payload_raw, dict):
+            payload = payload_raw
+        else:
+            payload = {}
+
+        return {
+            "id": row[0],
+            "owner": row[1],
+            "company": row[2],
+            "payload": payload,
+            # FAIL-CLOSED: Missing status in payload is strictly UNREVIEWED, never ACCEPTED_FOR_ANALYSIS
+            "status": payload.get("status") or "UNREVIEWED",
+            "snapshot_hash": payload.get("snapshot_hash") or payload.get("id") or row[0],
+        }
+    except Exception:
+        return None
+    finally:
+        if close_after and db_conn:
+            try:
+                db_conn.close()
+            except Exception:
+                pass
+
+
 @dataclass(frozen=True)
 class CapabilityDecision:
     allowed: bool
@@ -57,6 +131,7 @@ def evaluate_capability_gate(
     allow_synthetic_examples: bool = False,
     is_unpriced: bool = False,
     cin: str = "",
+    conn: Optional[Any] = None,
 ) -> CapabilityDecision:
     """
     Evaluates whether an analytical capability is authorized to run.
@@ -82,7 +157,7 @@ def evaluate_capability_gate(
 
     # 2. Block production HCCH across all identifier avenues (key, name, CIN) without accepted snapshot (P0-01)
     is_hcch = is_hcch_entity(company, company, cin)
-    if is_hcch and (origin == "LEGACY_REGISTRY" or snapshot_status != "ACCEPTED_FOR_ANALYSIS"):
+    if is_hcch and (origin == "LEGACY_REGISTRY" or not snapshot_id):
         return CapabilityDecision(
             allowed=False,
             capability=capability,
@@ -107,13 +182,29 @@ def evaluate_capability_gate(
             blocked_metrics=["ic_verdict", "rating_grade", "recommendation_action"],
         )
 
-    # 4. Require snapshot to be ACCEPTED_FOR_ANALYSIS for analytical capabilities
-    if not snapshot_id or snapshot_status != "ACCEPTED_FOR_ANALYSIS":
+    # 4. Persistence verification: never trust caller-supplied snapshot_status in production
+    effective_status = snapshot_status
+    if is_production and snapshot_id:
+        persisted = _get_persisted_snapshot_data(snapshot_id, owner, company, conn=conn)
+        if persisted is None:
+            return CapabilityDecision(
+                allowed=False,
+                capability=capability,
+                status="BLOCKED",
+                reason=f"Evidence snapshot '{snapshot_id}' does not exist in persistence for owner '{owner}' and company '{company}'. Unpersisted or spoofed snapshot IDs are strictly rejected.",
+                next_action="Persist and audit candidate observations in Tab 2 Provenance Ledger.",
+                snapshot_id=snapshot_id,
+                snapshot_hash=snapshot_hash,
+                blocked_metrics=["*"],
+            )
+        effective_status = persisted.get("status")
+
+    if not snapshot_id or effective_status != "ACCEPTED_FOR_ANALYSIS":
         return CapabilityDecision(
             allowed=False,
             capability=capability,
             status="BLOCKED",
-            reason=f"Evidence snapshot '{snapshot_id or 'None'}' is unreviewed or in status '{snapshot_status or 'UNREVIEWED'}'. Only ACCEPTED_FOR_ANALYSIS snapshots are eligible for analytical processing.",
+            reason=f"Evidence snapshot '{snapshot_id or 'None'}' is unreviewed or in status '{effective_status or 'UNREVIEWED'}'. Only ACCEPTED_FOR_ANALYSIS snapshots are eligible for analytical processing.",
             next_action="Audit and accept all candidate observations in Tab 2 Provenance Ledger to authorize downstream analysis.",
             snapshot_id=snapshot_id,
             snapshot_hash=snapshot_hash,
@@ -165,91 +256,57 @@ def assert_export_allowed(
     company_name = getattr(dossier, "company_name", str(dossier))
     deal_id = getattr(dossier, "deal_id", "")
     cin = getattr(dossier, "cin", "")
-    is_hcch = is_hcch_entity(deal_id, company_name, cin)
+    target_company = deal_id or company_name
 
-    # 1. HCCH Unreviewed Export Block
-    if is_hcch and is_production and (not snapshot_id or snapshot_status != "ACCEPTED_FOR_ANALYSIS"):
-        raise ExportBlockedError(
-            f"Pre-IPO Board Deck export is BLOCKED for {company_name} under P0-01 containment. "
-            "No unreviewed built-in registry dossier may be exported."
+    # In production, analytical export unconditionally requires a verified snapshot_id
+    if is_production:
+        if not snapshot_id:
+            raise ExportBlockedError(
+                f"Export blocked: snapshot_id required for verified analytical export of {company_name}."
+            )
+
+        # Scoped lookup
+        effective_owner = owner or "drbhatia"
+        persisted = _get_persisted_snapshot_data(
+            snapshot_id=snapshot_id,
+            owner=effective_owner,
+            company=target_company,
+            conn=conn,
         )
 
-    # 2. Check snapshot_id in persistence if in production mode
-    if is_production and (snapshot_id is not None or snapshot_status == "ACCEPTED_FOR_ANALYSIS"):
-        if not snapshot_id:
-            raise ExportBlockedError("Export blocked: snapshot_id required for verified analytical export.")
+        if persisted is None:
+            raise ExportBlockedError(
+                f"Export blocked: verified evidence snapshot '{snapshot_id}' not found in persistence "
+                f"for owner '{effective_owner}' and company '{target_company}'. "
+                "Invented, unpersisted, un-scoped, or mock snapshot IDs are strictly rejected."
+            )
 
-        # Resolve snapshot from SQLite persistence
-        db_conn = conn
-        close_after = False
-        if db_conn is None:
-            try:
-                from db import get_connection
-                db_conn = get_connection()
-                close_after = True
-            except Exception:
-                db_conn = None
+        persisted_status = persisted.get("status")
+        # FAIL-CLOSED: Snapshot status must be explicitly ACCEPTED_FOR_ANALYSIS or ACCEPTED
+        if persisted_status not in ("ACCEPTED_FOR_ANALYSIS", "ACCEPTED"):
+            raise ExportBlockedError(
+                f"Export blocked: snapshot '{snapshot_id}' in persistence has status '{persisted_status or 'UNREVIEWED'}'. "
+                "Only ACCEPTED_FOR_ANALYSIS snapshots may be exported."
+            )
 
-        if db_conn is not None:
-            try:
-                # Query pre_ipo_evidence_snapshots table
-                row = db_conn.execute(
-                    "SELECT id, owner, company, payload FROM pre_ipo_evidence_snapshots WHERE id=?",
-                    (snapshot_id,)
-                ).fetchone()
-
-                if not row:
-                    # Also check if id column matches snapshot_id or if table has snapshot_id column
-                    try:
-                        row = db_conn.execute(
-                            "SELECT id, owner, company, payload FROM pre_ipo_evidence_snapshots WHERE id=? OR payload LIKE ?",
-                            (snapshot_id, f'%"{snapshot_id}"%')
-                        ).fetchone()
-                    except Exception:
-                        row = None
-
-                if not row:
-                    raise ExportBlockedError(
-                        f"Export blocked: snapshot '{snapshot_id}' does not exist in persistence. "
-                        "Invented, unpersisted, or mock snapshot IDs are strictly rejected under P0-01/P0-03."
-                    )
-
-                snap_owner, snap_company, payload_raw = row[1], row[2], row[3]
-                import json
-                try:
-                    payload = json.loads(payload_raw) if isinstance(payload_raw, str) else payload_raw
-                except Exception:
-                    payload = {}
-
-                # Check persistence status
-                persisted_status = payload.get("status", "ACCEPTED_FOR_ANALYSIS")
-                if persisted_status not in ("ACCEPTED_FOR_ANALYSIS", "ACCEPTED"):
-                    raise ExportBlockedError(
-                        f"Export blocked: snapshot '{snapshot_id}' in persistence has status '{persisted_status}'. "
-                        "Only ACCEPTED_FOR_ANALYSIS snapshots may be exported."
-                    )
-
-                # Check hash consistency
-                persisted_hash = payload.get("snapshot_hash") or payload.get("id") or row[0]
-                if not snapshot_hash or not result_snapshot_hash:
-                    raise ExportBlockedError(
-                        "Export blocked: snapshot_hash and result_snapshot_hash are mandatory for verified analytical exports."
-                    )
-                if snapshot_hash != result_snapshot_hash:
-                    raise ExportBlockedError(
-                        f"Export blocked: snapshot hash mismatch ({snapshot_hash} != {result_snapshot_hash}). "
-                        "Data integrity validation failed."
-                    )
-                if persisted_hash and snapshot_hash != persisted_hash:
-                    raise ExportBlockedError(
-                        f"Export blocked: provided snapshot hash '{snapshot_hash}' does not match persisted hash '{persisted_hash}'."
-                    )
-            finally:
-                if close_after and db_conn:
-                    db_conn.close()
+        # Check hash consistency
+        persisted_hash = persisted.get("snapshot_hash")
+        if not snapshot_hash or not result_snapshot_hash:
+            raise ExportBlockedError(
+                "Export blocked: snapshot_hash and result_snapshot_hash are mandatory for verified analytical exports."
+            )
+        if snapshot_hash != result_snapshot_hash:
+            raise ExportBlockedError(
+                f"Export blocked: snapshot hash mismatch ({snapshot_hash} != {result_snapshot_hash}). "
+                "Data integrity validation failed."
+            )
+        if persisted_hash and snapshot_hash != persisted_hash:
+            raise ExportBlockedError(
+                f"Export blocked: provided snapshot hash '{snapshot_hash}' does not match persisted hash '{persisted_hash}'."
+            )
 
     # 3. Caller status sanity check
-    if snapshot_status and snapshot_status != "ACCEPTED_FOR_ANALYSIS":
+    if snapshot_status and snapshot_status not in ("ACCEPTED_FOR_ANALYSIS", "ACCEPTED"):
         raise ExportBlockedError(
             f"Export blocked: snapshot status is '{snapshot_status}'. Only ACCEPTED_FOR_ANALYSIS data may be exported."
         )

@@ -79,7 +79,7 @@ def test_new_user_auth_flow_and_visual_states(app_server, tmp_path):
     base_url, outbox = app_server
     username = f"visual_{int(time.time())}"
     email = f"{username}@example.com"
-    password = "correct horse battery staple 2026!"
+    password = os.environ.get("EPHEMERAL_TEST_SECRET", f"token_{int(time.time())}_secure")
     artifact_dir = Path(os.getenv("PLAYWRIGHT_ARTIFACT_DIR", str(tmp_path / "visual-auth")))
     artifact_dir.mkdir(parents=True, exist_ok=True)
 

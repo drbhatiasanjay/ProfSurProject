@@ -45,7 +45,17 @@ def test_browser_unreviewed_hcch_shows_correction_and_blocks_export():
         user_input = page.locator('input[placeholder="username or user@domain.com"]')
         if user_input.count() > 0 and user_input.is_visible():
             user_input.fill("drbhatia")
-            page.locator('input[type="password"]').fill("Pass@123")
+            auth_pass = os.environ.get("PROFSUR_ADMIN_PASS") or os.environ.get("PROFSUR_AUTH_PASS", "")
+            if not auth_pass:
+                sec_p = Path(".streamlit/secrets.toml")
+                if sec_p.exists():
+                    try:
+                        import toml
+                        sec_data = toml.loads(sec_p.read_text(encoding="utf-8"))
+                        auth_pass = sec_data.get("passwords", {}).get("drbhatia", "")
+                    except Exception:
+                        pass
+            page.locator('input[type="password"]').fill(auth_pass)
             page.locator("[data-testid='stFormSubmitButton'] button").first.click()
             page.wait_for_selector("[data-testid='stSidebarNav']", timeout=35000)
             page.wait_for_timeout(2000)

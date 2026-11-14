@@ -666,7 +666,42 @@ if selected_deal_key == "custom_upload":
 
         st.stop()
 else:
-    dossier = PRE_IPO_REGISTRY[selected_deal_key]
+    # HCCH Legacy Registry Disconnection (P0-01 Containment)
+    is_hcch = is_hcch_entity(selected_deal_key)
+    active_owner = st.session_state.get("authenticated_user", "drbhatia")
+    active_snapshot_id = st.session_state.get("pre_ipo_active_snapshot_id")
+
+    if is_hcch:
+        # HCCH resolves ONLY through a persistence-backed accepted evidence snapshot
+        from models.pre_ipo_capability_gate import _get_persisted_snapshot_data
+        persisted_snap = _get_persisted_snapshot_data(
+            snapshot_id=active_snapshot_id,
+            owner=active_owner,
+            company=selected_deal_key,
+        )
+        if not persisted_snap or persisted_snap.get("status") != "ACCEPTED_FOR_ANALYSIS":
+            render_html("""
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 24px; margin: 20px 0;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                    <span class="material-symbols-rounded" style="color: #f59e0b; font-size: 28px;">gavel</span>
+                    <h3 style="color: #f8fafc; margin: 0; font-size: 1.25rem;">HCCH Statutory Evidence Containment Active (P0-01)</h3>
+                </div>
+                <p style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; margin-bottom: 16px;">
+                    Hindustan Coca-Cola Beverages is strictly disconnected from the unreviewed built-in registry. 
+                    Under SEBI ICDR regulations and P0-01 containment, production ratio calculations, Dickinson stage classification, 
+                    and analytical deck export are <strong>blocked</strong> until an official filing snapshot is reviewed and accepted.
+                </p>
+                <div style="background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                    <div style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Next Required Action</div>
+                    <div style="color: #38bdf8; font-size: 0.88rem;">Open <strong>Tab 2 Provenance Ledger</strong> or upload the official 513-page DRHP to audit and accept source observations.</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            st.stop()
+        else:
+            dossier = PRE_IPO_REGISTRY[selected_deal_key]
+    else:
+        dossier = PRE_IPO_REGISTRY[selected_deal_key]
 
 # Evaluate analytical capability gate (PR 1 Containment)
 is_hcch = is_hcch_entity(selected_deal_key, getattr(dossier, "company_name", ""), getattr(dossier, "cin", ""))
@@ -686,6 +721,11 @@ gate_decision = evaluate_capability_gate(
     is_production=True,
     is_unpriced=bool(dossier and (not dossier.total_issue_size_cr or dossier.total_issue_size_cr <= 0)),
 )
+
+if not gate_decision.allowed:
+    st.warning(f"Analysis Blocked: {gate_decision.reason}")
+    st.info(f"Required action: {gate_decision.next_action}")
+    st.stop()
 
 eligibility = assess_analysis_eligibility(dossier)
 if not eligibility.allowed:
@@ -1402,7 +1442,11 @@ with tab_workpapers:
             render_html('<div class="bento-subtitle">Pricing & Benchmark Spread</div>', unsafe_allow_html=True)
             render_html('<div class="bento-title">Borrowing Cost Architecture</div>', unsafe_allow_html=True)
             wair_str = f"{ind.weighted_avg_interest_rate_pct:.2f}%" if ind.weighted_avg_interest_rate_pct else "Disclosed in Sanction Notes"
-            spread_str = ind.floating_benchmark_spread or "MCLR + 120 bps"
+            spread_str = (
+                ind.floating_benchmark_spread
+                if ind.floating_benchmark_spread is not None
+                else "Not established from reviewed filing evidence"
+            )
             cost_html = f"""
             <div class="bento-card">
                 <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8;">Weighted Average Interest Rate (WAIR)</div>

@@ -25,11 +25,30 @@ BASE_URL = os.environ.get("BASE_URL", "http://localhost:8501")
 ARTIFACT_DIR = Path("C:/Users/hemas/.gemini/antigravity/brain/f6978611-2b08-4fd9-8af9-7b703ed76b10")
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
 
+def _resolve_profile_password(username: str) -> str:
+    """Resolve password from environment or secrets.toml; never store in code."""
+    env_pass = os.environ.get("PROFSUR_AUTH_PASS") or os.environ.get(f"PROFSUR_{username.upper()}_PASS")
+    if env_pass:
+        return env_pass
+    # Check secrets.toml
+    secrets_path = Path(".streamlit/secrets.toml")
+    if secrets_path.exists():
+        try:
+            import toml
+            data = toml.loads(secrets_path.read_text(encoding="utf-8"))
+            passwords = data.get("passwords", {}) or data.get("test_passwords", {})
+            if username in passwords:
+                return str(passwords[username])
+        except Exception:
+            pass
+    return os.environ.get("PROFSUR_ADMIN_PASS", "")
+
+
 PROFILES = [
-    ("drbhatia", "Pass@123", "admin"),
-    ("profsurkumar", "Pass@123", "researcher"),
-    ("skumar", "Pass@123", "researcher"),
-    ("sbhatia", "Pass@123", "viewer"),
+    ("drbhatia", _resolve_profile_password("drbhatia"), "admin"),
+    ("profsurkumar", _resolve_profile_password("profsurkumar"), "researcher"),
+    ("skumar", _resolve_profile_password("skumar"), "researcher"),
+    ("sbhatia", _resolve_profile_password("sbhatia"), "viewer"),
 ]
 
 

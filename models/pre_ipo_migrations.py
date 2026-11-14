@@ -236,11 +236,15 @@ def apply_migrations(conn: sqlite3.Connection) -> List[int]:
                     ("reviewer", "TEXT"),
                     ("reviewed_at", "TEXT"),
                     ("review_reason", "TEXT"),
-                    ("origin", "TEXT NOT NULL DEFAULT 'FILING_FACT'"),
+                    ("origin", "TEXT"),
                 ]
                 for col_name, col_type in cols_to_add:
                     if col_name not in obs_cols:
                         conn.execute(f"ALTER TABLE pre_ipo_observations ADD COLUMN {col_name} {col_type}")
+
+                # Fail-closed classification of pre-existing legacy data
+                conn.execute("UPDATE pre_ipo_observations SET origin = 'LEGACY_EXAMPLE' WHERE origin IS NULL")
+                conn.execute("UPDATE pre_ipo_observations SET review_state = 'UNREVIEWED' WHERE origin = 'LEGACY_EXAMPLE'")
 
             # 2. Additive columns to pre_ipo_evidence_snapshots
             snap_cols = _get_table_columns(conn, "pre_ipo_evidence_snapshots")
