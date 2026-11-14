@@ -82,7 +82,38 @@ def validate_oracle_schema(oracle: Any) -> Tuple[bool, List[str]]:
             pat = fin.get("pat_cr")
             if pat is None or not isinstance(pat, (int, float)):
                 errors.append(f"Financial record #{idx} ('{fin.get('period')}') has non-numeric PAT.")
-                
+
+    # Semantic Disclosures & Absence Validation
+    disclosures = oracle.get("semantic_disclosures")
+    if disclosures is not None:
+        if not isinstance(disclosures, list):
+            errors.append("'semantic_disclosures' must be a list if present.")
+        else:
+            valid_presence = ("PRESENT", "DISCLOSED_ZERO", "NOT_DISCLOSED")
+            for idx, disc in enumerate(disclosures):
+                if not isinstance(disc, dict):
+                    errors.append(f"Semantic disclosure #{idx} must be a dictionary.")
+                    continue
+                if "metric_id" not in disc or not disc["metric_id"]:
+                    errors.append(f"Semantic disclosure #{idx} missing 'metric_id'.")
+                pres = disc.get("presence")
+                if pres not in valid_presence:
+                    errors.append(f"Semantic disclosure #{idx} ('{disc.get('metric_id')}') has invalid presence '{pres}'. Must be one of {valid_presence}.")
+                if pres == "NOT_DISCLOSED" and disc.get("value") is not None:
+                    errors.append(f"Semantic disclosure #{idx} ('{disc.get('metric_id')}') has presence NOT_DISCLOSED but value is not None ({disc.get('value')}).")
+                if pres == "DISCLOSED_ZERO" and disc.get("value") not in (0, 0.0):
+                    errors.append(f"Semantic disclosure #{idx} ('{disc.get('metric_id')}') has presence DISCLOSED_ZERO but value is not 0.0 ({disc.get('value')}).")
+                if "citation" not in disc or not str(disc.get("citation", "")).strip():
+                    errors.append(f"Semantic disclosure #{idx} ('{disc.get('metric_id')}') missing 'citation'.")
+
+    # Offer details validation (ensuring unpriced deals use None, not 0.0)
+    offer_details = oracle.get("offer_details")
+    if isinstance(offer_details, dict):
+        for num_key in ("total_issue_size_cr", "fresh_issue_cr", "ofs_cr"):
+            val = offer_details.get(num_key)
+            if val is not None and not isinstance(val, (int, float)):
+                errors.append(f"Offer detail '{num_key}' must be a number or None, got {type(val).__name__}.")
+
     return (len(errors) == 0), errors
 
 

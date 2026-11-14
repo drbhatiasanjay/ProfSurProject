@@ -1500,10 +1500,11 @@ with tab_workpapers:
     with subtab_stress:
         render_html('<div class="bento-subtitle">2D Dynamic Adversarial Stress Matrix</div>', unsafe_allow_html=True)
         render_html('<div class="bento-title">EBITDA Contraction vs Floating Rate Hike Sensitivity</div>', unsafe_allow_html=True)
+        wair_val = dossier.indebtedness.weighted_avg_interest_rate_pct if dossier.indebtedness.weighted_avg_interest_rate_pct is not None else 9.0
         stress_res = generate_2d_sensitivity_matrix(
             base_ebitda_cr=latest.ebitda_cr,
             gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-            base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+            base_wair_pct=wair_val,
             floating_debt_portion_pct=dossier.indebtedness.floating_rate_portion_pct,
         )
         hikes = stress_res.get("rate_hikes_bps", [0, 50, 100, 150, 200])
@@ -1536,7 +1537,7 @@ with tab_workpapers:
                 help="Models balance sheet repair by channeling primary IPO proceeds directly into retiring interest-bearing bank debt."
             )
         with c_3d2:
-            fresh_cap = dossier.fresh_issue_cr or 0.0
+            fresh_cap = dossier.fresh_issue_cr if dossier.fresh_issue_cr is not None else 0.0
             retired_debt = fresh_cap * (sel_prepay_pct / 100.0)
             st.caption(f"💡 **Balance Sheet Sizing:** At **{sel_prepay_pct}%** allocation of **₹{fresh_cap:,.1f} Cr** fresh issue, **₹{retired_debt:,.1f} Cr** of funded debt is retired.")
 
@@ -1546,7 +1547,7 @@ with tab_workpapers:
             base_ebitda_cr=latest.ebitda_cr,
             base_revenue_cr=rev_cr,
             base_gross_debt_cr=dossier.indebtedness.funded_bank_debt_cr,
-            base_wair_pct=dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+            base_wair_pct=wair_val,
             fresh_issue_cr=fresh_cap,
             debt_prepay_allocations_pct=[sel_prepay_pct],
             covenant_threshold=3.0,
@@ -1587,7 +1588,7 @@ with tab_workpapers:
                     "company_name": dossier.company_name,
                     "base_ebitda": latest.ebitda_cr,
                     "funded_debt": remaining_debt,
-                    "wair_pct": dossier.indebtedness.weighted_avg_interest_rate_pct or 9.0,
+                    "wair_pct": wair_val,
                     "prepay_pct": sel_prepay_pct,
                 }
                 st.success("Scenario parameters primed for Page 28. Switch to '28 Covenant Headroom' in sidebar.")
@@ -1755,10 +1756,10 @@ with tab_workpapers:
                         </div>
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.82rem; color:#cbd5e1;">
-                        <div>• DSRI (Days Sales in Receivables): <strong style="color:#ffffff;">{beneish.dsri or 1.0:.2f}</strong></div>
-                        <div>• GMI (Gross Margin Index): <strong style="color:#ffffff;">{beneish.gmi or 1.0:.2f}</strong></div>
-                        <div>• AQI (Asset Quality Index): <strong style="color:#ffffff;">{beneish.aqi or 1.0:.2f}</strong></div>
-                        <div>• SGI (Sales Growth Index): <strong style="color:#ffffff;">{beneish.sgi or 1.0:.2f}</strong></div>
+                        <div>• DSRI (Days Sales in Receivables): <strong style="color:#ffffff;">{beneish.dsri if beneish.dsri is not None else 1.0:.2f}</strong></div>
+                        <div>• GMI (Gross Margin Index): <strong style="color:#ffffff;">{beneish.gmi if beneish.gmi is not None else 1.0:.2f}</strong></div>
+                        <div>• AQI (Asset Quality Index): <strong style="color:#ffffff;">{beneish.aqi if beneish.aqi is not None else 1.0:.2f}</strong></div>
+                        <div>• SGI (Sales Growth Index): <strong style="color:#ffffff;">{beneish.sgi if beneish.sgi is not None else 1.0:.2f}</strong></div>
                     </div>
                 </div>
                 """,

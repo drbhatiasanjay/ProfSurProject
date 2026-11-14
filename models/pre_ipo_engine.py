@@ -129,8 +129,10 @@ def calculate_beneish_m_score(
         gmi = 1.0
 
     # Asset Quality Index (AQI)
-    tot_assets_c = total_assets_cur or (cur.net_worth_cr + (total_debt_cur or 0.0))
-    tot_assets_p = total_assets_prev or (prev.net_worth_cr + (total_debt_prev or 0.0))
+    cur_debt = total_debt_cur if total_debt_cur is not None else 0.0
+    prev_debt = total_debt_prev if total_debt_prev is not None else 0.0
+    tot_assets_c = total_assets_cur if total_assets_cur is not None else (cur.net_worth_cr + cur_debt)
+    tot_assets_p = total_assets_prev if total_assets_prev is not None else (prev.net_worth_cr + prev_debt)
     
     if current_assets_cur is not None and ppe_cur is not None and current_assets_prev is not None and ppe_prev is not None:
         non_ca_ppe_cur = max(0.0, tot_assets_c - current_assets_cur - ppe_cur)
@@ -633,7 +635,8 @@ def generate_stress_narrative(dossier: PreIPODealDossier, sens: Dict[str, Any], 
         f"{'Coverage remains above the 1.50x distress threshold throughout the stress range.' if is_robust else 'Coverage approaches or breaches standard 1.50x covenant buffers under severe stagflationary shocks.'}"
     )
 
-    evidence_basis = f"Sensitivity model calibrated on floating debt of ₹{sens.get('floating_debt_considered_cr', 0.0):,.1f} Cr and base WAIR of {dossier.indebtedness.weighted_avg_interest_rate_pct or 8.5:.2f}%."
+    wair_val = dossier.indebtedness.weighted_avg_interest_rate_pct if dossier.indebtedness.weighted_avg_interest_rate_pct is not None else 8.5
+    evidence_basis = f"Sensitivity model calibrated on floating debt of ₹{sens.get('floating_debt_considered_cr', 0.0):,.1f} Cr and base WAIR of {wair_val:.2f}%."
 
     alternative_explanations = (
         "Actual operational resilience depends on whether management can pass through input cost inflation into final pricing, "
@@ -937,7 +940,7 @@ def generate_persona_decision_view(
             "key_metrics": [
                 ("Funded Bank Debt", f"₹{ind.funded_bank_debt_cr:,.1f} Cr"),
                 ("Total Economic Indebtedness", f"₹{ind.total_economic_indebtedness_cr:,.1f} Cr"),
-                ("Sanctioned Banking Limits", f"₹{ind.sanctioned_limits_cr or 0:,.1f} Cr"),
+                ("Sanctioned Banking Limits", f"₹{ind.sanctioned_limits_cr if ind.sanctioned_limits_cr is not None else 0:,.1f} Cr"),
                 ("Internal Screening Grade", ic.internal_screening_grade if ic else "MODERATE"),
             ],
             "decision_question": "Does the issuer qualify for credit approval, and what covenants are required?",

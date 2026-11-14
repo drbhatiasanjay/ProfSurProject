@@ -2,106 +2,161 @@
   "deal_id": "hindustan_coca_cola",
   "company_name": "Hindustan Coca-Cola Holdings Limited",
   "filing_type": "DRHP",
-  "filing_date": "October 2026",
+  "filing_date": "October 2024",
   "sector": "Non-Alcoholic Ready-to-Drink Beverages",
   "face_value_inr": 10.0,
   "offer_details": {
-    "total_issue_size_cr": 0.0,
+    "total_issue_size_cr": null,
     "fresh_issue_cr": 0.0,
-    "ofs_cr": 0.0,
+    "ofs_cr": null,
     "offered_shares_count": 997461456,
     "fresh_issue_pct": 0.0,
-    "ofs_pct": 100.0
+    "ofs_pct": 100.0,
+    "issue_type": "100%_OFS_BOOK_BUILT",
+    "issue_price_inr": null
   },
+  "semantic_disclosures": [
+    {
+      "metric_id": "pre_ipo_placement_price",
+      "presence": "NOT_DISCLOSED",
+      "value": null,
+      "citation": "Physical p. 93 Offer Details (Unpriced book-building under SEBI ICDR Reg 26(1))"
+    },
+    {
+      "metric_id": "issue_price_inr",
+      "presence": "NOT_DISCLOSED",
+      "value": null,
+      "citation": "Physical p. 93 Offer Details (100% Book Built Offer; price band to be decided by Issuer and Selling Shareholders)"
+    },
+    {
+      "metric_id": "total_issue_size_cr",
+      "presence": "NOT_DISCLOSED",
+      "value": null,
+      "citation": "Physical p. 93 Offer Details (Unpriced 100% OFS of up to 997,461,456 shares)"
+    },
+    {
+      "metric_id": "fresh_issue_cr",
+      "presence": "DISCLOSED_ZERO",
+      "value": 0.0,
+      "citation": "Physical p. 93 Offer Details (Fresh Issue: Nil, 100% Offer for Sale)"
+    },
+    {
+      "metric_id": "funded_bank_debt_cr",
+      "presence": "DISCLOSED_ZERO",
+      "value": 0.0,
+      "citation": "Physical p. 274 Annexure I (Borrowings: Nil as at March 31, 2026)"
+    },
+    {
+      "metric_id": "authorized_capital_cr",
+      "presence": "PRESENT",
+      "value": 9000.0,
+      "citation": "Physical p. 93 Printed p. 88 (9,000,000,000 shares of ₹10 each = ₹90,000,000,000)"
+    },
+    {
+      "metric_id": "equity_face_value",
+      "presence": "PRESENT",
+      "value": 10.0,
+      "citation": "Physical p. 93 Printed p. 88 (face value of ₹10 each)"
+    }
+  ],
   "restated_financials": [
     {
       "period": "FY24",
       "revenue_ops_cr": 14021.55,
-      "ebitda_cr": 1777.94,
+      "ebitda_cr": 1895.71,
       "pat_cr": 2812.1,
       "cfo_cr": 284.69,
+      "cfi_cr": -291.55,
+      "cff_cr": -125.05,
       "total_debt_cr": 0.0,
       "net_worth_cr": 8897.18,
-      "cash_and_equiv_cr": 0.0,
-      "section": "Section V",
-      "physical_page": 68,
-      "printed_folio": "Page 58",
-      "table_heading": "Restated Summary Statement of Profit and Loss"
+      "total_assets_cr": 13471.01,
+      "cash_and_equiv_cr": 138.95,
+      "section": "Annexure II / Annexure I",
+      "physical_page": 275,
+      "printed_folio": "Page 270",
+      "table_heading": "Restated Consolidated Summary Statement of Profit and Loss"
     },
     {
       "period": "FY25",
       "revenue_ops_cr": 12751.29,
-      "ebitda_cr": 1640.02,
+      "ebitda_cr": 1726.31,
       "pat_cr": 759.9,
       "cfo_cr": 1572.7,
-      "total_debt_cr": 0.0,
+      "cfi_cr": -2071.56,
+      "cff_cr": 492.88,
+      "total_debt_cr": 595.0,
       "net_worth_cr": 9649.8,
-      "cash_and_equiv_cr": 0.0,
-      "section": "Section V",
-      "physical_page": 68,
-      "printed_folio": "Page 58",
-      "table_heading": "Restated Summary Statement of Profit and Loss"
+      "total_assets_cr": 14733.3,
+      "cash_and_equiv_cr": 132.97,
+      "section": "Annexure II / Annexure I",
+      "physical_page": 275,
+      "printed_folio": "Page 270",
+      "table_heading": "Restated Consolidated Summary Statement of Profit and Loss"
     },
     {
       "period": "FY26",
       "revenue_ops_cr": 11548.58,
-      "ebitda_cr": 1353.04,
+      "ebitda_cr": 1310.18,
       "pat_cr": 1165.05,
       "cfo_cr": 2290.19,
+      "cfi_cr": -219.45,
+      "cff_cr": -1771.76,
       "total_debt_cr": 0.0,
       "net_worth_cr": 9760.91,
-      "cash_and_equiv_cr": 0.0,
-      "section": "Section V",
-      "physical_page": 68,
-      "printed_folio": "Page 58",
-      "table_heading": "Restated Summary Statement of Profit and Loss"
+      "total_assets_cr": 15637.09,
+      "cash_and_equiv_cr": 431.96,
+      "section": "Annexure II / Annexure I",
+      "physical_page": 275,
+      "printed_folio": "Page 270",
+      "table_heading": "Restated Consolidated Summary Statement of Profit and Loss"
     }
   ],
   "provenance_citations": [
     {
       "fact_key": "financials_FY24_revenue",
       "value": 14021.55,
-      "section": "Section V",
-      "physical_page": 68,
-      "printed_folio": "Page 58",
-      "table_or_paragraph": "Restated Summary Statement of Profit and Loss",
-      "excerpt": "Revenue from Operations for FY24: Rs. 14021.55 Cr"
+      "section": "Annexure II",
+      "physical_page": 275,
+      "printed_folio": "Page 270",
+      "table_or_paragraph": "Annexure II - Restated Consolidated Statement of Profit and Loss",
+      "excerpt": "Revenue from operations 24 ... 140,215.45"
     },
     {
       "fact_key": "financials_FY25_revenue",
       "value": 12751.29,
-      "section": "Section V",
-      "physical_page": 68,
-      "printed_folio": "Page 58",
-      "table_or_paragraph": "Restated Summary Statement of Profit and Loss",
-      "excerpt": "Revenue from Operations for FY25: Rs. 12751.29 Cr"
+      "section": "Annexure II",
+      "physical_page": 275,
+      "printed_folio": "Page 270",
+      "table_or_paragraph": "Annexure II - Restated Consolidated Statement of Profit and Loss",
+      "excerpt": "Revenue from operations 24 ... 127,512.93"
     },
     {
       "fact_key": "financials_FY26_revenue",
       "value": 11548.58,
-      "section": "Section V",
-      "physical_page": 68,
-      "printed_folio": "Page 58",
-      "table_or_paragraph": "Restated Summary Statement of Profit and Loss",
-      "excerpt": "Revenue from Operations for FY26: Rs. 11548.58 Cr"
+      "section": "Annexure II",
+      "physical_page": 275,
+      "printed_folio": "Page 270",
+      "table_or_paragraph": "Annexure II - Restated Consolidated Statement of Profit and Loss",
+      "excerpt": "Revenue from operations 24 ... 115,485.79"
     },
     {
-      "fact_key": "objects_of_offer_total",
+      "fact_key": "objects_of_offer_fresh_issue",
       "value": 0.0,
-      "section": "Section III",
-      "physical_page": 64,
-      "printed_folio": "Page 54",
-      "table_or_paragraph": "Objects of the Offer",
-      "excerpt": "Total Fresh Issue / Offer Objects: Rs. 0.0 Cr"
+      "section": "Capital Structure",
+      "physical_page": 93,
+      "printed_folio": "Page 88",
+      "table_or_paragraph": "A. AUTHORISED SHARE CAPITAL / Offer Details",
+      "excerpt": "Fresh issue: Nil, 100% Offer for Sale"
     },
     {
       "fact_key": "cap_table_promoter_holding_pre_pct",
       "value": 100.0,
-      "section": "Section III",
-      "physical_page": 66,
-      "printed_folio": "Page 56",
+      "section": "Capital Structure",
+      "physical_page": 93,
+      "printed_folio": "Page 88",
       "table_or_paragraph": "Capital Structure",
-      "excerpt": "Promoter pre-issue shareholding: 100.0%"
+      "excerpt": "6,649,743,043 Equity Shares of face value of ₹10 each held by Promoter (100.0%)"
     }
   ]
 }
