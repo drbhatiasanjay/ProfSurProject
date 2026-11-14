@@ -16,7 +16,7 @@ Because private and late-stage pre-IPO firms suffer from severe information asym
 1. **Specialized AI/Machine Learning Architectures** designed to ingest, structure, and analyze unstructured statutory filings (DRHP, RHP, S-1), cap tables, and alternative market data signals.
 2. **Deterministic Quantitative & Econometric Valuation Frameworks** adapted specifically for late-stage private companies transitioning to public markets (capital structure waterfalls, step-down WACC dynamics, working capital runway, Dickinson life-cycle stage modeling, and Ind AS restatement analysis).
 
-This document establishes the permanent theoretical, empirical, regulatory, and software architecture foundations for pre-IPO evaluation in `ProfSurProject`. It aggregates core research, integrates the complete practitioner blueprint for Indian primary markets (**SEBI ICDR 2018**, **CRISIL IPO Grading**, **JRFM 2023**, **SJMSOM IIT Bombay ML research**), details the **end-to-end 6-stage engineering pipeline** for parsing statutory prospectuses, and defines the evolutionary roadmap for our Pre-IPO intelligence engine.
+This document establishes the permanent theoretical, empirical, regulatory, and software architecture foundations for pre-IPO evaluation in `ProfSurProject`. It aggregates core research, integrates the complete practitioner blueprint for Indian primary markets (**SEBI ICDR 2018**, **CRISIL IPO Grading**, **JRFM 2023**, **SJMSOM IIT Bombay ML research**), details the **end-to-end 6-stage engineering pipeline** for parsing statutory prospectuses, formalizes the **NSE India live API connection architecture**, and defines the evolutionary roadmap for our Pre-IPO intelligence engine.
 
 ---
 
@@ -193,8 +193,6 @@ When advising clients purchasing shares in the pre-IPO unlisted market rather th
 ## Section 5: End-to-End Automated Pipeline Engineering for Prospectus Parsing & Quantitative Valuation
 
 Building an automated pipeline to parse statutory pre-IPO prospectuses (such as SEC Form S-1 in the US or SEBI Draft Red Herring Prospectus [DRHP] in India) and generate an institutional quantitative pre-IPO valuation model involves **six distinct engineering stages**.
-
-The primary engineering challenges are handling massive unstructured documents (often 400–900 pages), reconciling restated historical financials, parsing nested equity dilution mechanics, and bridging extracted text into structured financial models.
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -378,26 +376,172 @@ class PreIPOProspectusData(BaseModel):
 
 ---
 
-## Section 6: Institutional Frameworks & Academic Literature
+## Section 6: Live Market Data Ingestion & NSE India API Architecture
+
+To transition pre-IPO models from static prospectus snapshots into live, market-synchronized decision tools, the platform interfaces directly with the National Stock Exchange of India (NSE). 
+
+The NSE data landscape operates across two major dimensions:
+1. **Exchange-Level Institutional Interfaces (2025–2026 Circulars):**
+   - *NSE Single Filing System API (NSE-BSE Integrated Reporting):* Standardized API framework for statutory filings under SEBI Listing Obligations and Disclosure Requirements (LODR). Provides direct machine-readable feeds for Regulation 33 Financial Statements (XBRL/JSON), shareholding patterns, and corporate governance reports.
+   - *Order & Trade Drop Copy API v3.0 (Late 2026):* Binary/JSON socket protocols for institutional members to stream drop-copy executions.
+   - *Client Direct API (SEBI Algorithmic Mandate):* Standardized broker-mediated REST/WebSocket protocol enforcing static IP mapping and 10 Orders-Per-Second (OPS) throttling for retail algorithmic trading.
+2. **Primary Market & IPO Web Endpoints (`nseindia.com/api/...`):**
+   - High-value REST endpoints powering the official NSE primary market portal, delivering real-time IPO schedules, live subscription multiples, anchor books, and listed peer metrics.
+
+```mermaid
+flowchart TD
+    subgraph NSE_DATA["NSE Live Data Endpoints"]
+        E1["/api/ipo-current-issue\n(Issue Master & Dates)"]
+        E2["/api/ipo-bid-details\n(Live 3-Day Subscription Multiples)"]
+        E3["/api/quote-equity\n(Live Listed Peer Comps)"]
+        E4["/api/corporate-announcements\n(Statutory Filings & Events)"]
+        E5["/api/allIndices\n(India VIX & Sector Benchmarks)"]
+    end
+
+    subgraph PRE_IPO_ENGINE["ProfSurProject Pre-IPO Pipeline"]
+        M1["Price Band Unlocking\n(Transitions unpriced DRHP to priced RHP)"]
+        M2["Sentiment & Demand Score\n(QIB, NII, Retail Oversubscription Multiples)"]
+        M3["Dynamic Trading Comps\n(P/E, EV/EBITDA, EV/Sales with 10-20% IPO Discount)"]
+        M4["Red-Flag NLP Scanner\n(Litigation disclosures & Show-Cause notices)"]
+        M5["Macro Regime Adjuster\n(VIX volatility step-down WACC calibration)"]
+    end
+
+    E1 --> M1
+    E2 --> M2
+    E3 --> M3
+    E4 --> M4
+    E5 --> M5
+```
+
+### 6.1 Extracted Data Taxonomy for Pre-IPO Intelligence
+
+| Domain | NSE Endpoint | Extracted Data Attributes | Pre-IPO Intelligence Use Case |
+|---|---|---|---|
+| **IPO Schedule & Terms** | `/api/ipo-current-issue` | Issue Name, Symbol, Issue Type (Book Building vs. Fixed), Open/Close Dates, **Price Band (Floor & Cap)**, Lot Size, Issue Size (₹ Cr), Face Value. | Automatically detects when an issuer files an RHP with a price band, **unlocking the statutory valuation circuit breaker** (`BLOCKED_MISSING_REVIEWED_PRICE_BAND`). |
+| **Live Subscription Tracking** | `/api/ipo-bid-details?symbol={SYM}` | • **QIB Subscription Multiple** ($x$ times)<br>• **NII / HNI Multiple**<br>• **Retail Individual (RII) Multiple**<br>• Employee / Shareholder quota<br>• Total Cumulative Demand | Feeds directly into **Score 2 (Pricing & Sentiment Score)** and first-day pop prediction. |
+| **Anchor Book & Allotment** | `/api/ipo-detail?symbol={SYM}` & Allocation Sheet | Total anchor size (₹ Cr), allocation count, proportion of marquee domestic MFs vs. sovereign wealth funds vs. opaque FPIs. | Computes the **Anchor Quality Tiering Index** (distinguishes institutional conviction from speculative bids). |
+| **Declared Listed Comps** | `/api/quote-equity?symbol={PEER}` | Live Price, Market Cap, Trailing P/E, Forward P/E, Industry P/E, 52-Week High/Low, Beta. | Feeds the **Comparable Company Analysis (Trading Comps)** matrix, auto-computing implied issue discount/premium. |
+| **Corporate Announcements** | `/api/corporate-announcements?index=equities` | Board meeting notices, SEBI/RBI show-cause disclosures, auditor change events, material contracts. | Continuous background ingestion for the **Automated DRHP Red-Flag Scanner**. |
+| **Market Volatility Index** | `/api/allIndices` | India VIX, Nifty 50 P/E, Nifty Smallcap/Midcap multiples. | Quantifies market sentiment and tunes the private-to-public WACC spread. |
+
+### 6.2 Connection Architecture & Protocol
+
+Because `nseindia.com` uses Cloudflare anti-bot verification and dynamic cookie rotation, sending a stateless HTTP `GET` request will immediately return `403 Forbidden`. 
+
+A reliable production client must follow a **two-step session handshake**:
+1. **Session Initialization:** Send a `GET` request to the base homepage (`https://www.nseindia.com`) with realistic browser headers to harvest session cookies (`nsit`, `nseappid`, `ak_bmsc`).
+2. **Subsequent API Queries:** Re-use the authenticated `requests.Session` object with `Referer: https://www.nseindia.com/` for all target JSON endpoints.
+3. **Automatic Cookie Rotation:** Refresh the session every 5–10 minutes to prevent expiration.
+
+#### Production Python Client Implementation (`models/pre_ipo_nse_client.py`)
+
+```python
+import time
+import requests
+from typing import Dict, Any, Optional
+
+class NSELiveClient:
+    """
+    Session-aware live client for NSE India primary market and equity endpoints.
+    Handles Cloudflare handshake, cookie harvesting, and header sequencing.
+    """
+    BASE_URL = "https://www.nseindia.com"
+    API_IPO_CURRENT = "https://www.nseindia.com/api/ipo-current-issue"
+    API_IPO_BID = "https://www.nseindia.com/api/ipo-bid-details?symbol={symbol}"
+    API_QUOTE_EQUITY = "https://www.nseindia.com/api/quote-equity?symbol={symbol}"
+
+    HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://www.nseindia.com/",
+        "Connection": "keep-alive",
+    }
+
+    def __init__(self, session_ttl_seconds: int = 300):
+        self.session_ttl = session_ttl_seconds
+        self.last_handshake: float = 0.0
+        self.session: requests.Session = requests.Session()
+        self.session.headers.update(self.HEADERS)
+
+    def _ensure_session(self) -> None:
+        """Establishes or refreshes session cookies from the main homepage."""
+        now = time.time()
+        if now - self.last_handshake > self.session_ttl or not self.session.cookies:
+            # Hit homepage to harvest valid cookies
+            resp = self.session.get(self.BASE_URL, timeout=10)
+            if resp.status_code == 200:
+                self.last_handshake = now
+            else:
+                raise ConnectionError(f"NSE Session Handshake failed: HTTP {resp.status_code}")
+
+    def get_current_ipos(self) -> Dict[str, Any]:
+        """Fetch list of all active and upcoming public issues."""
+        self._ensure_session()
+        resp = self.session.get(self.API_IPO_CURRENT, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_live_subscription(self, symbol: str) -> Dict[str, Any]:
+        """
+        Fetch real-time 3-day bidding window subscription multiples.
+        Returns QIB, NII, Retail, and Total oversubscription figures.
+        """
+        self._ensure_session()
+        url = self.API_IPO_BID.format(symbol=symbol.upper())
+        resp = self.session.get(url, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+
+    def get_listed_peer_multiples(self, symbol: str) -> Dict[str, Any]:
+        """
+        Fetch live quotes and trading multiples for declared peer groups.
+        Extracts P/E, Market Cap, and 52-Week valuation metrics.
+        """
+        self._ensure_session()
+        url = self.API_QUOTE_EQUITY.format(symbol=symbol.upper())
+        resp = self.session.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        
+        # Extract valuation essentials
+        price_info = data.get("priceInfo", {})
+        metadata = data.get("metadata", {})
+        security_info = data.get("securityInfo", {})
+        
+        return {
+            "symbol": symbol.upper(),
+            "last_price": price_info.get("lastPrice"),
+            "pe_ratio": metadata.get("pdSectorPe") or security_info.get("pe"),
+            "market_cap_cr": metadata.get("totalMarketCap"),
+            "52w_high": price_info.get("weekHighLow", {}).get("max"),
+            "52w_low": price_info.get("weekHighLow", {}).get("min"),
+        }
+```
+
+---
+
+## Section 7: Institutional Frameworks & Academic Literature
 
 The scoring weights, feature selection, and dual-score design of the application are grounded in established Indian regulatory grading frameworks and peer-reviewed empirical research on NSE and BSE listings:
 
-### 6.1 Institutional & Regulatory Frameworks (India-Specific)
+### 7.1 Institutional & Regulatory Frameworks (India-Specific)
 - **CRISIL / ICRA IPO Grading Methodology:** Introduced under SEBI's framework in 2007 (made optional in 2014), CRISIL's IPO Grading Methodology remains the benchmark practitioner scorecard in India. It evaluates issuers on a 1-to-5 scale across four pillars: **Business Prospects**, **Financial Position**, **Management Capabilities**, and **Corporate Governance**. Crucially, it separates fundamental business quality from issue pricing—a structural separation the application must preserve.
 - **SEBI Statutory KPI Disclosure Framework (ICDR Amendments):** SEBI mandates that loss-making and new-age issuers disclose audited Key Performance Indicators (KPIs) in the *"Basis for Issue Price"* chapter of the DRHP, alongside Weighted Average Cost of Acquisition (WACA) across past private funding rounds. Parsing this mandatory table provides a regulator-audited valuation anchor.
 
-### 6.2 Peer-Reviewed Academic Studies on Indian IPOs
+### 7.2 Peer-Reviewed Academic Studies on Indian IPOs
 - **Pre-IPO Financial Performance & Offer Price Estimation (JRFM, 2023):** Empirical analysis of Indian IPOs demonstrates that four financial metrics exhibit the highest combined explanatory power for justifying IPO offer prices: **Net Asset Value (NAV)**, **Return on Assets (ROA)**, **Profit After Tax (PAT)**, and **Return on Net Worth (RONW)**.
 - **Systematic Literature Review of Indian IPOs (2023):** A PRISMA systematic review synthesizing 111 studies on the Indian primary market establishes that while agency signals (promoter dilution, Fresh Issue vs. OFS split) and institutional demand (QIB/Anchor subscription) drive short-term listing pops, corporate governance quality and pre-IPO earnings management (artificial margin inflation prior to filing) are the strongest predictors of long-run post-listing underperformance.
 - **Efficacy of IPO Grading on Long-Run Operating Performance (EELET, IJF):** Studies evaluating graded Indian IPOs show that structured fundamental grading correlates significantly with lower post-listing return volatility and superior industry-adjusted operating performance (PBDITA/Total Assets), even though fundamental grades alone do not predict day-one listing gains.
 
-### 6.3 Machine Learning & Prospectus NLP Research
+### 7.3 Machine Learning & Prospectus NLP Research
 - **ML Prediction of Indian IPO Underperformance (SJMSOM, IIT Bombay):** Research comparing ensemble machine learning models (Gradient Boosting, Random Forest) against traditional regressions on Indian listings confirms that **Gradient Boosting** significantly improves underperformance prediction, identifying profit margins, debt-to-assets ratio, and prevailing market sentiment as top predictive features.
 - **Automated RHP Rating & Textual Uncertainty Models (SSRN):** Quantitative NLP studies analyzing Red Herring Prospectuses demonstrate that linguistic tone, risk-factor density, and litigation disclosure complexity significantly explain valuation uncertainty and improve abnormal return forecasts compared to financial ratios alone.
 
 ---
 
-## Section 7: The Recommended Dual-Score Architecture
+## Section 8: The Recommended Dual-Score Architecture
 
 Based on the consensus across Indian IPO literature, an institutional application must avoid blending fundamentals and market hype into a single opaque number. Instead, it computes **two independent, transparent scores**:
 
@@ -426,7 +570,7 @@ Based on the consensus across Indian IPO literature, an institutional applicatio
 
 ---
 
-## Section 8: Comprehensive Academic & Statutory Reference List
+## Section 9: Comprehensive Academic & Statutory Reference List
 
 1. **Securities and Exchange Board of India (SEBI).** *SEBI (Issue of Capital and Disclosure Requirements) Regulations, 2018 (as amended) & DRHP Public Filings Portal.*  
    [SEBI Filings Portal](https://www.sebi.gov.in/sebiweb/home/HomeAction.do?doListing=yes&sid=3&ssid=15&smid=10)
@@ -451,7 +595,7 @@ Based on the consensus across Indian IPO literature, an institutional applicatio
 
 ---
 
-## Section 9: Integration Blueprint for `ProfSurProject`
+## Section 10: Integration Blueprint for `ProfSurProject`
 
 To extend `ProfSurProject` from its current verified baseline (513-page HCCH DRHP vertical slice, Ind AS restatements, Dickinson life-cycle mapping, immutable evidence snapshots, and SEBI Reg 26(1) valuation circuit breakers), we map the implementation into clean, test-driven Python modules:
 
@@ -460,6 +604,7 @@ ProfSurProject/
 ├── models/
 │   ├── pre_ipo_dossier_adapter.py        # [Existing] Typed dossier & canonical hash verification
 │   ├── pre_ipo_capability_gate.py        # [Existing] Dual-mode gate & Reg 26(1) circuit breaker
+│   ├── pre_ipo_nse_client.py             # [NEW] Live NSE session-aware client & peer comps
 │   ├── pre_ipo_dual_score_engine.py      # [NEW] Fundamental (CRISIL) & Pricing/Sentiment Scores
 │   ├── pre_ipo_anomaly_scanner.py        # [NEW] Window-dressing, CFO/EBITDA & accruals detector
 │   ├── pre_ipo_objects_route_scanner.py  # [NEW] Fresh vs. OFS split & SEBI profitability route
