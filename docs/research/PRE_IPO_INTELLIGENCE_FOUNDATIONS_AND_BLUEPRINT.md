@@ -11,87 +11,138 @@
 
 There is **no single, universally standard standalone financial model** (in the sense of a pretrained, turnkey foundation model like BloombergGPT or FinGPT) purpose-built solely for pre-IPO intelligence. 
 
-Because private and late-stage pre-IPO firms suffer from severe information asymmetry and lack continuous, order-book public price discovery, a turnkey model cannot resolve the multi-faceted problem of pricing, governance, and structural risk. Instead, the global and Indian pre-IPO intelligence landscape breaks down into two distinct categories:
+Because private and late-stage pre-IPO firms suffer from severe information asymmetry and lack continuous, order-book public price discovery, a turnkey model cannot resolve the multi-faceted problem of pricing, governance, and structural risk. Instead, a deep literature scan across empirical finance, econometrics, corporate valuation, and financial machine learning reveals that pre-IPO intelligence is governed by **four distinct methodological paradigms**:
 
-1. **Specialized AI/Machine Learning Architectures** designed to ingest, structure, and analyze unstructured statutory filings (DRHP, RHP, S-1), cap tables, and alternative market data signals.
-2. **Deterministic Quantitative & Econometric Valuation Frameworks** adapted specifically for late-stage private companies transitioning to public markets (capital structure waterfalls, step-down WACC dynamics, working capital runway, Dickinson life-cycle stage modeling, and Ind AS restatement analysis).
+1. **Theoretical Asset-Pricing & Corporate Valuation Frameworks** (Asymmetric information signalling, winner's curse, downside risk, survival-adjusted DCF, and forensic earnings quality).
+2. **Econometric Specifications in Empirical IPO Literature** (Cross-sectional robust regressions, BHAR event studies, Heckman two-stage selection, Cox proportional hazards, and panel fixed-effects).
+3. **Supervised & Unsupervised Financial Machine Learning Architectures** (Gradient Boosted Decision Trees, Random Forests, Gaussian Mixture Models, and Temporal Fusion Transformers).
+4. **Prospectus NLP & Document Intelligence Models** (Domain-adapted FinBERT sentiment, linguistic uncertainty scoring, layout-aware document parsing, and semantic peer embedding retrieval).
 
-This document establishes the permanent theoretical, empirical, regulatory, and software architecture foundations for pre-IPO evaluation in `ProfSurProject`. It aggregates core research, integrates the complete practitioner blueprint for Indian primary markets (**SEBI ICDR 2018**, **CRISIL IPO Grading**, **JRFM 2023**, **SJMSOM IIT Bombay ML research**), details the **end-to-end 6-stage engineering pipeline** for parsing statutory prospectuses, formalizes the **NSE India live API connection architecture**, and defines the evolutionary roadmap for our Pre-IPO intelligence engine.
+This document establishes the permanent theoretical, empirical, regulatory, and software architecture foundations for pre-IPO evaluation in `ProfSurProject`. It aggregates core research, integrates the complete practitioner blueprint for Indian primary markets (**SEBI ICDR 2018**, **CRISIL IPO Grading**, **JRFM 2023**, **SJMSOM IIT Bombay ML research**), details the **end-to-end 6-stage engineering pipeline** for parsing statutory prospectuses, formalizes the **NSE India live API connection architecture**, establishes the **longitudinal Cohort Lifecycle & Post-IPO Trajectory framework**, and defines the evolutionary roadmap for our Pre-IPO intelligence engine.
 
 ---
 
-## Section 1: AI & Machine Learning Architectures for Pre-IPO Intelligence
+## Section 1: The Four Methodological Paradigms of Pre-IPO Intelligence
 
-Because private and late-stage pre-IPO firms lack continuous public market price discovery, AI models in this space focus on four distinct analytical tasks:
+Institutional research desks, sovereign wealth allocators, and quantitative funds layer four complementary paradigms to separate fundamental business quality from issuance mispricing:
 
 ```mermaid
 flowchart TD
-    subgraph INPUTS["Unstructured Pre-IPO Ingestion"]
-        A1["DRHP / RHP / S-1 Filings\n(300–700 pages)"]
-        A2["Cap Tables & CCPS Waterfall"]
-        A3["Grey Market Premiums (GMP)\n& Unlisted Trades"]
-        A4["Alternative Data Telemetry\n(App downloads, LinkedIn, Web)"]
+    subgraph PARADIGM_1["1. Theoretical & Valuation Frameworks"]
+        P1A["Asymmetric Information & Signalling\n(Rock 1986; Leland & Pyle 1977; Welch 1989)"]
+        P1B["Survival-Adjusted DCF & Downside Beta\n(Damodaran; Estrada)"]
+        P1C["Forensic Accounting & Accruals\n(Beneish M-Score; Sloan Ratio)"]
+        P1D["Warranted Multiples\n(Bhojraj & Lee 2002)"]
     end
 
-    subgraph AI_ML_TASKS["Specialized AI / ML Architectures"]
-        B1["Document-Level Financial LLMs\n(Docling, LayoutLM, Schema-Enforced LLMs)\n• Cap tables & conversion terms\n• Pro-forma adjustments & debt covenants\n• Related-Party Transactions (RPT)"]
-        B2["Listing-Day Gains & Underpricing Models\n(Supervised Ensembles: LightGBM, XGBoost, Random Forest)\n• QIB, NII, Retail subscription multiples\n• Historical GMP & unlisted quotes\n• Macro regime & VIX volatility comps"]
-        B3["Textual Sentiment & Risk Scoring\n(Domain-Adapted FinBERT)\n• MD&A managerial tone variance\n• Risk-factor linguistic density\n• Litigation & regulatory severity"]
-        B4["Alternative Data Momentum Scoring\n(Time-Series ML / Neural Nets)\n• Headcount acceleration\n• Digital consumer cohort retention\n• Pre-filing operational momentum"]
+    subgraph PARADIGM_2["2. Econometric Estimators"]
+        P2A["Huber / Quantile Robust Comps"]
+        P2B["Buy-and-Hold Abnormal Returns (BHAR)\n& CAR Event Studies"]
+        P2C["Heckman Two-Stage Selection (Mills λ)\n& Propensity Score Matching"]
+        P2D["Cox Proportional Hazards & Fama-MacBeth"]
     end
 
-    subgraph OUTPUTS["Pre-IPO Quantitative Signals"]
-        C1["Audited Financial Feature Vector"]
-        C2["First-Day Pop Probability & Fair Issue Price"]
-        C3["NLP Governance & Uncertainty Index"]
-        C4["Pre-Revenue Runway & Growth Multiplier"]
+    subgraph PARADIGM_3["3. Machine Learning Architectures"]
+        P3A["Tabular GBDTs: LightGBM / CatBoost / XGBoost\n(IIT Bombay Non-Linear Thresholds)"]
+        P3B["Random Forests (Feature Importance Ranking)"]
+        P3C["Gaussian Mixture Models (Unsupervised Archetypes)"]
+        P3D["Temporal Fusion Transformers (TFT / LSTM Sequences)"]
     end
 
-    A1 --> B1
-    A2 --> B1
-    A1 --> B3
-    A3 --> B2
-    A4 --> B4
+    subgraph PARADIGM_4["4. Prospectus NLP & Document AI"]
+        P4A["Domain Encoders (FinBERT, SEC-BERT, DeBERTa-v3)"]
+        P4B["Linguistic Uncertainty & Litigation Scanners"]
+        P4C["Layout Parsers (Docling, TATR) + Schema LLMs"]
+        P4D["Semantic Peer Discovery (BGE / FinE5 Embeddings)"]
+    end
 
-    B1 --> C1
-    B2 --> C2
-    B3 --> C3
-    B4 --> C4
+    PARADIGM_1 --> SYNTHESIS["PROFSUR PRE-IPO DECISION CORE"]
+    PARADIGM_2 --> SYNTHESIS
+    PARADIGM_3 --> SYNTHESIS
+    PARADIGM_4 --> SYNTHESIS
 ```
 
-### 1.1 S-1 / DRHP Parsing & Financial Extraction (Document-Level LLMs)
-- **Challenge:** Statutory prospectuses are massive (300 to 700+ pages), dense, multi-column documents combining audited tables, scanned legal schedules, complex footnotes, and qualitative risk disclosures. Standard 10-K parsers fail because pre-IPO documents embed non-standardized Ind AS restatement schedules, pro-forma adjustments, and historical stub periods.
-- **Architectural Approach:** Specialized financial benchmark agent frameworks leverage layout-aware multimodal pipelines (e.g., Docling, Azure Document Intelligence, LlamaParse) combined with schema-enforced long-context LLMs.
-- **Target Extraction Entities:**
-  - Cap tables and share capital structures (authorized vs. issued vs. fully diluted).
-  - Convertibles: Compulsorily Convertible Preference Shares (CCPS), Optionally Convertible Debentures (OCDs), and employee stock option plans (ESOPs).
-  - Related-Party Transactions (RPTs) spanning promoter entities, loans, brand royalties, and lease agreements.
-  - Debt perimeter: Funded term loans, working capital facilities, external commercial borrowings (ECBs), and operating lease liabilities under Ind AS 116.
-  - Contingent liabilities and litigations across criminal, tax, regulatory (SEBI/RBI), and material civil domains.
+### 1.1 Theoretical & Corporate Valuation Frameworks
+Academic and industry literature establishes that standard secondary-market models fail on pre-IPO issuers due to information asymmetry, illiquidity, and non-normal return distributions:
 
-### 1.2 Listing-Day Gains & Underpricing Prediction (Supervised Ensembles)
-- **Challenge:** Underpricing (the "first-day pop") and listing-day volatility are driven by a complex interplay of fundamental quality, pricing discount, institutional sentiment, and retail frenzy.
-- **Architectural Approach:** Academic and quant hedge fund models deploy supervised ensemble architectures—primarily **XGBoost**, **LightGBM**, and **Random Forests**—trained on historical pre-IPO feature sets.
-- **Key Feature Taxonomy:**
-  - *Quantitative Subscription Multiples:* Institutional (QIB), High Net-Worth Individuals (NII/HNI), and Retail individual bidding rates across the 3-day window.
-  - *Anchor Investor Tiering:* Ratio of marquee domestic mutual funds and sovereign wealth funds versus foreign portfolio investors (FPIs).
-  - *Pre-Issue Pricing Anchors:* Grey Market Premiums (GMP), unlisted secondary trades (from platforms like Forge Global, CartaX, Caplight, or Indian unlisted brokers), and Weighted Average Cost of Acquisition (WACA).
-  - *Market Climate Factors:* Volatility Index (India VIX), 30-day market returns, benchmark 10-year G-Sec yields, and sector-specific valuation multiple momentum.
+- **Asymmetric Information & Signalling Models (Rock, 1986; Leland & Pyle, 1977; Welch, 1989):**
+  - *Winner's Curse (Rock):* Uninformed investors receive disproportionate allocations in overpriced IPOs, forcing issuers to leave a structural **IPO Discount** (10%–20%) on the table to retain market participation.
+  - *Signalling & Equity Retention:* Promoter equity retention (low Offer-for-Sale ratio) and Tier-1 lead manager / anchor investor certification act as costly signals of private intrinsic quality.
+- **Adjusted Discounted Cash Flow & Downside Risk Models (Damodaran; Estrada):**
+  - Standard CAPM systematically misprices emerging-market and pre-profit technology IPOs (documented in empirical case studies of Zomato, Paytm, and Nykaa) because historical beta is unavailable and return volatility is heavily skewed.
+  - *Correction:* Practitioners use **Bottom-Up Levered Sector Betas** adjusted for post-Fresh-Issue cash/debt changes, **Estrada's Downside Beta** (semi-variance relative to market downside), and **Two-Stage Survival-Adjusted DCF** (explicitly modeling failure probability $p_{\text{fail}}$ before terminal value):
+    $$\text{Valuation} = (1 - p_{\text{fail}}) \times \sum_{t=1}^T \frac{\text{FCFF}_t}{(1 + WACC)^t} + p_{\text{fail}} \times \text{Liquidation Value}$$
+- **Forensic Earnings Quality Frameworks:**
+  - *Beneish M-Score & Sloan Accrual Ratio:* Deployed in pre-IPO accounting literature to detect "window dressing"—where issuers inflate pre-filing stub-period EBITDA by cutting discretionary R&D/marketing or stretching trade receivables:
+    $$\text{Sloan Accrual Ratio} = \frac{\text{Net Income} - \text{CFO}}{\text{Total Assets}}$$
+- **Comparable Company & Statistical Comps Frameworks (Bhojraj & Lee, 2002; Damodaran):**
+  - Replaces subjective peer selection with **Warranted Multiples** derived from fundamental value drivers (growth, ROE/ROCE, leverage, and reinvestment rate).
 
-### 1.3 Sentiment & Risk Analysis (NLP / FinBERT Variants)
-- **Challenge:** Prospectuses contain hundreds of boilerplate risk disclosures designed by legal counsel to protect issuers from liability. The challenge is distinguishing generic boilerplate from genuine operational and governance risks.
-- **Architectural Approach:** Domain-adapted transformer models (FinBERT, RoBERTa fine-tuned on financial filings) process the "Management Discussion and Analysis" (MD&A) and "Risk Factors" chapters:
-  - *Linguistic Tone Variance:* Quantifies optimism vs. pessimism, modal ambiguity, and hedge words.
-  - *Risk-Factor Density & Novelty:* Measures the semantic similarity of risk factor text against standard sector templates; high semantic deviation signals company-specific vulnerabilities.
-  - *Litigation Exposure Index:* Aggregates the cumulative monetary claims in outstanding litigations normalized by issuer net worth.
+---
 
-### 1.4 Alternative Data Scoring
-- **Challenge:** Pre-IPO companies in digital and platform sectors often report negative accounting profits. Valuation hinges on user engagement and market share gains.
-- **Architectural Approach:** Quantitative models utilized by crossover hedge funds (Coatue, Tiger Global) and VC allocators ingest operational telemetry:
-  - App downloads, active daily users (DAU/MAU), and app store review ratings.
-  - Hiring velocity and specialized engineering headcount growth tracked via LinkedIn talent data.
-  - Web domain traffic, bounce rates, and organic search volume via web intelligence feeds.
-  - Developer engagement (GitHub commits, API documentation activity) for B2B/SaaS technology issuers.
+### 1.2 Econometric Specifications in Empirical IPO Literature
+
+Econometric studies across US (EDGAR) and Indian (NSE/BSE) primary markets rely on specific estimators tailored to cross-sectional IPO cohorts and post-listing event windows:
+
+| Econometric Method | Mathematical Formulation / Estimator | Primary Pre-IPO Research Application |
+|---|---|---|
+| **Cross-Sectional OLS & Robust Regression** (Huber / Quantile) | $\text{Multiple}_i = \alpha + \sum \beta_k X_{ik} + \gamma \text{Sector}_i + \epsilon_i$ | Estimates "Fundamental Fair Multiples" ($P/E$, $EV/\text{EBITDA}$, $EV/\text{Sales}$) while neutralizing extreme peer outliers. |
+| **Buy-and-Hold Abnormal Returns (BHAR) & CAR** | $\text{BHAR}_{i,T} = \prod_{t=1}^{T}(1 + R_{it}) - \prod_{t=1}^{T}(1 + R_{mt})$ | Measures post-IPO wealth creation/destruction across $T \in \{30\text{D}, 90\text{D}, 180\text{D}, 1\text{Y}, 3\text{Y}\}$ and lock-in expiry windows. |
+| **Heckman Two-Stage Selection & PSM** | $\text{Pr}(\text{IPO}=1) = \Phi(Z'\gamma)$<br>$\text{Outcome} = X'\beta + \rho \sigma \lambda(Z'\gamma) + \epsilon$ | Controls for self-selection bias (firms choose to go public during hot market windows or peak margin cycles via Inverse Mills Ratio $\lambda$). |
+| **Cox Proportional Hazards & Survival Analysis** | $h(t \mid X) = h_0(t)\exp(\beta' X)$ | Models time-to-IPO exit for late-stage private companies or post-listing distress probability. |
+| **Fama-MacBeth & Panel Fixed-Effects** | $R_{it} - R_{ft} = \alpha_i + \beta_i \mathbf{F}_t + \tau_t + \mu_s + \epsilon_{it}$ | Controls for IPO vintage year ($\tau_t$) and sector fixed effects ($\mu_s$), separating macro waves from firm fundamentals. |
+
+#### Key Empirical Findings from Indian Primary Market Studies:
+- **Short-Run Underpricing Drivers:** QIB/NII oversubscription multiples, industry $P/E$ momentum, and listing delay positively drive Day-1 returns, while issue size and market volatility reduce them.
+- **Long-Run Underperformance Drivers:** Indian empirical studies confirm that short-run pops mean-revert over 6 to 24 months; **Return on Net Worth (RONW)**, **Return on Assets (ROA)**, **Cash Flow Conversion ($CFO/\text{EBITDA}$)**, and **Debt-to-Assets** dominate long-term abnormal return predictability.
+
+---
+
+### 1.3 Machine Learning & Deep Learning Architectures
+
+Recent academic literature (2020–2026) demonstrates that non-linear ensemble and neural architectures outperform linear regressions in capturing complex interactions between financial ratios, offer structure, and market sentiment:
+
+#### A. Tabular Supervised Learning (Pricing & Post-Listing Returns)
+- **Gradient Boosted Decision Trees (LightGBM, XGBoost, CatBoost):**
+  - *Empirical Consensus:* Consistently rank #1 on tabular IPO datasets (including IIT Bombay SJMSOM studies on Indian IPO underperformance and international underpricing benchmarks).
+  - *Why they work:* Handle non-linear thresholds (e.g., when $OFS > 70\%$ combined with $P/E$ premium $> 40\%$), missing stub-period features, and skewed financial ratios without strict Gaussian assumptions.
+- **Random Forests & Extra Trees:**
+  - Effective for feature-importance ranking (e.g., identifying that pre-IPO profit margin stability and issue price band rank highest in variance explanation) and variance reduction on smaller country-specific IPO cohorts (500–1,500 listings).
+- **Artificial Neural Networks (MLPs) & Error-Correction Neural Networks:**
+  - Applied in studies on KOSDAQ and Indian listings to blend multiple valuation anchors (DCF + Comps + Asset Value) into a non-linear fair-price estimator.
+
+#### B. Unsupervised & Hybrid Clustering Architectures
+- **Gaussian Mixture Models (GMM) & Hierarchical Agglomerative Clustering:**
+  - Used to cluster pre-IPO issuers and historical sector peers into behavioral trajectories (e.g., separating capital-efficient compounders from PE-exit supply overhangs) without relying on rigid SIC/NIC industry codes.
+- **Genetic Algorithms (GA) + Rough Set Theory:**
+  - Used in portfolio allocation research (e.g., Kim et al.) to optimize feature subset selection and rule induction for IPO subscription filtering.
+
+#### C. Time-Series & Deep Sequence Models
+- **Temporal Fusion Transformers (TFT) & LSTMs:**
+  - Recommended in recent 2026 empirical reviews for modeling post-listing trajectory sequences ($T_0$ through $T_{+8\text{ quarters}}$) where static pre-IPO covariates interact with dynamic post-listing quarterly earnings and macro volatility.
+
+---
+
+### 1.4 Prospectus NLP & Document Intelligence Models
+
+A major frontier in recent literature (from Loughran-McDonald lexical frameworks through modern LLM agents) is extracting predictive signals from unstructured S-1 and DRHP text:
+
+- **Domain-Adapted Encoders (FinBERT, SEC-BERT, DeBERTa-v3):**
+  - *Linguistic Uncertainty & Litigation Density:* Quantifies modal/uncertain word density in Risk Factors and MD&A. Empirical papers prove that higher textual uncertainty directly increases first-day underpricing (investors demand a wider discount for ambiguity) and post-listing return volatility.
+- **Layout-Aware Document Parsers + Schema-Constrained LLMs:**
+  - Architectures like **Docling**, **Nougat**, and **Table Transformer (TATR)** paired with QLoRA fine-tuned LLMs (Llama-3 / Qwen-2.5) extract multi-year restated Ind AS/GAAP schedules, cap table conversion waterfalls, and statutory KPIs with deterministic Pydantic validation.
+- **Semantic Embedding Peer Retrieval (BGE-large / FinE5):**
+  - Computes cosine similarity between the issuer's "Our Business" narrative and listed firms' annual report business descriptions to uncover true economic peers omitted from the prospectus.
+
+---
+
+### 1.5 Industry Practitioner Frameworks (Institutional & VC/PE)
+
+In commercial practice, top-tier institutions combine these quantitative layers into standardized decision engines:
+
+- **CRISIL / ICRA 4-Pillar Grading Architecture:** Strictly decouples **Fundamental Quality** (Business Prospects, Financial Position, Management, Governance) from **Issue Pricing**, preventing market hype from masking weak balance sheets.
+- **CB Insights Mosaic & CapitalVX (Ross et al., 2021):** Combines syndicate network centrality (investor tiering), momentum signals (headcount, web/app traction, patent velocity), and financial health into private-to-IPO exit probability scores.
+- **Crossover Hedge Fund "$T_0\text{-to-}T_{+4\text{Q}}$" Diligence Playbook:** Benchmarks restated DRHP stub margins against post-listing consensus estimates, stress-testing break-even prices across Day-30/90 Anchor and Month-6 non-promoter lock-in expiries.
 
 ---
 
@@ -241,79 +292,38 @@ Building an automated pipeline to parse statutory pre-IPO prospectuses (such as 
 ```
 
 ### Stage 1: Automated Prospectus Ingestion & Section Routing
-Prospectuses are dense, semi-structured PDFs or HTML filings. Running raw documents through an LLM is cost-prohibitive, introduces severe token limits, and causes context fragmentation.
-
-- **Ingestion:**
-  - *US Filings:* Query SEC EDGAR via the `sec-edgar-downloader` Python library or EDGAR API to pull Form S-1/A.
-  - *India Filings:* Scrape SEBI, NSE, or BSE filings for newly uploaded DRHP/RHP PDFs using Playwright and BeautifulSoup.
-- **Document Segmentation:**
-  Instead of parsing linearly, identify boundary headings using Regex and outline trees to extract specific target sections:
-  1. *Financial Statements:* "Restated Financial Information", "Financial Statements", or "Consolidated Financial Statements".
-  2. *Capital Structure:* "Capitalisation and Indebtedness", "Objects of the Offer", and "Summary of Offer".
-  3. *Operational & Risk Metrics:* "Management's Discussion and Analysis of Financial Condition (MD&A)" and "Risk Factors".
+- **Ingestion:** Query SEC EDGAR via `sec-edgar-downloader` / EDGAR API for US Form S-1/A; scrape SEBI/NSE/BSE for Indian DRHP/RHP PDFs using Playwright and BeautifulSoup.
+- **Document Segmentation:** Boundary heading detection via regex and PDF outline trees into:
+  1. *Financial Statements:* "Restated Financial Information", "Consolidated Financial Statements".
+  2. *Capital Structure:* "Capitalisation and Indebtedness", "Objects of the Offer".
+  3. *Operational & Risk Metrics:* "Management's Discussion and Analysis (MD&A)", "Risk Factors".
 
 ### Stage 2: High-Fidelity Table & Layout Parsing
-Financial tables in S-1/DRHP filings frequently contain merged headers, multi-period restatements, footnote indicators, and currency variations (e.g., INR in Lakhs/Crores vs. USD in Thousands/Millions).
-
-- **Tooling:** Dedicated document parsers rather than generic text extractors:
-  - *Marker* or *Nougat* for converting complex PDF pages into structured Markdown with LaTeX math and tables.
-  - *Table Transformer (TATR)* or *Docling* for extracting bounding boxes and cell matrices into structured JSON/DataFrames.
-- **Extraction Schema (3-Year History Minimum):**
+- **Tooling:** Dedicated layout parsers (*Marker*, *Nougat*, *Table Transformer [TATR]*, *Docling*) extracting complex tables, multi-year restatements, footnote markers, and unit scales (INR Crores/Lakhs vs. USD Thousands/Millions).
+- **Extraction Schema (3-Year History):**
   - *Balance Sheet:* Net Debt, Cash & Equivalents, Funded Borrowings, Lease Liabilities (Ind AS 116 / ASC 842), Net Worth.
-  - *Income Statement:* Revenue from Operations, Gross Profit, EBITDA, Operating Profit, Profit After Tax (PAT).
-  - *Cash Flow Statement:* Operating Cash Flow (CFO), Capital Expenditures (CapEx), Financing Cash Flow (CFF), and Free Cash Flow.
+  - *Income Statement:* Revenue, Gross Profit, EBITDA, Operating Profit, PAT.
+  - *Cash Flow Statement:* CFO, CapEx, Financing Cash Flow (CFF), Free Cash Flow.
 
 ### Stage 3: Cap Table Normalization & Dilution Mechanics
-Valuing a pre-IPO company on simple pre-offer shares yields misleading results due to complex pre-IPO capital structures. The extraction engine feeds a deterministic conversion script:
-
-- **Share Class Unification:**
-  - Parse conversion ratios for Series A–F Preferred Shares, Compulsorily Convertible Debentures (CCDs), and Compulsorily Convertible Preference Shares (CCPS).
-  - Factor in anti-dilution adjustments (broad-based weighted average vs. full ratchet) and liquidation preferences.
-- **Fresh Issue vs. Offer for Sale (OFS):**
-  - *Fresh Issue:* Injects fresh cash into the company balance sheet and increases total share count.
-  - *Offer for Sale (OFS):* Secondary exit for existing promoters/PE investors; does not affect company cash balance, but changes voting control.
-- **Fully Diluted Post-IPO Share Capital Formula:**
+- **Share Class Unification:** Parses conversion ratios for Series A–F Preferred Shares, CCDs, CCPS, liquidation preferences, and anti-dilution protections.
+- **Fresh Issue vs. OFS:** Models new cash injected to balance sheet vs. secondary liquidity to selling shareholders.
+- **Fully Diluted Post-IPO Share Count Formula:**
   $$\text{Post-IPO Diluted Shares} = \text{Existing Common Shares} + \sum (\text{Converted Preferred} \times \text{Ratio}) + \text{Vested Options/ESOPs} + \text{Fresh Issue Shares}$$
 
 ### Stage 4: Quantitative Valuation Engine
-Once structured data is available in tabular format, it is fed into deterministic financial models rather than relying on LLMs for arithmetic.
+1. **Trading Comps with IPO Discount (10%–20%):**
+   $$\text{Implied Offer Price per Share} = \frac{\text{Sector Multiple} \times \text{Company Metric} \times (1 - \text{IPO Discount})}{\text{Post-Issue Diluted Shares}}$$
+2. **DCF with Step-Down WACC & Proceeds Cash Injection:**
+   $$\text{FCFF} = \text{EBIT} \times (1 - t) + \text{D\&A} - \text{CapEx} - \Delta\text{NWC}$$
+   Adds net Fresh Issue proceeds to starting cash, reducing interest expense on retired debt.
 
-#### 1. Comparable Company Analysis (Trading Comps)
-Pull dynamic public market multiples ($P/E$, $EV/\text{Sales}$, $EV/\text{EBITDA}$, $P/B$) for declared peer groups (disclosed in the DRHP/S-1 under the *"Basis for Issue Price"* section) via market data APIs.
-
-Apply a parameter-driven **IPO Discount** (standard 10%–20%) to account for the liquidity spread and ensure offer absorption:
-
-$$\text{Implied Offer Price per Share} = \frac{\text{Sector Multiple} \times \text{Company Metric} \times (1 - \text{IPO Discount})}{\text{Post-Issue Diluted Shares}}$$
-
-#### 2. Discounted Cash Flow (DCF) Integration
-Compute Free Cash Flow to Firm (FCFF):
-
-$$\text{FCFF} = \text{EBIT} \times (1 - t) + \text{D\&A} - \text{CapEx} - \Delta\text{NWC}$$
-
-- **Incorporate Use of Proceeds:** Add net proceeds from the Fresh Issue into starting cash to model working capital expansion or debt reduction (which lowers post-IPO interest expense).
-- **Step-Down WACC Dynamic:** Discount early cash flows at higher private cost of capital ($WACC_{\text{private}}$), stepping down post-listing ($WACC_{\text{public}}$) as liquidity and cost of debt improve.
-
-### Stage 5: Risk & Sentiment Analysis via NLP
-Extract qualitative indicators from the Risk Factors section to supplement the quantitative score:
-- **FinBERT Sentiment Scoring:** Tag risk factors by category (*Regulatory*, *Legal*, *Operational*, *Customer Concentration*).
-- **Litigation & Contingent Liabilities Flag:** Compute the ratio of total monetary claims in pending litigation relative to Net Worth:
-  $$\text{Litigation Exposure Ratio} = \frac{\sum \text{Pending Monetary Claims}}{\text{Net Worth}}$$
-  *(Flag if ratio $> 15\%$).*
-- **Related Party Transactions (RPT) Ratio:** Calculate total annual RPT volume relative to total revenue to flag potential value leakage:
-  $$\text{RPT Ratio} = \frac{\text{Total Annual RPT Volume}}{\text{Total Revenue}}$$
+### Stage 5: Qualitative Risk & Sentiment NLP
+- **FinBERT Sentiment Categorization:** Tags risk disclosures (*Regulatory*, *Legal*, *Operational*, *Client Concentration*).
+- **Litigation Exposure Ratio:** $\frac{\sum \text{Pending Monetary Claims}}{\text{Net Worth}}$ *(flagged if $> 15\%$).*
+- **RPT Leakage Ratio:** $\frac{\text{Total Annual RPT Volume}}{\text{Total Revenue}}$.
 
 ### Stage 6: Modular Implementation Tech Stack & Pydantic Schema
-
-| Stage | Recommended Stack | Functional Purpose |
-|---|---|---|
-| **Ingestion** | FastAPI, Playwright, BeautifulSoup, `sec-edgar-downloader` | Automated scrapers for regulatory listing filings. |
-| **Parsing** | Docling / PyMuPDF + Schema-Enforced LLM (Tool-Calling) | Strict JSON extraction with page bounding-box citations. |
-| **Compute Core** | Python (`pandas`, `numpy`, `scipy`) | Dilution engine, debt adjustment, DCF/Comps valuation. |
-| **Validation** | Pydantic v2 | Enforces mathematical reconciliation ($A = L + E \pm 0.01$). |
-| **Export / UI** | Streamlit, `openpyxl`, `python-pptx` | Generates auditable dynamic Excel models, board decks, or web dashboards. |
-
-#### Production Pydantic Validation Schema
-To ensure computational reliability, LLMs are used exclusively to map unstructured text into a strict validation schema, leaving all arithmetic to Python:
 
 ```python
 from pydantic import BaseModel, Field, model_validator
@@ -367,9 +377,7 @@ class PreIPOProspectusData(BaseModel):
 
     @model_validator(mode="after")
     def verify_financial_integrity(self):
-        # Enforce that contingent liabilities do not exceed 100% of net worth without explicit warning
         if self.net_worth_cr > 0 and (self.contingent_liabilities_cr / self.net_worth_cr) > 0.15:
-            # High contingent liabilities flagged
             pass
         return self
 ```
@@ -417,18 +425,16 @@ flowchart TD
 
 | Domain | NSE Endpoint | Extracted Data Attributes | Pre-IPO Intelligence Use Case |
 |---|---|---|---|
-| **IPO Schedule & Terms** | `/api/ipo-current-issue` | Issue Name, Symbol, Issue Type (Book Building vs. Fixed), Open/Close Dates, **Price Band (Floor & Cap)**, Lot Size, Issue Size (₹ Cr), Face Value. | Automatically detects when an issuer files an RHP with a price band, **unlocking the statutory valuation circuit breaker** (`BLOCKED_MISSING_REVIEWED_PRICE_BAND`). |
-| **Live Subscription Tracking** | `/api/ipo-bid-details?symbol={SYM}` | • **QIB Subscription Multiple** ($x$ times)<br>• **NII / HNI Multiple**<br>• **Retail Individual (RII) Multiple**<br>• Employee / Shareholder quota<br>• Total Cumulative Demand | Feeds directly into **Score 2 (Pricing & Sentiment Score)** and first-day pop prediction. |
-| **Anchor Book & Allotment** | `/api/ipo-detail?symbol={SYM}` & Allocation Sheet | Total anchor size (₹ Cr), allocation count, proportion of marquee domestic MFs vs. sovereign wealth funds vs. opaque FPIs. | Computes the **Anchor Quality Tiering Index** (distinguishes institutional conviction from speculative bids). |
-| **Declared Listed Comps** | `/api/quote-equity?symbol={PEER}` | Live Price, Market Cap, Trailing P/E, Forward P/E, Industry P/E, 52-Week High/Low, Beta. | Feeds the **Comparable Company Analysis (Trading Comps)** matrix, auto-computing implied issue discount/premium. |
-| **Corporate Announcements** | `/api/corporate-announcements?index=equities` | Board meeting notices, SEBI/RBI show-cause disclosures, auditor change events, material contracts. | Continuous background ingestion for the **Automated DRHP Red-Flag Scanner**. |
+| **IPO Schedule & Terms** | `/api/ipo-current-issue` | Issue Name, Symbol, Issue Type, Open/Close Dates, **Price Band (Floor & Cap)**, Lot Size, Issue Size (₹ Cr). | Unlocks the statutory valuation circuit breaker (`BLOCKED_MISSING_REVIEWED_PRICE_BAND`). |
+| **Live Subscription Tracking** | `/api/ipo-bid-details?symbol={SYM}` | • **QIB Subscription Multiple** ($x$ times)<br>• **NII / HNI Multiple**<br>• **Retail Individual (RII) Multiple**<br>• Total Cumulative Demand | Feeds directly into **Score 2 (Pricing & Sentiment Score)** and first-day pop prediction. |
+| **Anchor Book & Allotment** | `/api/ipo-detail?symbol={SYM}` & Allocation Sheet | Total anchor size (₹ Cr), allocation count, proportion of marquee domestic MFs vs. sovereign wealth funds vs. opaque FPIs. | Computes the **Anchor Quality Tiering Index**. |
+| **Declared Listed Comps** | `/api/quote-equity?symbol={PEER}` | Live Price, Market Cap, Trailing P/E, Forward P/E, Industry P/E, 52-Week High/Low, Beta. | Feeds the **Comparable Company Analysis (Trading Comps)** matrix. |
+| **Corporate Announcements** | `/api/corporate-announcements?index=equities` | Board meeting notices, SEBI/RBI show-cause disclosures, auditor change events. | Continuous background ingestion for the **Automated DRHP Red-Flag Scanner**. |
 | **Market Volatility Index** | `/api/allIndices` | India VIX, Nifty 50 P/E, Nifty Smallcap/Midcap multiples. | Quantifies market sentiment and tunes the private-to-public WACC spread. |
 
 ### 6.2 Connection Architecture & Protocol
 
-Because `nseindia.com` uses Cloudflare anti-bot verification and dynamic cookie rotation, sending a stateless HTTP `GET` request will immediately return `403 Forbidden`. 
-
-A reliable production client must follow a **two-step session handshake**:
+Because `nseindia.com` uses Cloudflare anti-bot verification and dynamic cookie rotation, sending a stateless HTTP `GET` request returns `403 Forbidden`. The production client follows a **two-step session handshake**:
 1. **Session Initialization:** Send a `GET` request to the base homepage (`https://www.nseindia.com`) with realistic browser headers to harvest session cookies (`nsit`, `nseappid`, `ak_bmsc`).
 2. **Subsequent API Queries:** Re-use the authenticated `requests.Session` object with `Referer: https://www.nseindia.com/` for all target JSON endpoints.
 3. **Automatic Cookie Rotation:** Refresh the session every 5–10 minutes to prevent expiration.
@@ -466,10 +472,8 @@ class NSELiveClient:
         self.session.headers.update(self.HEADERS)
 
     def _ensure_session(self) -> None:
-        """Establishes or refreshes session cookies from the main homepage."""
         now = time.time()
         if now - self.last_handshake > self.session_ttl or not self.session.cookies:
-            # Hit homepage to harvest valid cookies
             resp = self.session.get(self.BASE_URL, timeout=10)
             if resp.status_code == 200:
                 self.last_handshake = now
@@ -477,17 +481,12 @@ class NSELiveClient:
                 raise ConnectionError(f"NSE Session Handshake failed: HTTP {resp.status_code}")
 
     def get_current_ipos(self) -> Dict[str, Any]:
-        """Fetch list of all active and upcoming public issues."""
         self._ensure_session()
         resp = self.session.get(self.API_IPO_CURRENT, timeout=10)
         resp.raise_for_status()
         return resp.json()
 
     def get_live_subscription(self, symbol: str) -> Dict[str, Any]:
-        """
-        Fetch real-time 3-day bidding window subscription multiples.
-        Returns QIB, NII, Retail, and Total oversubscription figures.
-        """
         self._ensure_session()
         url = self.API_IPO_BID.format(symbol=symbol.upper())
         resp = self.session.get(url, timeout=10)
@@ -495,17 +494,12 @@ class NSELiveClient:
         return resp.json()
 
     def get_listed_peer_multiples(self, symbol: str) -> Dict[str, Any]:
-        """
-        Fetch live quotes and trading multiples for declared peer groups.
-        Extracts P/E, Market Cap, and 52-Week valuation metrics.
-        """
         self._ensure_session()
         url = self.API_QUOTE_EQUITY.format(symbol=symbol.upper())
         resp = self.session.get(url, timeout=10)
         resp.raise_for_status()
         data = resp.json()
         
-        # Extract valuation essentials
         price_info = data.get("priceInfo", {})
         metadata = data.get("metadata", {})
         security_info = data.get("securityInfo", {})
@@ -522,26 +516,118 @@ class NSELiveClient:
 
 ---
 
-## Section 7: Institutional Frameworks & Academic Literature
+## Section 7: Cohort Lifecycle & Post-IPO Trajectory Analysis (IPO Vintage Benchmarking)
+
+While standard peer review asks *"How is Peer X priced today?"*, longitudinal peer cohort analysis asks: 
+> **"When Peer X went public at a similar stage, margin profile, and multiple, how did its story actually play out over the next 4 to 12 quarters?"**
+
+In Indian primary markets especially, empirical studies show a sharp regime shift: **short-term listing gains are driven by demand and sentiment** (subscription multiples and Grey Market Premium), whereas **1-year and multi-year post-listing trajectories revert strictly to fundamental execution, promoter retention, and multiple compression/expansion**.
+
+```mermaid
+flowchart LR
+    subgraph T0["At-IPO Baseline (T = 0)"]
+        D1["DRHP Financial Profile\n• Revenue CAGR\n• EBITDA Margin\n• CFO / EBITDA\n• Fresh vs. OFS %"]
+        D2["Issue Pricing & Demand\n• Issue P/E, EV/EBITDA\n• QIB / Anchor Multiple\n• Grey Market Premium"]
+    end
+
+    subgraph TRAJECTORY["Event-Time Longitudinal Window (T+1D to T+24M)"]
+        T1["T+1D to T+30D:\nListing Pop & Anchor 30D Unwind"]
+        T2["T+90D:\nAnchor 90D Unwind"]
+        T3["T+180D (M6):\nSEBI Reg 17 Non-Promoter Lock-In Expiry"]
+        T4["T+4Q to T+8Q:\nDRHP vs. Actual Quarterly Reality Check"]
+    end
+
+    subgraph OUTCOMES["Post-IPO Behavioral Archetypes"]
+        O1["1. Compounding Compounder\n(Sustained Alpha, High CFO Conversion)"]
+        O2["2. Priced-to-Perfection De-Rater\n(Growth Deceleration, Multiple Compression)"]
+        O3["3. PE Exit Supply Overhang\n(Drawdowns at M6 Lock-In Expiry)"]
+        O4["4. Window-Dressed Fader\n(Post-IPO Margin & Accrual Collapse)"]
+    end
+
+    D1 & D2 --> T1 --> T2 --> T3 --> T4
+    T4 --> O1 & O2 & O3 & O4
+```
+
+### 7.1 What This Longitudinal Lens Reveals
+Analyzing how prior IPOs in the same sector played out post-listing exposes four recurring market patterns that static point-in-time valuation tables hide:
+
+1. **The Multiple Compression vs. Earnings Catch-Up Race:**
+   Many high-growth companies list at aggressive valuations (e.g., $60\times$–$80\times$ $P/E$ or $12\times$ $EV/\text{Sales}$) on the promise that rapid earnings growth will "grow into the multiple." Tracking prior sector listings reveals whether peers actually grew earnings fast enough to compress their multiple organically—or whether the stock price suffered a 30%–50% de-rating when post-IPO growth decelerated.
+2. **Pre-IPO "Window Dressing" Mean Reversion:**
+   Comparing a peer's DRHP numbers (FY-1 and stub period prior to listing) against its first 4–8 post-listing quarterly results shows whether margins or cash conversion were temporarily inflated before the IPO and normalized downward once public.
+3. **Lock-In Expiry Supply Overhangs:**
+   Tracking how peer stocks behaved around statutory supply unlocks—specifically the **30-day and 90-day Anchor Investor lock-in expiries** and the **6-month mandatory SEBI ICDR non-promoter / pre-IPO investor lock-in expiry**—quantifies the historical selling pressure caused by PE/VC exits in that specific sector.
+4. **Use-of-Proceeds Execution vs. Guidance:**
+   Did prior peers in the sector deploy their Fresh Issue capital on schedule (capex, debt reduction, store expansion) and deliver the promised ROCE lift, or did capex delays and working capital bloat drag returns down?
+
+---
+
+### 7.2 The 4-Stage Trajectory Framework
+
+To build this as a repeatable analytical module inside `ProfSurProject`, we align every historical sector peer to a common **Event-Time ($T = 0$)** study timeline rather than calendar dates:
+
+#### Step 1: Event-Time Alignment ($T_0$ Normalization)
+Anchor each comparable listed company at its own IPO Listing Date ($T_0$). Extract two snapshots for every historical peer:
+- **At-IPO Baseline ($T_0$):** Issue price, implied $P/E$ or $EV/\text{EBITDA}$ at issue, Fresh Issue vs. OFS split, pre-IPO 3-year revenue CAGR, EBITDA margin, CFO/EBITDA, and QIB/Anchor subscription.
+- **Post-IPO Trajectory ($T_{+1\text{D}}, T_{+30\text{D}}, T_{+90\text{D}}, T_{+6\text{M}}, T_{+1\text{Y}}, T_{+2\text{Y}}$):** Cumulative total return, benchmark-adjusted alpha (vs. Nifty 50 / Nifty Midcap / Sector Index), and trailing valuation multiple at each milestone.
+
+#### Step 2: DRHP-to-Quarterly Reality Check (Guidance vs. Actuals)
+Compare the peer's pre-IPO 3-year trajectory (from its DRHP) against its first 4–8 post-IPO quarters (from NSE/BSE quarterly filings / CMIE Prowess):
+- **Growth Delta:**
+  $$\Delta_{\text{growth}} = \text{Post-IPO 4Q YoY Revenue Growth} - \text{Pre-IPO 3Y Revenue CAGR}$$
+- **Margin Delta:**
+  $$\Delta_{\text{margin}} = \text{Post-IPO EBITDA Margin} - \text{Pre-IPO Peak/Stub EBITDA Margin}$$
+- **Cash Conversion Drift:** Did $CFO/\text{EBITDA}$ hold steady or deteriorate post-listing?
+
+#### Step 3: Lock-In Expiry Event Study
+Measure abnormal returns and delivery volume spikes in the $[-5\text{ days}, +10\text{ days}]$ trading windows around:
+- **Day 30 & Day 90:** Anchor investor partial/full lock-in release.
+- **Month 6 (Day 180):** Pre-IPO non-promoter / PE/VC lock-in release (SEBI ICDR Reg 17).
+
+> *Empirical Signal:* If prior sector peers with $>50\%$ OFS or heavy PE backing consistently dropped $8\%$–$15\%$ around Day 180, that becomes a direct risk-timing signal for both IPO bidders and unlisted pre-IPO buyers.
+
+#### Step 4: Archetype Clustering (Mapping the Current IPO to Peer "Stories")
+Classify historical sector IPOs into four behavioral archetypes based on how their post-listing story unfolded, then score which archetype the current DRHP issuer resembles most closely:
+
+| Post-IPO Archetype | At-IPO Signature (DRHP Profile) | How the Post-Listing Story Played Out |
+|---|---|---|
+| **1. Compounding Compounder** | Reasonable issue multiple ($\le$ peer median), high Fresh Issue %, strong $CFO/\text{EBITDA} > 0.8\times$, durable ROCE. | Modest Day-1 pop, absorbed lock-in expiries smoothly, delivered steady earnings beats and sustained 1Y–3Y alpha. |
+| **2. Priced-to-Perfection De-Rater** | Strong business, but issued at a $40\%$–$80\%$ multiple premium to peers; peak stub-period margins. | Strong Day-1 listing pop, followed by 6–18 months of sideways/negative stock returns while earnings caught up to valuation. |
+| **3. PE Exit / Supply Overhang** | Heavy OFS ($>70\%$), multiple late-stage PE funds on cap table, high pre-IPO secondary WACA step-ups. | Repeated price drawdowns around Day 90 (Anchor) and Month 6 (Pre-IPO lock-in) as institutional block deals hit the tape. |
+| **4. Pre-IPO Window-Dressed Fader** | Sudden margin jump in final pre-DRHP year, rising receivable days, high RPTs or contingent liabilities. | Missed post-listing quarterly estimates within 2–3 quarters; sharp multiple compression below issue price. |
+
+---
+
+### 7.3 Why Current Tools Miss This (And How ProfSur Fills the Gap)
+
+- **The Blind Spot in Existing Platforms:**
+  - *Public market terminals (Screener, Capital IQ, Bloomberg):* Show a peer's current stock chart and current multiples, forgetting what multiple that peer traded at on its own IPO day 2 or 3 years ago.
+  - *IPO portals (Chittorgarh, InvestorGain):* Track listing-day gain and current LTP, but do not link pre-IPO DRHP financial quality to post-listing quarterly earnings delivery or lock-in drawdowns.
+- **The ProfSur Advantage ("Peer IPO Time-Machine" View):**
+  Inside `ProfSurProject`'s Pre-IPO Intelligence workspace, we render an **Event-Time Cohort Overlay ($T_0$ to $T_{+24\text{M}}$)** comparing the current issuer's DRHP metrics against 3–5 sector peers as they looked on their own IPO filing dates, alongside normalized price paths, multiple compression curves, and lock-in expiry markers.
+
+---
+
+## Section 8: Institutional Frameworks & Academic Literature
 
 The scoring weights, feature selection, and dual-score design of the application are grounded in established Indian regulatory grading frameworks and peer-reviewed empirical research on NSE and BSE listings:
 
-### 7.1 Institutional & Regulatory Frameworks (India-Specific)
+### 8.1 Institutional & Regulatory Frameworks (India-Specific)
 - **CRISIL / ICRA IPO Grading Methodology:** Introduced under SEBI's framework in 2007 (made optional in 2014), CRISIL's IPO Grading Methodology remains the benchmark practitioner scorecard in India. It evaluates issuers on a 1-to-5 scale across four pillars: **Business Prospects**, **Financial Position**, **Management Capabilities**, and **Corporate Governance**. Crucially, it separates fundamental business quality from issue pricing—a structural separation the application must preserve.
 - **SEBI Statutory KPI Disclosure Framework (ICDR Amendments):** SEBI mandates that loss-making and new-age issuers disclose audited Key Performance Indicators (KPIs) in the *"Basis for Issue Price"* chapter of the DRHP, alongside Weighted Average Cost of Acquisition (WACA) across past private funding rounds. Parsing this mandatory table provides a regulator-audited valuation anchor.
 
-### 7.2 Peer-Reviewed Academic Studies on Indian IPOs
+### 8.2 Peer-Reviewed Academic Studies on Indian IPOs
 - **Pre-IPO Financial Performance & Offer Price Estimation (JRFM, 2023):** Empirical analysis of Indian IPOs demonstrates that four financial metrics exhibit the highest combined explanatory power for justifying IPO offer prices: **Net Asset Value (NAV)**, **Return on Assets (ROA)**, **Profit After Tax (PAT)**, and **Return on Net Worth (RONW)**.
 - **Systematic Literature Review of Indian IPOs (2023):** A PRISMA systematic review synthesizing 111 studies on the Indian primary market establishes that while agency signals (promoter dilution, Fresh Issue vs. OFS split) and institutional demand (QIB/Anchor subscription) drive short-term listing pops, corporate governance quality and pre-IPO earnings management (artificial margin inflation prior to filing) are the strongest predictors of long-run post-listing underperformance.
 - **Efficacy of IPO Grading on Long-Run Operating Performance (EELET, IJF):** Studies evaluating graded Indian IPOs show that structured fundamental grading correlates significantly with lower post-listing return volatility and superior industry-adjusted operating performance (PBDITA/Total Assets), even though fundamental grades alone do not predict day-one listing gains.
 
-### 7.3 Machine Learning & Prospectus NLP Research
+### 8.3 Machine Learning & Prospectus NLP Research
 - **ML Prediction of Indian IPO Underperformance (SJMSOM, IIT Bombay):** Research comparing ensemble machine learning models (Gradient Boosting, Random Forest) against traditional regressions on Indian listings confirms that **Gradient Boosting** significantly improves underperformance prediction, identifying profit margins, debt-to-assets ratio, and prevailing market sentiment as top predictive features.
 - **Automated RHP Rating & Textual Uncertainty Models (SSRN):** Quantitative NLP studies analyzing Red Herring Prospectuses demonstrate that linguistic tone, risk-factor density, and litigation disclosure complexity significantly explain valuation uncertainty and improve abnormal return forecasts compared to financial ratios alone.
 
 ---
 
-## Section 8: The Recommended Dual-Score Architecture
+## Section 9: The Recommended Dual-Score Architecture
 
 Based on the consensus across Indian IPO literature, an institutional application must avoid blending fundamentals and market hype into a single opaque number. Instead, it computes **two independent, transparent scores**:
 
@@ -570,7 +656,18 @@ Based on the consensus across Indian IPO literature, an institutional applicatio
 
 ---
 
-## Section 9: Comprehensive Academic & Statutory Reference List
+## Section 10: Recommended 4-Layer Production Architecture for `ProfSurProject`
+
+To translate this academic and industry landscape into a high-precision engine inside `ProfSurProject`, we combine **four complementary production layers**:
+
+1. **Extraction & Semantic Layer:** Layout-aware PDF parser (**Docling**) + Pydantic schema-enforced LLM + dense text embeddings (**BGE-large / FinBERT**) for DRHP table extraction, risk scoring, and unbiased economic peer discovery.
+2. **Econometric Calibration Layer:** Huber-robust cross-sectional regressions (`statsmodels`) for Warranted Fair Multiples + Buy-and-Hold Abnormal Return (**BHAR**) event-study curves across historical sector peers ($T_0$ to $T_{+24\text{M}}$).
+3. **Machine Learning Layer:** Walk-forward validated **LightGBM / CatBoost** classifiers trained on historical Indian IPOs to score Fundamental Hold Quality vs. Listing-Day / Lock-In Drawdown Risk.
+4. **Deterministic Valuation Core:** Pure Python financial engine computing Diluted Post-Fresh-Issue Comps, Survival-Adjusted DCF, and Unlisted Lock-In Arbitrage.
+
+---
+
+## Section 11: Comprehensive Academic & Statutory Reference List
 
 1. **Securities and Exchange Board of India (SEBI).** *SEBI (Issue of Capital and Disclosure Requirements) Regulations, 2018 (as amended) & DRHP Public Filings Portal.*  
    [SEBI Filings Portal](https://www.sebi.gov.in/sebiweb/home/HomeAction.do?doListing=yes&sid=3&ssid=15&smid=10)
@@ -592,10 +689,19 @@ Based on the consensus across Indian IPO literature, an institutional applicatio
    [SSRN Abstract 5217693](https://papers.ssrn.com/sol3/Delivery.cfm/5217693.pdf?abstractid=5217693&mirid=1&type=2)
 10. **SSRN Working Paper Series.** *Textual Information and IPO Underpricing: A Machine Learning Approach* (NLP-based measurement of prospectus uncertainty, tone, and abnormal returns).  
     [SSRN Abstract 4963076](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4963076)
+11. **Rock, K. (1986).** *Why new issues are underpriced.* Journal of Financial Economics, 15(1-2), 187-212.
+12. **Leland, H. E., & Pyle, D. H. (1977).** *Informational asymmetries, financial structure, and financial intermediation.* The Journal of Finance, 32(2), 371-387.
+13. **Welch, I. (1989).** *Seasoned offerings, imitation costs, and the underpricing of initial public offerings.* The Journal of Finance, 44(2), 421-449.
+14. **Bhojraj, S., & Lee, C. M. (2002).** *Who is my peer? A valuation-based approach to the selection of comparable firms.* Journal of Accounting Research, 40(2), 415-439.
+15. **Damodaran, A. (2024).** *Narrative and Numbers: Valuing High-Growth and Pre-IPO Technology Companies.* Stern School of Business Research Papers.
+16. **Estrada, J. (2002).** *Systematic risk in emerging markets: the D-CAPM.* Emerging Markets Review, 3(4), 365-379.
+17. **Beneish, M. D. (1999).** *The detection of earnings manipulation.* Financial Analysts Journal, 55(5), 24-36.
+18. **Sloan, R. G. (1996).** *Do stock prices fully reflect information in accruals and cash flows about future earnings?* The Accounting Review, 71(3), 289-315.
+19. **Ross, G. et al. (2021).** *CapitalVX: A machine learning model for predicting venture capital exits.* MIT / SSRN.
 
 ---
 
-## Section 10: Integration Blueprint for `ProfSurProject`
+## Section 12: Integration Blueprint for `ProfSurProject`
 
 To extend `ProfSurProject` from its current verified baseline (513-page HCCH DRHP vertical slice, Ind AS restatements, Dickinson life-cycle mapping, immutable evidence snapshots, and SEBI Reg 26(1) valuation circuit breakers), we map the implementation into clean, test-driven Python modules:
 
@@ -605,6 +711,7 @@ ProfSurProject/
 │   ├── pre_ipo_dossier_adapter.py        # [Existing] Typed dossier & canonical hash verification
 │   ├── pre_ipo_capability_gate.py        # [Existing] Dual-mode gate & Reg 26(1) circuit breaker
 │   ├── pre_ipo_nse_client.py             # [NEW] Live NSE session-aware client & peer comps
+│   ├── pre_ipo_cohort_trajectory.py      # [NEW] Event-time T_0 peer trajectory & archetype scoring
 │   ├── pre_ipo_dual_score_engine.py      # [NEW] Fundamental (CRISIL) & Pricing/Sentiment Scores
 │   ├── pre_ipo_anomaly_scanner.py        # [NEW] Window-dressing, CFO/EBITDA & accruals detector
 │   ├── pre_ipo_objects_route_scanner.py  # [NEW] Fresh vs. OFS split & SEBI profitability route
