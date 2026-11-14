@@ -15,6 +15,7 @@ from typing import Dict, Any, Optional
 
 from models.pre_ipo_dossier_adapter import compute_canonical_snapshot_hash
 from models.pre_ipo_extraction_service import CanonicalExtractionService, ExtractionRequest
+from models.pre_ipo_capability_gate import is_demo_mode_active
 
 
 def seed_hcch_demo_fixture(
@@ -29,7 +30,7 @@ def seed_hcch_demo_fixture(
     Rejects execution if neither PROFSUR_DEMO_FIXTURE_MODE=1 nor ENVIRONMENT=demo is set,
     unless force=True in a unit-test context.
     """
-    is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+    is_demo_mode = is_demo_mode_active()
     if not is_demo_mode and not force:
         raise PermissionError(
             "Demo fixture generation is blocked in production mode. "

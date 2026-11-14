@@ -683,7 +683,8 @@ else:
     active_snapshot_status = st.session_state.get("pre_ipo_active_snapshot_status", "UNREVIEWED")
     active_snapshot_hash = st.session_state.get("pre_ipo_active_snapshot_hash")
 
-    is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+    from models.pre_ipo_capability_gate import is_demo_mode_active
+    is_demo_mode = is_demo_mode_active()
     if is_demo_mode and is_hcch_entity(selected_deal_key) and not active_snapshot_id:
         from models.pre_ipo_demo_fixture import seed_hcch_demo_fixture
         try:

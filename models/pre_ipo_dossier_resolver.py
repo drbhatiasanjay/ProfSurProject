@@ -12,7 +12,7 @@ import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Any, Dict
-from models.pre_ipo_capability_gate import is_hcch_entity, _get_persisted_snapshot_data
+from models.pre_ipo_capability_gate import is_hcch_entity, _get_persisted_snapshot_data, is_demo_mode_active
 from models.pre_ipo_data import get_legacy_dossier
 from models.pre_ipo_dossier_adapter import build_hcch_dossier_from_snapshot
 
@@ -70,7 +70,7 @@ def resolve_dossier(
                 snapshot_id=snapshot_id,
             )
 
-        is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+        is_demo_mode = is_demo_mode_active()
         allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
         if is_demo_mode:
             allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")

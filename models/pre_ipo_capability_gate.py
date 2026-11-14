@@ -9,6 +9,7 @@ Provides fail-closed capability-specific gating for Pre-IPO analysis:
 - Enforces strict relational authority and 3-way hash equality on analytical export
 """
 
+import os
 import re
 from dataclasses import dataclass, field
 from enum import Enum
@@ -34,6 +35,13 @@ def is_valid_hex_sha256(val: Optional[str]) -> bool:
     if not val or not isinstance(val, str):
         return False
     return bool(re.match(r"^[0-9a-f]{64}$", val))
+
+
+def is_demo_mode_active() -> bool:
+    """Check if demo fixture mode is active via PROFSUR_DEMO_FIXTURE_MODE=1 or ENVIRONMENT=demo."""
+    env = os.environ.get("ENVIRONMENT", "").lower()
+    fixture_flag = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE", "")
+    return fixture_flag == "1" or "demo" in env or "profsur_demo_fixture_mode=1" in env
 
 
 def is_hcch_entity(company_identifier: str = "", company_name: str = "", cin: str = "") -> bool:
@@ -126,7 +134,7 @@ def _get_persisted_snapshot_data(
         # Status validation: Only ACCEPTED_FOR_ANALYSIS is accepted (generic ACCEPTED is rejected)
         # In demo-fixture mode (PROFSUR_DEMO_FIXTURE_MODE=1), DEMO_ACCEPTED_TEST_ONLY is also authorized
         import os
-        is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+        is_demo_mode = is_demo_mode_active()
         allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
         if is_demo_mode:
             allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")
@@ -270,7 +278,7 @@ def evaluate_capability_gate(
             snapshot_hash = persisted_hash
 
         import os
-        is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+        is_demo_mode = is_demo_mode_active()
         allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
         if is_demo_mode:
             allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")
@@ -374,7 +382,7 @@ def assert_export_allowed(
         persisted_status = persisted.get("status")
         # FAIL-CLOSED: Snapshot status must be strictly ACCEPTED_FOR_ANALYSIS (or DEMO_ACCEPTED_TEST_ONLY in fixture mode)
         import os
-        is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+        is_demo_mode = is_demo_mode_active()
         allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
         if is_demo_mode:
             allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")
@@ -406,7 +414,7 @@ def assert_export_allowed(
 
     # 3. Caller status sanity check
     import os
-    is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+    is_demo_mode = is_demo_mode_active()
     allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
     if is_demo_mode:
         allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")
