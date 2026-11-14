@@ -667,7 +667,150 @@ To translate this academic and industry landscape into a high-precision engine i
 
 ---
 
-## Section 11: Comprehensive Academic & Statutory Reference List
+## Section 11: Structured Academic & Econometric Bibliography (with Key Equations & Datasets)
+
+A rigorous pre-IPO intelligence platform requires grounding in academic asset pricing, empirical microeconometrics, and domain-adapted financial machine learning. The literature is structured below across three complementary methodological taxonomies: foundational economic theory, cross-sectional econometric specifications, and modern machine learning/NLP architectures.
+
+### 11.1 Foundational Asset-Pricing, Information Asymmetry & Valuation Frameworks
+
+| Framework / Author | Core Mechanism & Exact Formulation | Empirical Dataset & Variables |
+| :--- | :--- | :--- |
+| **Winner's Curse & Asymmetric Information**<br>*(Rock, 1986)* | $\text{E}[R_1 \mid \text{Allocated}] = 0 \implies P_{\text{offer}} < \text{E}[V]$<br><br>Informed institutional investors crowd out uninformed retail investors in high-quality offerings. Issuers must embed a structural **IPO Discount** so uninformed demand participates to clear the book. | **US & Global Primary Market Allocations:**<br>• Institutional vs. retail allocation ratios<br>• Offer price discount relative to secondary market fair value<br>• Over-subscription multiples across investor tranches |
+| **Promoter Retention Signalling**<br>*(Leland & Pyle, 1977)* | $V_0 = f(\alpha_{\text{retained}}, \sigma^2_{\text{cashflow}}), \quad \frac{\partial V_0}{\partial \alpha_{\text{retained}}} > 0$<br><br>Insiders hold private information regarding true cash-flow distribution. Higher post-issue equity retention ($\alpha_{\text{retained}}$) and lower Offer for Sale (OFS) proportion credibly signal private intrinsic quality. | **Primary Equity Issuances (NSE / BSE / SEC):**<br>• Fresh Issue capital vs. OFS exit ratio<br>• Post-issue promoter shareholding %<br>• Statutory lock-in commitment duration |
+| **Seasoned Offerings & Imitation Costs**<br>*(Welch, 1989; Allen & Faulhaber, 1989)* | $P_{\text{offer}} < V^* \implies \text{Paved path for Seasoned Offerings (QIP / Rights)}$<br><br>High-quality firms intentionally underprice during initial issuance to leave a positive market sentiment, recouping capital at lower dilution during subsequent Qualified Institutional Placements (QIP). | **Multi-Stage Corporate Issuances:**<br>• Follow-on offering frequency within 36 months<br>• Cost of equity spread between IPO and post-listing QIPs |
+| **Warranted Multiples & Statistical Comps**<br>*(Bhojraj & Lee, 2002; Damodaran)* | $\widehat{M}_i = \hat{\alpha} + \hat{\beta}_1 g_i + \hat{\beta}_2 \text{ROCE}_i + \hat{\beta}_3 \text{Leverage}_i + \hat{\beta}_4 \text{Payout}_i$<br><br>Replaces subjective peer selection with cross-sectional regression-implied fair multiples conditioned on fundamentals, growth velocity, and capital structure. | **Compustat / NSE-BSE Listed Universe:**<br>• $P/E$, $EV/\text{EBITDA}$, $EV/\text{Sales}$<br>• 3-Year EPS / Revenue CAGR ($g$)<br>• Return on Capital Employed (ROCE)<br>• Net Debt / EBITDA & Dividend Payout % |
+| **Survival-Adjusted Two-Stage DCF**<br>*(Damodaran Emerging Market / Pre-Profit Valuation)* | $V_{\text{equity}} = \text{DCF}_{\text{going concern}} \times (1 - p_{\text{fail}}) + V_{\text{distress}} \times p_{\text{fail}} + \text{Cash}_{\text{fresh}}$<br><br>Adjusts high-growth, pre-profit issuers for structural failure probability ($p_{\text{fail}}$) and models post-IPO WACC step-down as liquidity and governance risk decline post-listing. | **Emerging Market Tech / Consumer IPOs:**<br>• Bottom-up unlevered sector beta adjusted for cash<br>• Cost of capital step-down path ($14.5\% \to 11.2\%$)<br>• Current cash burn rate and months of runway |
+| **Forensic Earnings Quality (Window Dressing)**<br>*(Sloan, 1996; Beneish, 1999)* | $\text{Accrual Ratio} = \frac{\text{PAT} - \text{CFO} - \text{CFI}}{\text{Average Total Assets}}$<br><br>$\text{DSRI} = \frac{\text{Receivables}_t / \text{Sales}_t}{\text{Receivables}_{t-1} / \text{Sales}_{t-1}}$<br><br>Detects aggressive revenue recognition, deferred expenses, and balance-sheet accrual bloat in restated pre-DRHP stub periods. | **Restated 3-Year Ind AS / GAAP Filings:**<br>• Cash Flow from Operations to EBITDA ratio<br>• Trade receivable DSO spikes in stub periods<br>• Other non-operating income as % of PBT |
+| **Downside Risk D-CAPM for Emerging Markets**<br>*(Estrada, 2002)* | $\beta_i^D = \frac{\text{E}[\min(R_i - \mu_i, 0) \cdot \min(R_m - \mu_m, 0)]}{\text{E}[\min(R_m - \mu_m, 0)^2]}$<br><br>Replaces standard CAPM beta with semi-variance downside beta, penalizing downside drawdowns rather than upside volatility for unseasoned equities. | **Emerging Market Primary Indices:**<br>• Asymmetric downside covariance with market benchmark<br>• High-growth technology issuer return series |
+
+---
+
+### 11.2 Econometric Specifications in Empirical IPO Research
+
+| Econometric Method | Exact Mathematical Specification | Datasets & Empirical Findings (Indian & Global) |
+| :--- | :--- | :--- |
+| **Buy-and-Hold Abnormal Returns (BHAR)**<br>*(Ritter, 1991; Indian Primary Market Reviews)* | $\text{BHAR}_{i,T} = \prod_{t=1}^{T}(1 + R_{it}) - \prod_{t=1}^{T}(1 + R_{\text{bench},t})$<br><br>Evaluates compound wealth relatives across investment horizons $T \in \{1\text{D}, 30\text{D}, 90\text{D}, 180\text{D}, 1\text{Y}, 3\text{Y}\}$. | **NSE/BSE Listings (2000–2025) vs. Nifty 50 / Midcap 150:**<br>Confirms initial listing gains are sentiment-driven, while 180-day and 365-day abnormal returns revert to fundamental execution and multiple re-rating. |
+| **Huber-Robust Cross-Sectional Multiple Regression** | $\min_{\beta} \sum_{i=1}^{N} \rho_\delta\!\left(M_i - X_i'\beta\right), \quad \rho_\delta(u) = \begin{cases} \frac{1}{2}u^2 & \vert u\vert \le \delta \\ \delta(\vert u\vert - \frac{1}{2}\delta) & \vert u\vert > \delta \end{cases}$<br><br>Replaces standard OLS to eliminate bias caused by extreme valuation multiple outliers in listed peer groups. | **NSE/BSE Sector Peers + CMIE Prowess:**<br>• Winsorized $P/E$ and $EV/\text{EBITDA}$<br>• 3-Year EBITDA CAGR, RONW, CFO/EBITDA<br>• Robust estimation of warranted fair multiples |
+| **Heckman Two-Stage Selection Correction** | **Stage 1 (Probit Selection):**<br>$\Pr(\text{IPO}_i = 1) = \Phi(Z_i'\gamma)$<br><br>**Stage 2 (Outcome Model):**<br>$Y_i = X_i'\beta + \theta \lambda(Z_i'\gamma) + \epsilon_i$<br><br>Corrects for endogenous market-timing bias (firms list during bubble valuations or peak operational margin cycles). | **Private-to-Public Firm Panels (MCA + SEBI DRHP):**<br>The Inverse Mills Ratio ($\lambda$) isolates authentic post-listing operational alpha from opportunistic market-timing bias. |
+| **Lock-In Expiry Event Study (CAR)** | $\text{CAR}_i[\tau_1, \tau_2] = \sum_{t=\tau_1}^{\tau_2} \left(R_{it} - \hat{\alpha}_i - \hat{\beta}_i R_{mt}\right)$<br><br>Calculated across event window $[ -5\text{D}, +10\text{D}]$ around Day 30/90 Anchor and Day 180 Pre-IPO Investor lock-in expirations. | **NSE/BSE Bulk/Block Deals & Delivery Volumes:**<br>Issues with heavy OFS and private equity selling exhibit statistically significant negative Cumulative Abnormal Returns around Month 6. |
+| **Statutory Offer Price Justification Model**<br>*(JRFM, 2023 — Indian IPOs)* | $P_{\text{offer},i} = \beta_0 + \beta_1 \text{NAV}_i + \beta_2 \text{ROA}_i + \beta_3 \text{PAT}_i + \beta_4 \text{RONW}_i + \epsilon_i$<br><br>Cross-sectional regression isolating mandatory SEBI Reg 26(1) disclosure metrics on historical Indian mainboard offerings. | **Indian Mainboard IPO Dataset (2010–2022):**<br>Empirical findings prove Net Asset Value (NAV), ROA, PAT, and RONW possess highest joint explanatory power ($R^2 \approx 0.72$) for offer pricing. |
+
+---
+
+### 11.3 Machine Learning & Prospectus NLP Literature
+
+| Model Family / Paper | Architecture & Formulation | Dataset & Key Quantitative Takeaway |
+| :--- | :--- | :--- |
+| **Gradient Boosted Decision Trees**<br>*(Agrawal & Ananthakumar, SJMSOM IIT Bombay)* | $F_M(x) = \sum_{m=1}^{M} \eta h_m(x; \theta_m)$<br><br>Minimizing regularized log-loss / Huber loss across combined tabular prospectus fundamentals and book-building market metrics. | **Indian Mainboard IPOs (NSE/BSE):**<br>GBDTs (CatBoost / LightGBM) significantly outperform classical logistic and linear regressions in predicting post-listing underperformance and drawdown risk. |
+| **Prospectus Textual Uncertainty & Tone**<br>*(Loughran & McDonald, 2013; SSRN Indian RHP Studies)* | $\text{Uncertainty Score}_i = \frac{\sum w_{\text{uncertain}} \in \text{Risk/MD&A}_i}{\text{Total Tokens}_i}$<br><br>Coupled with domain-adapted **FinBERT** and **DeBERTa-v3** contextual embeddings across Chapter IV (Risk Factors) and Outstanding Litigation tables. | **SEBI RHP Filings & SEC S-1s:**<br>Higher textual uncertainty density and litigation counts correlate with wider initial underpricing spreads and elevated 1-year post-listing return volatility. |
+| **Semantic Embedding Peer Retrieval**<br>*(Dense Vector Cosine Similarity)* | $\text{Sim}(A, B) = \frac{\mathbf{e}_A \cdot \mathbf{e}_B}{\Vert\mathbf{e}_A\Vert \Vert\mathbf{e}_B\Vert}$<br><br>Dense vector representations generated from DRHP *Our Business* descriptions matched against listed public companies' business descriptions. | **NSE/BSE Listed Universe (~2,200+ active equities):**<br>Uncovers omitted low-multiple direct competitors systematically excluded from merchant bankers' cherry-picked peer lists in DRHP filings. |
+| **Cohort Trajectory Clustering**<br>*(Dynamic Time Warping / Gaussian Mixture Models)* | $p(x_i) = \sum_{k=1}^{K} \pi_k \mathcal{N}(x_i \mid \mu_k, \Sigma_k)$<br><br>Unsupervised clustering of historical sector IPOs on $T_0$-aligned post-listing return, margin, and multiple compression trajectories ($T_0$ to $T_{+24\text{M}}$). | **Historical Indian IPO Database:**<br>Statistically separates new offerings into four behavioral archetypes: *Compounding Compounder*, *Priced-to-Perfection De-Rater*, *Post-Listing Margin Deteriorator*, and *PE Exit Overhang*. |
+| **Venture Capital Exit Classifiers**<br>*(CapitalVX, Ross et al., 2021 — MIT / SSRN)* | Binary & multi-class ensemble classifiers predicting IPO probability vs. M&A vs. failure across venture financing rounds and cap table milestones. | **Global Venture Deals & Secondary Trades:**<br>Proves pre-IPO round step-up multiples and lead investor reputation tiers provide statistically significant signals of public market survival. |
+
+---
+
+## Section 12: Walk-Forward Machine Learning Feature Engineering Pipeline for Indian IPOs (Mainboard & SME)
+
+To eliminate look-ahead bias and protect models from macroeconomic regime leakage (e.g., training during 2020–2021 zero-rate liquidity expansion and testing during 2022–2023 monetary tightening), the machine learning framework in `ProfSurProject` enforces strict **point-in-time feature construction** and **expanding-window walk-forward validation**.
+
+### 12.1 End-to-End Walk-Forward Pipeline Architecture
+
+```text
+[Stage 1: Point-in-Time Data Cutoff (T_cutoff = 5:00 PM IST on Final Bidding Day)]
+   ├── DRHP / RHP Restated Ind AS Financial Tables (3 Full Years + Stub Period)
+   ├── SEBI Statutory KPIs & 18-Month WACA Acquisition Schedule
+   ├── NSE / BSE Live Peer Group Quotations (Winsorized Multiples & Growth)
+   └── Final Bidding Book (QIB / NII / Retail Subscription + Anchor Book Quality + India VIX)
+          │
+          ▼
+[Stage 2: Domain Feature Engineering & Cross-Sectional Normalization]
+   ├── Block 1: Restated Fundamentals & Forensic Accruals (12 features)
+   ├── Block 2: Cap Table, Agency & WACA Step-Up Signals (8 features)
+   ├── Block 3: De-Biased Valuation & Econometric Spreads (7 features)
+   ├── Block 4: Governance, Litigation & FinBERT NLP Density (7 features)
+   └── Block 5: Book-Building Demand & Macro Regime Features (6 features)
+          │
+          ▼
+[Stage 3: Expanding-Window Walk-Forward Cross-Validation (Mainboard & SME)]
+   ├── Fold 1: Train [FY15–FY20] ──► Validate [FY21] ──► Test [FY22] (Embargo: 180 Days)
+   ├── Fold 2: Train [FY15–FY21] ──► Validate [FY22] ──► Test [FY23] (Embargo: 180 Days)
+   ├── Fold 3: Train [FY15–FY22] ──► Validate [FY23] ──► Test [FY24] (Embargo: 180 Days)
+   └── Fold 4: Train [FY15–FY23] ──► Validate [FY24] ──► Test [FY25–FY26] (Embargo: 180 Days)
+          │
+          ▼
+[Stage 4: Dual-Head Calibrated Inference (LightGBM + CatBoost Ensemble)]
+   ├── Head A (Fundamental Quality Score): Pr(BHAR_180D > +10% | Post-Lock-In Outperformance)
+   ├── Head B (Pricing & Listing Risk Score): Expected Day-1 Pop % & Day-180 Drawdown Probability
+   └── Local SHAP Attribution: Top-5 Positive / Negative Feature Attributions for SEBI Due Diligence
+```
+
+---
+
+### 12.2 Complete 40-Feature Engineering Matrix (Across 5 Blocks)
+
+Every feature in the matrix is computable exclusively from disclosures available on or before the final day of bidding ($T_{\text{cutoff}}$), ensuring absolute zero future leakage.
+
+| Block | Feature Name | Formula / Exact Construction | Economic & Econometric Rationale |
+| :--- | :--- | :--- | :--- |
+| **1. Fundamentals & Forensics** | `rev_cagr_3y` | $(\text{Rev}_{T} / \text{Rev}_{T-2})^{0.5} - 1$ | Measures top-line organic growth velocity across restated Ind AS years. |
+| | `ebitda_margin_stub_delta` | $\text{EBITDA\%}_{\text{stub}} - \text{EBITDA\%}_{T-1}$ | Detects pre-DRHP stub-period margin inflation (*window dressing*). |
+| | `cfo_to_ebitda_latest` | $\text{CFO}_{T} / \text{EBITDA}_{T}$ | Cash realization quality vs. accrual operating profits. |
+| | `cfo_to_ebitda_trend` | $(\text{CFO/EBITDA})_{T} - (\text{CFO/EBITDA})_{T-2}$ | Tracks multi-year working capital deterioration prior to public issue. |
+| | `sloan_accrual_ratio` | $(\text{PAT}_T - \text{CFO}_T - \text{CFI}_T) / \text{AvgAssets}_T$ | Captures balance-sheet accrual bloat (Sloan, 1996). |
+| | `receivable_days_delta` | $\text{DSO}_T - \text{DSO}_{T-1}$ | Flags channel-stuffing or aggressive credit extensions to bolster pre-IPO sales. |
+| | `ronw_latest` | $\text{PAT}_T / \text{NetWorth}_T$ | Primary driver in JRFM (2023) offer-price justification regression. |
+| | `roce_latest` | $\text{EBIT}_T / (\text{TotalAssets}_T - \text{CurrentLiabilities}_T)$ | Operating capital efficiency independent of leverage. |
+| | `net_debt_to_ebitda` | $(\text{TotalDebt}_T - \text{Cash}_{\text{post-fresh}}) / \text{EBITDA}_T$ | Post-issue balance sheet solvency and debt-clearance capacity. |
+| | `other_income_to_pbt` | $\text{OtherIncome}_T / \text{PBT}_T$ | Screens out companies dependent on non-operating gains for net profit. |
+| | `asset_turnover_latest` | $\text{Revenue}_T / \text{AverageTotalAssets}_T$ | Asset utilization efficiency and operational intensity. |
+| | `working_capital_days` | $(\text{NetWorkingCapital}_T / \text{Revenue}_T) \times 365$ | Operating cycle length and working-capital drag. |
+| **2. Cap Table & Agency** | `ofs_ratio` | $\text{OFS Proceeds} / \text{Total Issue Size}$ | Measures insider cash-out vs. primary growth capital (Leland-Pyle). |
+| | `promoter_post_hold_pct` | $\text{Post-IPO Promoter Shares} / \text{Total Diluted Shares}$ | Long-term insider alignment and skin in the game. |
+| | `waca_stepup_multiple` | $\text{Upper Price Band} / \text{18-Month WACA Acquisition Cost}$ | Quantifies pre-IPO secondary markup over recent private funding cost. |
+| | `esop_ccps_dilution_pct` | $(\text{Converted CCPS} + \text{ESOP Overhang}) / \text{Pre-Offer Shares}$ | Measures latent overhang from dilutive instruments pre-listing. |
+| | `issue_size_to_networth` | $\text{Total Issue Size} / \text{Pre-IPO Net Worth}$ | Capital raise absorption stress relative to historical equity base. |
+| | `board_segment_flag` | Binary: $1 = \text{Mainboard}, \, 0 = \text{NSE Emerge / BSE SME}$ | Controls for SME liquidity, lot-size constraints, and institutional participation. |
+| | `pe_backer_reputation_tier` | Ordinal $[0, 3]$: Tier-1 Global/Domestic PE vs. Unbacked | Institutional certification effect and exit pressure profile. |
+| | `primary_fresh_issue_share`| $\text{Fresh Issue Capital} / \text{Total Issue Size}$ | Share of capital deployed into capex or debt reduction. |
+| **3. Valuation & Comps** | `pe_premium_vs_true_peers` | $(\text{Offer P/E}_{\text{diluted}} / \text{Algo Peer Median P/E}) - 1$ | True valuation spread vs. unbiased semantic peers. |
+| | `ev_ebitda_premium_peers` | $(\text{Offer EV/EBITDA} / \text{Algo Peer Median EV/EBITDA}) - 1$ | Capital-structure-neutral multiple premium over industry peers. |
+| | `regression_fair_pe_gap` | $(\text{Offer P/E} - \widehat{\text{P/E}}_{\text{Huber}}) / \widehat{\text{P/E}}_{\text{Huber}}$ | Isolates pricing froth after controlling for growth, ROCE, and leverage. |
+| | `drhp_peer_bias_index` | $\text{Median P/E}_{\text{DRHP Peers}} / \text{Median P/E}_{\text{Algo Peers}}$ | Quantifies merchant banker peer cherry-picking bias. |
+| | `peer_cohort_1y_bhar` | Median 12M post-IPO BHAR of historical sector vintage | Historical post-listing success rate of the sector cohort. |
+| | `price_to_book_relative` | $\text{Offer P/B} / \text{Median Peer P/B}$ | Asset-backed valuation ratio comparison. |
+| | `ev_sales_premium` | $(\text{Offer EV/Sales} / \text{Algo Peer Median EV/Sales}) - 1$ | Top-line comparative multiple for pre-profit / hyper-growth issuers. |
+| **4. Governance & NLP** | `contingent_liab_to_nw` | $\text{Disclosed Contingent Liabilities} / \text{Net Worth}$ | Measures legal, tax, and regulatory balance-sheet tail risk. |
+| | `rpt_to_revenue_pct` | $\text{Aggregate RPT Outflows} / \text{Revenue}_T$ | Related-Party Transaction leakage and promoter siphoning risk. |
+| | `auditor_change_3y_flag` | Binary: $1$ if statutory auditor resigned within 3 years | Top corporate governance red flag in Indian primary markets. |
+| | `promoter_pledge_pct` | $\text{Pledged Promoter Shares} / \text{Total Promoter Shares}$ | Forced-selling vulnerability and promoter balance sheet distress. |
+| | `finbert_risk_uncertainty` | Mean FinBERT / DeBERTa uncertainty logit on Risk Factors | Textual ambiguity, litigation complexity, and disclosure opacity. |
+| | `top5_customer_conc_pct` | $\text{Top-5 Customer Revenue} / \text{Total Revenue}_T$ | Revenue concentration and counterparty loss vulnerability. |
+| | `independent_directors_pct` | $\text{Independent Directors} / \text{Total Board Size}$ | Board oversight compliance and minority shareholder protection. |
+| **5. Demand & Macro** | `qib_sub_multiple_log` | $\ln(1 + \text{QIB Oversubscription Multiple})$ | Logarithmic institutional book-building price-discovery signal. |
+| | `nii_to_retail_sub_ratio` | $\text{NII/HNI Subscription Multiple} / \text{Retail Sub Multiple}$ | Gauges leveraged HNI speculative fervor relative to organic retail demand. |
+| | `anchor_marquee_share` | $\text{Tier-1 Domestic Mutual Funds + SWFs} / \text{Total Anchor Book}$ | Quality, stickiness, and certification of institutional anchor investors. |
+| | `india_vix_offer_open` | $\text{India VIX Index level at Bidding Open Date}$ | Broad equity market volatility regime during offer period. |
+| | `nifty500_3m_momentum` | $\text{Nifty 500 63-Trading-Day Cumulative Return}$ | Hot vs. cold primary market issuance window timing. |
+| | `sme_sentiment_index` | 30-Day Rolling Median Listing Gain across SME issues | SME market liquidity froth and risk appetite indicator. |
+
+---
+
+### 12.3 Walk-Forward Training & Leakage-Prevention Rules
+
+To guarantee institution-grade econometric integrity when deploying this model family, `ProfSurProject` enforces four inviolable engineering constraints:
+
+1. **Strict Temporal Cutoff ($T_{\text{cutoff}}$):**
+   All fundamental ratios, restated balance-sheet figures, peer comps, and macroeconomic inputs are frozen strictly at **5:00 PM IST on the final day of the public bidding period** (prior to basis of allotment and secondary market listing). Under no circumstances are post-listing quarterly results, post-allotment announcements, or secondary volume statistics fed into model feature matrices.
+2. **Sector-Stratified Winsorization & Scaling:**
+   Continuous valuation multiples ($P/E$, $EV/\text{EBITDA}$, $EV/\text{Sales}$) and growth figures are winsorized at the 2.5th and 97.5th percentiles. All imputation medians and scaler statistics are **fit exclusively on the training window of each walk-forward fold** before transforming validation or test cohorts, preventing out-of-sample data leakage.
+3. **Embargo Gap (6-Month Horizon Buffer):**
+   When predicting 180-day post-lock-in abnormal returns ($\text{BHAR}_{180\text{D}}$), any historical IPO listed fewer than **180 trading days prior to the validation fold boundary** is purged from the training set. This ensures that overlapping future price paths never bleed backward into historical training splits.
+4. **SHAP (SHapley Additive exPlanations) Attribution:**
+   Every model output surfaces the top-5 positive and top-5 negative SHAP feature attributions directly inside the `ProfSur` analyst interface. This satisfies SEBI Research Analyst transparency requirements, ensuring quantitative buy/avoid recommendations can be audited back to specific root causes (e.g., $\text{OFS Ratio} = 0.82$, $\text{Fair P/E Gap} = +46\%$, $\text{CFO-to-EBITDA Trend} = -34\%$).
+
+---
+
+## Section 13: Comprehensive Academic & Statutory Reference List
 
 1. **Securities and Exchange Board of India (SEBI).** *SEBI (Issue of Capital and Disclosure Requirements) Regulations, 2018 (as amended) & DRHP Public Filings Portal.*  
    [SEBI Filings Portal](https://www.sebi.gov.in/sebiweb/home/HomeAction.do?doListing=yes&sid=3&ssid=15&smid=10)
@@ -701,7 +844,7 @@ To translate this academic and industry landscape into a high-precision engine i
 
 ---
 
-## Section 12: Integration Blueprint for `ProfSurProject`
+## Section 14: Target Module Architecture & Production Roadmap for `ProfSurProject`
 
 To extend `ProfSurProject` from its current verified baseline (513-page HCCH DRHP vertical slice, Ind AS restatements, Dickinson life-cycle mapping, immutable evidence snapshots, and SEBI Reg 26(1) valuation circuit breakers), we map the implementation into clean, test-driven Python modules:
 
