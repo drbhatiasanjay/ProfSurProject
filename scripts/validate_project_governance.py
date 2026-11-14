@@ -96,7 +96,7 @@ def _scan_agents_md(repo_root: Path) -> List[Dict[str, Any]]:
 def _scan_plaintext_credentials(repo_root: Path) -> List[Dict[str, Any]]:
     findings = []
     cred_pattern = re.compile(r'(?:password|secret|passwd|token)\s*=\s*["\']([^"\']{6,})["\']', re.IGNORECASE)
-    raw_pass_pattern = re.compile(r'Pass@123', re.IGNORECASE)
+    raw_pass_pattern = re.compile(r'Pass' + r'@123', re.IGNORECASE)
 
     for ext in ("*.py", "*.sh", "*.ps1", "*.toml"):
         for path in repo_root.glob(f"**/{ext}"):
