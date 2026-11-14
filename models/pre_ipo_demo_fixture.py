@@ -386,6 +386,50 @@ def seed_hcch_demo_fixture(
     # Persist review actions, bindings, and snapshot
     conn.execute("BEGIN IMMEDIATE")
     try:
+        demo_run_id = f"run_demo_hcch_{snapshot_hash[:12]}"
+        run_cols = [r[1] for r in conn.execute("PRAGMA table_info(pre_ipo_extraction_runs)").fetchall()]
+        if "payload" in run_cols:
+            conn.execute("""
+                INSERT OR REPLACE INTO pre_ipo_extraction_runs (
+                    id, owner, company, source_id, document_sha256,
+                    total_pages, pages_indexed, pages_requiring_ocr, status, extractor_version, payload
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                demo_run_id, owner, company, source_id,
+                "3f7ba673443dbbcf2047a6b0012c025235b54c4ad920474a2d2cd9e001727bc4",
+                513, 513, 0, "DEMO_FIXTURE_SEEDED", "v1.0.0-canonical-513p",
+                json.dumps({"demo": True, "source_id": source_id, "snapshot_hash": snapshot_hash})
+            ))
+        else:
+            conn.execute("""
+                INSERT OR REPLACE INTO pre_ipo_extraction_runs (
+                    id, owner, company, source_id, document_sha256,
+                    total_pages, pages_indexed, pages_requiring_ocr, status, extractor_version
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                demo_run_id, owner, company, source_id,
+                "3f7ba673443dbbcf2047a6b0012c025235b54c4ad920474a2d2cd9e001727bc4",
+                513, 513, 0, "DEMO_FIXTURE_SEEDED", "v1.0.0-canonical-513p"
+            ))
+
+        # Ensure candidate facts exist to satisfy FK constraints
+        for cand in candidates:
+            conn.execute("""
+                INSERT OR REPLACE INTO pre_ipo_candidate_facts (
+                    observation_id, run_id, metric_id, entity, entity_basis,
+                    period, duration, unit, value_numeric, presence, physical_page,
+                    printed_page, table_id, row_label, column_label, raw_text,
+                    document_sha256, confidence, review_state
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                cand.observation_id, demo_run_id, cand.metric_id, cand.entity, cand.entity_basis,
+                cand.period, cand.duration, cand.unit,
+                float(cand.value) if cand.value is not None else None,
+                cand.presence.value if hasattr(cand.presence, "value") else str(cand.presence),
+                cand.physical_page, cand.printed_page, cand.table_id, cand.row_label, cand.column_label,
+                cand.raw_text, cand.document_sha256, getattr(cand, "confidence_diagnostic", 1.0), "ACCEPTED"
+            ))
+
         # 1. Evidence snapshot
         payload = {
             "demo_fixture": True,
