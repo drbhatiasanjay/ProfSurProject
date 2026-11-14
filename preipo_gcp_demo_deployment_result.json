@@ -1,0 +1,89 @@
+{
+  "verdict": "DEPLOYED_TAGGED_ZERO_TRAFFIC_AND_LIVE_VERIFIED",
+  "timestamp": "2026-11-14T12:10:00Z",
+  "repository": "drbhatiasanjay/ProfSurProject",
+  "branch": "demo/preipo-gcp-demo-2026-11-14",
+  "base_sha": "0626347e61603547fd11e6999bae83a17a24fe36",
+  "ancestor_verified": "a9ab1e97ae02afbaa8cf405fa3f02f91f229a1da",
+  "candidate_sha": "bf31ee2d4a9ecc8675111b79d26bbe13e52eabe6",
+  "triple_sha_equality": {
+    "local_head": "bf31ee2d4a9ecc8675111b79d26bbe13e52eabe6",
+    "remote_tracking": "bf31ee2d4a9ecc8675111b79d26bbe13e52eabe6",
+    "github_api": "bf31ee2d4a9ecc8675111b79d26bbe13e52eabe6",
+    "verified": true
+  },
+  "database_integrity": {
+    "path": "capital_structure.db",
+    "sha256": "CA696195A5C541B56E0533DE6C69A3BEC4E501A232FD2B18A1B09D15D6FA7873",
+    "immutable": true
+  },
+  "gcp_deployment": {
+    "project": "tempproject-462219",
+    "region": "us-east1",
+    "service": "lifecycle-leverage",
+    "deployed_revision": "lifecycle-leverage-00244-zoj",
+    "tag": "preipo-demo-20261114",
+    "tagged_url": "https://preipo-demo-20261114---lifecycle-leverage-qhzom2yadq-ue.a.run.app",
+    "image_digest": "us-east1-docker.pkg.dev/tempproject-462219/cloud-run-source-deploy/lifecycle-leverage@sha256:b420cfb44f69b19e416987384f506b9a11f7e4ddf95d7889dff9259a9e736f2d",
+    "creation_timestamp": "2026-11-14T12:07:29.954647Z",
+    "production_traffic_isolation": {
+      "production_revision": "lifecycle-leverage-00241-89k",
+      "production_traffic_pct": 100,
+      "deployed_revision_traffic_pct": 0,
+      "traffic_diverted_pct": 0.0
+    }
+  },
+  "local_verification": {
+    "governance_audit": {
+      "status": "CLEAN",
+      "errors": 0,
+      "warnings": 0
+    },
+    "bounded_pytest_suite": {
+      "passed": 48,
+      "failed": 0,
+      "duration_sec": 3.35
+    },
+    "broad_pre_ipo_suite": {
+      "passed": 237,
+      "skipped": 3,
+      "failed": 0,
+      "duration_sec": 17.36
+    },
+    "ephemeral_browser_containment": {
+      "passed": 1,
+      "failed": 0,
+      "duration_sec": 18.87
+    }
+  },
+  "live_gcp_acceptance": {
+    "script": "scripts/verify_live_tagged_demo.py",
+    "authenticated_user": "drbhatia",
+    "health_check_status": 200,
+    "hcch_containment_verified": true,
+    "hcch_deck_export_blocked": true,
+    "hcch_dickinson_stage_blocked": true,
+    "supported_issuer_verified": "Mankind Pharma Ltd.",
+    "supported_issuer_overview_loaded": true,
+    "supported_issuer_workpapers_loaded": true,
+    "dynamic_containment_reactivated": true,
+    "cloud_run_logs_errors": 0,
+    "cloud_run_logs_tracebacks": 0,
+    "screenshots": [
+      {
+        "name": "gcp_live_hcch_containment_active.png",
+        "path": "docs/review-evidence/screenshots/gcp_live_hcch_containment_active.png",
+        "size_bytes": 136034,
+        "verified_on_disk": true
+      },
+      {
+        "name": "gcp_live_supported_issuer_mankind.png",
+        "path": "docs/review-evidence/screenshots/gcp_live_supported_issuer_mankind.png",
+        "size_bytes": 351514,
+        "verified_on_disk": true
+      }
+    ]
+  },
+  "rollback_command": "gcloud run services update-traffic lifecycle-leverage --project tempproject-462219 --region us-east1 --remove-tags preipo-demo-20261114",
+  "next_codex_action": "Independently review the pushed evidence and live tagged revision before any traffic or merge authorization."
+}
