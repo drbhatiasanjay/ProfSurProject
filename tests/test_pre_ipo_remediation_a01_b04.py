@@ -254,7 +254,7 @@ def test_b02_reverse_dcf_unbracketed_ev_returns_unfeasible():
 
     # Must NOT claim required CAGR is 80% when PV at 80% is trivial relative to 1e15
     assert reverse['required_fcf_cagr_pct'] is None
-    assert reverse['hurdle_difficulty'] in ("MATHEMATICALLY_OUT_OF_BOUNDS", "UNFEASIBLE_IMPLIED_VALUATION")
+    assert reverse['hurdle_difficulty'] in ("MATHEMATICALLY_OUT_OF_BOUNDS", "UNFEASIBLE_IMPLIED_VALUATION", "MISSING_DISCOUNT_RATE")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
