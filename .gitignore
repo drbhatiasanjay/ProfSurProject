@@ -65,3 +65,18 @@ scratch/*.srt
 verify_frames/
 unpacked/
 tmp/
+
+# Git Worktrees & Tooling Sandboxes (prevents VS Code git change overflow)
+.worktrees/
+.codex/
+.claude-flow/
+.ci-repro/
+.playwright-mcp/
+.graphify-quarantine/
+.tmp-test-*/
+TempFDI/
+batch_result*/
+ProjSurKGdocfiles/
+node_modules/
+scripts/node_modules/
+*.zip
