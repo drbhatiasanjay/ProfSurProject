@@ -139,11 +139,14 @@ def run_live_acceptance():
         mankind_title = page.locator("text=Mankind Pharma Ltd.")
         assert mankind_title.count() > 0, "Mankind Pharma Ltd. title must be rendered!"
 
-        cockpit_q = page.locator("text=Primary Decision Question")
-        assert cockpit_q.count() > 0, "Primary Decision Question must be visible in decision cockpit!"
+        # Verify key cards in hero and decision cockpit
+        focus_label = page.locator("text=Focus:")
+        assert focus_label.count() > 0, "Focus label must be visible in decision cockpit!"
 
-        action_rec = page.locator("text=RECOMMENDED STRATEGIC ACTION")
-        assert action_rec.count() > 0, "RECOMMENDED STRATEGIC ACTION must be rendered for supported issuer!"
+        rec_action = page.locator("text=RECOMMENDED STRATEGIC ACTION")
+        if rec_action.count() == 0:
+            rec_action = page.locator("text=/RECOMMENDED STRATEGIC ACTION/i")
+        assert rec_action.count() > 0, "Strategic action card must be rendered for supported issuer!"
 
         # Navigate to Detailed Workpapers -> Indebtedness & Debt Maturity
         print("   Navigating to Detailed Workpapers tab...")
