@@ -14,6 +14,7 @@ Implements PR 3 requirements:
 from dataclasses import dataclass, field, asdict
 from typing import Optional, Dict, List, Tuple, Any, Set
 from enum import Enum
+from datetime import datetime, timezone
 import hashlib
 import json
 import os
@@ -355,196 +356,157 @@ class DocumentIndexer:
         company: str = "coca_cola"
     ) -> List[Dict[str, Any]]:
         """
-        Extracts canonical gold restated financials from official HCCH DRHP pages.
-        All values are grounded with physical/printed page citations and verifiable source text.
+        Extracts candidate observations dynamically from official HCCH DRHP pages.
+        All values are parsed from table text lines using regex matching and scaling rules.
+        Emitted observations strictly have review_state="PROPOSED" (inserted into SQLite
+        as 'UNREVIEWED'). Extraction engines NEVER self-accept data.
         """
         observations: List[Dict[str, Any]] = []
 
         # 1. Capital Structure (Physical Page 93, Printed Page 88)
         p93 = doc_index.pages.get(93)
-        if p93 and "90,000,000,000" in p93.text:
-            observations.append({
-                "metric_id": "authorized_capital_cr",
-                "entity": "HCCH",
-                "period": "DRHP_DATE",
-                "unit": "INR_CR",
-                "value": "9000.00",
-                "presence": "PRESENT",
-                "physical_page": 93,
-                "printed_page": "88",
-                "table_id": "CAPITAL_STRUCTURE",
-                "row_label": "A. AUTHORISED SHARE CAPITAL",
-                "raw_text": "9,000,000,000 Equity Shares of face value of ₹10 each 90,000,000,000",
-                "review_state": "ACCEPTED"
-            })
-            observations.append({
-                "metric_id": "equity_face_value",
-                "entity": "HCCH",
-                "period": "DRHP_DATE",
-                "unit": "INR",
-                "value": "10.00",
-                "presence": "PRESENT",
-                "physical_page": 93,
-                "printed_page": "88",
-                "table_id": "CAPITAL_STRUCTURE",
-                "row_label": "face value",
-                "raw_text": "face value of ₹10 each",
-                "review_state": "ACCEPTED"
-            })
+        if p93 and p93.text:
+            for line in p93.text.split("\n"):
+                m = re.search(
+                    r"([\d,]+)\s+Equity\s+Shares\s+of\s+face\s+value\s+of\s+[₹INR\s]*(\d+)\s+each\s+([\d,]+)",
+                    line,
+                    re.IGNORECASE
+                )
+                if m:
+                    face_val_float = float(m.group(2))
+                    total_inr_float = float(m.group(3).replace(",", ""))
+                    auth_cap_cr = total_inr_float / 1e7
+
+                    observations.append({
+                        "metric_id": "authorized_capital_cr",
+                        "entity": "HCCH",
+                        "period": "DRHP_DATE",
+                        "unit": "INR_CR",
+                        "value": f"{auth_cap_cr:.2f}",
+                        "presence": "PRESENT",
+                        "physical_page": 93,
+                        "printed_page": str(p93.printed_page or "88"),
+                        "table_id": "CAPITAL_STRUCTURE",
+                        "row_label": "A. AUTHORISED SHARE CAPITAL",
+                        "column_label": "DRHP_DATE",
+                        "raw_text": line.strip(),
+                        "document_sha256": doc_index.source_sha256,
+                        "extraction_method": "REGEX_TABLE_PARSER_V1",
+                        "confidence": 0.95,
+                        "warnings": [],
+                        "review_state": "PROPOSED"
+                    })
+                    observations.append({
+                        "metric_id": "equity_face_value",
+                        "entity": "HCCH",
+                        "period": "DRHP_DATE",
+                        "unit": "INR",
+                        "value": f"{face_val_float:.2f}",
+                        "presence": "PRESENT",
+                        "physical_page": 93,
+                        "printed_page": str(p93.printed_page or "88"),
+                        "table_id": "CAPITAL_STRUCTURE",
+                        "row_label": "face value",
+                        "column_label": "DRHP_DATE",
+                        "raw_text": f"face value of ₹{int(face_val_float)} each",
+                        "document_sha256": doc_index.source_sha256,
+                        "extraction_method": "REGEX_TABLE_PARSER_V1",
+                        "confidence": 0.95,
+                        "warnings": [],
+                        "review_state": "PROPOSED"
+                    })
+                    break
+
+        def _parse_table_line(line: str) -> Optional[Tuple[str, List[str]]]:
+            tokens = [t.strip() for t in line.split() if t.strip()]
+            if not tokens:
+                return None
+            num_pat = re.compile(r"^-?\(?[\d,]+(?:\.\d+)?\)?$|^-+$")
+            nums: List[str] = []
+            i = len(tokens) - 1
+            while i >= 0 and num_pat.match(tokens[i]):
+                nums.insert(0, tokens[i])
+                i -= 1
+            if not nums:
+                return None
+            label = " ".join(tokens[:i+1])
+            if len(nums) == 6 and nums[0].isdigit():
+                nums = nums[1:]
+            return label, nums
+
+        def _extract_fy26_candidate(
+            p_art: Optional[PageArtifact],
+            table_id: str,
+            row_keyword: str,
+            metric_id: str,
+            unit: str = "INR_CR",
+            scale_divisor: float = 10.0,
+            custom_row_label: Optional[str] = None
+        ):
+            if not p_art or not p_art.text:
+                return
+            for line in p_art.text.split("\n"):
+                if row_keyword.lower() in line.lower():
+                    parsed = _parse_table_line(line)
+                    if parsed:
+                        label, nums = parsed
+                        if len(nums) >= 3:
+                            raw_token = nums[2]
+                            if raw_token in ("-", "--"):
+                                val_str = "0.00"
+                                presence = "PRESENT"
+                            else:
+                                clean_tok = raw_token.replace(",", "").replace("(", "-").replace(")", "")
+                                try:
+                                    num_val = float(clean_tok)
+                                    if scale_divisor != 1.0:
+                                        num_val = round(num_val / scale_divisor, 2)
+                                    val_str = f"{num_val:.2f}"
+                                    presence = "PRESENT"
+                                except ValueError:
+                                    continue
+
+                            observations.append({
+                                "metric_id": metric_id,
+                                "entity": "HCCH",
+                                "period": "FY26",
+                                "unit": unit,
+                                "value": val_str,
+                                "presence": presence,
+                                "physical_page": p_art.physical_page,
+                                "printed_page": str(p_art.printed_page or ""),
+                                "table_id": table_id,
+                                "row_label": custom_row_label or label,
+                                "column_label": "As at March 31, 2026 (FY26)",
+                                "raw_text": line.strip(),
+                                "document_sha256": doc_index.source_sha256,
+                                "extraction_method": "REGEX_TABLE_PARSER_V1",
+                                "confidence": 0.95,
+                                "warnings": [],
+                                "review_state": "PROPOSED"
+                            })
+                            break
 
         # 2. Balance Sheet (Physical Page 274, Printed Page 269 - Annexure I)
         p274 = doc_index.pages.get(274)
-        if p274 and "97,651.44" in p274.text:
-            observations.append({
-                "metric_id": "total_equity_cr",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR_CR",
-                "value": "9765.14",
-                "presence": "PRESENT",
-                "physical_page": 274,
-                "printed_page": "269",
-                "table_id": "ANNEXURE_I",
-                "row_label": "Total equity",
-                "raw_text": "Total equity 101,913.00 107,226.35 97,651.44",
-                "review_state": "ACCEPTED"
-            })
-            observations.append({
-                "metric_id": "owners_equity_cr",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR_CR",
-                "value": "9760.91",
-                "presence": "PRESENT",
-                "physical_page": 274,
-                "printed_page": "269",
-                "table_id": "ANNEXURE_I",
-                "row_label": "Equity attributable to shareholders of the Holding Company",
-                "raw_text": "Equity attributable to shareholders of the Holding Company 101,869.01 107,184.38 97,609.11",
-                "review_state": "ACCEPTED"
-            })
-            observations.append({
-                "metric_id": "nci_equity_cr",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR_CR",
-                "value": "4.23",
-                "presence": "PRESENT",
-                "physical_page": 274,
-                "printed_page": "269",
-                "table_id": "ANNEXURE_I",
-                "row_label": "c) Non-controlling interests",
-                "raw_text": "c) Non-controlling interests 43.99 41.97 42.33",
-                "review_state": "ACCEPTED"
-            })
-            observations.append({
-                "metric_id": "total_assets_cr",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR_CR",
-                "value": "15637.09",
-                "presence": "PRESENT",
-                "physical_page": 274,
-                "printed_page": "269",
-                "table_id": "ANNEXURE_I",
-                "row_label": "Total Assets",
-                "raw_text": "Total Assets 150,978.96 151,342.67 156,370.85",
-                "review_state": "ACCEPTED"
-            })
-            observations.append({
-                "metric_id": "cash_and_equiv_cr",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR_CR",
-                "value": "431.96",
-                "presence": "PRESENT",
-                "physical_page": 274,
-                "printed_page": "269",
-                "table_id": "ANNEXURE_I",
-                "row_label": "ii) Cash and cash equivalents",
-                "raw_text": "ii) Cash and cash equivalents 14 5,127.09 16,921.68 4,319.61",
-                "review_state": "ACCEPTED"
-            })
-            observations.append({
-                "metric_id": "borrowings_cr",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR_CR",
-                "value": "0.00",
-                "presence": "PRESENT",
-                "physical_page": 274,
-                "printed_page": "269",
-                "table_id": "ANNEXURE_I",
-                "row_label": "i) Borrowings",
-                "raw_text": "i) Borrowings 18 - 1,176.69 - 5,950.00 -",
-                "review_state": "ACCEPTED"
-            })
+        _extract_fy26_candidate(p274, "ANNEXURE_I", "Total equity", "total_equity_cr", custom_row_label="Total equity")
+        _extract_fy26_candidate(p274, "ANNEXURE_I", "Holding Company", "owners_equity_cr", custom_row_label="Equity attributable to shareholders of the Holding Company")
+        _extract_fy26_candidate(p274, "ANNEXURE_I", "Non-controlling interests", "nci_equity_cr", custom_row_label="c) Non-controlling interests")
+        _extract_fy26_candidate(p274, "ANNEXURE_I", "Total Assets", "total_assets_cr", custom_row_label="Total Assets")
+        _extract_fy26_candidate(p274, "ANNEXURE_I", "Cash and cash equivalents", "cash_and_equiv_cr", custom_row_label="ii) Cash and cash equivalents")
+        _extract_fy26_candidate(p274, "ANNEXURE_I", "Borrowings", "borrowings_cr", custom_row_label="i) Borrowings")
 
         # 3. Statement of Profit and Loss (Physical Page 275, Printed Page 270 - Annexure II)
         p275 = doc_index.pages.get(275)
-        if p275 and "11,650.48" in p275.text:
-            observations.append({
-                "metric_id": "pat_cr",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR_CR",
-                "value": "1165.05",
-                "presence": "PRESENT",
-                "physical_page": 275,
-                "printed_page": "270",
-                "table_id": "ANNEXURE_II",
-                "row_label": "Restated profit for the period/year (A)",
-                "raw_text": "Restated profit for the period/year (A) 4,086.16 10,548.63 11,650.48",
-                "review_state": "ACCEPTED"
-            })
-            observations.append({
-                "metric_id": "diluted_eps",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR",
-                "value": "1.75",
-                "presence": "PRESENT",
-                "physical_page": 275,
-                "printed_page": "270",
-                "table_id": "ANNEXURE_II",
-                "row_label": "Basic and diluted [in INR]",
-                "raw_text": "Basic and diluted [in INR] 34 0.61 1.59 1.75",
-                "review_state": "ACCEPTED"
-            })
+        _extract_fy26_candidate(p275, "ANNEXURE_II", "Restated profit for the period/year (A)", "pat_cr", custom_row_label="Restated profit for the period/year (A)")
+        _extract_fy26_candidate(p275, "ANNEXURE_II", "Basic and diluted", "diluted_eps", unit="INR", scale_divisor=1.0, custom_row_label="Basic and diluted [in INR]")
 
         # 4. Statement of Cash Flows (Physical Page 276, Printed Page 271 - Annexure III)
         p276 = doc_index.pages.get(276)
-        if p276 and "13,101.81" in p276.text:
-            observations.append({
-                "metric_id": "operating_profit_before_wc_cr",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR_CR",
-                "value": "1310.18",
-                "presence": "PRESENT",
-                "physical_page": 276,
-                "printed_page": "271",
-                "table_id": "ANNEXURE_III",
-                "row_label": "Operating profit before working capital changes",
-                "raw_text": "Operating profit before working capital changes 7,418.97 5,159.56 13,101.81",
-                "review_state": "ACCEPTED"
-            })
-            observations.append({
-                "metric_id": "pbt_cr",
-                "entity": "HCCH",
-                "period": "FY26",
-                "unit": "INR_CR",
-                "value": "1417.48",
-                "presence": "PRESENT",
-                "physical_page": 276,
-                "printed_page": "271",
-                "table_id": "ANNEXURE_III",
-                "row_label": "Restated profit before tax",
-                "raw_text": "Restated profit before tax 5,538.98 12,563.98 14,174.78",
-                "review_state": "ACCEPTED"
-            })
+        _extract_fy26_candidate(p276, "ANNEXURE_III", "Operating profit before working capital", "operating_profit_before_wc_cr", custom_row_label="Operating profit before working capital changes")
+        _extract_fy26_candidate(p276, "ANNEXURE_III", "Restated profit before tax", "pbt_cr", custom_row_label="Restated profit before tax")
 
-        # Optionally persist to SQLite pre_ipo_observations
+        # Optionally persist to SQLite pre_ipo_observations strictly as UNREVIEWED
         if conn and observations:
             for obs in observations:
                 obs_id = f"obs_{obs['metric_id']}_{obs['period']}_{doc_index.source_id}"
@@ -557,13 +519,13 @@ class DocumentIndexer:
                     ) VALUES (
                         ?, ?, ?, 1, ?, ?,
                         ?, ?, '12M', 'STANDALONE_OR_CONSOL', 'IND_AS', 'INR', ?,
-                        ?, ?, ?, ?, ?,
+                        ?, ?, 'UNREVIEWED', ?, ?,
                         ?, ?, ?, 'DRHP_EXTRACTION'
                     )
                 """, (
                     owner, company, obs_id, doc_index.source_id, obs["entity"],
                     obs["metric_id"], obs["period"], obs["unit"],
-                    obs["value"], obs["presence"], obs["review_state"],
+                    obs["value"], obs["presence"],
                     obs["physical_page"], obs["printed_page"],
                     obs["table_id"], obs["row_label"], obs["raw_text"]
                 ))
@@ -670,4 +632,46 @@ def extract_page_slice_text(
         "snippet": snippet,
         "full_text": text,
     }
+
+
+def accept_candidate_observation(
+    conn: sqlite3.Connection,
+    owner: str,
+    company: str,
+    observation_id: str,
+    reviewer: str,
+    review_reason: str = "Verified against SEBI DRHP filing"
+) -> Dict[str, Any]:
+    """
+    Explicit, auditable human review action transitioning a candidate observation
+    from UNREVIEWED/PROPOSED to ACCEPTED. Extraction engines must NEVER call this.
+    """
+    if not owner or not str(owner).strip():
+        raise PermissionError("Authenticated owner required for observation review.")
+    if not reviewer or not str(reviewer).strip():
+        raise ValueError("Accepted observation requires an identified reviewer. Anonymous review blocked.")
+    if not review_reason or not str(review_reason).strip():
+        raise ValueError("Accepted observation requires an explicit review_reason / rationale.")
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE pre_ipo_observations
+        SET review_state = 'ACCEPTED',
+            reviewer = ?,
+            review_reason = ?,
+            reviewed_at = ?
+        WHERE owner = ? AND company = ? AND observation_id = ?
+    """, (reviewer.strip(), review_reason.strip(), now_iso, owner, company, observation_id))
+    if cursor.rowcount == 0:
+        raise ValueError(f"Observation '{observation_id}' not found for {owner}/{company}")
+    conn.commit()
+    return {
+        "observation_id": observation_id,
+        "review_state": "ACCEPTED",
+        "reviewer": reviewer.strip(),
+        "review_reason": review_reason.strip(),
+        "reviewed_at": now_iso
+    }
+
 

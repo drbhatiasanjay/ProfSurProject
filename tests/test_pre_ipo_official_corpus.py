@@ -20,7 +20,8 @@ from models.pre_ipo_document_indexer import (
     CandidateObservation,
     CandidateState,
     OFFICIAL_HCCH_EXPECTED,
-    REQUIRED_SECTIONS
+    REQUIRED_SECTIONS,
+    accept_candidate_observation
 )
 from models.pre_ipo_migrations import apply_migrations
 
@@ -125,6 +126,14 @@ def test_full_513_page_corpus_indexing_and_readiness():
     )
     assert len(gold_obs) >= 11
 
+    # Verify extraction strictly emits PROPOSED (zero auto-accepted observations)
+    for o in gold_obs:
+        assert o["review_state"] == "PROPOSED", f"Observation {o['metric_id']} must be PROPOSED, not auto-accepted"
+        assert o["document_sha256"] == doc_index.source_sha256
+        assert o["extraction_method"] == "REGEX_TABLE_PARSER_V1"
+        assert o["confidence"] > 0.0
+        assert o["raw_text"] is not None and len(o["raw_text"]) > 0
+
     obs_map = {o["metric_id"]: o for o in gold_obs}
 
     # Verify Capital Structure (pp. 93 / 88)
@@ -162,7 +171,42 @@ def test_full_513_page_corpus_indexing_and_readiness():
         reconciled = indexer.reconcile_candidate(cand, source_text=p_text)
         assert reconciled.state in (CandidateState.STRUCTURE_VALIDATED, CandidateState.RECONCILED_TO_SOURCE)
 
-    # 7. Verify SQLite persistence of observations
+    # 7. Verify SQLite persistence of observations: MUST BE UNREVIEWED (ZERO AUTO-ACCEPTED)
     cursor.execute("SELECT count(*) FROM pre_ipo_observations WHERE origin = 'DRHP_EXTRACTION'")
     obs_count = cursor.fetchone()[0]
     assert obs_count >= 11
+
+    cursor.execute("SELECT count(*) FROM pre_ipo_observations WHERE origin = 'DRHP_EXTRACTION' AND review_state = 'ACCEPTED'")
+    accepted_count = cursor.fetchone()[0]
+    assert accepted_count == 0, "Extraction must NEVER persist observations as ACCEPTED"
+
+    cursor.execute("SELECT count(*) FROM pre_ipo_observations WHERE origin = 'DRHP_EXTRACTION' AND review_state = 'UNREVIEWED'")
+    unreviewed_count = cursor.fetchone()[0]
+    assert unreviewed_count >= 11
+
+    # 8. Verify explicit human acceptance action
+    target_obs_id = f"obs_total_equity_cr_FY26_{doc_index.source_id}"
+    res = accept_candidate_observation(
+        conn=conn,
+        owner="profsurkumar",
+        company="coca_cola",
+        observation_id=target_obs_id,
+        reviewer="drbhatia",
+        review_reason="Verified against Annexure I p. 269 of SEBI DRHP"
+    )
+    assert res["review_state"] == "ACCEPTED"
+    assert res["reviewer"] == "drbhatia"
+
+    # Verify database was updated
+    cursor.execute("SELECT review_state, reviewer, review_reason FROM pre_ipo_observations WHERE observation_id = ?", (target_obs_id,))
+    row = cursor.fetchone()
+    assert row[0] == "ACCEPTED"
+    assert row[1] == "drbhatia"
+    assert "Verified against Annexure I" in row[2]
+
+    # Verify anonymous or blank review is rejected
+    with pytest.raises(ValueError, match="identified reviewer"):
+        accept_candidate_observation(conn, "profsurkumar", "coca_cola", target_obs_id, reviewer="", review_reason="reason")
+
+    with pytest.raises(ValueError, match="review_reason"):
+        accept_candidate_observation(conn, "profsurkumar", "coca_cola", target_obs_id, reviewer="drbhatia", review_reason="   ")
