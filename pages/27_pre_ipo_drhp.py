@@ -667,54 +667,82 @@ if selected_deal_key == "custom_upload":
 
         st.stop()
 else:
-    # HCCH Legacy Registry Disconnection (P0-01 Containment)
-    is_hcch = is_hcch_entity(selected_deal_key)
-    active_owner = st.session_state.get("authenticated_user", "drbhatia")
-    active_snapshot_id = st.session_state.get("pre_ipo_active_snapshot_id")
+    # HCCH Legacy Registry Disconnection & Dossier Boundary (P0-01 Containment)
+    active_owner = (
+        st.session_state.get("authenticated_user")
+        or st.session_state.get("username")
+        or (st.session_state.get("user", {}).get("username") if isinstance(st.session_state.get("user"), dict) else None)
+    )
+    if not active_owner:
+        st.warning("Please sign in to access Pre-IPO DRHP Intelligence.")
+        st.stop()
 
-    if is_hcch:
-        # HCCH resolves ONLY through a persistence-backed accepted evidence snapshot
-        from models.pre_ipo_capability_gate import _get_persisted_snapshot_data
-        persisted_snap = _get_persisted_snapshot_data(
-            snapshot_id=active_snapshot_id,
-            owner=active_owner,
-            company=selected_deal_key,
-        )
-        if not persisted_snap or persisted_snap.get("status") != "ACCEPTED_FOR_ANALYSIS":
-            render_html("""
-            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 24px; margin: 20px 0;">
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
-                    <span class="material-symbols-rounded" style="color: #f59e0b; font-size: 28px;">gavel</span>
-                    <h3 style="color: #f8fafc; margin: 0; font-size: 1.25rem;">HCCH Statutory Evidence Containment Active (P0-01)</h3>
-                </div>
-                <p style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; margin-bottom: 16px;">
-                    Hindustan Coca-Cola Beverages is strictly disconnected from the unreviewed built-in registry. 
-                    Under SEBI ICDR regulations and P0-01 containment, production ratio calculations, Dickinson stage classification, 
-                    and analytical deck export are <strong>blocked</strong> until an official filing snapshot is reviewed and accepted.
-                </p>
-                <div style="background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
-                    <div style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Next Required Action</div>
-                    <div style="color: #38bdf8; font-size: 0.88rem;">Open <strong>Tab 2 Provenance Ledger</strong> or upload the official 513-page DRHP to audit and accept source observations.</div>
-                </div>
+    active_snapshot_id = st.session_state.get("pre_ipo_active_snapshot_id")
+    active_snapshot_status = st.session_state.get("pre_ipo_active_snapshot_status", "UNREVIEWED")
+    active_snapshot_hash = st.session_state.get("pre_ipo_active_snapshot_hash")
+
+    from models.pre_ipo_dossier_resolver import resolve_dossier, DossierResolutionStatus
+    resolution = resolve_dossier(
+        selected_deal_key=selected_deal_key,
+        owner=active_owner,
+        snapshot_id=active_snapshot_id,
+        custom_dossier=dossier,
+    )
+
+    if resolution.status == DossierResolutionStatus.BLOCKED_EVIDENCE_NOT_ACCEPTED:
+        render_html("""
+        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 12px; padding: 24px; margin: 20px 0;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <span class="material-symbols-rounded" style="color: #f59e0b; font-size: 28px;">gavel</span>
+                <h3 style="color: #f8fafc; margin: 0; font-size: 1.25rem;">HCCH Statutory Evidence Containment Active (P0-01)</h3>
             </div>
-            """, unsafe_allow_html=True)
-            st.stop()
-        else:
-            snap_payload = persisted_snap.get("payload", {})
-            dossier = snap_payload.get("dossier")
-            if dossier is None:
-                st.warning("Accepted evidence snapshot does not contain an analyzed dossier. Re-run evidence intake.")
-                st.stop()
-    else:
-        dossier = get_legacy_dossier(selected_deal_key)
+            <p style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; margin-bottom: 16px;">
+                Hindustan Coca-Cola Beverages is strictly disconnected from the unreviewed built-in registry.
+                Under SEBI ICDR regulations and P0-01 containment, production ratio calculations, Dickinson stage classification,
+                and analytical deck export are <strong>blocked</strong> until an official filing snapshot is reviewed and accepted.
+            </p>
+            <div style="background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                <div style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Next Required Action</div>
+                <div style="color: #38bdf8; font-size: 0.88rem;">Open <strong>Tab 2 Provenance Ledger</strong> or upload the official 513-page DRHP to audit and accept source observations.</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+    elif resolution.status == DossierResolutionStatus.BLOCKED_EVIDENCE_DOSSIER_ADAPTER_UNAVAILABLE:
+        render_html(f"""
+        <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 24px; margin: 20px 0;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                <span class="material-symbols-rounded" style="color: #38bdf8; font-size: 28px;">construction</span>
+                <h3 style="color: #f8fafc; margin: 0; font-size: 1.25rem;">HCCH Evidence-to-Dossier Adapter Pending (P0-01)</h3>
+            </div>
+            <p style="color: #cbd5e1; font-size: 0.92rem; line-height: 1.6; margin-bottom: 16px;">
+                {resolution.reason}
+            </p>
+            <div style="background: rgba(15, 23, 42, 0.6); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                <div style="color: #94a3b8; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Next Required Action</div>
+                <div style="color: #38bdf8; font-size: 0.88rem;">{resolution.next_action}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.stop()
+
+    dossier = resolution.dossier
+    dossier_origin = resolution.origin
 
 # Evaluate analytical capability gate (PR 1 Containment)
 is_hcch = is_hcch_entity(selected_deal_key, getattr(dossier, "company_name", ""), getattr(dossier, "cin", ""))
-active_owner = st.session_state.get("authenticated_user", "drbhatia")
+active_owner = (
+    st.session_state.get("authenticated_user")
+    or st.session_state.get("username")
+    or (st.session_state.get("user", {}).get("username") if isinstance(st.session_state.get("user"), dict) else None)
+)
+if not active_owner:
+    st.warning("Please sign in to access Pre-IPO DRHP Intelligence.")
+    st.stop()
+
 active_snapshot_id = st.session_state.get("pre_ipo_active_snapshot_id")
 active_snapshot_status = st.session_state.get("pre_ipo_active_snapshot_status", "UNREVIEWED")
 active_snapshot_hash = st.session_state.get("pre_ipo_active_snapshot_hash")
-dossier_origin = "LEGACY_REGISTRY" if get_legacy_dossier(selected_deal_key) is not None else "PROCESSED_INTAKE"
 
 gate_decision = evaluate_capability_gate(
     owner=active_owner,
@@ -791,6 +819,8 @@ with col_act:
                 snapshot_hash=active_snapshot_hash,
                 result_snapshot_hash=active_snapshot_hash,
                 is_production=True,
+                owner=active_owner,
+                company=selected_deal_key,
                 wacc_result=wacc_calc,
                 reverse_dcf_result=dcf_calc,
                 decision_support_policy="NEUTRAL_EVIDENCE_BASED",

@@ -54,7 +54,7 @@ def test_fresh_migration(test_db_path):
     conn = sqlite3.connect(test_db_path)
     try:
         applied = apply_migrations(conn)
-        assert applied == [1, 2, 3], f"Expected [1, 2, 3], got {applied}"
+        assert applied == [1, 2, 3, 4], f"Expected [1, 2, 3, 4], got {applied}"
         
         # Verify schema journal
         journal = get_applied_migrations(conn)
@@ -103,7 +103,7 @@ def test_upgrade_from_001(test_db_path):
         
         # Upgrade
         applied = apply_migrations(conn)
-        assert applied == [2, 3]
+        assert applied == [2, 3, 4]
         
         journal = get_applied_migrations(conn)
         assert 2 in journal and 3 in journal
@@ -141,7 +141,7 @@ def test_upgrade_from_001_and_002(test_db_path):
         
         # Apply pending
         applied = apply_migrations(conn)
-        assert applied == [3]
+        assert applied == [3, 4]
         
         cols = _get_table_columns(conn, "pre_ipo_observations")
         assert "definition_id" in cols
@@ -155,7 +155,7 @@ def test_idempotent_rerun(test_db_path):
     conn = sqlite3.connect(test_db_path)
     try:
         applied1 = apply_migrations(conn)
-        assert applied1 == [1, 2, 3]
+        assert applied1 == [1, 2, 3, 4]
         
         # Second run should apply 0 migrations and succeed
         applied2 = apply_migrations(conn)

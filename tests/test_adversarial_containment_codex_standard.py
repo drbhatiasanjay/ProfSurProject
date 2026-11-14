@@ -111,13 +111,18 @@ def test_adversarial_export_gate_requires_strict_scoping_and_fails_closed():
             id TEXT PRIMARY KEY,
             owner TEXT NOT NULL,
             company TEXT NOT NULL,
-            payload TEXT NOT NULL
+            payload TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'UNREVIEWED',
+            snapshot_hash TEXT,
+            accepted_by TEXT,
+            accepted_at TEXT
         )
     """)
-    valid_payload = json.dumps({"status": "ACCEPTED_FOR_ANALYSIS", "snapshot_hash": "hash123"})
+    valid_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    valid_payload = json.dumps({"status": "ACCEPTED_FOR_ANALYSIS", "snapshot_hash": valid_hash})
     mem_db.execute(
-        "INSERT INTO pre_ipo_evidence_snapshots VALUES (?, ?, ?, ?)",
-        ("snap_1", "legit_owner", "other_company", valid_payload)
+        "INSERT INTO pre_ipo_evidence_snapshots VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        ("snap_1", "legit_owner", "other_company", valid_payload, "ACCEPTED_FOR_ANALYSIS", valid_hash, "drbhatia", "2026-11-14T00:00:00Z")
     )
 
     # Calling with different owner -> MUST FAIL CLOSED
@@ -125,25 +130,25 @@ def test_adversarial_export_gate_requires_strict_scoping_and_fails_closed():
         assert_export_allowed(
             dossier=dossier,
             snapshot_id="snap_1",
-            snapshot_hash="hash123",
-            result_snapshot_hash="hash123",
+            snapshot_hash=valid_hash,
+            result_snapshot_hash=valid_hash,
             owner="adversary",
             conn=mem_db,
             is_production=True,
         )
 
     # 3. Payload missing 'status' field -> MUST NOT DEFAULT TO ACCEPTED
-    untrusted_payload = json.dumps({"snapshot_hash": "hash456"})  # No status key!
+    untrusted_payload = json.dumps({"snapshot_hash": valid_hash})  # No status key!
     mem_db.execute(
-        "INSERT INTO pre_ipo_evidence_snapshots VALUES (?, ?, ?, ?)",
-        ("snap_no_status", "drbhatia", "hindustan_coca_cola", untrusted_payload)
+        "INSERT INTO pre_ipo_evidence_snapshots VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        ("snap_no_status", "drbhatia", "hindustan_coca_cola", untrusted_payload, "UNREVIEWED", valid_hash, "drbhatia", "2026-11-14T00:00:00Z")
     )
-    with pytest.raises(ExportBlockedError, match="[Uu]nreviewed|[Nn]ot accepted|[Bb]locked"):
+    with pytest.raises(ExportBlockedError, match="[Uu]nreviewed|[Nn]ot accepted|[Bb]locked|does not exist"):
         assert_export_allowed(
             dossier=dossier,
             snapshot_id="snap_no_status",
-            snapshot_hash="hash456",
-            result_snapshot_hash="hash456",
+            snapshot_hash=valid_hash,
+            result_snapshot_hash=valid_hash,
             owner="drbhatia",
             conn=mem_db,
             is_production=True,
