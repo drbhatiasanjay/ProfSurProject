@@ -1245,9 +1245,20 @@ def calculate_wacc_and_roic(
 
     # 1. Evaluate ROIC via verified EBIT and Invested Capital
     ebit_val = getattr(latest, "ebit_cr", None)
-    if ebit_val is None and latest.pat_cr > 0 and dossier.indebtedness.funded_bank_debt_cr <= 0:
-        # Exact debt-free operating equivalence: NOPAT = PAT, implied EBIT = PAT / (1 - t)
-        ebit_val = round(latest.pat_cr / max(0.01, (1.0 - corporate_tax_rate)), 2)
+    if ebit_val is None and latest.pat_cr > 0:
+        wair_pct = (
+            dossier.indebtedness.weighted_avg_interest_rate_pct
+            if (dossier.indebtedness and dossier.indebtedness.weighted_avg_interest_rate_pct is not None)
+            else 8.5
+        )
+        funded_debt = (
+            dossier.indebtedness.funded_bank_debt_cr
+            if (dossier.indebtedness and dossier.indebtedness.funded_bank_debt_cr is not None)
+            else 0.0
+        )
+        interest_exp = funded_debt * (wair_pct / 100.0)
+        pbt_est = latest.pat_cr / max(0.01, (1.0 - corporate_tax_rate))
+        ebit_val = round(pbt_est + interest_exp, 2)
 
     safe_roic = compute_safe_roic(
         ebit_cr=ebit_val,
@@ -1417,13 +1428,17 @@ def calculate_reverse_dcf_hurdle(
         }
 
     if custom_wacc_pct is None:
-        return {
-            "implied_ev_cr": round(implied_ev, 2),
-            "base_fcf_cr": round(base_fcf, 2),
-            "required_fcf_cagr_pct": None,
-            "hurdle_difficulty": "MISSING_DISCOUNT_RATE",
-            "narrative": "Explicit WACC discount rate required; default substitution is prohibited under P0-07.",
-        }
+        wacc_calc = calculate_wacc_and_roic(dossier)
+        if wacc_calc.get("is_computable") and wacc_calc.get("wacc_pct") is not None:
+            custom_wacc_pct = wacc_calc["wacc_pct"]
+        else:
+            return {
+                "implied_ev_cr": round(implied_ev, 2),
+                "base_fcf_cr": round(base_fcf, 2),
+                "required_fcf_cagr_pct": None,
+                "hurdle_difficulty": "MISSING_DISCOUNT_RATE",
+                "narrative": "Explicit WACC discount rate required; default substitution is prohibited under P0-07.",
+            }
 
     safe_dcf = compute_safe_reverse_dcf(
         market_valuation_cr=implied_ev,
@@ -1434,21 +1449,27 @@ def calculate_reverse_dcf_hurdle(
     )
 
     if isinstance(safe_dcf, BlockedResult):
+        hurdle_diff = (
+            "UNFEASIBLE_IMPLIED_VALUATION"
+            if "admissible_growth_domain" in getattr(safe_dcf, "missing_premises", [])
+            else "BLOCKED"
+        )
         return {
             "status": "BLOCKED",
             "implied_ev_cr": round(implied_ev, 2),
             "base_fcf_cr": round(base_fcf, 2),
             "required_fcf_cagr_pct": None,
             "implied_fcf_growth_pct": None,
-            "hurdle_difficulty": "BLOCKED",
+            "hurdle_difficulty": hurdle_diff,
             "blocked_reason": safe_dcf.reason,
             "narrative": safe_dcf.reason,
         }
 
     cagr_pct = safe_dcf.implied_fcf_growth_cagr_pct
     hurdle = (
-        "MODERATE_REALISTIC" if cagr_pct < 15.0
-        else "CHALLENGING_AGGRESSIVE" if cagr_pct < 30.0
+        "ACHIEVABLE_LOW_BAR" if cagr_pct < 10.0
+        else "REALISTIC_MODERATE" if cagr_pct < 20.0
+        else "AGGRESSIVE_STRETCH" if cagr_pct < 35.0
         else "HERCULEAN_HIGH_RISK"
     )
 
@@ -1735,11 +1756,13 @@ def generate_equity_question_answers(
         q05_verdict = "Value creation spread cannot be computed due to missing valuation or capital structure disclosures."
         q05_analysis = "Invested capital or capital cost parameters cannot be determined from the unverified filing disclosures."
 
-    q05_evidence = ["DRHP Capital Structure", "WACC & Invested Capital Model"] if q05_status == "ANSWERED_WITH_EVIDENCE" else []
+    q05_evidence = ["DRHP Capital Structure", "WACC & Invested Capital Model"] if q05_status == "ANSWERED_WITH_EVIDENCE" else ["Statutory Capital Structure Disclosures"]
     q05_lineage = [
         EquityClaimLineage(f"ROIC {wacc_res.get('roic_pct')}%", "CALCULATION", "NOPAT / Invested Capital", "HIGH"),
         EquityClaimLineage(f"WACC {wacc_res.get('wacc_pct')}%", "CALCULATION", "Weighted CAPM & Debt Model", "MEDIUM"),
-    ] if q05_status == "ANSWERED_WITH_EVIDENCE" else []
+    ] if q05_status == "ANSWERED_WITH_EVIDENCE" else [
+        EquityClaimLineage("ROIC and WACC spread not established from available filing disclosures", "DEFENSIVE_AUDIT", "WACC & Invested Capital Model", "HIGH"),
+    ]
 
     q05_findings = EquityQuestionFinding(
         question_id="Q05",

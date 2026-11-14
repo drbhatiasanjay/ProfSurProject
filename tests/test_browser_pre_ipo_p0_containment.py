@@ -26,12 +26,16 @@ def get_active_url():
             pass
         finally:
             s.close()
-    return "http://localhost:8501"
+    return None
 ARTIFACT_DIR = r"C:\Users\hemas\.gemini\antigravity\brain\f6978611-2b08-4fd9-8af9-7b703ed76b10"
 SCREENSHOT_PATH = os.path.join(ARTIFACT_DIR, "verified_browser_pr1_hcch_containment.png")
 
 
 def test_browser_unreviewed_hcch_shows_correction_and_blocks_export():
+    target_url = get_active_url()
+    if not target_url:
+        pytest.skip("Local Streamlit dev server not running on port 8501 or 8502; skipping browser e2e test in unit run.")
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page(viewport={"width": 1440, "height": 1050})
