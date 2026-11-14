@@ -10,7 +10,16 @@ Verifies that in an authenticated browser session:
 import os
 from pathlib import Path
 import pytest
-from playwright.sync_api import sync_playwright
+
+try:
+    from playwright.sync_api import sync_playwright
+except ImportError:
+    sync_playwright = None
+
+pytestmark = pytest.mark.skipif(
+    sync_playwright is None,
+    reason="Playwright is required for browser tests but is not installed in this environment"
+)
 
 import socket
 import subprocess

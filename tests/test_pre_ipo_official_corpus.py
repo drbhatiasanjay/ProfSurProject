@@ -26,6 +26,13 @@ from models.pre_ipo_document_indexer import (
 from models.pre_ipo_migrations import apply_migrations
 
 OFFICIAL_PDF_PATH = os.path.join("data", "drhp", "Hindustan_Coca_Cola_Holdings_DRHP.pdf")
+if not os.path.exists(OFFICIAL_PDF_PATH) and os.path.exists("Hindustan_Coca_Cola_Holdings_DRHP.pdf"):
+    OFFICIAL_PDF_PATH = "Hindustan_Coca_Cola_Holdings_DRHP.pdf"
+
+pytestmark = pytest.mark.skipif(
+    not os.path.exists(OFFICIAL_PDF_PATH),
+    reason="Official HCCH DRHP PDF is not present in this environment"
+)
 
 
 def test_official_drhp_identity_and_tamper_rejection():

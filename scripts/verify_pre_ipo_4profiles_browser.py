@@ -58,34 +58,46 @@ def verify_profile(page, username, password, role):
     print(f"\n[ACCEPTANCE] Testing profile: {username} ({role})...")
 
     # 1. Clear session and navigate to login
-    page.goto(f"{BASE_URL}/?logout=1", wait_until="networkidle")
-    time.sleep(1.0)
+    page.goto(f"{BASE_URL}/?logout=1&theme=dark", wait_until="networkidle", timeout=60000)
+    time.sleep(2.0)
 
-    # 2. Authenticate
-    identifier_input = page.locator("input[aria-label='Username or email']")
+    # 2. Authenticate with robust wait
+    identifier_input = page.locator('input[placeholder="username or user@domain.com"]')
     if identifier_input.count() == 0:
         identifier_input = page.locator("input[placeholder*='username']")
-    assert identifier_input.count() > 0, f"Login input missing for {username}"
+    if identifier_input.count() == 0:
+        identifier_input = page.locator("input[aria-label='Username or email']")
+    
+    identifier_input.wait_for(state="visible", timeout=30000)
     identifier_input.fill(username)
 
-    pw_input = page.locator("input[aria-label='Password']")
+    pw_input = page.locator("input[type='password']")
     if pw_input.count() == 0:
-        pw_input = page.locator("input[type='password']")
+        pw_input = page.locator("input[aria-label='Password']")
+    pw_input.wait_for(state="visible", timeout=15000)
     pw_input.fill(password)
 
-    page.locator("button:has-text('Sign In →')").click()
-    page.wait_for_load_state("networkidle")
-    time.sleep(2.5)
+    submit_btn = page.locator("[data-testid='stFormSubmitButton'] button").first
+    if submit_btn.count() == 0:
+        submit_btn = page.locator("button:has-text('Sign In →')").first
+    submit_btn.click()
 
-    # 3. Navigate to Page 27 Pre-IPO DRHP Intelligence
-    nav_link = page.locator("[data-testid='stSidebarNav'] a:has-text('Pre-IPO DRHP Intelligence')")
-    if nav_link.count() > 0:
-        nav_link.click()
-    else:
-        # Fallback click on sidebar navigation button
-        page.locator("text='Pre-IPO DRHP Intelligence'").first.click()
-    page.wait_for_load_state("networkidle")
-    time.sleep(2.5)
+    # 3. Wait for sidebar navigation
+    page.wait_for_selector("[data-testid='stSidebarNav']", timeout=35000)
+    time.sleep(2.0)
+
+    # Handle sidebar view more button if present
+    view_more = page.locator("[data-testid='stSidebarNavViewButton']")
+    if view_more.count() > 0 and view_more.is_visible():
+        view_more.click()
+        time.sleep(1.0)
+
+    # 4. Navigate to Page 27 Pre-IPO DRHP Intelligence
+    nav_link = page.locator("[data-testid='stSidebarNav'] a:has-text('Pre-IPO DRHP Intelligence')").first
+    nav_link.scroll_into_view_if_needed()
+    nav_link.click()
+    page.wait_for_load_state("networkidle", timeout=35000)
+    time.sleep(4.0)
 
     # 4. Verify Page 27 loaded
     page_content = page.content()
