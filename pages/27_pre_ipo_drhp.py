@@ -18,7 +18,7 @@ import streamlit as st
 from utils.html_blocks import render_html
 import pandas as pd
 import plotly.graph_objects as go
-from models.pre_ipo_data import PRE_IPO_REGISTRY
+from models.pre_ipo_data import get_legacy_dossier
 from models.pre_ipo_ingest import PreIPOIngestionEngine, assess_analysis_eligibility, ExtractionState
 from models.pre_ipo_capability_gate import (
     CapabilityType,
@@ -417,7 +417,7 @@ if selected_deal_key.startswith("private-"):
     if "coca" in selected_deal_key.lower() or "coca" in prof_label:
         selected_deal_key = "hindustan_coca_cola"
         st.session_state["pre_ipo_deal_selector"] = "hindustan_coca_cola"
-    elif selected_deal_key in PRE_IPO_REGISTRY:
+    elif get_legacy_dossier(selected_deal_key) is not None:
         pass
     else:
         st.info(":material/info: This private company evidence dossier is reviewed under **Facts & evidence review**.")
@@ -699,9 +699,13 @@ else:
             """, unsafe_allow_html=True)
             st.stop()
         else:
-            dossier = PRE_IPO_REGISTRY[selected_deal_key]
+            snap_payload = persisted_snap.get("payload", {})
+            dossier = snap_payload.get("dossier")
+            if dossier is None:
+                st.warning("Accepted evidence snapshot does not contain an analyzed dossier. Re-run evidence intake.")
+                st.stop()
     else:
-        dossier = PRE_IPO_REGISTRY[selected_deal_key]
+        dossier = get_legacy_dossier(selected_deal_key)
 
 # Evaluate analytical capability gate (PR 1 Containment)
 is_hcch = is_hcch_entity(selected_deal_key, getattr(dossier, "company_name", ""), getattr(dossier, "cin", ""))
@@ -709,7 +713,7 @@ active_owner = st.session_state.get("authenticated_user", "drbhatia")
 active_snapshot_id = st.session_state.get("pre_ipo_active_snapshot_id")
 active_snapshot_status = st.session_state.get("pre_ipo_active_snapshot_status", "UNREVIEWED")
 active_snapshot_hash = st.session_state.get("pre_ipo_active_snapshot_hash")
-dossier_origin = "LEGACY_REGISTRY" if selected_deal_key in PRE_IPO_REGISTRY else "PROCESSED_INTAKE"
+dossier_origin = "LEGACY_REGISTRY" if get_legacy_dossier(selected_deal_key) is not None else "PROCESSED_INTAKE"
 
 gate_decision = evaluate_capability_gate(
     owner=active_owner,

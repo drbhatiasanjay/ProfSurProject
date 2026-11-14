@@ -169,20 +169,7 @@ def evaluate_capability_gate(
             blocked_metrics=["valuation", "wacc", "roic", "dcf", "recommendations", "board_deck"],
         )
 
-    # 3. Recommendation / Approval ban (P0-08)
-    if capability == CapabilityType.RECOMMENDATIONS:
-        return CapabilityDecision(
-            allowed=False,
-            capability=capability,
-            status="BLOCKED",
-            reason="Automated investment committee approvals, agency credit ratings, and definitive anchor recommendations are strictly prohibited under P0-08.",
-            next_action="Refer to factual diligence observations, risk factor catalog, and neutral decision support summary only.",
-            snapshot_id=snapshot_id,
-            snapshot_hash=snapshot_hash,
-            blocked_metrics=["ic_verdict", "rating_grade", "recommendation_action"],
-        )
-
-    # 4. Persistence verification: never trust caller-supplied snapshot_status in production
+    # 3. Persistence verification: never trust caller-supplied snapshot_status in production
     effective_status = snapshot_status
     if is_production and snapshot_id:
         persisted = _get_persisted_snapshot_data(snapshot_id, owner, company, conn=conn)
@@ -209,6 +196,19 @@ def evaluate_capability_gate(
             snapshot_id=snapshot_id,
             snapshot_hash=snapshot_hash,
             blocked_metrics=["*"],
+        )
+
+    # 4. Recommendation / Approval ban (P0-08)
+    if capability == CapabilityType.RECOMMENDATIONS:
+        return CapabilityDecision(
+            allowed=False,
+            capability=capability,
+            status="BLOCKED",
+            reason="Automated investment committee approvals, agency credit ratings, and definitive anchor recommendations are strictly prohibited under P0-08.",
+            next_action="Refer to factual diligence observations, risk factor catalog, and neutral decision support summary only.",
+            snapshot_id=snapshot_id,
+            snapshot_hash=snapshot_hash,
+            blocked_metrics=["ic_verdict", "rating_grade", "recommendation_action"],
         )
 
     # 5. Unpriced book-building circuit breaker (P0-03, P0-07)

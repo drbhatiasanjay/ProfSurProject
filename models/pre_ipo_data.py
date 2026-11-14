@@ -6,7 +6,7 @@ Contains verified SEBI ICDR 2018 ground truth and institutional underwriting dat
 3. Swiggy Ltd. (DRHP September 2024 · ₹4,499 Cr Fresh Issue · Quick Commerce Growth)
 4. Tata Technologies Ltd. (DRHP November 2023 · 100% OFS · Pristine Debt-Free ER&D)
 """
-from typing import Dict
+from typing import Dict, Optional
 from models.pre_ipo_schema import (
     PreIPODealDossier,
     FinancialYearMetric,
@@ -1592,3 +1592,15 @@ coca.cmie_crosswalk = [
     CMIECrosswalkRecord("Cash & Bank Balances", "CASH_BANK", "Cash and liquid mutual fund treasury investments", "Rs. 4,319.61 Mn (FY24)", "Rs. 431.96 Cr", "EXACT_MATCH", "Unencumbered cash and bank balances"),
     CMIECrosswalkRecord("Net Worth (Shareholders' Funds)", "NET_WORTH", "Paid-up equity share capital plus reserves", "Rs. 89,012.71 Mn (FY24)", "Rs. 8,901.27 Cr", "EXACT_MATCH", "Exact balance sheet equity line"),
 ]
+
+
+def get_legacy_dossier(deal_key: str) -> Optional[PreIPODealDossier]:
+    """
+    Retrieves legacy exemplar dossier for non-HCCH deals.
+    Fail-closed: HCCH is strictly disconnected from the legacy registry and returns None.
+    """
+    from models.pre_ipo_capability_gate import is_hcch_entity
+    if is_hcch_entity(deal_key):
+        return None
+    return PRE_IPO_REGISTRY.get(deal_key)
+
