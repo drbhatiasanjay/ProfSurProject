@@ -14,6 +14,8 @@ Comprehensive Institutional Architecture adhering to:
 - Investment Committee (IC) Deal Memo & Prescriptive Underwriting Verdict
 - One-Click 16:9 Vector Board Pitch Deck Generator
 """
+import os
+import sys
 import streamlit as st
 from utils.html_blocks import render_html
 import pandas as pd
@@ -681,6 +683,23 @@ else:
     active_snapshot_status = st.session_state.get("pre_ipo_active_snapshot_status", "UNREVIEWED")
     active_snapshot_hash = st.session_state.get("pre_ipo_active_snapshot_hash")
 
+    is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+    if is_demo_mode and is_hcch_entity(selected_deal_key) and not active_snapshot_id:
+        from models.pre_ipo_demo_fixture import seed_hcch_demo_fixture
+        try:
+            from db import get_connection
+            _conn = get_connection()
+            fixture = seed_hcch_demo_fixture(owner=active_owner, company=selected_deal_key, conn=_conn)
+            active_snapshot_id = fixture["snapshot_id"]
+            active_snapshot_status = fixture["status"]
+            active_snapshot_hash = fixture["snapshot_hash"]
+            st.session_state["pre_ipo_active_snapshot_id"] = active_snapshot_id
+            st.session_state["pre_ipo_active_snapshot_status"] = active_snapshot_status
+            st.session_state["pre_ipo_active_snapshot_hash"] = active_snapshot_hash
+            _conn.close()
+        except Exception:
+            pass
+
     from models.pre_ipo_dossier_resolver import resolve_dossier, DossierResolutionStatus
     resolution = resolve_dossier(
         selected_deal_key=selected_deal_key,
@@ -728,6 +747,24 @@ else:
 
     dossier = resolution.dossier
     dossier_origin = resolution.origin
+    if resolution.snapshot_hash:
+        active_snapshot_hash = resolution.snapshot_hash
+        st.session_state["pre_ipo_active_snapshot_hash"] = resolution.snapshot_hash
+
+    # Demo Fixture Warning Banner (Phase G Requirement)
+    if dossier_origin == "DEMO_FIXTURE" or (is_hcch_entity(selected_deal_key) and is_demo_mode):
+        render_html("""
+        <div style="background: rgba(239, 68, 68, 0.12); border: 2px solid #ef4444; border-radius: 10px; padding: 16px 20px; margin: 15px 0;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                <span class="material-symbols-rounded" style="color: #ef4444; font-size: 24px;">warning</span>
+                <strong style="color: #f87171; font-size: 1.05rem; letter-spacing: 0.04em;">DEMO REVIEW FIXTURE — NOT OFFICIAL ACCEPTED EVIDENCE</strong>
+            </div>
+            <div style="color: #fca5a5; font-size: 0.88rem; line-height: 1.45;">
+                This analytical view is generated from an isolated demonstration review fixture for interface evaluation.
+                It has NOT been certified by an authorized human reviewer under SEBI ICDR regulations.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # Evaluate analytical capability gate (PR 1 Containment)
 is_hcch = is_hcch_entity(selected_deal_key, getattr(dossier, "company_name", ""), getattr(dossier, "cin", ""))
@@ -749,6 +786,7 @@ gate_decision = evaluate_capability_gate(
     company=selected_deal_key,
     capability=CapabilityType.FINANCIAL_ANALYSIS,
     snapshot_id=active_snapshot_id,
+    snapshot_hash=active_snapshot_hash,
     snapshot_status=active_snapshot_status,
     origin=dossier_origin,
     is_production=True,
@@ -802,15 +840,17 @@ with col_act:
         st.caption(":material/block: P0-01 Containment Active")
     else:
         try:
+            is_deal_unpriced = bool(dossier and (not dossier.total_issue_size_cr or dossier.total_issue_size_cr <= 0))
+            is_wacc_blocked = bool((is_hcch and not gate_decision.allowed) or is_deal_unpriced)
             wacc_calc = calculate_wacc_and_roic(
                 dossier,
-                is_blocked=bool(is_hcch and not gate_decision.allowed),
-                blocked_reason="P0-01 Containment active: awaiting official DRHP review and acceptance."
+                is_blocked=is_wacc_blocked,
+                blocked_reason="BLOCKED_MISSING_REVIEWED_PRICE_BAND: Unpriced DRHP" if is_deal_unpriced else "P0-01 Containment active: awaiting official DRHP review and acceptance."
             )
             dcf_calc = calculate_reverse_dcf_hurdle(
                 dossier,
-                is_blocked=bool(is_hcch and not gate_decision.allowed),
-                blocked_reason="P0-01 Containment active: awaiting official DRHP review and acceptance."
+                is_blocked=is_wacc_blocked,
+                blocked_reason="BLOCKED_MISSING_REVIEWED_PRICE_BAND: Unpriced DRHP" if is_deal_unpriced else "P0-01 Containment active: awaiting official DRHP review and acceptance."
             )
             deck_bytes = generate_pre_ipo_board_deck(
                 dossier=dossier,
@@ -1768,15 +1808,17 @@ with tab_workpapers:
         render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
         render_html('<div class="bento-subtitle">Economic Value Creation & Reverse DCF Sizing</div>', unsafe_allow_html=True)
         render_html('<div class="bento-title">ROIC vs WACC Spread & Required Growth Hurdle</div>', unsafe_allow_html=True)
+        is_deal_unpriced = bool(dossier and (not dossier.total_issue_size_cr or dossier.total_issue_size_cr <= 0))
+        is_wacc_blocked = bool((is_hcch and not gate_decision.allowed) or is_deal_unpriced)
         wacc_res = calculate_wacc_and_roic(
             dossier,
-            is_blocked=bool(is_hcch and not gate_decision.allowed),
-            blocked_reason="Unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
+            is_blocked=is_wacc_blocked,
+            blocked_reason="BLOCKED_MISSING_REVIEWED_PRICE_BAND: Unpriced DRHP" if is_deal_unpriced else ("Unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else ""),
         )
         rev_dcf = calculate_reverse_dcf_hurdle(
             dossier,
-            is_blocked=bool(is_hcch and not gate_decision.allowed),
-            blocked_reason="Unpriced / unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
+            is_blocked=is_wacc_blocked,
+            blocked_reason="BLOCKED_MISSING_REVIEWED_PRICE_BAND: Unpriced DRHP" if is_deal_unpriced else ("Unpriced / unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else ""),
         )
 
         col_w1, col_w2, col_w3 = st.columns(3)

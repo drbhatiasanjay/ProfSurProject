@@ -510,24 +510,28 @@ class DocumentIndexer:
         if conn and observations:
             for obs in observations:
                 obs_id = f"obs_{obs['metric_id']}_{obs['period']}_{doc_index.source_id}"
+                prov = {
+                    "physical_page": obs.get("physical_page"),
+                    "printed_page": obs.get("printed_page"),
+                    "table_id": obs.get("table_id"),
+                    "row_label": obs.get("row_label"),
+                    "raw_text": obs.get("raw_text"),
+                    "origin": "DRHP_EXTRACTION",
+                }
                 conn.execute("""
                     INSERT OR REPLACE INTO pre_ipo_observations (
                         owner, company, observation_id, revision, source_id, entity,
                         metric_id, period, duration, basis, framework, currency, unit,
-                        value, presence, review_state, physical_page, printed_page,
-                        table_id, row_label, raw_text, origin
+                        value, presence, review_state, provenance_json
                     ) VALUES (
                         ?, ?, ?, 1, ?, ?,
                         ?, ?, '12M', 'STANDALONE_OR_CONSOL', 'IND_AS', 'INR', ?,
-                        ?, ?, 'UNREVIEWED', ?, ?,
-                        ?, ?, ?, 'DRHP_EXTRACTION'
+                        ?, ?, 'UNREVIEWED', ?
                     )
                 """, (
                     owner, company, obs_id, doc_index.source_id, obs["entity"],
                     obs["metric_id"], obs["period"], obs["unit"],
-                    obs["value"], obs["presence"],
-                    obs["physical_page"], obs["printed_page"],
-                    obs["table_id"], obs["row_label"], obs["raw_text"]
+                    obs["value"], obs["presence"], json.dumps(prov)
                 ))
             conn.commit()
 

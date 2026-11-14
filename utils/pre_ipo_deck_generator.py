@@ -427,13 +427,19 @@ def generate_pre_ipo_board_deck(
         cfo_pat = round(latest.cfo_cr / max(0.1, latest.pat_cr), 2)
         cfo_status_str = f"Cash Conversion: Latest CFO of Rs. {latest.cfo_cr:,.1f} Cr delivers {cfo_pat}x PAT conversion and fully covers Rs. {latest.capex_cr:,.1f} Cr capex"
 
-    p = tf_c4.add_paragraph()
-    p.text = (
-        f"• {cfo_status_str}. | "
+    wc_text = (
         f"Working Capital: CCC {dossier.working_capital.cash_conversion_cycle_days:.0f} days "
-        f"(DSO: {dossier.working_capital.debtor_days_dso:.0f}d, DIO: {dossier.working_capital.inventory_days_dio:.0f}d, DPO: {dossier.working_capital.creditor_days_dpo:.0f}d) | "
-        f"Forensic M-Score: {dossier.beneish_forensics.m_score if (dossier.beneish_forensics and dossier.beneish_forensics.m_score is not None) else 'N/A (Missing line-items)'}."
+        f"(DSO: {dossier.working_capital.debtor_days_dso:.0f}d, DIO: {dossier.working_capital.inventory_days_dio:.0f}d, DPO: {dossier.working_capital.creditor_days_dpo:.0f}d)"
+        if dossier.working_capital
+        else "Working Capital: Disclosed in statutory Annexures"
     )
+    m_score_text = (
+        f"Forensic M-Score: {dossier.beneish_forensics.m_score}"
+        if (dossier.beneish_forensics and dossier.beneish_forensics.m_score is not None)
+        else "Forensic M-Score: N/A (Missing line-items)"
+    )
+    p = tf_c4.add_paragraph()
+    p.text = f"• {cfo_status_str}. | {wc_text} | {m_score_text}."
     p.font.size = Pt(9.5)
     p.font.color.rgb = text_white
 

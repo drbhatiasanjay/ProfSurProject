@@ -29,13 +29,15 @@ def test_migrations_applied_and_journaled(temp_db):
     assert 2 in newly_applied
     assert 3 in newly_applied
     assert 4 in newly_applied
+    assert 5 in newly_applied
 
     applied = get_applied_versions(conn)
-    assert len(applied) == 4
+    assert len(applied) == 5
     assert applied[1]["name"] == "001_baseline_evidence_schema"
     assert applied[2]["name"] == "002_lifecycle_and_multidoc_extensions"
     assert applied[3]["name"] == "003_evidence_contract_normalization"
     assert applied[4]["name"] == "004_legacy_evidence_origin_remediation"
+    assert applied[5]["name"] == "005_hcch_e2e_evidence_contract"
 
     # Verify additive tables exist
     tables = [row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]
@@ -47,6 +49,10 @@ def test_migrations_applied_and_journaled(temp_db):
     assert "pre_ipo_observations" in tables
     assert "pre_ipo_dependencies" in tables
     assert "pre_ipo_tombstones" in tables
+    assert "pre_ipo_extraction_runs" in tables
+    assert "pre_ipo_page_artifacts" in tables
+    assert "pre_ipo_candidate_facts" in tables
+    assert "pre_ipo_review_actions" in tables
 
     # Verify additive columns exist
     prof_cols = [r[1] for r in conn.execute("PRAGMA table_info(pre_ipo_company_profiles)").fetchall()]

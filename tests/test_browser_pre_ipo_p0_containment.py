@@ -137,10 +137,15 @@ def test_browser_unreviewed_hcch_containment_isolated():
             page.wait_for_load_state("networkidle", timeout=35000)
             page.wait_for_timeout(3000)
 
-            # Select Hindustan Coca-Cola
-            selectbox = page.locator("[data-testid='stSelectbox']").first
-            selectbox.scroll_into_view_if_needed()
-            selectbox.click()
+            # Select Hindustan Coca-Cola from Pre-IPO Deal Dossier selectbox
+            deal_box = page.locator("div[data-testid='stSelectbox']").filter(has_text="Active Pre-IPO Deal Dossier")
+            if deal_box.count() > 0:
+                deal_box.scroll_into_view_if_needed()
+                deal_box.locator("div[role='combobox'], input").first.click()
+            else:
+                selectbox = page.locator("[data-testid='stSelectbox']").first
+                selectbox.scroll_into_view_if_needed()
+                selectbox.click()
             page.wait_for_timeout(1000)
             coca_option = page.locator("li:has-text('Hindustan Coca-Cola')").first
             if coca_option.count() > 0 and coca_option.is_visible():

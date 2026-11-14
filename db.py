@@ -103,9 +103,13 @@ def _register_sqlite_stats_functions(conn):
 
 
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(get_db_path(), check_same_thread=False)
+    conn = sqlite3.connect(get_db_path(), check_same_thread=False, timeout=30.0)
     conn.execute("PRAGMA foreign_keys=ON")
-    conn.execute("PRAGMA busy_timeout=5000")
+    conn.execute("PRAGMA busy_timeout=30000")
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except Exception:
+        pass
     _register_sqlite_stats_functions(conn)
     return conn
 

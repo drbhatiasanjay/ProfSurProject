@@ -124,7 +124,14 @@ def _get_persisted_snapshot_data(
             return None
 
         # Status validation: Only ACCEPTED_FOR_ANALYSIS is accepted (generic ACCEPTED is rejected)
-        if rel_status == "ACCEPTED_FOR_ANALYSIS":
+        # In demo-fixture mode (PROFSUR_DEMO_FIXTURE_MODE=1), DEMO_ACCEPTED_TEST_ONLY is also authorized
+        import os
+        is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+        allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
+        if is_demo_mode:
+            allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")
+
+        if rel_status in allowed_statuses:
             if not is_valid_hex_sha256(rel_hash):
                 return None
             if not rel_by.strip():
@@ -262,7 +269,13 @@ def evaluate_capability_gate(
         else:
             snapshot_hash = persisted_hash
 
-        if effective_status != "ACCEPTED_FOR_ANALYSIS":
+        import os
+        is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+        allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
+        if is_demo_mode:
+            allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")
+
+        if effective_status not in allowed_statuses:
             return CapabilityDecision(
                 allowed=False,
                 capability=capability,
@@ -292,7 +305,7 @@ def evaluate_capability_gate(
         return CapabilityDecision(
             allowed=False,
             capability=capability,
-            status="BLOCKED",
+            status="BLOCKED_MISSING_REVIEWED_PRICE_BAND",
             reason="Unpriced DRHP with undisclosed issue price under SEBI ICDR 2018 Regulation 26(1). Valuation, WACC, and reverse DCF hurdles cannot be computed without accepted price.",
             next_action="Utilize interactive scenario pricing sandbox or await RHP book-building price band disclosure.",
             snapshot_id=snapshot_id,
@@ -359,11 +372,17 @@ def assert_export_allowed(
             )
 
         persisted_status = persisted.get("status")
-        # FAIL-CLOSED: Snapshot status must be strictly ACCEPTED_FOR_ANALYSIS (never generic ACCEPTED)
-        if persisted_status != "ACCEPTED_FOR_ANALYSIS":
+        # FAIL-CLOSED: Snapshot status must be strictly ACCEPTED_FOR_ANALYSIS (or DEMO_ACCEPTED_TEST_ONLY in fixture mode)
+        import os
+        is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+        allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
+        if is_demo_mode:
+            allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")
+
+        if persisted_status not in allowed_statuses:
             raise ExportBlockedError(
                 f"Export blocked: snapshot '{snapshot_id}' in persistence has status '{persisted_status or 'UNREVIEWED'}'. "
-                "Only ACCEPTED_FOR_ANALYSIS snapshots may be exported."
+                f"Only {allowed_statuses} snapshots may be exported."
             )
 
         persisted_hash = persisted.get("snapshot_hash")
@@ -386,9 +405,15 @@ def assert_export_allowed(
             )
 
     # 3. Caller status sanity check
-    if snapshot_status and snapshot_status != "ACCEPTED_FOR_ANALYSIS":
+    import os
+    is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+    allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
+    if is_demo_mode:
+        allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")
+
+    if snapshot_status and snapshot_status not in allowed_statuses:
         raise ExportBlockedError(
-            f"Export blocked: snapshot status is '{snapshot_status}'. Only ACCEPTED_FOR_ANALYSIS data may be exported."
+            f"Export blocked: snapshot status is '{snapshot_status}'. Only {allowed_statuses} data may be exported."
         )
 
     # 4. Hash verification if hashes are supplied

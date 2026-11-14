@@ -311,6 +311,43 @@ def apply_migrations(conn: sqlite3.Connection) -> List[int]:
             conn.rollback()
             raise
 
+    # 6. Migration 5: HCCH End-to-End Evidence Contract
+    if 5 not in applied_records:
+        m5_file = MIGRATIONS_DIR / "005_hcch_e2e_evidence_contract.sql"
+        if not m5_file.exists():
+            raise RuntimeError("Required migration file 005_hcch_e2e_evidence_contract.sql missing from disk.")
+        sql = m5_file.read_text(encoding="utf-8")
+        chk = compute_checksum(sql)
+        conn.execute("BEGIN IMMEDIATE")
+        try:
+            # Safely handle pre-existing baseline extraction_runs table
+            run_cols = _get_table_columns(conn, "pre_ipo_extraction_runs")
+            if run_cols:
+                cols_to_add = [
+                    ("source_id", "TEXT"),
+                    ("document_sha256", "TEXT"),
+                    ("total_pages", "INTEGER"),
+                    ("pages_indexed", "INTEGER"),
+                    ("pages_requiring_ocr", "INTEGER NOT NULL DEFAULT 0"),
+                    ("status", "TEXT"),
+                    ("extractor_version", "TEXT"),
+                    ("created_at", "TEXT"),
+                ]
+                for col_name, col_type in cols_to_add:
+                    if col_name not in run_cols:
+                        conn.execute(f"ALTER TABLE pre_ipo_extraction_runs ADD COLUMN {col_name} {col_type}")
+
+            _execute_sql_script_transactional(conn, sql)
+            conn.execute(
+                "INSERT INTO pre_ipo_schema_migrations(version, name, checksum, status) VALUES(?, ?, ?, ?)",
+                (5, "005_hcch_e2e_evidence_contract", chk, "APPLIED")
+            )
+            conn.commit()
+            newly_applied.append(5)
+        except Exception:
+            conn.rollback()
+            raise
+
     return newly_applied
 
 

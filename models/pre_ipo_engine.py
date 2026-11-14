@@ -1070,6 +1070,8 @@ def generate_anchor_lockin_calendar(
         exchange_recon = {"is_reconciled": False, "circular_ref": "PENDING_EXCHANGE_CIRCULAR", "exchange": "NSE"}
 
     total_issue_cr = dossier.total_issue_size_cr
+    if total_issue_cr is None or total_issue_cr <= 0:
+        return []
     cap = dossier.cap_table
     anchor_pct = cap.anchor_portion_pct if cap else 30.0
     public_post_pct = cap.public_holding_post_pct if cap else 25.0
@@ -1790,20 +1792,25 @@ def generate_equity_question_answers(
 
     # Q06: Can shareholders trust management and control?
     gov = dossier.governance
+    pledge_pct = gov.promoter_pledge_pct if gov and gov.promoter_pledge_pct is not None else 0.0
+    rpt_pct = gov.related_party_transactions_pct_rev if gov and gov.related_party_transactions_pct_rev is not None else 0.0
+    indep_pct = gov.independent_directors_pct if gov and gov.independent_directors_pct is not None else 50.0
+    contingent_pct = gov.contingent_liabilities_pct_networth if gov and gov.contingent_liabilities_pct_networth is not None else 0.0
+
     q06_findings = EquityQuestionFinding(
         question_id="Q06",
         title="Can shareholders trust management and control?",
         status="ANSWERED_WITH_EVIDENCE",
-        direct_verdict=f"Promoter pledge is {gov.promoter_pledge_pct}%; related party transactions represent {gov.related_party_transactions_pct_rev}% of revenue.",
+        direct_verdict=f"Promoter pledge is {pledge_pct}%; related party transactions represent {rpt_pct}% of revenue.",
         detailed_analysis=(
-            f"Board composition features {gov.independent_directors_pct}% independent directors. "
-            f"Contingent liabilities equal {gov.contingent_liabilities_pct_networth}% of net worth. "
+            f"Board composition features {indep_pct}% independent directors. "
+            f"Contingent liabilities equal {contingent_pct}% of net worth. "
             f"Ownership structure shows clear promoter continuity with statutory 18-month lock-in on minimum contribution."
         ),
         evidence_sources=["DRHP Section VI: Management & Promoters", "Related Party Transactions Note"],
         claim_lineage=[
-            EquityClaimLineage(f"Promoter pledge {gov.promoter_pledge_pct}%", "ISSUER_DISCLOSURE", "DRHP Capital Structure", "HIGH"),
-            EquityClaimLineage(f"RPT % of revenue {gov.related_party_transactions_pct_rev}%", "CALCULATION", "RPT Note / Revenue", "HIGH"),
+            EquityClaimLineage(f"Promoter pledge {pledge_pct}%", "ISSUER_DISCLOSURE", "DRHP Capital Structure", "HIGH"),
+            EquityClaimLineage(f"RPT % of revenue {rpt_pct}%", "CALCULATION", "RPT Note / Revenue", "HIGH"),
         ],
         alternative_explanations=["Related party transactions involve standard shared corporate services at arm's length."],
         limitations_and_uncertainties=["Litigation outcomes against promoters in lower courts carry uncertain timing."],
@@ -1823,15 +1830,16 @@ def generate_equity_question_answers(
     obj = dossier.objects_of_offer
     fresh_val = dossier.fresh_issue_cr
     ofs_val = dossier.ofs_cr
-    if not dossier.is_price_disclosed or (dossier.total_issue_size_cr <= 0 and dossier.offered_shares_count):
-        q07_verdict = f"Issue is 100% OFS ({dossier.offered_shares_count:,} Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders."
+    if not dossier.is_price_disclosed or ((dossier.total_issue_size_cr or 0) <= 0 and dossier.offered_shares_count):
+        shares_str = f"{dossier.offered_shares_count:,}" if dossier.offered_shares_count is not None else "[●]"
+        q07_verdict = f"Issue is 100% OFS ({shares_str} Equity Shares; Value [●] Undisclosed) providing secondary liquidity to selling shareholders."
         q07_analysis = (
-            f"The entire offering of {dossier.offered_shares_count:,} equity shares comprises an Offer for Sale (OFS) "
+            f"The entire offering of {shares_str} equity shares comprises an Offer for Sale (OFS) "
             "by selling shareholders. The company receives nil proceeds from the offer. "
             "Under statutory SEBI ICDR 2018 regulations, aggregate offer value is left blank [●] pending RHP book-building."
         )
         q07_lineage = [
-            EquityClaimLineage(f"100% OFS Structure ({dossier.offered_shares_count:,} shares)", "ISSUER_DISCLOSURE", "DRHP Cover Page", "HIGH"),
+            EquityClaimLineage(f"100% OFS Structure ({shares_str} shares)", "ISSUER_DISCLOSURE", "DRHP Cover Page", "HIGH"),
             EquityClaimLineage("Company proceeds: Nil (Pure OFS)", "STATUTORY_RULE", "Objects of Offer", "HIGH"),
         ]
     elif dossier.total_issue_size_cr and dossier.total_issue_size_cr > 0:

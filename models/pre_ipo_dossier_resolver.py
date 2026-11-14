@@ -8,11 +8,13 @@ and domain analytical dossiers:
 - Preserves demonstration issuers labeled explicitly as legacy demonstration data
 """
 
+import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Any, Dict
 from models.pre_ipo_capability_gate import is_hcch_entity, _get_persisted_snapshot_data
 from models.pre_ipo_data import get_legacy_dossier
+from models.pre_ipo_dossier_adapter import build_hcch_dossier_from_snapshot
 
 
 class DossierResolutionStatus(str, Enum):
@@ -68,28 +70,71 @@ def resolve_dossier(
                 snapshot_id=snapshot_id,
             )
 
+        is_demo_mode = os.environ.get("PROFSUR_DEMO_FIXTURE_MODE") == "1" or os.environ.get("ENVIRONMENT") == "demo"
+        allowed_statuses = {"ACCEPTED_FOR_ANALYSIS"}
+        if is_demo_mode:
+            allowed_statuses.add("DEMO_ACCEPTED_TEST_ONLY")
+
         persisted = _get_persisted_snapshot_data(snapshot_id, owner, selected_deal_key, conn=conn)
-        if not persisted or persisted.get("status") != "ACCEPTED_FOR_ANALYSIS":
+        if not persisted or persisted.get("status") not in allowed_statuses:
             return DossierResolution(
                 status=DossierResolutionStatus.BLOCKED_EVIDENCE_NOT_ACCEPTED,
                 dossier=None,
                 origin="BLOCKED",
                 reason=(
                     f"Evidence snapshot '{snapshot_id}' for HCCH is unreviewed or in status '{persisted.get('status') if persisted else 'NOT_FOUND'}'. "
-                    "Only ACCEPTED_FOR_ANALYSIS snapshots are eligible for analytical processing."
+                    f"Only {allowed_statuses} snapshots are eligible for analytical processing."
                 ),
                 next_action="Audit and accept all candidate observations in Tab 2 Provenance Ledger.",
                 snapshot_id=snapshot_id,
             )
 
-        # Snapshot is accepted, but evidence-to-dossier analytical adapter is not yet implemented
+        # Snapshot is accepted: call typed adapter to build domain dossier strictly from bound observations
+        db_conn = conn
+        close_after = False
+        if db_conn is None:
+            try:
+                from db import get_connection
+                db_conn = get_connection()
+                close_after = True
+            except Exception:
+                db_conn = None
+
+        if db_conn is not None:
+            try:
+                build_res = build_hcch_dossier_from_snapshot(
+                    snapshot_id=snapshot_id,
+                    authenticated_owner=owner,
+                    company=selected_deal_key,
+                    conn=db_conn,
+                    is_demo_fixture=is_demo_mode,
+                )
+                if build_res.success and build_res.dossier is not None:
+                    origin_label = "DEMO_FIXTURE" if persisted.get("status") == "DEMO_ACCEPTED_TEST_ONLY" else "ACCEPTED_SNAPSHOT"
+                    return DossierResolution(
+                        status=DossierResolutionStatus.READY,
+                        dossier=build_res.dossier,
+                        origin=origin_label,
+                        reason="Loaded typed dossier strictly from verified accepted evidence observations.",
+                        next_action="Ready for analytical presentation and board deck export.",
+                        snapshot_id=snapshot_id,
+                        snapshot_hash=build_res.snapshot_hash,
+                    )
+            finally:
+                if close_after:
+                    try:
+                        db_conn.close()
+                    except Exception:
+                        pass
+
+        # If adapter failed (e.g. no bound observations), retain fail-closed adapter unavailable status
         return DossierResolution(
             status=DossierResolutionStatus.BLOCKED_EVIDENCE_DOSSIER_ADAPTER_UNAVAILABLE,
             dossier=None,
             origin="BLOCKED",
             reason=(
                 "Evidence snapshot is accepted with verified source provenance, but the official evidence-to-dossier "
-                "analytical adapter is not yet available for HCCH. Production ratios, valuation, and analytical models "
+                "analytical adapter is not yet available for HCCH (no bound observations or unverified metrics). Production ratios, valuation, and analytical models "
                 "cannot be computed from raw snapshots without an audited analytical mapping adapter."
             ),
             next_action="Complete independent audit review and implementation of the evidence-to-dossier mapping adapter.",

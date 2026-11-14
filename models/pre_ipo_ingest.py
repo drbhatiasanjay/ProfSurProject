@@ -67,7 +67,7 @@ def assess_analysis_eligibility(dossier: PreIPODealDossier) -> AnalysisEligibili
         reasons.append("No restated financial reporting periods were recognized in the document.")
         return AnalysisEligibility(allowed=False, state=ExtractionState.BLOCKED, gaps=gaps, reasons=reasons)
 
-    if dossier.ic_verdict.underwriting_verdict == "INSUFFICIENT_DISCLOSURES_UNRATED":
+    if getattr(dossier, "ic_verdict", None) and dossier.ic_verdict.underwriting_verdict == "INSUFFICIENT_DISCLOSURES_UNRATED":
         reasons.append("Underwriting verdict is INSUFFICIENT_DISCLOSURES_UNRATED due to unverified disclosures.")
 
     if gaps:
