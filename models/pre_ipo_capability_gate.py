@@ -274,8 +274,8 @@ def evaluate_capability_gate(
                 blocked_metrics=["*"],
             )
     elif is_production and not snapshot_id:
-        # Non-HCCH demonstration issuers (DEMO_DOSSIER) preserve demonstration analysis without snapshot
-        if origin != "DEMO_DOSSIER":
+        # Non-HCCH demonstration issuers (DEMONSTRATION_LEGACY / DEMO_DOSSIER) preserve demonstration analysis without snapshot
+        if origin not in ("DEMONSTRATION_LEGACY", "DEMO_DOSSIER"):
             return CapabilityDecision(
                 allowed=False,
                 capability=capability,
