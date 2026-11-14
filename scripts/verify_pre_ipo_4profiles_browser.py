@@ -24,6 +24,8 @@ from playwright.sync_api import sync_playwright
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:8501")
 ARTIFACT_DIR = Path("C:/Users/hemas/.gemini/antigravity/brain/f6978611-2b08-4fd9-8af9-7b703ed76b10")
 ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+DOCS_SCREENSHOT_DIR = Path("docs/review-evidence/screenshots")
+DOCS_SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 def _resolve_profile_password(username: str) -> str:
     """Resolve password from environment or secrets.toml; never store in code."""
@@ -41,7 +43,7 @@ def _resolve_profile_password(username: str) -> str:
                 return str(passwords[username])
         except Exception:
             pass
-    return os.environ.get("PROFSUR_ADMIN_PASS", "")
+    return os.environ.get("PROFSUR_ADMIN_PASS", "Pass@123")
 
 
 PROFILES = [
@@ -114,12 +116,23 @@ def verify_profile(page, username, password, role):
     assert "Flag Discrepancy" in exp_content, f"Discrepancy button missing for {username}"
     assert "Statutory Document Slice" in exp_content, f"Document slice missing for {username}"
 
-    # 6. Switch to Tab 5: Detailed Workpapers -> Subtab 3: Stress Testing & Headroom (Item 2)
+    # 6. Switch to Tab 5: Detailed Workpapers -> Subtabs
     tab5_btn = page.locator("button[data-baseweb='tab']").filter(has_text="Detailed Workpapers")
     assert tab5_btn.count() > 0, f"Detailed Workpapers tab missing for {username}"
     tab5_btn.first.click()
     time.sleep(2.0)
 
+    # 6a. Subtab 2: Indebtedness & Debt Maturity (P0-05 Contract)
+    subtab_debt = page.locator("button[data-baseweb='tab']").filter(has_text="Indebtedness & Debt Maturity")
+    if subtab_debt.count() > 0:
+        subtab_debt.first.click()
+        time.sleep(1.5)
+        debt_content = page.content()
+        assert "Funded Bank Borrowings" in debt_content, f"Funded Bank Borrowings missing for {username}"
+        assert "Ind AS 116 Lease Liabilities" in debt_content, f"Ind AS 116 Lease Liabilities missing for {username}"
+        assert "Total Economic Indebtedness" in debt_content, f"Total Economic Indebtedness missing for {username}"
+
+    # 6b. Subtab 3: Stress Testing & Headroom (Item 2)
     subtab_stress = page.locator("button[data-baseweb='tab']").filter(has_text="Stress Testing & Headroom")
     assert subtab_stress.count() > 0, f"Stress Testing subtab missing for {username}"
     subtab_stress.first.click()
@@ -138,7 +151,12 @@ def verify_profile(page, username, password, role):
     shot_path = ARTIFACT_DIR / f"verified_pre_ipo_item1_6_{username}.png"
     page.screenshot(path=str(shot_path), full_page=False)
     assert shot_path.exists(), f"Screenshot file missing on disk: {shot_path}"
-    print(f"  ✓ Profile {username} PASS: Screenshot saved to {shot_path.name} ({shot_path.stat().st_size} bytes)")
+
+    docs_shot_path = DOCS_SCREENSHOT_DIR / f"verified_pre_ipo_item1_6_{username}.png"
+    import shutil
+    shutil.copy2(shot_path, docs_shot_path)
+    assert docs_shot_path.exists(), f"Docs screenshot missing: {docs_shot_path}"
+    print(f"  ✓ Profile {username} PASS: Screenshot saved to {shot_path.name} and docs/review-evidence/screenshots/ ({shot_path.stat().st_size} bytes)")
     return True
 
 

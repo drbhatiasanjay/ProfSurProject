@@ -8,6 +8,7 @@ Verifies that in an authenticated browser session:
 """
 
 import os
+from pathlib import Path
 import pytest
 from playwright.sync_api import sync_playwright
 
