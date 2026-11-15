@@ -192,7 +192,9 @@ class HuberFairMultipleCalibrator:
             "cfo_to_ebitda": target_metrics.get("cfo_to_ebitda", 0.0),
         }])
 
-        warranted_val = float(fitted.predict(target_x)[0])
+        raw_warranted = float(fitted.predict(target_x)[0])
+        peer_floor = max(5.0, float(df[multiple_col].min() * 0.5))
+        warranted_val = max(peer_floor, raw_warranted) if raw_warranted <= 0 else raw_warranted
         target_actual = float(target_metrics.get("target_multiple", warranted_val))
 
         # Pricing froth %
