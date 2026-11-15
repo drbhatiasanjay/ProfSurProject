@@ -2412,6 +2412,7 @@ def generate_valuation_evidence_narrative(
         "verdict": action_verdict,
         "the_problem": {"title": problem_title, "content": problem_desc},
         "the_background": {"title": bg_title, "content": bg_desc},
+        "statutory_background": {"title": bg_title, "content": bg_desc},
         "econometric_findings": {"title": findings_title, "content": findings_desc},
         "deep_insights": {"title": insights_title, "content": insights_desc},
         "call_to_action": {"title": action_title, "content": action_desc},

@@ -492,11 +492,11 @@ with tab_ml:
 
 # ── TAB 5: 5-STAGE INSTITUTIONAL NARRATIVE & IC PLAYBOOK ──
 with tab_narrative:
-    p_data = narrative["the_problem"]
-    s_data = narrative["statutory_background"]
-    e_data = narrative["econometric_findings"]
-    i_data = narrative["deep_insights"]
-    a_data = narrative["call_to_action"]
+    p_data = narrative.get("the_problem") or {"title": "Pricing & Selection Dilemma", "content": "Awaiting disclosures."}
+    s_data = narrative.get("statutory_background") or narrative.get("the_background") or {"title": "Statutory Foundations", "content": "SEBI ICDR 2018 route."}
+    e_data = narrative.get("econometric_findings") or {"title": "Econometric Evidence", "content": "Huber M-estimation."}
+    i_data = narrative.get("deep_insights") or {"title": "Forensic Insights", "content": "Working capital."}
+    a_data = narrative.get("call_to_action") or {"title": "IC Directives", "content": "Playbook."}
 
     render_html(f"""
     <div style="display:flex; flex-direction:column; gap:14px; margin-bottom:20px;">
