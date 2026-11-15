@@ -1,18 +1,47 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 09 November 2026 19:30 IST (Day-Close & Production Deployment Synced)  
+**Last Updated:** 15 November 2026 13:40 IST (Modern React Terminal & Pre-IPO Live Feed Release)  
 **Active Branch:** `master` (100% In Sync with `origin/master`)  
-**Active Baseline Commit:** `a78aa84` on `master`  
-**Release Tag:** `v2.4.2` (Hindustan Coca-Cola Pre-IPO Intelligence, Option B Lineage Layout & Auth Parity Release)  
-**Production URL:** `https://lifecycle-leverage-779655496440.us-east1.run.app`  
+**Active Baseline Commit:** `ef554fa` on `master`  
+**Release Tag:** `v3.4.0` (React Modern UI Pre-IPO Terminal, Huber Robust Calibrator, Walk-Forward ML & NSE Live Primary Feed)  
+**React Terminal URL:** `http://localhost:5173/` (Vite + React 19 + TypeScript + Tailwind v4)  
+**FastAPI Bridge URL:** `http://localhost:8000/` (Uvicorn 0.32+ / SEBI RA 2014 Compliance Engine)  
+**Production Streamlit URL:** `https://lifecycle-leverage-779655496440.us-east1.run.app`  
 **GCP Project:** `tempproject-462219` (Region: `us-east1`)  
-**Verified CI/CD Run:** `42626000240` (Test and Deploy: SUCCESS / Cloud Run Deployed & Live Verified)  
+**Verified CI/CD Run:** `42626000240` (Cloud Run Deployed & Live Verified)  
 **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
 
 ---
 
-## 1. Executive Summary & Day-Close Milestones (08 November 2026)
+## 1. Executive Summary & Day-Close Milestones (15 November 2026)
+This session achieved complete implementation, econometric testing, and browser-verified release of the **Full Modern React Terminal for Pre-IPO Intelligence & Forensic Valuation (India)** alongside the **FastAPI live NSE adapter bridge**, conforming to **Google Modern Web Guidance (MWG)** and institutional **Anti-AI-Slop** design standards.
+
+### Core Completed Deliverables:
+1. **Modern React Terminal (`frontend/`):**
+   - High-density Bloomberg-style financial terminal aesthetic: Obsidian canvas (`#090D12`), Midnight Slate (`#101620`), surgical borders (`#223044`), tabular numerals (`font-mono tabular-nums`).
+   - 7 Core institutional component modules:
+     - `HeaderTicker.tsx`: Pulsing green NSE primary feed indicator, live NIFTY 50, NIFTY FMCG, and INDIA VIX stream.
+     - `StatutoryOfferHero.tsx`: Price band (₹102–108), Lot size (138 sh), Issue Size (₹10,000 Cr, 100% Fresh Issue), BRLM list, direct RHP and Anchor book links.
+     - `SubscriptionBookBar.tsx`: Segmented category demand bars (QIB 2.36x, NII 0.85x, Retail 1.53x, Total 1.82x) with institutional divergence callout.
+     - `LivePeerCompsTable.tsx`: Live peer trading table with 52-week price range bars, sorting, and DRHP Declared vs Algorithmic provenance tags.
+     - `HuberCalibrationCard.tsx`: Huber M-estimator regression card ($t=1.345$), DRHP Selection Bias Index ($2.22\times$), Warranted Fair P/E ($11.8\times$), and Unbacked Valuation Froth ($+227.1\%$).
+     - `WalkForwardMLScorecard.tsx`: Dual-Score architecture (Score 1: Fundamental `18.4/100`, Score 2: Sentiment `47.0/100`), Composite Decision (`AVOID_HIGH_DRAWDOWN_RISK`), Head A Outperformance probability (`14.2%`), Head B Month-6 Lock-in CAR (`-10.4%`).
+     - `SHAPWaterfallChart.tsx`: TreeExplainer horizontal waterfall bars with exact positive alpha contributions and negative drawdown penalties.
+     - `SEBIComplianceStamp.tsx`: Cryptographic SHA-256 immutable digest with one-click copy and statutory disclosures.
+     - `SidebarNav.tsx`: 5-view institutional workspace navigation and quick issuer switcher.
+2. **FastAPI Quantitative Backend (`api/server.py`):**
+   - Unified `/api/pre-ipo/market-status` and `/health` endpoints.
+   - Live integration with `models/pre_ipo_nse_client.py` and `models/profsur_walkforward_ml_huber.py`.
+   - Comprehensive test suite (`tests/test_api_server.py`) passing 100% cleanly.
+3. **Evidence Gate Verification & Physical Browser Artifacts:**
+   - Automated Chromium Playwright verification script `scripts/verify_react_ui.py` executed cleanly.
+   - Physical screenshot artifacts generated and verified on disk:
+     - `verified_react_preipo_terminal_overview.png` (426 KB)
+     - `verified_react_preipo_terminal_peer_comps.png` (167 KB)
+     - `verified_react_preipo_terminal_huber.png` (188 KB)
+     - `verified_react_preipo_terminal_ml.png` (168 KB)
+     - `verified_react_preipo_terminal_compliance.png` (118 KB)
 This session achieved complete integration, verification, and automated deployment of the **Pre-IPO Multi-Document Ingestion, Migration Architecture, 74-Family Field Registry, and Complete Deletion Lifecycle** alongside the **Multi-Quarter Bank Covenant & Debt Headroom Engine (Page 28)**.
 
 ### Core Completed Deliverables:
