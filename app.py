@@ -601,6 +601,7 @@ stata_studio        = st.Page("pages/25_stata_studio_v2.py",    title="Stata Stu
 legacy_stata_studio = st.Page("pages/23_stata_studio.py",       title="Stata Studio (Legacy)", icon=":material/history:")
 ai_chat_guide       = st.Page("pages/24_ai_chat_guide.py",      title="AI Chat Guide",       icon=":material/menu_book:")
 pre_ipo             = st.Page("pages/27_pre_ipo_drhp.py",       title="Pre-IPO DRHP Intelligence", icon=":material/rocket_launch:")
+pre_ipo_terminal    = st.Page("pages/29_pre_ipo_terminal.py",   title="Pre-IPO Quantitative Terminal", icon=":material/candlestick_chart:")
 covenant_headroom   = st.Page("pages/28_covenant_headroom.py",   title="Covenant & Debt Headroom",   icon=":material/shield_with_heart:")
 # knowledge_graph2  = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")  # temporarily hidden
 _admin_tools = [settings, ai_chat_guide]
@@ -613,6 +614,7 @@ if st.session_state.get("workspace_mode") == "pre_ipo":
     nav = st.navigation({
         "Pre-IPO Deal Workflow": [
             pre_ipo,
+            pre_ipo_terminal,
             covenant_headroom,
             benchmarks,
             company_financing,
@@ -625,7 +627,7 @@ if st.session_state.get("workspace_mode") == "pre_ipo":
 else:
     nav = st.navigation({
         "": [
-            overview, dashboard, pre_ipo, covenant_headroom, data_explorer, benchmarks,
+            overview, dashboard, pre_ipo, pre_ipo_terminal, covenant_headroom, data_explorer, benchmarks,
             life_stage_dynamics, transitions,
             scenarios, econometrics, advanced_econ, interaction_effects,
             stata_studio,
