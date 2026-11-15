@@ -11,11 +11,57 @@ from datetime import datetime, timezone
 from models.pre_ipo_nse_client import NSELiveClient
 from models.profsur_walkforward_ml_huber import HuberFairMultipleCalibrator
 
+from fastapi.responses import HTMLResponse, RedirectResponse
+
 app = FastAPI(
     title="ProfSur Pre-IPO Intelligence API",
     version="3.4.0",
     description="Statutory SEBI (RA) 2014 compliant quantitative valuation service for Indian Mainboard and SME IPOs."
 )
+
+@app.get("/", response_class=HTMLResponse)
+def root_dashboard():
+    """
+    Root portal directing users to the React UI Terminal and API documentation.
+    """
+    return """<!DOCTYPE html>
+<html>
+<head>
+    <title>ProfSur Pre-IPO API & Terminal Portal</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #090D12; color: #F1F5F9; margin: 0; padding: 40px 20px; display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+        .card { background: #101620; border: 1px solid #223044; border-radius: 12px; padding: 32px; max-width: 580px; width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        h1 { margin-top: 0; font-size: 22px; color: #38BDF8; display: flex; align-items: center; gap: 10px; }
+        p { color: #94A3B8; font-size: 14px; line-height: 1.6; }
+        .btn-group { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+        .btn { display: block; text-align: center; text-decoration: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; transition: all 0.2s; }
+        .btn-primary { background: #0284C7; color: white; border: 1px solid #38BDF8; }
+        .btn-primary:hover { background: #0369A1; }
+        .btn-secondary { background: #151D2A; color: #E2E8F0; border: 1px solid #223044; }
+        .btn-secondary:hover { background: #1E293B; border-color: #475569; }
+        .badge { font-family: monospace; font-size: 11px; background: rgba(6,182,212,0.15); color: #22D3EE; border: 1px solid #0891B2; padding: 2px 8px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>ProfSur Quantitative Engine <span class="badge">v3.4.0</span></h1>
+        <p>The backend API service is running on <strong>Port 8000</strong>. If you are looking for the interactive graphical dashboard, open the React Terminal on <strong>Port 5173</strong>.</p>
+        
+        <div class="btn-group">
+            <a href="http://localhost:5173/" class="btn btn-primary" target="_blank">
+                🚀 Open React Terminal UI (localhost:5173)
+            </a>
+            <a href="/docs" class="btn btn-secondary">
+                📖 View Interactive API Documentation (Swagger /docs)
+            </a>
+            <a href="/api/pre-ipo/market-status" class="btn btn-secondary">
+                📊 Inspect Live Market Status JSON Feed
+            </a>
+        </div>
+    </div>
+</body>
+</html>
+"""
 
 app.add_middleware(
     CORSMiddleware,
