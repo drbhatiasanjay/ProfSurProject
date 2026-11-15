@@ -1000,6 +1000,345 @@ cockpit_html = f"""
 """
 render_html(cockpit_html)
 
+
+def render_econometric_valuation_tab(dossier, selected_persona, is_hcch, gate_decision, key_suffix="toplevel"):
+    """
+    Renders the complete Huber M-estimator calibrated valuation card,
+    the 5-part institutional econometric evidence narrative,
+    walk-forward machine learning dual-head scores,
+    and statutory anchor secondary float schedule.
+    """
+    val = dossier.valuation_comps
+    if not dossier.is_price_disclosed or (val and val.price_band_upper_inr <= 0):
+        render_html("""
+        <div class="bento-card" style="border-left:4px solid #38bdf8; margin-bottom:16px;">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;">
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">info</span>STATUTORY PRICING NOTICE · SEBI ICDR 2018 (BOOK BUILDING PROCESS)
+            </div>
+            <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.6; margin-top:6px;">
+                This filing is a <strong>Draft Red Herring Prospectus (DRHP)</strong>. Under statutory SEBI regulations, the 
+                <strong>Offer Price, Price Band, and aggregate Offer Value are explicitly left blank [●]</strong> and will be determined through 
+                the book-building bidding process at the Red Herring Prospectus (RHP) stage.<br>
+                Use the <strong>Interactive Scenario Valuation Sandbox</strong> below to simulate enterprise multiples, dilution, and DCF hurdles.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("##### :material/tune: Interactive Scenario Valuation Sandbox")
+        c_sc1, c_sc2 = st.columns([1.5, 2.5])
+        with c_sc1:
+            scenario_price = st.slider(
+                "Hypothetical Issue Price (₹ / share)",
+                min_value=100.0,
+                max_value=1000.0,
+                value=390.0,
+                step=5.0,
+                key=f"scenario_slider_{dossier.deal_id}_{key_suffix}"
+            )
+        with c_sc2:
+            # Derive shares count safely from dossier without hardcoded constants
+            shares_pre_cr = getattr(dossier.objects_of_offer, 'shares_pre_issue_cr', None) if dossier.objects_of_offer else None
+            if not shares_pre_cr and getattr(dossier, 'cap_table', None) and getattr(dossier.cap_table, 'pre_offer_equity_shares_cr', None):
+                shares_pre_cr = dossier.cap_table.pre_offer_equity_shares_cr
+            if not shares_pre_cr and dossier.offered_shares_count:
+                shares_pre_cr = dossier.offered_shares_count / 1e7
+
+            latest_pat = dossier.history[-1].pat_cr if (dossier.history and len(dossier.history) > 0) else None
+            latest_ebitda = dossier.history[-1].ebitda_cr if (dossier.history and len(dossier.history) > 0) else None
+
+            sc_debt = dossier.indebtedness.total_economic_indebtedness_cr if dossier.indebtedness else 0.0
+            sc_cash = dossier.indebtedness.cash_and_equivalents_cr if dossier.indebtedness else 0.0
+
+            if shares_pre_cr and shares_pre_cr > 0:
+                sc_mcap = shares_pre_cr * scenario_price
+                sc_ev = sc_mcap + sc_debt - sc_cash
+                sc_mcap_str = f"₹{sc_mcap:,.1f} Cr"
+                sc_ev_str = f"₹{sc_ev:,.1f} Cr"
+                sc_pe_str = f"{sc_mcap / latest_pat:.1f}x" if (latest_pat and latest_pat > 0) else "N/A"
+                sc_ev_ebitda_str = f"{sc_ev / latest_ebitda:.1f}x" if (latest_ebitda and latest_ebitda > 0) else "N/A"
+            else:
+                sc_mcap_str = "Undisclosed"
+                sc_ev_str = "Undisclosed"
+                sc_pe_str = "N/A"
+                sc_ev_ebitda_str = "N/A"
+
+            render_html(f"""
+            <div style="display:flex; gap:16px; flex-wrap:wrap; background:rgba(30,41,59,0.7); border-radius:8px; padding:12px; border:1px solid rgba(56,189,248,0.2);">
+                <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO MCAP:</span><br><strong style="font-size:1.1rem; color:#38bdf8;">{sc_mcap_str}</strong></div>
+                <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO EV:</span><br><strong style="font-size:1.1rem; color:#38bdf8;">{sc_ev_str}</strong></div>
+                <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO P/E:</span><br><strong style="font-size:1.1rem; color:#f8fafc;">{sc_pe_str}</strong></div>
+                <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO EV/EBITDA:</span><br><strong style="font-size:1.1rem; color:#f8fafc;">{sc_ev_ebitda_str}</strong></div>
+                <div><span class="badge-pill badge-amber" style="font-size:0.75rem;">USER SCENARIO ASSUMPTION</span></div>
+            </div>
+            """, unsafe_allow_html=True)
+    elif val:
+        v_badge = "badge-emerald" if "DISCOUNT" in val.valuation_verdict else "badge-sky"
+        val_box_html = f"""
+        <div class="bento-card" style="margin-bottom:16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                <div>
+                    <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8; font-weight:700;">Offer Valuation Summary & Multiples Overview</div>
+                    <div style="font-size:1.85rem; font-weight:800; color:#38bdf8; margin:2px 0;">₹{val.implied_ev_cr:,.1f} Cr <span style="font-size:0.9rem; font-weight:500; color:#94a3b8;">Implied Enterprise Value (Upper Band)</span></div>
+                </div>
+                <div>
+                    <span class="badge-pill {v_badge}" style="font-size:0.82rem; padding:6px 14px;">Verdict: {val.valuation_verdict}</span>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.84rem;">
+                <div><span style="color:#94a3b8;">Implied P/E:</span> <strong style="color:#ffffff;">{val.implied_pe_ratio:.1f}x</strong> <span style="color:#64748b;">(Peer Median: {val.peer_median_pe or 'N/A'}x)</span></div>
+                <div><span style="color:#94a3b8;">Implied EV/EBITDA:</span> <strong style="color:#ffffff;">{val.implied_ev_ebitda:.1f}x</strong></div>
+                <div><span style="color:#94a3b8;">Price Band:</span> <strong style="color:#10b981;">₹{val.price_band_lower_inr:.0f} - ₹{val.price_band_upper_inr:.0f}</strong></div>
+                <div><span style="color:#94a3b8;">Peer Comps Sizing:</span> <strong style="color:#f8fafc;">{len(val.peers) if val.peers else 0} Listed Competitors</strong></div>
+            </div>
+        </div>
+        """
+        render_html(val_box_html)
+
+    render_html('<div class="bento-subtitle">CMIE Listed Peers at Identical Life-Cycle Stage</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Valuation Peer Benchmarking</div>', unsafe_allow_html=True)
+    if val and val.peers:
+        p_comps = []
+        for p in val.peers:
+            p_comps.append({
+                "Peer Name": p.peer_name,
+                "Ticker": p.ticker,
+                "Market Cap (₹ Cr)": f"₹{p.mcap_cr:,.1f}",
+                "P/E Ratio": f"{p.pe_ratio:.1f}x" if p.pe_ratio else "Loss",
+                "EV/EBITDA": f"{p.ev_ebitda:.1f}x" if p.ev_ebitda else "Loss",
+                "ROE (%)": f"{p.roe_pct:.1f}%",
+                "Life Stage": p.dickinson_stage,
+            })
+        st.dataframe(pd.DataFrame(p_comps), use_container_width=True, hide_index=True)
+    else:
+        st.info("Peer comparison table configured in DRHP Section III.")
+
+    # ── HUBER M-ESTIMATOR & 5-PART ECONOMETRIC EVIDENCE NARRATIVE ──
+    render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">Econometric M-Estimation Calibration & Evidence Narrative</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Huber Fair Multiple Calibration & 5-Part Institutional Narrative</div>', unsafe_allow_html=True)
+
+    sc_p = scenario_price if ('scenario_price' in locals() and scenario_price is not None) else None
+    huber_res = compute_dynamic_huber_valuation(dossier, scenario_price_inr=sc_p)
+    narrative = generate_valuation_evidence_narrative(dossier, huber_res, persona=selected_persona)
+
+    f_badge = "badge-emerald" if huber_res.unbacked_froth_pct <= 0 else "badge-rose"
+    f_label = f"{abs(huber_res.unbacked_froth_pct):.1f}% DISCOUNT" if huber_res.unbacked_froth_pct <= 0 else f"+{huber_res.unbacked_froth_pct:.1f}% FROTH"
+
+    # 1. Huber Metrics Bento
+    huber_card_html = f"""
+    <div class="bento-card" style="margin-bottom:16px; border:1px solid rgba(56,189,248,0.25);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;">
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">analytics</span>HUBER M-ESTIMATOR CALIBRATED VALUATION (c=1.345)
+                </div>
+                <div style="font-size:1.85rem; font-weight:800; color:#ffffff; margin:2px 0;">
+                    {huber_res.warranted_fair_multiple:.1f}x P/E <span style="font-size:0.9rem; font-weight:500; color:#94a3b8;">Warranted Fair Multiple (Implied Asking: {huber_res.target_actual_multiple:.1f}x)</span>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <span class="badge-pill {f_badge}" style="font-size:0.82rem; padding:6px 14px;">{f_label}</span>
+                <span class="badge-pill badge-sky" style="font-size:0.82rem; padding:6px 14px;">DRHP Bias: {huber_res.drhp_peer_bias_index:.2f}x</span>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.84rem;">
+            <div><span style="color:#94a3b8;">Pseudo R-Squared:</span> <strong style="color:#10b981;">{huber_res.r_squared_pseudo:.4f}</strong></div>
+            <div><span style="color:#94a3b8;">Peer Universe Sample:</span> <strong style="color:#ffffff;">N = {huber_res.peer_sample_size}</strong></div>
+            <div><span style="color:#94a3b8;">Algo Peer Median:</span> <strong style="color:#ffffff;">{huber_res.algo_peer_median:.1f}x P/E</strong></div>
+            <div><span style="color:#94a3b8;">DRHP Declared Median:</span> <strong style="color:#ffffff;">{huber_res.declared_peer_median:.1f}x P/E</strong></div>
+        </div>
+    </div>
+    """
+    render_html(huber_card_html, unsafe_allow_html=True)
+
+    # 2. 5-Part Econometric Evidence Narrative Block
+    p_data = narrative["the_problem"]
+    b_data = narrative["the_background"]
+    e_data = narrative["econometric_findings"]
+    i_data = narrative["deep_insights"]
+    a_data = narrative["call_to_action"]
+
+    narrative_block_html = f"""
+    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
+        <!-- Part 1: The Problem -->
+        <div class="bento-card" style="border-left:4px solid #f43f5e; background:rgba(15,23,42,0.7);">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:#f43f5e; font-weight:700;">
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">warning</span>STAGE 1: THE VALUATION & CAPITAL ALLOCATION DILEMMA
+            </div>
+            <div style="font-size:1.0rem; font-weight:700; color:#f8fafc; margin:4px 0;">{p_data['title']}</div>
+            <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.6;">{p_data['content']}</div>
+        </div>
+
+        <!-- Part 2: Disclosures Background -->
+        <div class="bento-card" style="border-left:4px solid #38bdf8; background:rgba(15,23,42,0.7);">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;">
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">policy</span>STAGE 2: STATUTORY FILING & REGULATORY DISCLOSURES
+            </div>
+            <div style="font-size:1.0rem; font-weight:700; color:#f8fafc; margin:4px 0;">{b_data['title']}</div>
+            <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.6;">{b_data['content']}</div>
+        </div>
+
+        <!-- Part 3: Econometric Findings -->
+        <div class="bento-card" style="border-left:4px solid #10b981; background:rgba(15,23,42,0.7);">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:#10b981; font-weight:700;">
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">functions</span>STAGE 3: ECONOMETRIC FINDINGS & EMPIRICAL EVIDENCE
+            </div>
+            <div style="font-size:1.0rem; font-weight:700; color:#f8fafc; margin:4px 0;">{e_data['title']}</div>
+            <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.6;">{e_data['content']}</div>
+        </div>
+
+        <!-- Part 4: Deep Insights -->
+        <div class="bento-card" style="border-left:4px solid #a855f7; background:rgba(15,23,42,0.7);">
+            <div style="font-size:0.75rem; text-transform:uppercase; color:#a855f7; font-weight:700;">
+                <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">biotech</span>STAGE 4: FORENSIC EARNINGS QUALITY & WORKING CAPITAL DYNAMICS
+            </div>
+            <div style="font-size:1.0rem; font-weight:700; color:#f8fafc; margin:4px 0;">{i_data['title']}</div>
+            <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.6;">{i_data['content']}</div>
+        </div>
+
+        <!-- Part 5: Call to Action -->
+        <div class="bento-card" style="border-left:4px solid #f59e0b; background:rgba(15,23,42,0.85); box-shadow:0 4px 14px rgba(245,158,11,0.15);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:0.75rem; text-transform:uppercase; color:#f59e0b; font-weight:700;">
+                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">gavel</span>STAGE 5: INVESTMENT COMMITTEE CALL-FOR-ACTION PLAYBOOK
+                </div>
+                <span class="badge-pill badge-amber" style="font-size:0.75rem;">{narrative['verdict']}</span>
+            </div>
+            <div style="font-size:1.05rem; font-weight:800; color:#fbbf24; margin:6px 0;">{a_data['title']}</div>
+            <div style="font-size:0.88rem; color:#f1f5f9; line-height:1.7;">{a_data['content']}</div>
+        </div>
+    </div>
+    """
+    render_html(narrative_block_html, unsafe_allow_html=True)
+
+    # 3. Walk-Forward ML Dual-Head Scorecard
+    render_html('<div class="bento-subtitle">Dual-Head Expanding Window Model (180-Day Embargoed Validation)</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Walk-Forward Machine Learning Institutional Scorecard</div>', unsafe_allow_html=True)
+
+    c_ml1, c_ml2, c_ml3 = st.columns(3)
+    with c_ml1:
+        fund_score = round(max(5.0, min(95.0, 100.0 - (huber_res.unbacked_froth_pct * 0.5))), 1) if huber_res.unbacked_froth_pct > 0 else round(min(95.0, 75.0 + abs(huber_res.unbacked_froth_pct) * 0.3), 1)
+        st.metric("Fundamental & Governance Score", f"{fund_score} / 100", delta="60% Weight")
+    with c_ml2:
+        sent_score = 65.0 if dossier.is_price_disclosed else 48.0
+        st.metric("Pricing & Demand Sentiment", f"{sent_score} / 100", delta="40% Weight")
+    with c_ml3:
+        comp_rec = narrative["verdict"].replace("_", " ")
+        st.metric("Composite Decision", comp_rec, delta="Walk-Forward Calibrated")
+
+    # WACC, ROIC & Reverse DCF Hurdle
+    render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">Economic Value Creation & Reverse DCF Sizing</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">ROIC vs WACC Spread & Required Growth Hurdle</div>', unsafe_allow_html=True)
+    wacc_res = calculate_wacc_and_roic(
+        dossier,
+        is_blocked=bool(is_hcch and not gate_decision.allowed),
+        blocked_reason="Unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
+    )
+    rev_dcf = calculate_reverse_dcf_hurdle(
+        dossier,
+        is_blocked=bool(is_hcch and not gate_decision.allowed),
+        blocked_reason="Unpriced / unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
+    )
+
+    col_w1, col_w2, col_w3 = st.columns(3)
+    with col_w1:
+        roic_val = wacc_res.get('roic_pct') if wacc_res else None
+        spread_val = wacc_res.get('value_creation_spread_pct') if wacc_res else None
+        roic_str = f"{roic_val:.1f}%" if roic_val is not None else "N/A"
+        delta_str = f"{spread_val:+.1f}% vs WACC" if spread_val is not None else None
+        st.metric("Return on Invested Capital (ROIC)", roic_str, delta=delta_str)
+    with col_w2:
+        wacc_val = wacc_res.get('wacc_pct') if wacc_res else None
+        wacc_str = f"{wacc_val:.1f}%" if wacc_val is not None else "N/A"
+        st.metric("Weighted Average Cost of Capital (WACC)", wacc_str, help="CAPM Ke + Post-tax Kd")
+    with col_w3:
+        eva_val = wacc_res.get('economic_profit_cr') if wacc_res else None
+        eva_str = f"₹{eva_val:,.1f} Cr" if eva_val is not None else "N/A"
+        eva_status = (wacc_res.get('status') or 'UNCOMPUTED').replace('_', ' ') if wacc_res else "UNCOMPUTED"
+        st.metric("Annual Economic Profit (EVA)", eva_str, delta=eva_status)
+
+    dcf_narrative = rev_dcf.get('narrative', 'Reverse DCF hurdle calculation requires audited financial statements.') if rev_dcf else "Awaiting disclosures."
+    st.info(f"**Reverse DCF Analysis:** {dcf_narrative}", icon=":material/info:")
+
+    # Beneish Forensics & Anchor Lock-In Calendar
+    render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
+    render_html('<div class="bento-subtitle">Forensic Accruals & Statutory Lock-In Calendar</div>', unsafe_allow_html=True)
+    render_html('<div class="bento-title">Beneish M-Score & Anchor Secondary Float Schedule</div>', unsafe_allow_html=True)
+
+    beneish = dossier.beneish_forensics
+    if beneish and beneish.m_score is not None:
+        b_color = "#10b981" if not beneish.is_manipulation_risk else "#f43f5e"
+        b_status = "SAFE (Low Accrual Manipulation Risk)" if not beneish.is_manipulation_risk else "ELEVATED EARNINGS QUALITY CONCERN"
+        render_html(
+            f"""
+            <div class="bento-card" style="border-left:4px solid {b_color}; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                    <div>
+                        <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8; font-weight:700;">Beneish (1999) 8-Variable M-Score Model</div>
+                        <div style="font-size:1.85rem; font-weight:800; color:{b_color}; margin:2px 0;">{beneish.m_score:.2f} <span style="font-size:0.88rem; font-weight:600; color:{b_color}; margin-left:8px;">[{b_status}]</span></div>
+                    </div>
+                    <div style="font-size:0.80rem; color:#94a3b8; max-width:420px; text-align:right;">
+                        Threshold: M-Score &gt; -1.78 indicates high statistical probability of earnings management.
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.82rem; color:#cbd5e1;">
+                    <div>• DSRI (Days Sales in Receivables): <strong style="color:#ffffff;">{beneish.dsri or 1.0:.2f}</strong></div>
+                    <div>• GMI (Gross Margin Index): <strong style="color:#ffffff;">{beneish.gmi or 1.0:.2f}</strong></div>
+                    <div>• AQI (Asset Quality Index): <strong style="color:#ffffff;">{beneish.aqi or 1.0:.2f}</strong></div>
+                    <div>• SGI (Sales Growth Index): <strong style="color:#ffffff;">{beneish.sgi or 1.0:.2f}</strong></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.info("Forensic M-Score requires minimum 2 full years of restated balance sheet disclosures.")
+
+    # Full-width Statutory Lock-In Schedule
+    render_html('<div class="bento-subtitle">Statutory Anchor & Promoter Lock-in Expiry Calendar</div>', unsafe_allow_html=True)
+    from datetime import datetime, timezone
+    from models.pre_ipo_exchange_feed import ExchangeFeedClient
+    recon = ExchangeFeedClient.reconcile_with_prospectus(dossier.listing_date, dossier.company_name)
+    if recon.get("is_reconciled"):
+        render_html(
+            f"""
+            <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:0.78rem; color:#10b981;">
+                <span class="material-symbols-rounded" style="font-size:14px; color:#10b981; vertical-align:-2px; margin-right:2px;">check_circle</span> <strong>{recon['exchange']} Circular {recon['circular_ref']}</strong> · Listing: <strong>{recon['exchange_listing_date']}</strong> ({recon['drift_status']})
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    if not recon.get("is_reconciled"):
+        st.info(recon["notes"])
+    as_of_today = datetime.now(timezone.utc).date()
+    lockin_sched = generate_anchor_lockin_calendar(dossier, as_of_date=as_of_today)
+    if lockin_sched:
+        l_rows = []
+        for l in lockin_sched:
+            l_rows.append({
+                "Unlock Milestone": l.milestone_name,
+                "Target Date": l.calendar_date,
+                "Unlocked (₹ Cr)": f"₹{l.unlocked_value_cr:,.1f}",
+                "Free Float (%)": f"{l.cumulative_free_float_pct:.1f}%",
+                "Risk Level": l.supply_risk_level,
+                "Status": l.status,
+                "Exchange Circular": l.exchange_notice_ref,
+            })
+        st.dataframe(pd.DataFrame(l_rows), use_container_width=True, hide_index=True)
+
+
+
+
+st.markdown("""
+<div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px 14px; margin: 12px 0 16px 0; display:flex; align-items:center; justify-content:space-between;">
+    <div style="font-size:0.85rem; color:#e2e8f0;">
+        <strong style="color:#38bdf8;">NEW ECONOMETRIC ENGINE LIVE:</strong> 
+        Explore the <strong>Econometric Valuation & 5-Part Narrative</strong> tab below for dynamic Huber M-estimator calibration (c=1.345), peer bias index, walk-forward ML dual-head scores, and 5-stage institutional investment playbook.
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
 # ─────────────────────────────────────────────────────────────────────────────
 # MULTI-LEVEL LOGICAL TAB ARCHITECTURE (PRD SECTION 5 SPECIFICATION)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1008,6 +1347,7 @@ render_html(cockpit_html)
     tab_provenance,
     tab_disclosures,
     tab_equity_thesis,
+    tab_valuation,
     tab_workpapers,
     tab_crosswalk,
     tab_ic_action,
@@ -1016,6 +1356,7 @@ render_html(cockpit_html)
     ":material/verified: Extracted Disclosures & Provenance Ledger",
     ":material/fact_check: Lineage Audit Card",
     f":material/quiz: Investor Questions & Thesis ({'14 Questions' if selected_context != 'PUBLIC_IPO' else '10 Core'})",
+    ":material/functions: Econometric Valuation & 5-Part Narrative",
     ":material/analytics: Detailed Workpapers",
     ":material/sync_alt: CMIE Reference Crosswalk",
     ":material/gavel: IC Stance & Action Register",
@@ -1201,6 +1542,7 @@ with tab_disclosures:
         ], use_container_width=True, hide_index=True)
 
 with tab_equity_thesis:
+    st.info("💡 **Looking for Huber M-Estimator Multiple Calibration & 5-Stage Narrative?** They are available in the dedicated **'Econometric Valuation & 5-Part Narrative'** tab right next door (Tab 5) or inside Detailed Workpapers (Subtab 4).")
     render_html('<div class="bento-subtitle">Question-Led Institutional Underwriting · PRD Specification S01–S04</div>', unsafe_allow_html=True)
     render_html('<div class="bento-title">Ten Core Investor Questions & Decision Scorecard</div>', unsafe_allow_html=True)
 
@@ -1607,324 +1949,7 @@ with tab_workpapers:
 
     # ── SUBTAB 4: VALUATION, PEERS, DCF & FORENSICS ──
     with subtab_val:
-        val = dossier.valuation_comps
-        if not dossier.is_price_disclosed or (val and val.price_band_upper_inr <= 0):
-            render_html("""
-            <div class="bento-card" style="border-left:4px solid #38bdf8; margin-bottom:16px;">
-                <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;">
-                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">info</span>STATUTORY PRICING NOTICE · SEBI ICDR 2018 (BOOK BUILDING PROCESS)
-                </div>
-                <div style="font-size:0.86rem; color:#e2e8f0; line-height:1.6; margin-top:6px;">
-                    This filing is a <strong>Draft Red Herring Prospectus (DRHP)</strong>. Under statutory SEBI regulations, the 
-                    <strong>Offer Price, Price Band, and aggregate Offer Value are explicitly left blank [●]</strong> and will be determined through 
-                    the book-building bidding process at the Red Herring Prospectus (RHP) stage.<br>
-                    Use the <strong>Interactive Scenario Valuation Sandbox</strong> below to simulate enterprise multiples, dilution, and DCF hurdles.
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown("##### :material/tune: Interactive Scenario Valuation Sandbox")
-            c_sc1, c_sc2 = st.columns([1.5, 2.5])
-            with c_sc1:
-                scenario_price = st.slider(
-                    "Hypothetical Issue Price (₹ / share)",
-                    min_value=100.0,
-                    max_value=1000.0,
-                    value=390.0,
-                    step=5.0,
-                    key=f"scenario_slider_{dossier.deal_id}"
-                )
-            with c_sc2:
-                # Derive shares count safely from dossier without hardcoded constants
-                shares_pre_cr = getattr(dossier.objects_of_offer, 'shares_pre_issue_cr', None) if dossier.objects_of_offer else None
-                if not shares_pre_cr and getattr(dossier, 'cap_table', None) and getattr(dossier.cap_table, 'pre_offer_equity_shares_cr', None):
-                    shares_pre_cr = dossier.cap_table.pre_offer_equity_shares_cr
-                if not shares_pre_cr and dossier.offered_shares_count:
-                    shares_pre_cr = dossier.offered_shares_count / 1e7
-
-                latest_pat = dossier.history[-1].pat_cr if (dossier.history and len(dossier.history) > 0) else None
-                latest_ebitda = dossier.history[-1].ebitda_cr if (dossier.history and len(dossier.history) > 0) else None
-
-                sc_debt = dossier.indebtedness.total_economic_indebtedness_cr if dossier.indebtedness else 0.0
-                sc_cash = dossier.indebtedness.cash_and_equivalents_cr if dossier.indebtedness else 0.0
-
-                if shares_pre_cr and shares_pre_cr > 0:
-                    sc_mcap = shares_pre_cr * scenario_price
-                    sc_ev = sc_mcap + sc_debt - sc_cash
-                    sc_mcap_str = f"₹{sc_mcap:,.1f} Cr"
-                    sc_ev_str = f"₹{sc_ev:,.1f} Cr"
-                    sc_pe_str = f"{sc_mcap / latest_pat:.1f}x" if (latest_pat and latest_pat > 0) else "N/A"
-                    sc_ev_ebitda_str = f"{sc_ev / latest_ebitda:.1f}x" if (latest_ebitda and latest_ebitda > 0) else "N/A"
-                else:
-                    sc_mcap_str = "Undisclosed"
-                    sc_ev_str = "Undisclosed"
-                    sc_pe_str = "N/A"
-                    sc_ev_ebitda_str = "N/A"
-
-                render_html(f"""
-                <div style="display:flex; gap:16px; flex-wrap:wrap; background:rgba(30,41,59,0.7); border-radius:8px; padding:12px; border:1px solid rgba(56,189,248,0.2);">
-                    <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO MCAP:</span><br><strong style="font-size:1.1rem; color:#38bdf8;">{sc_mcap_str}</strong></div>
-                    <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO EV:</span><br><strong style="font-size:1.1rem; color:#38bdf8;">{sc_ev_str}</strong></div>
-                    <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO P/E:</span><br><strong style="font-size:1.1rem; color:#f8fafc;">{sc_pe_str}</strong></div>
-                    <div><span style="font-size:0.75rem; color:#94a3b8;">SCENARIO EV/EBITDA:</span><br><strong style="font-size:1.1rem; color:#f8fafc;">{sc_ev_ebitda_str}</strong></div>
-                    <div><span class="badge-pill badge-amber" style="font-size:0.75rem;">USER SCENARIO ASSUMPTION</span></div>
-                </div>
-                """, unsafe_allow_html=True)
-        elif val:
-            v_badge = "badge-emerald" if "DISCOUNT" in val.valuation_verdict else "badge-sky"
-            val_box_html = f"""
-            <div class="bento-card" style="margin-bottom:16px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                    <div>
-                        <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8; font-weight:700;">Offer Valuation Summary & Multiples Overview</div>
-                        <div style="font-size:1.85rem; font-weight:800; color:#38bdf8; margin:2px 0;">₹{val.implied_ev_cr:,.1f} Cr <span style="font-size:0.9rem; font-weight:500; color:#94a3b8;">Implied Enterprise Value (Upper Band)</span></div>
-                    </div>
-                    <div>
-                        <span class="badge-pill {v_badge}" style="font-size:0.82rem; padding:6px 14px;">Verdict: {val.valuation_verdict}</span>
-                    </div>
-                </div>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.84rem;">
-                    <div><span style="color:#94a3b8;">Implied P/E:</span> <strong style="color:#ffffff;">{val.implied_pe_ratio:.1f}x</strong> <span style="color:#64748b;">(Peer Median: {val.peer_median_pe or 'N/A'}x)</span></div>
-                    <div><span style="color:#94a3b8;">Implied EV/EBITDA:</span> <strong style="color:#ffffff;">{val.implied_ev_ebitda:.1f}x</strong></div>
-                    <div><span style="color:#94a3b8;">Price Band:</span> <strong style="color:#10b981;">₹{val.price_band_lower_inr:.0f} - ₹{val.price_band_upper_inr:.0f}</strong></div>
-                    <div><span style="color:#94a3b8;">Peer Comps Sizing:</span> <strong style="color:#f8fafc;">{len(val.peers) if val.peers else 0} Listed Competitors</strong></div>
-                </div>
-            </div>
-            """
-            render_html(val_box_html)
-
-        render_html('<div class="bento-subtitle">CMIE Listed Peers at Identical Life-Cycle Stage</div>', unsafe_allow_html=True)
-        render_html('<div class="bento-title">Valuation Peer Benchmarking</div>', unsafe_allow_html=True)
-        if val and val.peers:
-            p_comps = []
-            for p in val.peers:
-                p_comps.append({
-                    "Peer Name": p.peer_name,
-                    "Ticker": p.ticker,
-                    "Market Cap (₹ Cr)": f"₹{p.mcap_cr:,.1f}",
-                    "P/E Ratio": f"{p.pe_ratio:.1f}x" if p.pe_ratio else "Loss",
-                    "EV/EBITDA": f"{p.ev_ebitda:.1f}x" if p.ev_ebitda else "Loss",
-                    "ROE (%)": f"{p.roe_pct:.1f}%",
-                    "Life Stage": p.dickinson_stage,
-                })
-            st.dataframe(pd.DataFrame(p_comps), use_container_width=True, hide_index=True)
-        else:
-            st.info("Peer comparison table configured in DRHP Section III.")
-
-        # ── HUBER M-ESTIMATOR & 5-PART ECONOMETRIC EVIDENCE NARRATIVE ──
-        render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
-        render_html('<div class="bento-subtitle">Econometric M-Estimation Calibration & Evidence Narrative</div>', unsafe_allow_html=True)
-        render_html('<div class="bento-title">Huber Fair Multiple Calibration & 5-Part Institutional Narrative</div>', unsafe_allow_html=True)
-
-        sc_p = scenario_price if ('scenario_price' in locals() and scenario_price is not None) else None
-        huber_res = compute_dynamic_huber_valuation(dossier, scenario_price_inr=sc_p)
-        narrative = generate_valuation_evidence_narrative(dossier, huber_res, persona=selected_persona)
-
-        f_badge = "badge-emerald" if huber_res.unbacked_froth_pct <= 0 else "badge-rose"
-        f_label = f"{abs(huber_res.unbacked_froth_pct):.1f}% DISCOUNT" if huber_res.unbacked_froth_pct <= 0 else f"+{huber_res.unbacked_froth_pct:.1f}% FROTH"
-
-        # 1. Huber Metrics Bento
-        huber_card_html = f"""
-        <div class="bento-card" style="margin-bottom:16px; border:1px solid rgba(56,189,248,0.25);">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-                <div>
-                    <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;">
-                        <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">analytics</span>HUBER M-ESTIMATOR CALIBRATED VALUATION (c=1.345)
-                    </div>
-                    <div style="font-size:1.85rem; font-weight:800; color:#ffffff; margin:2px 0;">
-                        {huber_res.warranted_fair_multiple:.1f}x P/E <span style="font-size:0.9rem; font-weight:500; color:#94a3b8;">Warranted Fair Multiple (Implied Asking: {huber_res.target_actual_multiple:.1f}x)</span>
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <span class="badge-pill {f_badge}" style="font-size:0.82rem; padding:6px 14px;">{f_label}</span>
-                    <span class="badge-pill badge-sky" style="font-size:0.82rem; padding:6px 14px;">DRHP Bias: {huber_res.drhp_peer_bias_index:.2f}x</span>
-                </div>
-            </div>
-            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.84rem;">
-                <div><span style="color:#94a3b8;">Pseudo R-Squared:</span> <strong style="color:#10b981;">{huber_res.r_squared_pseudo:.4f}</strong></div>
-                <div><span style="color:#94a3b8;">Peer Universe Sample:</span> <strong style="color:#ffffff;">N = {huber_res.peer_sample_size}</strong></div>
-                <div><span style="color:#94a3b8;">Algo Peer Median:</span> <strong style="color:#ffffff;">{huber_res.algo_peer_median:.1f}x P/E</strong></div>
-                <div><span style="color:#94a3b8;">DRHP Declared Median:</span> <strong style="color:#ffffff;">{huber_res.declared_peer_median:.1f}x P/E</strong></div>
-            </div>
-        </div>
-        """
-        render_html(huber_card_html, unsafe_allow_html=True)
-
-        # 2. 5-Part Econometric Evidence Narrative Block
-        p_data = narrative["the_problem"]
-        b_data = narrative["the_background"]
-        e_data = narrative["econometric_findings"]
-        i_data = narrative["deep_insights"]
-        a_data = narrative["call_to_action"]
-
-        narrative_block_html = f"""
-        <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:20px;">
-            <!-- Part 1: The Problem -->
-            <div class="bento-card" style="border-left:4px solid #f43f5e; background:rgba(15,23,42,0.7);">
-                <div style="font-size:0.75rem; text-transform:uppercase; color:#f43f5e; font-weight:700;">
-                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">warning</span>STAGE 1: THE VALUATION & CAPITAL ALLOCATION DILEMMA
-                </div>
-                <div style="font-size:1.0rem; font-weight:700; color:#f8fafc; margin:4px 0;">{p_data['title']}</div>
-                <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.6;">{p_data['content']}</div>
-            </div>
-
-            <!-- Part 2: Disclosures Background -->
-            <div class="bento-card" style="border-left:4px solid #38bdf8; background:rgba(15,23,42,0.7);">
-                <div style="font-size:0.75rem; text-transform:uppercase; color:#38bdf8; font-weight:700;">
-                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">policy</span>STAGE 2: STATUTORY FILING & REGULATORY DISCLOSURES
-                </div>
-                <div style="font-size:1.0rem; font-weight:700; color:#f8fafc; margin:4px 0;">{b_data['title']}</div>
-                <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.6;">{b_data['content']}</div>
-            </div>
-
-            <!-- Part 3: Econometric Findings -->
-            <div class="bento-card" style="border-left:4px solid #10b981; background:rgba(15,23,42,0.7);">
-                <div style="font-size:0.75rem; text-transform:uppercase; color:#10b981; font-weight:700;">
-                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">functions</span>STAGE 3: ECONOMETRIC FINDINGS & EMPIRICAL EVIDENCE
-                </div>
-                <div style="font-size:1.0rem; font-weight:700; color:#f8fafc; margin:4px 0;">{e_data['title']}</div>
-                <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.6;">{e_data['content']}</div>
-            </div>
-
-            <!-- Part 4: Deep Insights -->
-            <div class="bento-card" style="border-left:4px solid #a855f7; background:rgba(15,23,42,0.7);">
-                <div style="font-size:0.75rem; text-transform:uppercase; color:#a855f7; font-weight:700;">
-                    <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">biotech</span>STAGE 4: FORENSIC EARNINGS QUALITY & WORKING CAPITAL DYNAMICS
-                </div>
-                <div style="font-size:1.0rem; font-weight:700; color:#f8fafc; margin:4px 0;">{i_data['title']}</div>
-                <div style="font-size:0.86rem; color:#cbd5e1; line-height:1.6;">{i_data['content']}</div>
-            </div>
-
-            <!-- Part 5: Call to Action -->
-            <div class="bento-card" style="border-left:4px solid #f59e0b; background:rgba(15,23,42,0.85); box-shadow:0 4px 14px rgba(245,158,11,0.15);">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="font-size:0.75rem; text-transform:uppercase; color:#f59e0b; font-weight:700;">
-                        <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">gavel</span>STAGE 5: INVESTMENT COMMITTEE CALL-FOR-ACTION PLAYBOOK
-                    </div>
-                    <span class="badge-pill badge-amber" style="font-size:0.75rem;">{narrative['verdict']}</span>
-                </div>
-                <div style="font-size:1.05rem; font-weight:800; color:#fbbf24; margin:6px 0;">{a_data['title']}</div>
-                <div style="font-size:0.88rem; color:#f1f5f9; line-height:1.7;">{a_data['content']}</div>
-            </div>
-        </div>
-        """
-        render_html(narrative_block_html, unsafe_allow_html=True)
-
-        # 3. Walk-Forward ML Dual-Head Scorecard
-        render_html('<div class="bento-subtitle">Dual-Head Expanding Window Model (180-Day Embargoed Validation)</div>', unsafe_allow_html=True)
-        render_html('<div class="bento-title">Walk-Forward Machine Learning Institutional Scorecard</div>', unsafe_allow_html=True)
-
-        c_ml1, c_ml2, c_ml3 = st.columns(3)
-        with c_ml1:
-            fund_score = round(max(5.0, min(95.0, 100.0 - (huber_res.unbacked_froth_pct * 0.5))), 1) if huber_res.unbacked_froth_pct > 0 else round(min(95.0, 75.0 + abs(huber_res.unbacked_froth_pct) * 0.3), 1)
-            st.metric("Fundamental & Governance Score", f"{fund_score} / 100", delta="60% Weight")
-        with c_ml2:
-            sent_score = 65.0 if dossier.is_price_disclosed else 48.0
-            st.metric("Pricing & Demand Sentiment", f"{sent_score} / 100", delta="40% Weight")
-        with c_ml3:
-            comp_rec = narrative["verdict"].replace("_", " ")
-            st.metric("Composite Decision", comp_rec, delta="Walk-Forward Calibrated")
-
-        # WACC, ROIC & Reverse DCF Hurdle
-        render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
-        render_html('<div class="bento-subtitle">Economic Value Creation & Reverse DCF Sizing</div>', unsafe_allow_html=True)
-        render_html('<div class="bento-title">ROIC vs WACC Spread & Required Growth Hurdle</div>', unsafe_allow_html=True)
-        wacc_res = calculate_wacc_and_roic(
-            dossier,
-            is_blocked=bool(is_hcch and not gate_decision.allowed),
-            blocked_reason="Unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
-        )
-        rev_dcf = calculate_reverse_dcf_hurdle(
-            dossier,
-            is_blocked=bool(is_hcch and not gate_decision.allowed),
-            blocked_reason="Unpriced / unreviewed under P0-07 containment" if (is_hcch and not gate_decision.allowed) else "",
-        )
-
-        col_w1, col_w2, col_w3 = st.columns(3)
-        with col_w1:
-            roic_val = wacc_res.get('roic_pct') if wacc_res else None
-            spread_val = wacc_res.get('value_creation_spread_pct') if wacc_res else None
-            roic_str = f"{roic_val:.1f}%" if roic_val is not None else "N/A"
-            delta_str = f"{spread_val:+.1f}% vs WACC" if spread_val is not None else None
-            st.metric("Return on Invested Capital (ROIC)", roic_str, delta=delta_str)
-        with col_w2:
-            wacc_val = wacc_res.get('wacc_pct') if wacc_res else None
-            wacc_str = f"{wacc_val:.1f}%" if wacc_val is not None else "N/A"
-            st.metric("Weighted Average Cost of Capital (WACC)", wacc_str, help="CAPM Ke + Post-tax Kd")
-        with col_w3:
-            eva_val = wacc_res.get('economic_profit_cr') if wacc_res else None
-            eva_str = f"₹{eva_val:,.1f} Cr" if eva_val is not None else "N/A"
-            eva_status = (wacc_res.get('status') or 'UNCOMPUTED').replace('_', ' ') if wacc_res else "UNCOMPUTED"
-            st.metric("Annual Economic Profit (EVA)", eva_str, delta=eva_status)
-
-        dcf_narrative = rev_dcf.get('narrative', 'Reverse DCF hurdle calculation requires audited financial statements.') if rev_dcf else "Awaiting disclosures."
-        st.info(f"**Reverse DCF Analysis:** {dcf_narrative}", icon=":material/info:")
-
-        # Beneish Forensics & Anchor Lock-In Calendar
-        render_html('<hr style="border-color:rgba(255,255,255,0.08); margin:20px 0 16px 0;">', unsafe_allow_html=True)
-        render_html('<div class="bento-subtitle">Forensic Accruals & Statutory Lock-In Calendar</div>', unsafe_allow_html=True)
-        render_html('<div class="bento-title">Beneish M-Score & Anchor Secondary Float Schedule</div>', unsafe_allow_html=True)
-
-        beneish = dossier.beneish_forensics
-        if beneish and beneish.m_score is not None:
-            b_color = "#10b981" if not beneish.is_manipulation_risk else "#f43f5e"
-            b_status = "SAFE (Low Accrual Manipulation Risk)" if not beneish.is_manipulation_risk else "ELEVATED EARNINGS QUALITY CONCERN"
-            render_html(
-                f"""
-                <div class="bento-card" style="border-left:4px solid {b_color}; margin-bottom:16px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                        <div>
-                            <div style="font-size:0.75rem; text-transform:uppercase; color:#94a3b8; font-weight:700;">Beneish (1999) 8-Variable M-Score Model</div>
-                            <div style="font-size:1.85rem; font-weight:800; color:{b_color}; margin:2px 0;">{beneish.m_score:.2f} <span style="font-size:0.88rem; font-weight:600; color:{b_color}; margin-left:8px;">[{b_status}]</span></div>
-                        </div>
-                        <div style="font-size:0.80rem; color:#94a3b8; max-width:420px; text-align:right;">
-                            Threshold: M-Score &gt; -1.78 indicates high statistical probability of earnings management.
-                        </div>
-                    </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.82rem; color:#cbd5e1;">
-                        <div>• DSRI (Days Sales in Receivables): <strong style="color:#ffffff;">{beneish.dsri or 1.0:.2f}</strong></div>
-                        <div>• GMI (Gross Margin Index): <strong style="color:#ffffff;">{beneish.gmi or 1.0:.2f}</strong></div>
-                        <div>• AQI (Asset Quality Index): <strong style="color:#ffffff;">{beneish.aqi or 1.0:.2f}</strong></div>
-                        <div>• SGI (Sales Growth Index): <strong style="color:#ffffff;">{beneish.sgi or 1.0:.2f}</strong></div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            st.info("Forensic M-Score requires minimum 2 full years of restated balance sheet disclosures.")
-
-        # Full-width Statutory Lock-In Schedule
-        render_html('<div class="bento-subtitle">Statutory Anchor & Promoter Lock-in Expiry Calendar</div>', unsafe_allow_html=True)
-        from datetime import datetime, timezone
-        from models.pre_ipo_exchange_feed import ExchangeFeedClient
-        recon = ExchangeFeedClient.reconcile_with_prospectus(dossier.listing_date, dossier.company_name)
-        if recon.get("is_reconciled"):
-            render_html(
-                f"""
-                <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:0.78rem; color:#10b981;">
-                    <span class="material-symbols-rounded" style="font-size:14px; color:#10b981; vertical-align:-2px; margin-right:2px;">check_circle</span> <strong>{recon['exchange']} Circular {recon['circular_ref']}</strong> · Listing: <strong>{recon['exchange_listing_date']}</strong> ({recon['drift_status']})
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        if not recon.get("is_reconciled"):
-            st.info(recon["notes"])
-        as_of_today = datetime.now(timezone.utc).date()
-        lockin_sched = generate_anchor_lockin_calendar(dossier, as_of_date=as_of_today)
-        if lockin_sched:
-            l_rows = []
-            for l in lockin_sched:
-                l_rows.append({
-                    "Unlock Milestone": l.milestone_name,
-                    "Target Date": l.calendar_date,
-                    "Unlocked (₹ Cr)": f"₹{l.unlocked_value_cr:,.1f}",
-                    "Free Float (%)": f"{l.cumulative_free_float_pct:.1f}%",
-                    "Risk Level": l.supply_risk_level,
-                    "Status": l.status,
-                    "Exchange Circular": l.exchange_notice_ref,
-                })
-            st.dataframe(pd.DataFrame(l_rows), use_container_width=True, hide_index=True)
+        render_econometric_valuation_tab(dossier, selected_persona, is_hcch, gate_decision, key_suffix="subtab")
 
 # ═════════════════════════════════════════════════════════════════════════════
 # LEVEL 1 - TAB 4: CMIE REFERENCE CROSSWALK & DATA COVERAGE
