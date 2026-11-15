@@ -22,6 +22,25 @@ This document establishes the permanent theoretical, empirical, regulatory, and 
 
 ---
 
+
+
+---
+
+## Executive Reconciliation: The Seven-Part Architecture Master Map
+
+The following structured matrix confirms the complete integration of the institutional research, practitioner app blueprint, empirical literature, and quantitative machine learning feature engineering across the seven core parts of the master document:
+
+| Section / Part | Core Contents Incorporated & Validated in Blueprint | Anchor Blueprint Sections |
+| :--- | :--- | :--- |
+| **Part I: Six-Pillar Pre-IPO Analysis Framework (India)** | • **SEBI ICDR Eligibility Routes:** Regulation 6(1) (Profitability Route: ₹3 Cr tangible assets, ₹15 Cr avg operating profit, ₹1 Cr net worth) vs. Regulation 6(2) (Alternative / QIB Route: 75% compulsory allocation to QIBs).<br>• **Capital Split:** Fresh Issue (growth capex / debt repayment) vs. OFS (promoter / PE cash-out).<br>• **Financial Track Record:** Ind AS 3-year restated financials with stub-period adjustments.<br>• **Forensic Triggers:** Sloan Accrual Ratio & Beneish M-Score window-dressing alarms.<br>• **Governance & Tail Risk:** RPT leakage (>10% revenue), auditor turnover/resignation within 3 years, promoter share pledges.<br>• **Valuation Core:** DCF + Use-of-Proceeds integration, post-issue dilution mechanics.<br>• **Liquidity & Tax Constraints:** Mandatory 6-month SEBI ICDR Regulation 17 lock-in & Section 56(2)(x) Income Tax deemed income risk for unlisted buyers. | **Section 4:** Indian Pre-IPO Analysis Framework (Six-Pillar Methodology)<br>**Section 5:** Automated Prospectus Ingestion & Financial Reconstruction |
+| **Part II: Algorithmic Peer Benchmarking & Post-IPO Lifecycle Trajectory** | • **Similarity Weighting Index (0–100):** Multi-factor semantic, margin, revenue scale, and product overlap distance metric.<br>• **DRHP Peer-Selection Bias Detector:** Quantifies merchant banker peer cherry-picking ($\text{BiasIndex} = \text{Median}(M_{\text{DRHP}}) / \text{Median}(M_{\text{Algo}})$).<br>• **Warranted Fair Multiples:** Huber-robust cross-sectional regression neutralizing outlier bias.<br>• **$T_0$ Event-Study Cohort Trajectory:** Day 30/90 Anchor and Day 180 Pre-IPO lock-in supply unlock event curves.<br>• **Four Behavioral Post-IPO Archetypes:** *Compounding Compounder*, *Priced-to-Perfection De-Rater*, *Post-Listing Margin Deteriorator*, *PE Exit Overhang*.<br>• **Commercial Platform Gap Matrix:** Evaluates capabilities and shortcomings of global tools. | **Section 3:** Commercial Platforms & Gap Analysis<br>**Section 7:** Cohort Lifecycle & Post-IPO Trajectory Analysis<br>**Section 11.2:** Econometric Specifications |
+| **Part III: Global & Commercial Landscape + 6-Stage Pipeline** | • **Benchmark Comparisons:** IPO Finance Agent, InSync Analytics, PitchBook / CB Insights Mosaic, Forge Global / Caplight.<br>• **6-Stage Pipeline Flow:** Ingestion $\to$ Partitioning/OCR $\to$ Information Extraction $\to$ Specialized Engines (Cap Table, Dilution, Restatement, FinBERT) $\to$ Peer Comps/DCF $\to$ Export & Sensitivity.<br>• **Alternative Data Signals:** Hiring momentum (LinkedIn/Naukri), employee sentiment (AmbitionBox/Glassdoor), app traffic (SimilarWeb), GST e-way bill volume indicators.<br>• **4-Tier Stakeholder Alpha Matrix:** Value creation mapping for Asset Managers/PE, Merchant Bankers, HNIs/Family Offices, and Retail/SME Bidders. | **Section 2:** Quantitative & Econometric Models<br>**Section 3:** Commercial Landscape & Gap Analysis<br>**Section 5:** End-to-End Automated Pipeline Engineering |
+| **Part IV: ProfSur Practitioner Application Blueprint** | • **5 Left-Panel Workspace Views:** (1) Executive Summary & Statutory Overview, (2) Forensic Accounting & Restated Health, (3) Capital Structure & Dilution Engine, (4) Algorithmic Peer Comps & Multiples, (5) Governance, RPT & NLP Risk Matrix.<br>• **6 Deterministic Red-Flag Rule Thresholds:** Quantified rule-based circuit breakers for accrual bloat, OFS dominance, promoter pledge, RPT leakage, auditor turnover, and valuation froth.<br>• **SEBI RA/RIA Compliance Controls:** Immutable audit trails, deterministic reproducible calculations, SHA-256 data snapshot hashes.<br>• **Python/Pydantic Data Contracts:** Strongly typed validation contracts (`FinancialMetric`, `CapitalStructure`, `PreIPOProspectusData`). | **Section 5.3:** Pydantic v2 Production Data Contract<br>**Section 10:** 4-Layer Production Architecture<br>**Section 14:** Target Module Architecture & Production Roadmap |
+| **Part V: Hybrid AI & Quantitative Model Training Roadmap** | • **Two-Stage Training Architecture:** QLoRA fine-tuned long-context LLM schema extractor + FinBERT/DeBERTa risk encoder + walk-forward validated LightGBM/CatBoost tabular model.<br>• **Dual-Score Architecture:** Unblended separation into **Score 1: Fundamental & Governance Score** (Long-Term Hold Signal) and **Score 2: Pricing & Sentiment Score** (Listing Gain Signal). | **Section 1:** Four Methodological Paradigms<br>**Section 9:** Recommended Dual-Score Architecture<br>**Section 10:** 4-Layer Production Architecture |
+| **Part VI: Empirical Literature & Reference List** | • **CRISIL / ICRA Grading Methodology:** 4-pillar evaluation (Business Prospects, Financial Position, Management Capabilities, Corporate Governance).<br>• **SEBI Statutory KPI & 18-Month WACA Rules:** Regulation 26(1) basis of offer price and acquisition cost schedules.<br>• **Academic Literature:** JRFM (2023) offer price regression, PRISMA 111-study Indian IPO review, IIT Bombay (SJMSOM) ML underperformance findings.<br>• **Master Citation Register:** Comprehensive 19-source academic and statutory bibliography. | **Section 8:** Institutional Frameworks & Academic Literature<br>**Section 13:** Comprehensive Academic & Statutory Reference List |
+| **Part VII: Academic & Econometric Taxonomy + Walk-Forward ML Pipeline** | • **Foundational Theoretical Frameworks:** Rock (1986), Leland & Pyle (1977), Welch (1989), Bhojraj & Lee (2002), Damodaran Survival DCF, Sloan (1996) / Beneish (1999), Estrada (2002).<br>• **Econometric Specifications:** BHAR over $\{1\text{D}, 30\text{D}, 90\text{D}, 180\text{D}, 1\text{Y}, 3\text{Y}\}$, Huber-robust regression, Heckman two-stage selection, CAR lock-in event studies $[-5\text{D}, +10\text{D}]$, JRFM offer price regression.<br>• **ML/NLP Literature:** GBDTs, textual uncertainty scores, dense vector peer retrieval, trajectory clustering, CapitalVX exit models.<br>• **40-Feature Engineering Matrix:** Complete formulas and economic rationale across 5 feature blocks (Fundamentals, Cap Table, Comps, Governance, Demand).<br>• **Walk-Forward Validation Rules:** 5:00 PM IST $T_{\text{cutoff}}$, training-window-only winsorization, 6-month embargo gap, and SHAP explainability. | **Section 11:** Structured Academic & Econometric Bibliography<br>**Section 12:** Walk-Forward ML Feature Engineering Pipeline |
+
+---
 ## Section 1: The Four Methodological Paradigms of Pre-IPO Intelligence
 
 Institutional research desks, sovereign wealth allocators, and quantitative funds layer four complementary paradigms to separate fundamental business quality from issuance mispricing:
@@ -170,6 +189,33 @@ Several commercial platforms combine quantitative modeling and machine learning 
 * **Indian Primary Market Data Portals (NSE, BSE, Chittorgarh, IPO Watch, Ace Equity, CMIE Prowess):** Provide live bidding subscription rates across QIB/NII/Retail buckets, Grey Market Premiums, anchor allocation sheets, and historical Ind AS restatement databases.
 
 ---
+
+
+
+### 3.2 Commercial Platform Capabilities & Institutional Gap Matrix
+
+Global financial platforms provide robust datasets for mature public equities or US tech venture rounds, but exhibit severe architectural and regulatory gaps when applied to the Indian primary market ecosystem:
+
+| Platform / Vendor | Core Strength | Structural Limitations in Indian Pre-IPO Context | ProfSur Advantage |
+| :--- | :--- | :--- | :--- |
+| **PitchBook** | Global VC/PE deal histories, pre-money valuations, and limited partner fund flows. | Static lagging data; lacks automated parsing of SEBI DRHP restatements, Ind AS adjustments, and Indian anchor bidding book-building feeds. | Native SEBI DRHP layout parser with automated Ind AS 3Y restated financial reconstruction. |
+| **CB Insights (Mosaic)** | Algorithmic private company momentum scoring (Mosaic Health, Management, and Market). | US-centric feature weights; misses Indian statutory disclosures (18-month WACA, Section 56(2)(x) tax fair market values, SEBI Reg 17 lock-ins). | Codified SEBI statutory KPI verification, 18-month WACA markup, and unlisted LTCG tax model. |
+| **Caplight / Forge Global** | Real-time secondary price discovery for pre-IPO unicorns with indicative synthetic multiples. | Restricted to US institutional secondary market transactions; zero coverage of Indian unlisted pre-IPO liquidity, grey market dynamics, or SME platforms. | Live NSE/BSE API integration for bids, peer multiples, and unlisted block-deal pricing trackers. |
+| **InSync Analytics** | Deep line-item financial model creation from SEC 10-K/S-1 filings. | High manual human-in-the-loop turnaround times (24–48 hours); lacks real-time algorithmic peer selection and NLP litigation risk scanning. | Sub-minute automated Pydantic schema extraction, FinBERT textual risk scoring, and Huber peer comps. |
+| **Bloomberg / FactSet** | Unrivaled global secondary market depth, consensus estimates, and terminal analytics. | Treats DRHP filings as static PDF attachments; no automated peer-bias detection or post-IPO lock-in supply unlock event modeling. | Algorithmic DRHP peer-selection bias detector and $T_0$ event-study post-IPO cohort trajectory modeling. |
+
+---
+
+### 3.3 The 4-Tier Stakeholder Alpha Matrix
+
+A production-grade pre-IPO platform must deliver asymmetric quantitative value across the entire institutional capital lifecycle:
+
+| Stakeholder Tier | Strategic Decision Mandate | Core Analytical Engine & Alpha Deliverable |
+| :--- | :--- | :--- |
+| **Tier 1: Institutional Asset Managers & PE Funds** | Pre-IPO crossover investments, unlisted secondary acquisitions, and QIB anchor book bidding strategy. | • **Dilution & WACA Engine:** Models post-fresh equity dilution, ESOP overhang, and step-up vs. 18-month historical acquisition cost.<br>• **Lock-In Arbitrage Model:** Computes risk-adjusted expected returns factoring in the mandatory 6-month Regulation 17 lock-in and liquidity discount.<br>• **Dual-Score Signal:** Evaluates fundamental hold quality independent of short-term listing hype. |
+| **Tier 2: Merchant Bankers & Investment Banks** | Offer price band defense, statutory peer justification under SEBI Reg 26(1), and regulatory filing compliance. | • **Huber Warranted Multiples:** Computes defensible regression-implied fair multiples conditioned on ROCE, growth, and leverage.<br>• **Peer-Bias Diagnostic:** Detects whether proposed peer sets will face regulatory pushback for cherry-picking high-multiple outliers.<br>• **Restatement Reconciliation:** Automated validation of Ind AS reconciliations across 3-year historical statements. |
+| **Tier 3: Family Offices & Ultra-HNIs** | Direct participation in unlisted secondary shares, pre-IPO placements, and post-listing exit timing. | • **Section 56(2)(x) Tax Guardrail:** Evaluates deemed income tax liability where unlisted purchase price falls below fair market value (Rule 11UA).<br>• **Forensic Red-Flag Scanner:** Screens for promoter siphoning, excessive related-party transactions (>10% revenue), and auditor resignations.<br>• **Lock-In Drawdown Probability:** Assesses post-listing supply overhang risk across 30-day, 90-day, and 180-day lock-in dates. |
+| **Tier 4: Retail & SME Bidders** | High-conviction IPO application decisions, listing-day gain capture, and SME liquidity risk mitigation. | • **Listing-Day Pop Forecaster:** Calibrated ensemble model predicting Day-1 listing gains from QIB/NII subscription multiples and market volatility.<br>• **SME Lot-Size Liquidity Guard:** Analyzes minimum application lot sizes (₹1.0–1.2 Lakhs), market-maker liquidity support, and post-listing trading spread risks.<br>• **Window-Dressing Warning:** Simplified alert when stub-period margins diverge sharply from audited annual operating cash flows. |
 
 ## Section 4: Indian Pre-IPO Analysis Framework (Six-Pillar Methodology)
 
@@ -666,6 +712,63 @@ To translate this academic and industry landscape into a high-precision engine i
 4. **Deterministic Valuation Core:** Pure Python financial engine computing Diluted Post-Fresh-Issue Comps, Survival-Adjusted DCF, and Unlisted Lock-In Arbitrage.
 
 ---
+
+
+
+### 10.2 The Five ProfSur Left-Panel Workspace Views
+
+The `ProfSur` practitioner application maps the pre-IPO due diligence workflow into five specialized, high-conviction workspace views:
+
+```text
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                          PROFSUR PRE-IPO WORKSPACE VIEWS                               │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ 1. Executive Summary & Statutory Overview                                              │
+│    ├── Issue Structure (Fresh Issue vs. OFS Split & Capital Purpose)                   │
+│    ├── SEBI Eligibility Route Verification (Reg 6(1) Profitability vs. Reg 6(2) QIB)   │
+│    ├── Anchor Investor Allocation Book & Tier-1 Mutual Fund / SWF Participation        │
+│    └── Statutory Capital Raise Constraints & 18-Month WACA Upper Band Markup           │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ 2. Forensic Accounting & Restated Financial Health                                     │
+│    ├── 3-Year Ind AS Restated Financial Statements (P&L, Balance Sheet, Cash Flow)    │
+│    ├── Operating Cash Realization & CFO-to-EBITDA Conversion Velocity                   │
+│    ├── Sloan Accrual Ratio & Working Capital Expansion Tracker                         │
+│    └── Beneish M-Score Multi-Period Metric Scanner (DSRI, GMI, AQI, SGI, DEPI)         │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ 3. Capital Structure, Cap Table & Dilution Engine                                      │
+│    ├── Pre-Issue vs. Post-Issue Shareholding Pattern & Promoter Control Retention      │
+│    ├── Convertible Securities Schedule (CCPS, Compulsory Dilution, Warrant Overhang)   │
+│    ├── ESOP Pool Allocation, Exercise Price Distribution, and Vested Supply Overhang   │
+│    └── Fully Diluted Equity Capital Base & Valuation Circuit Breakers                  │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ 4. Algorithmic Peer Comps & Econometric Valuation                                      │
+│    ├── 0–100 Multi-Dimensional Semantic & Operational Peer Similarity Matching        │
+│    ├── DRHP Peer-Selection Bias Detector (Merchant Banker Multiple Inflation Index)    │
+│    ├── Huber-Loss Robust Cross-Sectional Regression for Warranted P/E and EV/EBITDA    │
+│    └── Two-Stage Survival-Adjusted DCF with WACC Step-Down Glide Path                  │
+├────────────────────────────────────────────────────────────────────────────────────────┤
+│ 5. Governance, Litigation & NLP Risk Matrix                                            │
+│    ├── Related-Party Transactions (RPT) Materiality & Capital Siphoning Scan           │
+│    ├── 3-Year Statutory Auditor Resignation & Modified Audit Opinion History           │
+│    ├── Promoter Share Pledges, Personal Guarantees, and Entity Encumbrances            │
+│    └── FinBERT / DeBERTa NLP Ambiguity & Uncertainty Density across Risk Factor Tables │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 10.3 The Six Deterministic Pre-IPO Red-Flag Rule Thresholds
+
+To protect institutional investors and ensure SEBI Research Analyst (RA) compliance, `ProfSur` executes six deterministic rule-based circuit breakers that flag high-risk offerings prior to qualitative evaluation:
+
+| Rule Code | Red-Flag Category | Exact Quantitative Trigger Condition | Severity | Economic & Governance Rationale |
+| :--- | :--- | :--- | :--- | :--- |
+| **RF-01** | **Accrual & Window-Dressing Trigger** | $\text{EBITDA\%}_{\text{stub}} - \text{EBITDA\%}_{T-1} > +500\text{ bps}$<br>AND $\text{CFO} / \text{EBITDA} < 0.40$<br>OR $\Delta \text{DSO} > +20\text{ days}$ | **CRITICAL** | Flags aggressive revenue recognition or expense deferral in stub period preceding IPO filing to inflate offer valuations. |
+| **RF-02** | **OFS Capital Extraction Trigger** | $\frac{\text{OFS Proceeds}}{\text{Total Issue Size}} > 0.70$ | **HIGH** | Indicates private equity or promoters using public markets primarily as an exit vehicle rather than raising growth capital for the enterprise. |
+| **RF-03** | **Promoter Dilution & Pledge Trigger** | $\text{Post-Issue Promoter Holding} < 40\%$<br>OR $\frac{\text{Pledged Shares}}{\text{Promoter Shares}} > 0.10$ | **CRITICAL** | Signals agency conflict, loss of insider skin-in-the-game, and vulnerability to open-market forced selling during stock drawdowns. |
+| **RF-04** | **RPT Value-Leakage Trigger** | $\frac{\text{Aggregate RPT Outflows}}{\text{Total Revenue}_T} > 0.10$<br>OR Loans to Promoter Group $> 0$ | **HIGH** | Uncovers capital siphoning, preferential related-party supply arrangements, and unrecovered loans to promoter-controlled entities. |
+| **RF-05** | **Auditor Turnover / Qualification Trigger** | $\text{Auditor Resignation within 36M} = \text{True}$<br>OR $\text{Audit Opinion} \neq \text{Unqualified}$ | **FATAL** | Sudden resignation of statutory audit firms or modified restated opinions is the strongest empirical predictor of post-listing accounting fraud. |
+| **RF-06** | **Valuation Froth & WACA Markup Trigger** | $\frac{\text{Offer P/E}_{\text{diluted}}}{\text{Algo Peer Median P/E}} - 1 > 0.40$<br>OR $\frac{\text{Upper Price Band}}{\text{18M WACA}} > 3.0\times$ | **HIGH** | Protects against exorbitant IPO pricing premiums unsupported by growth fundamentals or recent private funding benchmark valuations. |
 
 ## Section 11: Structured Academic & Econometric Bibliography (with Key Equations & Datasets)
 
