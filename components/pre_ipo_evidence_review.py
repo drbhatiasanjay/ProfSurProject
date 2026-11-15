@@ -351,10 +351,14 @@ def render():
                 core_prods = getattr(background, "core_products_and_services", [])
                 if core_prods:
                     st.markdown("**Core Operating Segments & Product Lines**")
+                    def _fmt_rev(p_dict):
+                        v = p_dict.get('revenue_pct') if isinstance(p_dict, dict) else None
+                        return f"{float(v):.1f}%" if isinstance(v, (int, float)) else "0.0%"
+
                     t_rows = "".join([
                         f"<tr>"
                         f"<td style='padding:10px 14px; font-weight:600; border-bottom:1px solid rgba(255,255,255,0.08); vertical-align:top; width:28%;'>{html.escape(p.get('name', '—'))}</td>"
-                        f"<td style='padding:10px 14px; text-align:right; font-family:monospace; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.08); vertical-align:top; width:14%;'>{float(p.get('revenue_pct', 0.0)):.1f}%</td>"
+                        f"<td style='padding:10px 14px; text-align:right; font-family:monospace; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.08); vertical-align:top; width:14%;'>{_fmt_rev(p)}</td>"
                         f"<td style='padding:10px 14px; white-space:normal; word-wrap:break-word; word-break:break-word; line-height:1.55; border-bottom:1px solid rgba(255,255,255,0.08); vertical-align:top; width:58%;'>{html.escape(p.get('description', '—'))}</td>"
                         f"</tr>"
                         for p in core_prods

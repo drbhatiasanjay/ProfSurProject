@@ -2672,8 +2672,10 @@ def get_stored_models_table(session=None) -> pd.DataFrame:
     r2_row = {"Variable": "R-squared"}
     fe_row = {"Variable": "Firm Fixed Effects"}
     for m_name, m in stored.items():
-        n_row[m_name] = f"{m.get('n_obs', 0):,}"
-        r2_row[m_name] = f"{m.get('r2', 0.0):.4f}"
+        n_val = m.get('n_obs') if isinstance(m, dict) else None
+        n_row[m_name] = f"{n_val:,}" if isinstance(n_val, (int, float)) else "0"
+        r2_val = m.get('r2') if isinstance(m, dict) else None
+        r2_row[m_name] = f"{r2_val:.4f}" if isinstance(r2_val, (int, float)) else "0.0000"
         fe_row[m_name] = "Yes" if "Fixed" in m.get("model_type", "") else "No"
 
     rows.extend([{"Variable": "----------------"}, n_row, r2_row, fe_row])

@@ -1078,10 +1078,12 @@ with tab_overview:
     if prods:
         p_rows = []
         for pr in prods:
+            _rev_pct = pr.get("revenue_pct") if isinstance(pr, dict) else None
+            _rev_pct_s = f"{_rev_pct:.1f}%" if isinstance(_rev_pct, (int, float)) else "0.0%"
             p_rows.append({
-                "Product / Service Line": pr.get("name", ""),
-                "Revenue Contribution (%)": f"{pr.get('revenue_pct', 0):.1f}%",
-                "Operational Description & Market Position": pr.get("description", ""),
+                "Product / Service Line": pr.get("name", "") if isinstance(pr, dict) else "",
+                "Revenue Contribution (%)": _rev_pct_s,
+                "Operational Description & Market Position": pr.get("description", "") if isinstance(pr, dict) else "",
             })
         st.dataframe(pd.DataFrame(p_rows), use_container_width=True, hide_index=True)
     else:
@@ -1720,8 +1722,27 @@ with tab_workpapers:
         huber_res = compute_dynamic_huber_valuation(dossier, scenario_price_inr=sc_p)
         narrative = generate_valuation_evidence_narrative(dossier, huber_res, persona=selected_persona)
 
-        f_badge = "badge-emerald" if huber_res.unbacked_froth_pct <= 0 else "badge-rose"
-        f_label = f"{abs(huber_res.unbacked_froth_pct):.1f}% DISCOUNT" if huber_res.unbacked_froth_pct <= 0 else f"+{huber_res.unbacked_froth_pct:.1f}% FROTH"
+        froth_val = getattr(huber_res, 'unbacked_froth_pct', None)
+        if froth_val is not None:
+            f_badge = "badge-emerald" if froth_val <= 0 else "badge-rose"
+            f_label = f"{abs(froth_val):.1f}% DISCOUNT" if froth_val <= 0 else f"+{froth_val:.1f}% FROTH"
+        else:
+            f_badge = "badge-amber"
+            f_label = "PENDING CALIBRATION"
+
+        warranted_mult = getattr(huber_res, 'warranted_fair_multiple', None)
+        warranted_str = f"{warranted_mult:.1f}x" if warranted_mult is not None else "N/A"
+        actual_mult = getattr(huber_res, 'target_actual_multiple', None)
+        actual_str = f"{actual_mult:.1f}x" if actual_mult is not None else "N/A"
+        bias_idx = getattr(huber_res, 'drhp_peer_bias_index', None)
+        bias_str = f"{bias_idx:.2f}x" if bias_idx is not None else "1.00x"
+        r2_pseudo = getattr(huber_res, 'r_squared_pseudo', None)
+        r2_str = f"{r2_pseudo:.4f}" if r2_pseudo is not None else "N/A"
+        n_sample = getattr(huber_res, 'peer_sample_size', 0)
+        algo_med = getattr(huber_res, 'algo_peer_median', None)
+        algo_med_str = f"{algo_med:.1f}x P/E" if algo_med is not None else "N/A"
+        decl_med = getattr(huber_res, 'declared_peer_median', None)
+        decl_med_str = f"{decl_med:.1f}x P/E" if decl_med is not None else "N/A"
 
         # 1. Huber Metrics Bento
         huber_card_html = f"""
@@ -1732,19 +1753,19 @@ with tab_workpapers:
                         <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">analytics</span>HUBER M-ESTIMATOR CALIBRATED VALUATION (c=1.345)
                     </div>
                     <div style="font-size:1.85rem; font-weight:800; color:#ffffff; margin:2px 0;">
-                        {huber_res.warranted_fair_multiple:.1f}x P/E <span style="font-size:0.9rem; font-weight:500; color:#94a3b8;">Warranted Fair Multiple (Implied Asking: {huber_res.target_actual_multiple:.1f}x)</span>
+                        {warranted_str} P/E <span style="font-size:0.9rem; font-weight:500; color:#94a3b8;">Warranted Fair Multiple (Implied Asking: {actual_str})</span>
                     </div>
                 </div>
                 <div style="display:flex; gap:8px;">
                     <span class="badge-pill {f_badge}" style="font-size:0.82rem; padding:6px 14px;">{f_label}</span>
-                    <span class="badge-pill badge-sky" style="font-size:0.82rem; padding:6px 14px;">DRHP Bias: {huber_res.drhp_peer_bias_index:.2f}x</span>
+                    <span class="badge-pill badge-sky" style="font-size:0.82rem; padding:6px 14px;">DRHP Bias: {bias_str}</span>
                 </div>
             </div>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.84rem;">
-                <div><span style="color:#94a3b8;">Pseudo R-Squared:</span> <strong style="color:#10b981;">{huber_res.r_squared_pseudo:.4f}</strong></div>
-                <div><span style="color:#94a3b8;">Peer Universe Sample:</span> <strong style="color:#ffffff;">N = {huber_res.peer_sample_size}</strong></div>
-                <div><span style="color:#94a3b8;">Algo Peer Median:</span> <strong style="color:#ffffff;">{huber_res.algo_peer_median:.1f}x P/E</strong></div>
-                <div><span style="color:#94a3b8;">DRHP Declared Median:</span> <strong style="color:#ffffff;">{huber_res.declared_peer_median:.1f}x P/E</strong></div>
+                <div><span style="color:#94a3b8;">Pseudo R-Squared:</span> <strong style="color:#10b981;">{r2_str}</strong></div>
+                <div><span style="color:#94a3b8;">Peer Universe Sample:</span> <strong style="color:#ffffff;">N = {n_sample}</strong></div>
+                <div><span style="color:#94a3b8;">Algo Peer Median:</span> <strong style="color:#ffffff;">{algo_med_str}</strong></div>
+                <div><span style="color:#94a3b8;">DRHP Declared Median:</span> <strong style="color:#ffffff;">{decl_med_str}</strong></div>
             </div>
         </div>
         """
@@ -1869,6 +1890,10 @@ with tab_workpapers:
         if beneish and beneish.m_score is not None:
             b_color = "#10b981" if not beneish.is_manipulation_risk else "#f43f5e"
             b_status = "SAFE (Low Accrual Manipulation Risk)" if not beneish.is_manipulation_risk else "ELEVATED EARNINGS QUALITY CONCERN"
+            dsri_s = f"{beneish.dsri:.2f}" if getattr(beneish, 'dsri', None) is not None else "1.00"
+            gmi_s = f"{beneish.gmi:.2f}" if getattr(beneish, 'gmi', None) is not None else "1.00"
+            aqi_s = f"{beneish.aqi:.2f}" if getattr(beneish, 'aqi', None) is not None else "1.00"
+            sgi_s = f"{beneish.sgi:.2f}" if getattr(beneish, 'sgi', None) is not None else "1.00"
             render_html(
                 f"""
                 <div class="bento-card" style="border-left:4px solid {b_color}; margin-bottom:16px;">
@@ -1882,10 +1907,10 @@ with tab_workpapers:
                         </div>
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:10px; margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:10px; font-size:0.82rem; color:#cbd5e1;">
-                        <div>• DSRI (Days Sales in Receivables): <strong style="color:#ffffff;">{beneish.dsri or 1.0:.2f}</strong></div>
-                        <div>• GMI (Gross Margin Index): <strong style="color:#ffffff;">{beneish.gmi or 1.0:.2f}</strong></div>
-                        <div>• AQI (Asset Quality Index): <strong style="color:#ffffff;">{beneish.aqi or 1.0:.2f}</strong></div>
-                        <div>• SGI (Sales Growth Index): <strong style="color:#ffffff;">{beneish.sgi or 1.0:.2f}</strong></div>
+                        <div>• DSRI (Days Sales in Receivables): <strong style="color:#ffffff;">{dsri_s}</strong></div>
+                        <div>• GMI (Gross Margin Index): <strong style="color:#ffffff;">{gmi_s}</strong></div>
+                        <div>• AQI (Asset Quality Index): <strong style="color:#ffffff;">{aqi_s}</strong></div>
+                        <div>• SGI (Sales Growth Index): <strong style="color:#ffffff;">{sgi_s}</strong></div>
                     </div>
                 </div>
                 """,

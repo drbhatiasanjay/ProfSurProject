@@ -131,7 +131,9 @@ synced_deal_options["tata_technologies"] = "Tata Technologies Ltd. (DRHP 2023 ·
 
 # Synchronize dynamically with dynamically ingested dossiers in session state
 for ing_id, ing_dossier in st.session_state["ingested_dossiers"].items():
-    synced_deal_options[ing_id] = f"📁 INGESTED: {ing_dossier.company_name} ({ing_dossier.filing_type} · ₹{ing_dossier.total_issue_size_cr or 0:,.0f} Cr)"
+    _iss_sz = getattr(ing_dossier, 'total_issue_size_cr', None)
+    _iss_sz_s = f"₹{_iss_sz:,.0f} Cr" if isinstance(_iss_sz, (int, float)) else "Unpriced"
+    synced_deal_options[ing_id] = f"📁 INGESTED: {ing_dossier.company_name} ({ing_dossier.filing_type} · {_iss_sz_s})"
 
 # Synchronize with private evidence ledger
 try:
@@ -234,7 +236,13 @@ sector_peers_df = get_sector_peers_df(dossier)
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. ACTIVE ISSUER CARD (EXACT REPLICA OF USER SCREENSHOT)
 # ─────────────────────────────────────────────────────────────────────────────
-price_band_str = f"₹{dossier.valuation_comps.price_band_lower_inr:.0f} - ₹{dossier.valuation_comps.price_band_upper_inr:.0f}" if (dossier.valuation_comps and dossier.valuation_comps.price_band_upper_inr > 0) else "Unpriced [●]"
+vc = getattr(dossier, 'valuation_comps', None)
+pb_lower = getattr(vc, 'price_band_lower_inr', None) if vc else None
+pb_upper = getattr(vc, 'price_band_upper_inr', None) if vc else None
+if pb_lower is not None and pb_upper is not None and pb_upper > 0:
+    price_band_str = f"₹{pb_lower:.0f} - ₹{pb_upper:.0f}"
+else:
+    price_band_str = "Unpriced [●]"
 lot_size_str = f"{getattr(dossier.valuation_comps, 'market_lot_shares', None) or getattr(dossier, 'market_lot_shares', None) or 138} shares"
 issue_sz_str = f"₹{dossier.total_issue_size_cr:,.2f} Cr" if dossier.total_issue_size_cr else "₹8,500.00 Cr (Est)"
 fresh_split_str = f"{dossier.fresh_issue_pct:.0f}% / {dossier.ofs_pct:.0f}%" if (dossier.fresh_issue_pct is not None and getattr(dossier, 'ofs_pct', None) is not None) else "100% / 0%"
@@ -439,8 +447,27 @@ with tab_peers:
 
 # ── TAB 3: HUBER M-ESTIMATOR CALIBRATION ──
 with tab_huber:
-    f_badge = "tag-emerald" if huber_res.unbacked_froth_pct <= 0 else "tag-rose"
-    f_label = f"{abs(huber_res.unbacked_froth_pct):.1f}% DISCOUNT" if huber_res.unbacked_froth_pct <= 0 else f"+{huber_res.unbacked_froth_pct:.1f}% FROTH"
+    froth_val = getattr(huber_res, 'unbacked_froth_pct', None)
+    if froth_val is not None:
+        f_badge = "tag-emerald" if froth_val <= 0 else "tag-rose"
+        f_label = f"{abs(froth_val):.1f}% DISCOUNT" if froth_val <= 0 else f"+{froth_val:.1f}% FROTH"
+    else:
+        f_badge = "tag-amber"
+        f_label = "PENDING CALIBRATION"
+
+    warranted_mult = getattr(huber_res, 'warranted_fair_multiple', None)
+    warranted_str = f"{warranted_mult:.1f}x" if warranted_mult is not None else "N/A"
+    actual_mult = getattr(huber_res, 'target_actual_multiple', None)
+    actual_str = f"{actual_mult:.1f}x" if actual_mult is not None else "N/A"
+    bias_idx = getattr(huber_res, 'drhp_peer_bias_index', None)
+    bias_str = f"{bias_idx:.2f}x" if bias_idx is not None else "1.00x"
+    r2_pseudo = getattr(huber_res, 'r_squared_pseudo', None)
+    r2_str = f"{r2_pseudo:.4f}" if r2_pseudo is not None else "N/A"
+    n_sample = getattr(huber_res, 'peer_sample_size', 0)
+    algo_med = getattr(huber_res, 'algo_peer_median', None)
+    algo_med_str = f"{algo_med:.1f}x P/E" if algo_med is not None else "N/A"
+    decl_med = getattr(huber_res, 'declared_peer_median', None)
+    decl_med_str = f"{decl_med:.1f}x P/E" if decl_med is not None else "N/A"
 
     render_html(f"""
     <div class="bento-card" style="border:1px solid rgba(56,189,248,0.3); margin-bottom:16px;">
@@ -450,19 +477,19 @@ with tab_huber:
                     <span class="material-symbols-rounded" style="font-size:14px; vertical-align:-2px; margin-right:4px;">analytics</span>HUBER M-ESTIMATOR CALIBRATED VALUATION (c=1.345)
                 </div>
                 <div style="font-size:2.0rem; font-weight:900; color:#ffffff; margin:3px 0;">
-                    {huber_res.warranted_fair_multiple:.1f}x P/E <span style="font-size:0.95rem; font-weight:500; color:#94a3b8;">Warranted Fair Multiple (Implied Asking: {huber_res.target_actual_multiple:.1f}x)</span>
+                    {warranted_str} P/E <span style="font-size:0.95rem; font-weight:500; color:#94a3b8;">Warranted Fair Multiple (Implied Asking: {actual_str})</span>
                 </div>
             </div>
             <div style="display:flex; gap:8px;">
                 <span class="terminal-tag {f_badge}" style="font-size:0.85rem; padding:6px 14px;">{f_label}</span>
-                <span class="terminal-tag tag-cyan" style="font-size:0.85rem; padding:6px 14px;">DRHP Bias: {huber_res.drhp_peer_bias_index:.2f}x</span>
+                <span class="terminal-tag tag-cyan" style="font-size:0.85rem; padding:6px 14px;">DRHP Bias: {bias_str}</span>
             </div>
         </div>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-top:14px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px; font-size:0.84rem;">
-            <div><span style="color:#94a3b8;">Pseudo R-Squared:</span> <strong style="color:#10b981;">{huber_res.r_squared_pseudo:.4f}</strong></div>
-            <div><span style="color:#94a3b8;">Peer Sample Size:</span> <strong style="color:#ffffff;">N = {huber_res.peer_sample_size}</strong></div>
-            <div><span style="color:#94a3b8;">Algo Peer Median:</span> <strong style="color:#ffffff;">{huber_res.algo_peer_median:.1f}x P/E</strong></div>
-            <div><span style="color:#94a3b8;">DRHP Declared Median:</span> <strong style="color:#ffffff;">{huber_res.declared_peer_median:.1f}x P/E</strong></div>
+            <div><span style="color:#94a3b8;">Pseudo R-Squared:</span> <strong style="color:#10b981;">{r2_str}</strong></div>
+            <div><span style="color:#94a3b8;">Peer Sample Size:</span> <strong style="color:#ffffff;">N = {n_sample}</strong></div>
+            <div><span style="color:#94a3b8;">Algo Peer Median:</span> <strong style="color:#ffffff;">{algo_med_str}</strong></div>
+            <div><span style="color:#94a3b8;">DRHP Declared Median:</span> <strong style="color:#ffffff;">{decl_med_str}</strong></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -478,9 +505,11 @@ with tab_ml:
     col_sh1, col_sh2 = st.columns(2)
     with col_sh1:
         st.markdown("##### 🔍 SHAP Value Feature Attribution (Top Predictive Features)")
+        shap_froth = f"-{abs(froth_val)*0.1:.2f}" if froth_val is not None else "-0.40"
+        shap_bias = f"-{bias_idx*0.8:.2f}" if bias_idx is not None else "-0.80"
         shap_df = pd.DataFrame([
-            {"Feature": "Unbacked Froth (%)", "SHAP Impact": f"-{abs(huber_res.unbacked_froth_pct)*0.1:.2f}", "Direction": "Bearish / Drawdown"},
-            {"Feature": "DRHP Peer-Selection Bias", "SHAP Impact": f"-{huber_res.drhp_peer_bias_index*0.8:.2f}", "Direction": "Governance Discount"},
+            {"Feature": "Unbacked Froth (%)", "SHAP Impact": shap_froth, "Direction": "Bearish / Drawdown"},
+            {"Feature": "DRHP Peer-Selection Bias", "SHAP Impact": shap_bias, "Direction": "Governance Discount"},
             {"Feature": "Operating Cash Flow Margin", "SHAP Impact": "+1.42", "Direction": "Quality Moat"},
             {"Feature": "Promoter Pledge (%)", "SHAP Impact": "-0.05", "Direction": "Clean Structure"},
         ])
@@ -557,24 +586,39 @@ with tab_forensics:
     rev_dcf = calculate_reverse_dcf_hurdle(dossier)
 
     with col_w1:
-        st.metric("ROIC", f"{wacc_res.get('roic_pct', 0.0):.1f}%", delta=f"{wacc_res.get('value_creation_spread_pct', 0.0):+.1f}% vs WACC")
+        roic_val = wacc_res.get('roic_pct') if wacc_res else None
+        spread_val = wacc_res.get('value_creation_spread_pct') if wacc_res else None
+        roic_str = f"{roic_val:.1f}%" if roic_val is not None else "N/A"
+        delta_str = f"{spread_val:+.1f}% vs WACC" if spread_val is not None else None
+        st.metric("ROIC", roic_str, delta=delta_str)
     with col_w2:
-        st.metric("WACC", f"{wacc_res.get('wacc_pct', 0.0):.1f}%", help="CAPM Ke + Post-tax Kd")
+        wacc_val = wacc_res.get('wacc_pct') if wacc_res else None
+        wacc_str = f"{wacc_val:.1f}%" if wacc_val is not None else "N/A"
+        st.metric("WACC", wacc_str, help="CAPM Ke + Post-tax Kd")
     with col_w3:
-        st.metric("Annual EVA", f"₹{wacc_res.get('economic_profit_cr', 0.0):,.1f} Cr", delta="Economic Profit")
+        eva_val = wacc_res.get('economic_profit_cr') if wacc_res else None
+        eva_str = f"₹{eva_val:,.1f} Cr" if eva_val is not None else "N/A"
+        eva_status = (wacc_res.get('status') or 'UNCOMPUTED').replace('_', ' ') if wacc_res else "UNCOMPUTED"
+        st.metric("Annual EVA", eva_str, delta=eva_status)
 
-    st.info(f"**Reverse DCF Hurdle:** {rev_dcf.get('narrative', 'Awaiting audited financials.')}")
+    dcf_narr = rev_dcf.get('narrative') if rev_dcf else None
+    st.info(f"**Reverse DCF Hurdle:** {dcf_narr or 'Awaiting audited financials.'}")
 
     # Beneish Forensics
-    beneish = dossier.beneish_forensics
-    if beneish and beneish.m_score is not None:
-        b_col = "#10b981" if not beneish.is_manipulation_risk else "#f43f5e"
-        b_st = "SAFE" if not beneish.is_manipulation_risk else "ELEVATED RISK"
+    beneish = getattr(dossier, 'beneish_forensics', None)
+    if beneish and getattr(beneish, 'm_score', None) is not None:
+        is_risk = getattr(beneish, 'is_manipulation_risk', False)
+        b_col = "#10b981" if not is_risk else "#f43f5e"
+        b_st = "SAFE" if not is_risk else "ELEVATED RISK"
+        dsri_s = f"{beneish.dsri:.2f}" if getattr(beneish, 'dsri', None) is not None else "1.00"
+        gmi_s = f"{beneish.gmi:.2f}" if getattr(beneish, 'gmi', None) is not None else "1.00"
+        aqi_s = f"{beneish.aqi:.2f}" if getattr(beneish, 'aqi', None) is not None else "1.00"
+        sgi_s = f"{beneish.sgi:.2f}" if getattr(beneish, 'sgi', None) is not None else "1.00"
         render_html(f"""
         <div class="bento-card" style="border-left:4px solid {b_col}; margin-top:12px;">
             <div style="font-size:0.75rem; color:#94a3b8; font-weight:700;">BENEISH (1999) 8-VARIABLE M-SCORE</div>
             <div style="font-size:1.8rem; font-weight:900; color:{b_col};">{beneish.m_score:.2f} [{b_st}]</div>
-            <div style="font-size:0.82rem; color:#cbd5e1; margin-top:6px;">DSRI: {beneish.dsri or 1.0:.2f} | GMI: {beneish.gmi or 1.0:.2f} | AQI: {beneish.aqi or 1.0:.2f} | SGI: {beneish.sgi or 1.0:.2f}</div>
+            <div style="font-size:0.82rem; color:#cbd5e1; margin-top:6px;">DSRI: {dsri_s} | GMI: {gmi_s} | AQI: {aqi_s} | SGI: {sgi_s}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -585,8 +629,8 @@ with tab_forensics:
         l_df = pd.DataFrame([{
             "Unlock Milestone": l.milestone_name,
             "Target Date": str(l.calendar_date),
-            "Unlocked (₹ Cr)": f"₹{l.unlocked_value_cr:,.1f}",
-            "Free Float (%)": f"{l.cumulative_free_float_pct:.1f}%",
+            "Unlocked (₹ Cr)": f"₹{l.unlocked_value_cr:,.1f}" if getattr(l, 'unlocked_value_cr', None) is not None else "N/A",
+            "Free Float (%)": f"{l.cumulative_free_float_pct:.1f}%" if getattr(l, 'cumulative_free_float_pct', None) is not None else "N/A",
             "Risk Level": l.supply_risk_level,
             "Status": l.status,
         } for l in lockin_sched])

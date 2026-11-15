@@ -668,7 +668,9 @@ for _si in _stages_pw:
     _row_t, _row_h = [], []
     for _sj in _stages_pw:
         if _si == _sj:
-            _row_t.append(f"μ={_group_means.get(_si, 0):.1f}%")
+            _gm_val = _group_means.get(_si) if isinstance(_group_means, dict) else None
+            _gm_s = f"{_gm_val:.1f}%" if isinstance(_gm_val, (int, float)) else "0.0%"
+            _row_t.append(f"μ={_gm_s}")
             _row_h.append(0.5)
         else:
             _pv = _pval_m.loc[_si, _sj]

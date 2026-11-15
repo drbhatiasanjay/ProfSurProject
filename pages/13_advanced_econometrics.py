@@ -164,17 +164,23 @@ with tab_gmm:
             _cite_yr = filters.get("year_range", (2001, 2024))
             _cite_panel = panel_label(_panel)
             _cite_url = "https://lifecycle-leverage-779655496440.us-east1.run.app"
+            _n_firms_val = gmm.get('n_firms') if isinstance(gmm, dict) else None
+            _n_firms_s = f"{_n_firms_val:,}" if isinstance(_n_firms_val, (int, float)) else "N"
+            _n_obs_val = gmm.get('n_obs') if isinstance(gmm, dict) else None
+            _n_obs_s = f"{_n_obs_val:,}" if isinstance(_n_obs_val, (int, float)) else "0"
+            _r2_val = gmm.get('r_squared') if isinstance(gmm, dict) else None
+            _r2_s = f"{_r2_val:.3f}" if isinstance(_r2_val, (int, float)) else "0.000"
             _apa_text = (
                 f"Kumar, S. (2024). Capital structure determinants across corporate life stages "
                 f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
                 f"(Estimated via legacy IV-GMM proxy; panel: {_cite_panel}, "
-                f"{_cite_yr[0]}–{_cite_yr[1]}, N={gmm.get('n_firms', 'N'):,} firms, "
-                f"{gmm.get('n_obs', 0):,} obs, R²={gmm.get('r_squared', 0):.3f})"
+                f"{_cite_yr[0]}–{_cite_yr[1]}, N={_n_firms_s} firms, "
+                f"{_n_obs_s} obs, R²={_r2_s})"
             )
             _latex_text = (
                 r"\cite{kumar2024lifecycle} estimated via legacy IV-GMM proxy, "
                 f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
-                f"$N={gmm.get('n_firms', 'N')}$ firms, $R^2={gmm.get('r_squared', 0):.3f}$."
+                f"$N={_n_firms_s}$ firms, $R^2={_r2_s}$."
             )
             with st.expander("Cite this result", icon=":material/format_quote:"):
                 st.caption("Copy the citation in your preferred format:")
@@ -427,16 +433,20 @@ with tab_delta:
             _cite_yr = filters.get("year_range", (2001, 2024))
             _cite_panel = panel_label(_panel)
             _cite_url = "https://lifecycle-leverage-779655496440.us-east1.run.app"
+            _n_obs_rec = rec.get('n_obs') if isinstance(rec, dict) else None
+            _n_obs_rec_s = f"{_n_obs_rec:,}" if isinstance(_n_obs_rec, (int, float)) else "0"
+            _r2_rec = rec.get('r_squared') if isinstance(rec, dict) else None
+            _r2_rec_s = f"{_r2_rec:.3f}" if isinstance(_r2_rec, (int, float)) else "0.000"
             _apa_text = (
                 f"Kumar, S. (2024). Capital structure determinants across corporate life stages "
                 f"[Dataset]. LifeCycle Leverage Dashboard. {_cite_url} "
                 f"(Estimated via Delta-Leverage OLS; panel: {_cite_panel}, "
-                f"{_cite_yr[0]}–{_cite_yr[1]}, {rec.get('n_obs', 0):,} obs, R²={rec.get('r_squared', 0):.3f})"
+                f"{_cite_yr[0]}–{_cite_yr[1]}, {_n_obs_rec_s} obs, R²={_r2_rec_s})"
             )
             _latex_text = (
                 r"\cite{kumar2024lifecycle} estimated via Delta-Leverage OLS, "
                 f"{_cite_panel} {_cite_yr[0]}--{_cite_yr[1]}, "
-                f"$R^2={rec.get('r_squared', 0):.3f}$."
+                f"$R^2={_r2_rec_s}$."
             )
             with st.expander("Cite this result", icon=":material/format_quote:"):
                 st.caption("Copy the citation in your preferred format:")

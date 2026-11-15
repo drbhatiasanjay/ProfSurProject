@@ -474,8 +474,20 @@ def _build_panel_context_cached(
             for r in ind_tang_top.itertuples()
         )
 
+        def _sf(v, d=0.0):
+            try:
+                return float(v) if v is not None else float(d)
+            except (ValueError, TypeError):
+                return float(d)
+
+        def _si(v, d=0):
+            try:
+                return int(v) if v is not None else int(d)
+            except (ValueError, TypeError):
+                return int(d)
+
         coef_lines = "\n".join(
-            f"- {p}: coef={float(coefs.get(p, 0.0)):+.3f} (sample mean={float(means.get(_means_key_map.get(p, p), 0.0)):+.3f})"
+            f"- {p}: coef={_sf(coefs.get(p, 0.0)):+.3f} (sample mean={_sf(means.get(_means_key_map.get(p, p), 0.0)):+.3f})"
             for p in PREDICTORS
         )
         md = (
@@ -484,7 +496,7 @@ def _build_panel_context_cached(
             f"- {total_firms} firms, "
             f"{total_obs} firm-year observations, "
             f"{year_min}-{year_max}\n"
-            f"- Overall mean leverage: {float(df['leverage'].mean()):.3f}%\n"
+            f"- Overall mean leverage: {_sf(df['leverage'].mean()):.3f}%\n"
             f"- Leverage distribution: median={lev_median:.1f}%, p90={lev_p90:.1f}%, "
             f"p99={lev_p99:.1f}%, max={lev_max:.1f}% "
             f"({lev_over100} firm-years >100%, driven by negative-equity firms)\n"
@@ -502,15 +514,15 @@ def _build_panel_context_cached(
             f"{ind_lev_lines}\n"
             f"- Highest tangibility: {ind_tang_lines}\n\n"
             f"## [SOURCE: OLS Model] OLS Baseline (DV: leverage)\n"
-            f"- intercept: {float(coefs.get('intercept', 0.0)):+.3f}\n"
+            f"- intercept: {_sf(coefs.get('intercept', 0.0)):+.3f}\n"
             f"{coef_lines}\n"
-            f"R²={float(coefs.get('r_squared', 0.0)):.3f}, N={int(coefs.get('n_obs', 0))}\n"
+            f"R²={_sf(coefs.get('r_squared', 0.0)):.3f}, N={_si(coefs.get('n_obs', 0))}\n"
         )
         text = md + footer
         if count_tokens(text) > CONTEXT_BUDGET_TOKENS:
             md_pruned = md.replace(f"- YoY Profitability Trajectory (mean/median): {yoy_lines}\n", "")
             short = "\n".join(
-                f"- {p}: coef={float(coefs.get(p, 0.0)):+.3f}" for p in PREDICTORS
+                f"- {p}: coef={_sf(coefs.get(p, 0.0)):+.3f}" for p in PREDICTORS
             )
             text = md_pruned.replace(coef_lines, short) + footer
         return text
@@ -1638,12 +1650,13 @@ def generate_econometric_narrative(
     f_pval = result.get("f_pvalue", "N/A")
 
     hausman_line = ""
-    if hausman:
-        hausman_line = (
-            f"\n**Hausman test**: Chi²={hausman.get('chi2', 'N/A'):.2f}, "
-            f"p={hausman.get('p_value', 'N/A'):.4f} — "
-            f"{'Fixed Effects preferred' if hausman.get('p_value', 1) < 0.05 else 'Random Effects preferred'}"
-        )
+    if hausman and isinstance(hausman, dict):
+        h_chi2 = hausman.get('chi2')
+        h_chi2_s = f"{h_chi2:.2f}" if isinstance(h_chi2, (int, float)) else "N/A"
+        h_pval = hausman.get('p_value')
+        h_pval_s = f"{h_pval:.4f}" if isinstance(h_pval, (int, float)) else "N/A"
+        pref = 'Fixed Effects preferred' if (isinstance(h_pval, (int, float)) and h_pval < 0.05) else 'Random Effects preferred'
+        hausman_line = f"\n**Hausman test**: Chi²={h_chi2_s}, p={h_pval_s} — {pref}"
 
     coef_table_md = (
         "| Variable | Coef | SE | t | p | Sig |\n"

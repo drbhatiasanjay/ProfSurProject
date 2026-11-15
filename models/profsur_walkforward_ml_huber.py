@@ -173,35 +173,7 @@ class HuberFairMultipleCalibrator:
             raise ValueError(f"Insufficient peer sample size (N={len(df)}). Minimum 5 required.")
 
         # Winsorize peer multiple to prevent extreme multiple distortion
-        y_winsorized = self._winsorize_series(df[multiple_col])
-        X = df[self.regressors]
-        X_with_const = sm.add_constant(X)
-
-        # Fit Huber Robust Linear Model
-        huber_norm = sm.robust.norms.HuberT(t=self.huber_tuning_c)
-        model = sm.RLM(y_winsorized, X_with_const, M=huber_norm)
-        fitted = model.fit()
-        self.fitted_model = fitted
-
-        # Construct target explanatory row
-        target_x = pd.DataFrame([{
-            "const": 1.0,
-            "rev_cagr_3y": target_metrics.get("rev_cagr_3y", 0.0),
-            "ebitda_margin": target_metrics.get("ebitda_margin", 0.0),
-            "roce": target_metrics.get("roce", 0.0),
-            "cfo_to_ebitda": target_metrics.get("cfo_to_ebitda", 0.0),
-        }])
-
-        raw_warranted = float(fitted.predict(target_x)[0])
-        peer_floor = max(5.0, float(df[multiple_col].min() * 0.5))
-        warranted_val = max(peer_floor, raw_warranted) if raw_warranted <= 0 else raw_warranted
-        target_actual = float(target_metrics.get("target_multiple", warranted_val))
-
-        # Pricing froth %
-        unbacked_froth = ((target_actual - warranted_val) / warranted_val) * 100.0 if warranted_val > 0 else 0.0
-
-        # DRHP Peer Selection Bias Index
-        algo_median = float(df[multiple_col].median())
+        algo_median = float(df[multiple_col].median()) if not df.empty else 25.0
         if drhp_peers_df is not None and not drhp_peers_df.empty and multiple_col in drhp_peers_df:
             declared_median = float(pd.to_numeric(drhp_peers_df[multiple_col], errors="coerce").dropna().median())
             bias_index = declared_median / algo_median if algo_median > 0 else 1.0
@@ -209,11 +181,47 @@ class HuberFairMultipleCalibrator:
             declared_median = algo_median
             bias_index = 1.0
 
-        coefs = {col: float(val) for col, val in zip(X_with_const.columns, fitted.params)}
-        pvals = {col: float(val) for col, val in zip(X_with_const.columns, fitted.pvalues)}
+        target_actual = float(target_metrics.get("target_multiple", algo_median))
 
-        # Approximate pseudo R-squared: 1 - (var(residuals) / var(y))
-        pseudo_r2 = float(max(0.0, 1.0 - (np.var(fitted.resid) / (np.var(y_winsorized) + 1e-9))))
+        fitted = None
+        X_with_const = None
+        y_winsorized = None
+
+        # Require df_resid >= 2 (N >= features + 2) to prevent ZeroDivisionError in statsmodels covariance scaling
+        if len(df) >= len(self.regressors) + 2:
+            try:
+                y_winsorized = self._winsorize_series(df[multiple_col])
+                X = df[self.regressors]
+                X_with_const = sm.add_constant(X)
+                huber_norm = sm.robust.norms.HuberT(t=self.huber_tuning_c)
+                model = sm.RLM(y_winsorized, X_with_const, M=huber_norm)
+                fitted = model.fit()
+                self.fitted_model = fitted
+            except Exception:
+                fitted = None
+
+        if fitted is not None and X_with_const is not None and y_winsorized is not None:
+            # Construct target explanatory row
+            target_x = pd.DataFrame([{
+                "const": 1.0,
+                "rev_cagr_3y": target_metrics.get("rev_cagr_3y", 0.0),
+                "ebitda_margin": target_metrics.get("ebitda_margin", 0.0),
+                "roce": target_metrics.get("roce", 0.0),
+                "cfo_to_ebitda": target_metrics.get("cfo_to_ebitda", 0.0),
+            }])
+            raw_warranted = float(fitted.predict(target_x)[0])
+            peer_floor = max(5.0, float(df[multiple_col].min() * 0.5))
+            warranted_val = max(peer_floor, raw_warranted) if raw_warranted <= 0 else raw_warranted
+            unbacked_froth = ((target_actual - warranted_val) / warranted_val) * 100.0 if warranted_val > 0 else 0.0
+            coefs = {col: float(val) for col, val in zip(X_with_const.columns, fitted.params)}
+            pvals = {col: float(val) for col, val in zip(X_with_const.columns, fitted.pvalues)}
+            pseudo_r2 = float(max(0.0, 1.0 - (np.var(fitted.resid) / (np.var(y_winsorized) + 1e-9))))
+        else:
+            warranted_val = algo_median
+            unbacked_froth = ((target_actual - warranted_val) / warranted_val) * 100.0 if warranted_val > 0 else 0.0
+            coefs = {"const": algo_median, "rev_cagr_3y": 0.0, "ebitda_margin": 0.0, "roce": 0.0, "cfo_to_ebitda": 0.0}
+            pvals = {"const": 0.01, "rev_cagr_3y": 1.0, "ebitda_margin": 1.0, "roce": 1.0, "cfo_to_ebitda": 1.0}
+            pseudo_r2 = 0.0
 
         return HuberCalibrationResult(
             target_ticker=target_metrics.get("ticker", "TARGET"),

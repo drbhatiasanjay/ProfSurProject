@@ -83,8 +83,11 @@ if coefs.get("n_obs", 0) == 0:
     st.warning("Regression unavailable for this sample. Adjust filters or supply a valid dataset; no predicted leverage is calculated from fallback coefficients.")
     st.stop()
 
+_n_obs_c = coefs.get("n_obs") if isinstance(coefs, dict) else None
+_n_obs_c_str = f"{_n_obs_c:,}" if isinstance(_n_obs_c, (int, float)) else "0"
+
 if db.is_cmie_lab_enabled() and _data_source == "cmie" and _version_id:
-    st.caption(f"Regression fit on **CMIE import** (version `{_version_id[:16]}…`, n={coefs.get('n_obs', 0):,}).")
+    st.caption(f"Regression fit on **CMIE import** (version `{_version_id[:16]}…`, n={_n_obs_c_str}).")
 elif coefs.get("n_obs", 0) == 0:
     st.caption("Insufficient observations for OLS after filters — using fallback coefficients.")
 
@@ -126,17 +129,19 @@ res_left, res_right = st.columns([1, 2])
 
 with res_left:
     st.markdown("#### 🎯 Model Forecast")
+    _r2_c = coefs.get("r_squared") if isinstance(coefs, dict) else None
+    _r2_tag = f"R² = {_r2_c:.3f}" if isinstance(_r2_c, (int, float)) else "R² = N/A"
     st.markdown(render_bento_kpi(
         title="Predicted Leverage",
         value=format_pct(predicted),
         delta=f"{predicted - coefs['sample_mean']:+.1f}pp vs fitted sample mean",
         percentile=min(100.0, max(0.0, predicted * 2.0)),
-        tag=f"R² = {coefs.get('r_squared', 0):.3f}",
+        tag=_r2_tag,
         stroke_color="#6366F1"
     ), unsafe_allow_html=True)
 
     st.markdown("**Model Specification**")
-    st.caption(f"Panel sample size: {coefs.get('n_obs', 0):,} observations")
+    st.caption(f"Panel sample size: {_n_obs_c_str} observations")
 
     st.markdown("**Equation**")
     eq_parts = [f"{coefs['intercept']:.2f}"]
@@ -374,23 +379,30 @@ with res_right:
     text_c = "#E2E8F0" if is_dark else "#1E293B"
     muted_c = "#94A3B8" if is_dark else "#64748B"
 
+    _prof_b = coefs.get('profitability') if isinstance(coefs, dict) else None
+    _prof_b_s = f"{_prof_b:.3f}" if isinstance(_prof_b, (int, float)) else "-0.250"
+    _tang_b = coefs.get('tangibility') if isinstance(coefs, dict) else None
+    _tang_b_s = f"{_tang_b:.3f}" if isinstance(_tang_b, (int, float)) else "+0.220"
+    _size_b = coefs.get('log_size') if isinstance(coefs, dict) else None
+    _size_b_s = f"{_size_b:.3f}" if isinstance(_size_b, (int, float)) else "-0.020"
+
     scholarly_html = f"""
     <div style="background: {card_bg}; border: 1px solid {card_border}; border-radius: 8px; padding: 14px 18px; margin-top: 14px; margin-bottom: 14px;">
         <div style="font-size: 13px; font-weight: 700; color: #38BDF8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em;">
             💡 Theoretical Assessment & Empirical Mechanisms
         </div>
         <div style="font-size: 13px; color: {text_c}; line-height: 1.6; margin-bottom: 10px;">
-            <b style="color: #F43F5E;">• Profitability Sensitivity [β = {coefs.get('profitability', -0.25):.3f}]:</b> 
+            <b style="color: #F43F5E;">• Profitability Sensitivity [β = {_prof_b_s}]:</b> 
             <span style="color: #10B981; font-weight: 600;">[Supports Pecking Order Theory]</span> 
             Higher operational earnings enable direct internal reinvestment and debt paydown, strongly reducing reliance on bank debt.
         </div>
         <div style="font-size: 13px; color: {text_c}; line-height: 1.6; margin-bottom: 10px;">
-            <b style="color: #10B981;">• Tangible Collateral [β = {coefs.get('tangibility', 0.22):.3f}]:</b> 
+            <b style="color: #10B981;">• Tangible Collateral [β = {_tang_b_s}]:</b> 
             <span style="color: #10B981; font-weight: 600;">[Supports Static Trade-Off Theory]</span> 
             Fixed physical assets serve as pledgeable security under Indian banking norms (IBBI 2022 covenants), mitigating agency costs of debt.
         </div>
         <div style="font-size: 13px; color: {text_c}; line-height: 1.6;">
-            <b style="color: #38BDF8;">• Scale & Information Asymmetry [β = {coefs.get('log_size', -0.02):.3f}]:</b> 
+            <b style="color: #38BDF8;">• Scale & Information Asymmetry [β = {_size_b_s}]:</b> 
             Larger manufacturing firms maintain lower leverage ratios due to access to diversified public equity capital.
         </div>
     </div>

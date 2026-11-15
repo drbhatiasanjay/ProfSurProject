@@ -212,7 +212,8 @@ with col_right:
         for i, row_stage in enumerate(stages):
             for j, col_stage in enumerate(stages):
                 if row_stage == col_stage:
-                    text = f"{pw['group_means'].get(row_stage, 0):.1f}"
+                    _gm = pw['group_means'].get(row_stage) if isinstance(pw.get('group_means'), dict) else None
+                    text = f"{_gm:.1f}" if isinstance(_gm, (int, float)) else "0.0"
                 else:
                     diff_val = diff_matrix.loc[row_stage, col_stage]
                     pval = pval_matrix.loc[row_stage, col_stage]
@@ -443,20 +444,27 @@ With 8 life stages, there are **28 unique pairs** (8×7/2). Without correction, 
                 stroke_color="#06B6D4"
             ), unsafe_allow_html=True)
         elif best["type"].startswith("Robust M"):
+            _n_down = best.get('n_downweighted') if isinstance(best, dict) else None
+            _n_down_s = f"{_n_down:,}" if isinstance(_n_down, (int, float)) else "0"
+            _wt_min = best.get('weight_min') if isinstance(best, dict) else None
+            _wt_min_s = f"min wt {_wt_min:.2f}" if isinstance(_wt_min, (int, float)) else "min wt 1.00"
             st.markdown(render_bento_kpi(
                 title="Downweighted Obs",
-                value=f"{best.get('n_downweighted', 0):,}",
-                delta=f"min wt {best.get('weight_min', 1.0):.2f}",
+                value=_n_down_s,
+                delta=_wt_min_s,
                 percentile=25.0,
                 tag="ROBUST M",
                 stroke_color="#F59E0B"
             ), unsafe_allow_html=True)
         else:
+            _adj_r2 = best.get('adj_r_squared') if isinstance(best, dict) else None
+            _adj_r2_s = f"{_adj_r2:.4f}" if isinstance(_adj_r2, (int, float)) else "0.0000"
+            _adj_r2_pct = (_adj_r2 * 100.0) if isinstance(_adj_r2, (int, float)) else 0.0
             st.markdown(render_bento_kpi(
                 title="Adj R-Squared",
-                value=f"{best.get('adj_r_squared', 0):.4f}",
+                value=_adj_r2_s,
                 delta="Degrees of freedom penalty",
-                percentile=best.get('adj_r_squared', 0) * 100.0,
+                percentile=_adj_r2_pct,
                 tag="ADJUSTED",
                 stroke_color="#8B5CF6"
             ), unsafe_allow_html=True)

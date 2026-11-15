@@ -633,7 +633,11 @@ def generate_stress_narrative(dossier: PreIPODealDossier, sens: Dict[str, Any], 
         f"{'Coverage remains above the 1.50x distress threshold throughout the stress range.' if is_robust else 'Coverage approaches or breaches standard 1.50x covenant buffers under severe stagflationary shocks.'}"
     )
 
-    evidence_basis = f"Sensitivity model calibrated on floating debt of ₹{sens.get('floating_debt_considered_cr', 0.0):,.1f} Cr and base WAIR of {dossier.indebtedness.weighted_avg_interest_rate_pct or 8.5:.2f}%."
+    fld = sens.get('floating_debt_considered_cr') if isinstance(sens, dict) else None
+    fld_s = f"₹{fld:,.1f} Cr" if isinstance(fld, (int, float)) else "₹0.0 Cr"
+    wair_val = getattr(dossier.indebtedness, 'weighted_avg_interest_rate_pct', None) if getattr(dossier, 'indebtedness', None) else None
+    wair_s = f"{wair_val:.2f}%" if isinstance(wair_val, (int, float)) else "8.50%"
+    evidence_basis = f"Sensitivity model calibrated on floating debt of {fld_s} and base WAIR of {wair_s}."
 
     alternative_explanations = (
         "Actual operational resilience depends on whether management can pass through input cost inflation into final pricing, "
@@ -2351,16 +2355,28 @@ def generate_valuation_evidence_narrative(
     b_roce = coefs.get("roce", 0.0)
     b_cfo = coefs.get("cfo_to_ebitda", 0.0)
 
-    findings_title = f"Huber-Loss Robust M-Estimation Calibration (Pseudo-R² = {huber_res.r_squared_pseudo:.4f}, N = {huber_res.peer_sample_size})"
+    def _sp(pv, d=0.05):
+        val = pvals.get(pv) if isinstance(pvals, dict) else None
+        return f"{val:.3f}" if isinstance(val, (int, float)) else f"{d:.3f}"
+
+    r2_ps = f"{huber_res.r_squared_pseudo:.4f}" if getattr(huber_res, 'r_squared_pseudo', None) is not None else "N/A"
+    n_peers = getattr(huber_res, 'peer_sample_size', 0)
+    w_mult_s = f"{huber_res.warranted_fair_multiple:.1f}x" if getattr(huber_res, 'warranted_fair_multiple', None) is not None else "N/A"
+    froth_val = getattr(huber_res, 'unbacked_froth_pct', 0.0)
+    froth_val = froth_val if isinstance(froth_val, (int, float)) else 0.0
+    froth_s = f"{abs(froth_val):.1f}%"
+    froth_dir = "above" if froth_val > 0 else "below"
+
+    findings_title = f"Huber-Loss Robust M-Estimation Calibration (Pseudo-R² = {r2_ps}, N = {n_peers})"
     findings_desc = (
         f"Cross-sectional multiple calibration using Huber robust regression (t-norm = 1.345) demonstrates that operating efficiency and "
         f"cash conversion are statistically significant pricing determinants across comparable peers. "
-        f"Empirical model estimates: β[RevCAGR] = {b_rev:+.2f} (p={pvals.get('rev_cagr_3y', 0.05):.3f}), "
-        f"β[EBITDAMargin] = {b_ebit:+.2f} (p={pvals.get('ebitda_margin', 0.05):.3f}), "
-        f"β[ROCE] = {b_roce:+.2f} (p={pvals.get('roce', 0.05):.3f}), and "
-        f"β[CFO/EBITDA] = {b_cfo:+.2f} (p={pvals.get('cfo_to_ebitda', 0.05):.3f}). "
-        f"Applying these calibrated weights to the issuer's audited metrics yields a Warranted Multiple of {huber_res.warranted_fair_multiple:.1f}x P/E, "
-        f"verifying that the syndicate's asking multiple is {abs(huber_res.unbacked_froth_pct):.1f}% {'above' if huber_res.unbacked_froth_pct > 0 else 'below'} "
+        f"Empirical model estimates: β[RevCAGR] = {b_rev:+.2f} (p={_sp('rev_cagr_3y')}), "
+        f"β[EBITDAMargin] = {b_ebit:+.2f} (p={_sp('ebitda_margin')}), "
+        f"β[ROCE] = {b_roce:+.2f} (p={_sp('roce')}), and "
+        f"β[CFO/EBITDA] = {b_cfo:+.2f} (p={_sp('cfo_to_ebitda')}). "
+        f"Applying these calibrated weights to the issuer's audited metrics yields a Warranted Multiple of {w_mult_s} P/E, "
+        f"verifying that the syndicate's asking multiple is {froth_s} {froth_dir} "
         f"fundamental cash-flow parity."
     )
 

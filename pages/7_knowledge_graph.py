@@ -43,12 +43,19 @@ stats = get_graph_stats(G)
 
 # ── KPI strip ──
 c1, c2, c3, c4, c5 = st.columns(5)
-c1.metric("Companies", f"{stats['node_types'].get('company', 0):,}")
-c2.metric("Observations", f"{stats['node_types'].get('observation', 0):,}")
-c3.metric("Transitions", f"{stats['edge_types'].get('TRANSITION', 0):,}")
-avg_trans = stats['edge_types'].get('TRANSITION', 0) / max(stats['node_types'].get('company', 1), 1)
+_n_comp = stats['node_types'].get('company') if isinstance(stats.get('node_types'), dict) else None
+_n_comp_val = _n_comp if isinstance(_n_comp, (int, float)) else 0
+_n_obs = stats['node_types'].get('observation') if isinstance(stats.get('node_types'), dict) else None
+_n_obs_val = _n_obs if isinstance(_n_obs, (int, float)) else 0
+_n_trans = stats['edge_types'].get('TRANSITION') if isinstance(stats.get('edge_types'), dict) else None
+_n_trans_val = _n_trans if isinstance(_n_trans, (int, float)) else 0
+
+c1.metric("Companies", f"{_n_comp_val:,}")
+c2.metric("Observations", f"{_n_obs_val:,}")
+c3.metric("Transitions", f"{_n_trans_val:,}")
+avg_trans = _n_trans_val / max(_n_comp_val, 1)
 c4.metric("Avg Transitions/Firm", f"{avg_trans:.1f}")
-c5.metric("Life Stages", stats["node_types"].get("life_stage", 0))
+c5.metric("Life Stages", stats["node_types"].get("life_stage", 0) if isinstance(stats.get("node_types"), dict) else 0)
 
 st.divider()
 
