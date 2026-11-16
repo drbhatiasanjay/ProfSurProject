@@ -28,9 +28,15 @@ export const SubscriptionBookBar: React.FC<SubscriptionBookBarProps> = ({ subscr
         <div className="p-3 rounded bg-[#090D12] border border-[#1E293B] flex items-center justify-between">
           <div>
             <span className="text-[11px] text-slate-400 block">Total Issue Subscription</span>
-            <span className="text-xl font-bold font-mono text-emerald-400 tabular-nums">
-              {subscription.totalMultiple.toFixed(2)}x
-            </span>
+            {subscription.totalMultiple > 0 ? (
+              <span className="text-xl font-bold font-mono text-emerald-400 tabular-nums">
+                {subscription.totalMultiple.toFixed(2)}x
+              </span>
+            ) : (
+              <span className="text-sm font-bold font-mono text-cyan-400">
+                DRHP Drafting (Pre-Bidding)
+              </span>
+            )}
           </div>
           <div className="p-2 rounded bg-emerald-950/40 border border-emerald-800/60">
             <CheckCircle className="w-4 h-4 text-emerald-400" />
@@ -40,9 +46,15 @@ export const SubscriptionBookBar: React.FC<SubscriptionBookBarProps> = ({ subscr
         <div className="p-3 rounded bg-[#090D12] border border-[#1E293B] flex items-center justify-between">
           <div>
             <span className="text-[11px] text-slate-400 block">Total Shares Bid</span>
-            <span className="text-xl font-bold font-mono text-slate-100 tabular-nums">
-              {(subscription.totalBidsShares / 1e7).toFixed(2)} Cr
-            </span>
+            {subscription.totalBidsShares > 0 ? (
+              <span className="text-xl font-bold font-mono text-slate-100 tabular-nums">
+                {(subscription.totalBidsShares / 1e7).toFixed(2)} Cr
+              </span>
+            ) : (
+              <span className="text-sm font-bold font-mono text-slate-400">
+                Order Book Awaiting ROC
+              </span>
+            )}
           </div>
           <div className="p-2 rounded bg-slate-800 border border-slate-700">
             <Users className="w-4 h-4 text-cyan-400" />
@@ -53,11 +65,13 @@ export const SubscriptionBookBar: React.FC<SubscriptionBookBarProps> = ({ subscr
           <div>
             <span className="text-[11px] text-slate-400 block">Total Capital Committed</span>
             <span className="text-xl font-bold font-mono text-cyan-400 tabular-nums">
-              ₹{subscription.totalAmountCollectedCr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} Cr
+              {subscription.totalAmountCollectedCr > 0
+                ? `₹${subscription.totalAmountCollectedCr.toLocaleString('en-IN', { minimumFractionDigits: 2 })} Cr`
+                : '₹0.00 Cr (Drafting)'}
             </span>
           </div>
           <div className="text-[10px] text-slate-500 font-mono text-right">
-            116.6% of Issue Size
+            {subscription.totalMultiple > 0 ? '116.6% of Issue Size' : 'Statutory Allocation'}
           </div>
         </div>
       </div>
@@ -66,7 +80,7 @@ export const SubscriptionBookBar: React.FC<SubscriptionBookBarProps> = ({ subscr
       <div className="space-y-3.5">
         {subscription.categories.map((cat) => {
           const isOver = cat.subscriptionMultiple >= 1.0;
-          const pctWidth = Math.min(Math.max((cat.subscriptionMultiple / 3.0) * 100, 6), 100);
+          const pctWidth = cat.sharesBid > 0 ? Math.min(Math.max((cat.subscriptionMultiple / 3.0) * 100, 6), 100) : 0;
 
           return (
             <div key={cat.category} className="space-y-1.5">
@@ -74,16 +88,20 @@ export const SubscriptionBookBar: React.FC<SubscriptionBookBarProps> = ({ subscr
                 <span className="font-medium text-slate-300 font-sans">{cat.category}</span>
                 <div className="flex items-center gap-3 font-mono">
                   <span className="text-[11px] text-slate-400">
-                    {(cat.sharesBid / 1e7).toFixed(2)} Cr bids / {(cat.sharesOffered / 1e7).toFixed(2)} Cr quota
+                    {cat.sharesBid > 0
+                      ? `${(cat.sharesBid / 1e7).toFixed(2)} Cr bids / ${(cat.sharesOffered / 1e7).toFixed(2)} Cr quota`
+                      : `${(cat.sharesOffered / 1e7).toFixed(2)} Cr statutory quota`}
                   </span>
                   <span
                     className={`font-bold tabular-nums px-1.5 py-0.5 rounded text-[11px] ${
-                      isOver
+                      cat.sharesBid === 0
+                        ? 'bg-slate-900 border border-slate-700 text-slate-400'
+                        : isOver
                         ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-400'
                         : 'bg-amber-950/60 border border-amber-800 text-amber-400'
                     }`}
                   >
-                    {cat.subscriptionMultiple.toFixed(2)}x
+                    {cat.sharesBid > 0 ? `${cat.subscriptionMultiple.toFixed(2)}x` : 'Pre-Bidding'}
                   </span>
                 </div>
               </div>
@@ -92,7 +110,11 @@ export const SubscriptionBookBar: React.FC<SubscriptionBookBarProps> = ({ subscr
               <div className="h-2 w-full rounded-full bg-[#090D12] border border-[#1E293B] overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${
-                    isOver ? 'bg-gradient-to-r from-emerald-600 to-emerald-400' : 'bg-gradient-to-r from-amber-600 to-amber-400'
+                    cat.sharesBid === 0
+                      ? 'bg-slate-800'
+                      : isOver
+                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-400'
+                      : 'bg-gradient-to-r from-amber-600 to-amber-400'
                   }`}
                   style={{ width: `${pctWidth}%` }}
                 />
@@ -106,9 +128,18 @@ export const SubscriptionBookBar: React.FC<SubscriptionBookBarProps> = ({ subscr
       <div className="mt-4 p-2.5 rounded bg-[#090D12] border border-[#1E293B] flex items-start gap-2 text-xs">
         <AlertCircle className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
         <p className="text-slate-400 leading-relaxed font-sans">
-          <strong className="text-slate-200">Institutional Appetite Divergence:</strong> QIB allocation is oversubscribed by{' '}
-          <span className="text-emerald-400 font-mono font-semibold">2.36x</span> driven by domestic mutual funds and sovereign wealth anchors, while NII (HNI) category trails at{' '}
-          <span className="text-amber-400 font-mono font-semibold">0.85x</span>, signaling limited leverage arbitrage interest in primary gray-market financing.
+          {subscription.totalMultiple > 0 ? (
+            <>
+              <strong className="text-slate-200">Institutional Appetite Divergence:</strong> QIB allocation is oversubscribed by{' '}
+              <span className="text-emerald-400 font-mono font-semibold">2.36x</span> driven by domestic mutual funds and sovereign wealth anchors, while NII (HNI) category trails at{' '}
+              <span className="text-amber-400 font-mono font-semibold">0.85x</span>, signaling limited leverage arbitrage interest in primary gray-market financing.
+            </>
+          ) : (
+            <>
+              <strong className="text-slate-200">Statutory Regulatory Status:</strong> Issuer is currently in{' '}
+              <span className="text-cyan-400 font-mono font-semibold">SEBI ICDR 2018 Regulation 6(2) DRHP Review</span>. Bidding order books open post final observations and ROC RHP filing. 75% QIB allocation will include a mandatory 90-day anchor lock-in window.
+            </>
+          )}
         </p>
       </div>
     </div>

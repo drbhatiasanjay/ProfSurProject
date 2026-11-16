@@ -3,72 +3,98 @@ import {
   Layers,
   Activity,
   Calculator,
-  Cpu,
   ShieldCheck,
-  Building,
-  TrendingUp,
-  FileSpreadsheet,
-  ChevronRight
+  FileText,
+  Sliders,
+  HelpCircle,
+  Users,
+  AlertOctagon,
+  Coins,
+  Presentation,
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
+import { VaultId } from '../types/terminal';
 
-export type TerminalView =
-  | 'overview'
-  | 'peer_comps'
-  | 'huber_calibrator'
-  | 'ml_scorecard'
-  | 'compliance';
+// Backwards-compatible type alias
+export type TerminalView = VaultId | 'overview';
 
 interface SidebarNavProps {
   activeView: TerminalView;
   onViewChange: (view: TerminalView) => void;
   selectedSymbol: string;
   onSymbolChange: (symbol: string) => void;
+  onOpenIngestModal: () => void;
 }
 
 export const SidebarNav: React.FC<SidebarNavProps> = ({
   activeView,
   onViewChange,
   selectedSymbol,
-  onSymbolChange
+  onSymbolChange,
+  onOpenIngestModal
 }) => {
   const navItems = [
     {
-      id: 'overview' as TerminalView,
-      label: 'Mainboard IPO Terminal',
-      sublabel: 'Live bidding, book & terms',
+      id: 'market_demand' as TerminalView,
+      label: '1. Market Demand & Book',
+      sublabel: 'Live bidding, AQI & ML',
       icon: Activity,
     },
     {
       id: 'peer_comps' as TerminalView,
-      label: 'Live Peer Comps',
-      sublabel: 'NSE primary trading comps',
+      label: '2. Live Peer Comps',
+      sublabel: 'WACA step-up & Mueller ROCE',
       icon: Layers,
     },
     {
-      id: 'huber_calibrator' as TerminalView,
-      label: 'Huber M-Estimator',
-      sublabel: 'DRHP bias & warranted multiple',
+      id: 'huber_studio' as TerminalView,
+      label: '3. Huber Econometric Studio',
+      sublabel: 'Bias Index & Quantile Cones',
       icon: Calculator,
     },
     {
-      id: 'ml_scorecard' as TerminalView,
-      label: 'Walk-Forward ML & SHAP',
-      sublabel: 'Dual-head 180D outperformance',
-      icon: Cpu,
+      id: 'provenance_ledger' as TerminalView,
+      label: '4. Provenance Evidence Ledger',
+      sublabel: '513p BBox & 5-Gate Accounting',
+      icon: FileText,
     },
     {
-      id: 'compliance' as TerminalView,
-      label: 'SEBI RA Compliance Ledger',
-      sublabel: 'Immutable SHA-256 audit log',
-      icon: ShieldCheck,
+      id: 'stress_workpapers' as TerminalView,
+      label: '5. 2D Stress Workpapers',
+      sublabel: '5x5 Grid & Debt Ladder',
+      icon: Sliders,
     },
-  ];
-
-  const issuers = [
-    { symbol: 'NTPCGREEN', name: 'NTPC Green Energy Ltd', size: '₹10,000 Cr', status: 'Bidding Live' },
-    { symbol: 'HCCB', name: 'Hindustan Coca-Cola Beverages', size: '₹8,500 Cr (Est)', status: 'DRHP Drafting' },
-    { symbol: 'SWIGGY', name: 'Swiggy Limited', size: '₹11,327 Cr', status: 'Post-Listing T+12' },
-    { symbol: 'WAAREE', name: 'Waaree Energies Limited', size: '₹4,321 Cr', status: 'Trading Q2' },
+    {
+      id: 'investor_qa' as TerminalView,
+      label: '6. Institutional Q&A',
+      sublabel: '14 Questions & Churn Shock',
+      icon: HelpCircle,
+    },
+    {
+      id: 'stakeholder_lens' as TerminalView,
+      label: '7. 6-Persona Stakeholder Lens',
+      sublabel: 'CFO, Lender, QIB, Retail, RA',
+      icon: Users,
+    },
+    {
+      id: 'red_flag_scanner' as TerminalView,
+      label: '8. 6-Rule Red-Flag Scanner',
+      sublabel: 'Governance & Beneish M-Score',
+      icon: AlertOctagon,
+    },
+    {
+      id: 'unlisted_arbitrage' as TerminalView,
+      label: '9. Unlisted Post-Tax Arbitrage',
+      sublabel: 'Sec 56(2)(x) & Breakeven Solver',
+      icon: Coins,
+    },
+    {
+      id: 'ic_board_deck' as TerminalView,
+      label: '10. IC Stance & Board Deck',
+      sublabel: 'Mandate & 1-Click PPTX/PDF',
+      icon: Presentation,
+    },
   ];
 
   return (
@@ -84,53 +110,54 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             <div className="text-[10px] text-slate-500 font-mono">QUANTITATIVE VALUATION</div>
           </div>
         </div>
-        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-400">
-          v3.4.0
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-bold">
+          v3.5.0
         </span>
       </div>
 
-      {/* Issuer Selector Dropdown Panel */}
+      {/* Active Pre-IPO Deal Dossier Dropdown Selector */}
       <div className="p-3 border-b border-[#223044]">
-        <label className="text-[10px] font-mono text-slate-500 uppercase tracking-wider block mb-1.5">
-          Active Pre-IPO Pipeline Issuer
+        <label className="text-[11px] font-mono text-slate-400 block mb-1.5 tracking-wide">
+          Active Pre-IPO Deal Dossier
         </label>
-        <div className="space-y-1">
-          {issuers.map((iss) => {
-            const isSelected = selectedSymbol === iss.symbol;
-            return (
-              <button
-                key={iss.symbol}
-                onClick={() => onSymbolChange(iss.symbol)}
-                className={`w-full text-left p-2 rounded transition-all flex items-center justify-between cursor-pointer border ${
-                  isSelected
-                    ? 'bg-[#151D2A] border-cyan-500/80 text-slate-100 shadow-sm'
-                    : 'bg-[#101620]/60 border-[#1E293B] hover:border-slate-600 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <div>
-                  <div className="font-mono text-xs font-bold flex items-center gap-1.5">
-                    <span className={isSelected ? 'text-cyan-400' : 'text-slate-300'}>{iss.symbol}</span>
-                    <span className="text-[9px] font-normal px-1 rounded bg-[#090D12] border border-[#223044] text-slate-400">
-                      {iss.size}
-                    </span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 truncate max-w-[170px] mt-0.5">
-                    {iss.name}
-                  </div>
-                </div>
-                <div className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-400">
-                  {iss.status}
-                </div>
-              </button>
-            );
-          })}
+        <div className="relative">
+          <select
+            value={selectedSymbol}
+            onChange={(e) => {
+              if (e.target.value === '__INGEST__') {
+                onOpenIngestModal();
+              } else {
+                onSymbolChange(e.target.value);
+              }
+            }}
+            className="w-full appearance-none bg-[#101620] border border-[#223044] hover:border-cyan-500/70 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 rounded-lg px-3 py-2.5 pr-8 text-xs font-mono text-slate-100 transition-colors cursor-pointer shadow-inner"
+          >
+            <option value="NTPCGREEN" className="bg-[#101620] text-slate-100 py-1.5">
+              NTPC Green Energy Ltd. (RHP Nov 2024 · ₹10,000 Cr Fresh · Utilities)
+            </option>
+            <option value="HCCB" className="bg-[#101620] text-slate-100 py-1.5">
+              Hindustan Coca-Cola Holdings Ltd. (DRHP 2024 · ₹9,975 Cr OFS · FMCG Giant)
+            </option>
+            <option value="SWIGGY" className="bg-[#101620] text-slate-100 py-1.5">
+              Swiggy Ltd. (DRHP 2024 · ₹4,499 Cr Fresh · Hyperlocal Logistics)
+            </option>
+            <option value="WAAREE" className="bg-[#101620] text-slate-100 py-1.5">
+              Waaree Energies Ltd. (RHP 2024 · ₹4,321 Cr · Solar PV)
+            </option>
+            <option value="__INGEST__" className="bg-[#151D2A] text-cyan-400 font-bold py-1.5">
+              + Ingest New DRHP / RHP PDF Document...
+            </option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+            <ChevronDown className="w-4 h-4 text-slate-400" />
+          </div>
         </div>
       </div>
 
-      {/* Navigation Workspace Menu */}
+      {/* Navigation Workspace Menu (10 Specialized Vaults) */}
       <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
-        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider px-2 block mb-2">
-          Forensic Intelligence Views
+        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider px-2 block mb-2 font-semibold">
+          10 Specialized Vaults
         </span>
 
         {navItems.map((item) => {
@@ -141,9 +168,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
             <button
               key={item.id}
               onClick={() => onViewChange(item.id)}
-              className={`w-full text-left p-2.5 rounded-lg transition-all flex items-center gap-3 cursor-pointer ${
+              className={`w-full text-left p-2.5 rounded-lg transition-all flex items-center gap-2.5 cursor-pointer ${
                 isActive
-                  ? 'bg-gradient-to-r from-cyan-950/70 to-transparent border-l-2 border-cyan-400 text-slate-100 font-semibold'
+                  ? 'bg-gradient-to-r from-cyan-950/70 to-[#0A101C] border-l-2 border-cyan-400 text-slate-100 font-semibold shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-[#101620]'
               }`}
             >
@@ -161,7 +188,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       {/* Footer Info */}
       <div className="p-3 border-t border-[#223044] text-[10px] text-slate-500 font-mono flex items-center justify-between">
         <span>NSE PRIMARY ADAPTER</span>
-        <span className="text-emerald-400">ONLINE</span>
+        <span className="text-emerald-400 font-bold">ONLINE</span>
       </div>
     </aside>
   );

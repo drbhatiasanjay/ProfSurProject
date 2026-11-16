@@ -52,27 +52,44 @@ export const mockMarketIndices: MarketIndex[] = [
 
 export const mockOfferDetails: StatutoryOfferDetails = {
   symbol: 'NTPCGREEN',
-  companyName: 'NTPC Green Energy Limited',
+  companyName: 'NTPC Green Energy Limited (NGEL)',
+  sectorName: 'Renewable Energy Utilities & Solar/Wind Power',
+  listingExchanges: 'BSE, NSE',
   issueType: 'Mainboard',
+  boardSegment: 'Mainboard',
+  filingDateLabel: 'RHP · NOVEMBER 2024',
   issueStartDate: '2024-11-19',
   issueEndDate: '2024-11-22',
   priceBandMin: 102,
   priceBandMax: 108,
+  isPriceUndisclosed: false,
+  priceBandDisplay: '₹102 - ₹108',
   lotSize: 138,
+  minCommitmentInr: 14904,
   issueSizeCr: 10000.00,
+  totalOfferingShares: '925,925,925',
   freshIssueCr: 10000.00,
   ofsCr: 0.00,
+  freshIssuePct: 100,
+  ofsPct: 0,
+  structureDisplay: '100% Fresh (₹10,000.00 Cr) · 0% OFS (Zero Exit)',
   leadManagers: [
-    'IDBI Capital Markets & Securities',
+    'IDBI Capital Markets & Securities Limited',
     'HDFC Bank Limited',
     'IIFL Securities Limited',
-    'Nuvama Wealth Management'
+    'Nuvama Wealth Management Limited'
   ],
   rhpUrl: 'https://archives.nseindia.com/content/equities/IPO_RHP_NTPCGREEN.zip',
   anchorListUrl: 'https://www.nseindia.com/api/ipo-detail?symbol=NTPCGREEN',
   sebiEligibilityRoute: 'Regulation 6(2) 75% QIB Book Building',
   lockInDaysQIBAnchor: 90,
   lockInDaysPreIPOShareholders: 180,
+  isContained: false,
+  dickinsonStage: 'GROWTH',
+  cashFlowPattern: '(+, -, +)',
+  gcpAllocationCr: 2500.0,
+  gcpAllocationPct: 25.0,
+  isGcpCompliant: true,
 };
 
 export const mockSubscriptionBook: SubscriptionBook = {
@@ -293,21 +310,334 @@ export const mockSEBICompliance: SEBIComplianceRecord = {
   ]
 };
 
-// API Service Functions
-export async function fetchLiveMarketData() {
-  try {
-    const res = await fetch('http://localhost:8000/api/pre-ipo/market-status');
-    if (!res.ok) throw new Error('Backend offline');
-    return await res.json();
-  } catch {
+// Symbol-specific fallback mock datasets
+export const hccbOfferDetails: StatutoryOfferDetails = {
+  symbol: 'HCCB',
+  companyName: 'Hindustan Coca-Cola Holdings Limited',
+  sectorName: 'Non-Alcoholic Ready-to-Drink Beverages',
+  listingExchanges: 'BSE, NSE',
+  issueType: 'DRHP',
+  boardSegment: 'Mainboard',
+  filingDateLabel: 'DRHP · OCTOBER 2026',
+  issueStartDate: 'Statutory DRHP',
+  issueEndDate: 'Under Review (SEBI)',
+  priceBandMin: null,
+  priceBandMax: null,
+  isPriceUndisclosed: true,
+  priceBandDisplay: 'Drafting / Unpriced (₹[●])',
+  lotSize: null,
+  minCommitmentInr: null,
+  issueSizeCr: 9975.00,
+  totalOfferingShares: '997,461,456',
+  freshIssueCr: 0.00,
+  freshIssueShares: '0 (Nil Issue)',
+  ofsCr: 9975.00,
+  ofsShares: '997,461,456',
+  freshIssuePct: 0,
+  ofsPct: 100,
+  structureDisplay: '100% OFS (₹[●] Undisclosed) · 0% Fresh (Nil Issue)',
+  leadManagers: [
+    'Kotak Mahindra Capital Company Limited',
+    'Citigroup Global Markets India Private Limited',
+    'Morgan Stanley India Company Private Limited',
+    'J.P. Morgan India Private Limited'
+  ],
+  rhpUrl: '',
+  anchorListUrl: '',
+  sebiEligibilityRoute: 'Regulation 6(2) 75% QIB Book Building',
+  lockInDaysQIBAnchor: 90,
+  lockInDaysPreIPOShareholders: 180,
+  isContained: true,
+  containmentReason: 'SEBI ICDR 2018 statutory guidelines, real analytical processing (Offer Valuation, WACC/ROIC, Reverse DCF, and Board Deck generation) is strictly BLOCKED until the 513-page parent DRHP is fully indexed and its evidence ledger reviewed and accepted in Tab 2 (Provenance Ledger). All values shown below are candidate unreviewed disclosures and cannot be used for investment, credit, or underwriting decisions.',
+  dickinsonStage: 'MATURE (CASH COW)',
+  cashFlowPattern: '(+, -, -)',
+  gcpAllocationCr: 0.0,
+  gcpAllocationPct: 0.0,
+  isGcpCompliant: true,
+};
+
+export const hccbSubscriptionBook: SubscriptionBook = {
+  totalMultiple: 0.0,
+  totalBidsShares: 0,
+  totalAmountCollectedCr: 0.0,
+  lastUpdated: 'DRHP Under Statutory SEBI Review',
+  categories: [
+    {
+      category: 'Qualified Institutional Buyers (QIB)',
+      sharesOffered: 748096092,
+      sharesBid: 0,
+      subscriptionMultiple: 0.0,
+    },
+    {
+      category: 'Non-Institutional Investors (NII / HNI)',
+      sharesOffered: 149619218,
+      sharesBid: 0,
+      subscriptionMultiple: 0.0,
+    },
+    {
+      category: 'Retail Individual Investors (RII)',
+      sharesOffered: 99746146,
+      sharesBid: 0,
+      subscriptionMultiple: 0.0,
+    }
+  ]
+};
+
+export const hccbLivePeers: LivePeerComp[] = [
+  {
+    symbol: 'VBL',
+    companyName: 'Varun Beverages Limited',
+    lastPrice: 432.80,
+    change: 3.45,
+    pChange: 0.80,
+    pe: 62.4,
+    evEbitda: 31.8,
+    evSales: 6.8,
+    revenueCagr3Y: 28.4,
+    ebitdaMargin: 23.1,
+    roce: 27.8,
+    cfoToEbitda: 0.88,
+    high52: 520.00,
+    low52: 345.00,
+    marketCapCr: 140650.00,
+    similarityScore: 94.5,
+    isDrhpDeclared: true
+  },
+  {
+    symbol: 'TATACONSUM',
+    companyName: 'Tata Consumer Products Limited',
+    lastPrice: 945.20,
+    change: 6.80,
+    pChange: 0.72,
+    pe: 55.6,
+    evEbitda: 27.1,
+    evSales: 4.2,
+    revenueCagr3Y: 11.2,
+    ebitdaMargin: 15.3,
+    roce: 13.8,
+    cfoToEbitda: 0.84,
+    high52: 1250.00,
+    low52: 890.00,
+    marketCapCr: 88400.00,
+    similarityScore: 88.0,
+    isDrhpDeclared: true
+  },
+  {
+    symbol: 'DABUR',
+    companyName: 'Dabur India Limited',
+    lastPrice: 512.40,
+    change: -2.10,
+    pChange: -0.41,
+    pe: 48.2,
+    evEbitda: 28.5,
+    evSales: 4.9,
+    revenueCagr3Y: 8.6,
+    ebitdaMargin: 19.5,
+    roce: 21.4,
+    cfoToEbitda: 0.92,
+    high52: 672.00,
+    low52: 489.00,
+    marketCapCr: 90750.00,
+    similarityScore: 86.5,
+    isDrhpDeclared: false
+  },
+  {
+    symbol: 'HINDUNILVR',
+    companyName: 'Hindustan Unilever Limited',
+    lastPrice: 2410.50,
+    change: 12.30,
+    pChange: 0.51,
+    pe: 54.1,
+    evEbitda: 36.2,
+    evSales: 9.1,
+    revenueCagr3Y: 7.8,
+    ebitdaMargin: 23.8,
+    roce: 29.5,
+    cfoToEbitda: 0.96,
+    high52: 3034.00,
+    low52: 2170.00,
+    marketCapCr: 566400.00,
+    similarityScore: 82.0,
+    isDrhpDeclared: false
+  },
+  {
+    symbol: 'NESTLEIND',
+    companyName: 'Nestle India Limited',
+    lastPrice: 2245.00,
+    change: -8.40,
+    pChange: -0.37,
+    pe: 68.9,
+    evEbitda: 44.5,
+    evSales: 11.2,
+    revenueCagr3Y: 10.5,
+    ebitdaMargin: 24.2,
+    roce: 48.2,
+    cfoToEbitda: 0.91,
+    high52: 2770.00,
+    low52: 2140.00,
+    marketCapCr: 216500.00,
+    similarityScore: 80.5,
+    isDrhpDeclared: false
+  }
+];
+
+export const hccbHuberCalibration: HuberCalibrationResults = {
+  metric: 'P/E Multiple',
+  declaredPeerMedian: 58.8,
+  algorithmicPeerMedian: 54.1,
+  drhpBiasIndex: 1.09,
+  warrantedFairMultiple: 48.5,
+  unbackedFrothPct: 0.0,
+  formula: 'P/E = 14.2 + 0.48*(RevCAGR) + 0.82*(EBITDA%) + 0.35*(ROCE) + 5.2*(CFO/EBITDA)',
+  coefficients: [
+    { feature: 'Revenue CAGR (3-Yr)', weight: 0.48, tStat: 3.82 },
+    { feature: 'EBITDA Margin (%)', weight: 0.82, tStat: 4.15 },
+    { feature: 'ROCE (%)', weight: 0.35, tStat: 2.94 },
+    { feature: 'CFO / EBITDA Conversion', weight: 5.20, tStat: 4.51 }
+  ],
+  rSquaredRobust: 0.8624
+};
+
+export const hccbMLScorecard: WalkForwardMLScorecardData = {
+  fundamentalScore: 82.5,
+  sentimentScore: 71.0,
+  compositeRating: 'STRONG_BUY_ALPHA',
+  prob180DOutperformance: 76.2,
+  expectedMonth6LockinCAR: 14.8,
+  lockinExpiryDate: '180 Days Post-Listing',
+  walkForwardBacktestAccuracy: 81.2,
+  shapTopFeatures: [
+    {
+      featureName: 'cfo_ebitda_conversion',
+      displayName: 'FMCG Cash Flow Conversion (0.88x)',
+      category: 'Forensic & Accruals',
+      featureValue: '0.88x',
+      attributionValue: 0.38,
+      isWarning: false
+    },
+    {
+      featureName: 'funded_debt_ratio',
+      displayName: 'Pristine Zero Funded Bank Debt',
+      category: 'Capital Structure',
+      featureValue: '₹0.00 Cr',
+      attributionValue: 0.32,
+      isWarning: false
+    },
+    {
+      featureName: 'ofs_dilution_structure',
+      displayName: '100% OFS Structure (Bottling Investments Group)',
+      category: 'Statutory Signal',
+      featureValue: '100% OFS',
+      attributionValue: -0.15,
+      isWarning: true
+    },
+    {
+      featureName: 'beneish_accrual_quality',
+      displayName: 'Beneish M-Score (-2.84, Safe Zone)',
+      category: 'Forensic & Accruals',
+      featureValue: '-2.84',
+      attributionValue: 0.22,
+      isWarning: false
+    }
+  ]
+};
+
+// Swiggy fallback dataset
+export const swiggyOfferDetails: StatutoryOfferDetails = {
+  symbol: 'SWIGGY',
+  companyName: 'Swiggy Limited',
+  issueType: 'Mainboard',
+  issueStartDate: '2024-11-06',
+  issueEndDate: '2024-11-08',
+  priceBandMin: 371,
+  priceBandMax: 390,
+  lotSize: 38,
+  issueSizeCr: 11327.43,
+  freshIssueCr: 4499.00,
+  ofsCr: 6828.43,
+  leadManagers: ['Kotak Mahindra Capital', 'Citigroup Global Markets India', 'Jefferies India', 'Avendus Capital'],
+  rhpUrl: '',
+  anchorListUrl: '',
+  sebiEligibilityRoute: 'Regulation 6(2) 75% QIB Book Building',
+  lockInDaysQIBAnchor: 90,
+  lockInDaysPreIPOShareholders: 180,
+};
+
+// Waaree fallback dataset
+export const waareeOfferDetails: StatutoryOfferDetails = {
+  symbol: 'WAAREE',
+  companyName: 'Waaree Energies Limited',
+  issueType: 'Mainboard',
+  issueStartDate: '2024-10-21',
+  issueEndDate: '2024-10-23',
+  priceBandMin: 1427,
+  priceBandMax: 1503,
+  lotSize: 9,
+  issueSizeCr: 4321.44,
+  freshIssueCr: 3600.00,
+  ofsCr: 721.44,
+  leadManagers: ['Axis Capital Limited', 'IIFL Securities Limited', 'Jefferies India', 'Nomura Financial Advisory'],
+  rhpUrl: '',
+  anchorListUrl: '',
+  sebiEligibilityRoute: 'Regulation 6(1) Net Tangible Assets & Profitability',
+  lockInDaysQIBAnchor: 90,
+  lockInDaysPreIPOShareholders: 180,
+};
+
+function getFallbackForSymbol(symbol: string) {
+  const s = symbol.toUpperCase();
+  if (s === 'HCCB' || s.includes('COCA')) {
     return {
       indices: mockMarketIndices,
-      offer: mockOfferDetails,
+      offer: hccbOfferDetails,
+      subscription: hccbSubscriptionBook,
+      peers: hccbLivePeers,
+      calibration: hccbHuberCalibration,
+      scorecard: hccbMLScorecard,
+      compliance: mockSEBICompliance
+    };
+  }
+  if (s === 'SWIGGY') {
+    return {
+      indices: mockMarketIndices,
+      offer: swiggyOfferDetails,
       subscription: mockSubscriptionBook,
       peers: mockLivePeers,
       calibration: mockHuberCalibration,
       scorecard: mockMLScorecard,
       compliance: mockSEBICompliance
     };
+  }
+  if (s === 'WAAREE') {
+    return {
+      indices: mockMarketIndices,
+      offer: waareeOfferDetails,
+      subscription: mockSubscriptionBook,
+      peers: mockLivePeers,
+      calibration: mockHuberCalibration,
+      scorecard: mockMLScorecard,
+      compliance: mockSEBICompliance
+    };
+  }
+  return {
+    indices: mockMarketIndices,
+    offer: mockOfferDetails,
+    subscription: mockSubscriptionBook,
+    peers: mockLivePeers,
+    calibration: mockHuberCalibration,
+    scorecard: mockMLScorecard,
+    compliance: mockSEBICompliance
+  };
+}
+
+// API Service Functions
+export async function fetchLiveMarketData(symbol: string = 'NTPCGREEN') {
+  try {
+    const res = await fetch(`http://localhost:8000/api/pre-ipo/market-status?symbol=${encodeURIComponent(symbol)}`);
+    if (!res.ok) throw new Error('Backend offline');
+    const data = await res.json();
+    return data;
+  } catch {
+    return getFallbackForSymbol(symbol);
   }
 }
