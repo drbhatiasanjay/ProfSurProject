@@ -128,22 +128,20 @@ export const CompactCockpitHUD: React.FC<CompactCockpitHUDProps> = ({
         <div className="flex items-center gap-2.5">
           {/* Micro-Tower 1 Telemetry */}
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold hidden lg:inline border ${
-              freshPct === 100
+            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold hidden lg:inline border ${freshPct === 100
                 ? 'bg-emerald-950/60 border-emerald-800 text-emerald-400'
                 : 'bg-amber-950/60 border-amber-800 text-amber-400'
-            }`}
+              }`}
           >
             T1: {freshPct === 100 ? '100% Fresh' : '100% OFS'}
           </span>
 
           {/* Micro-Tower 2 Telemetry */}
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold hidden lg:inline border ${
-              isUnpriced
+            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold hidden lg:inline border ${isUnpriced
                 ? 'bg-blue-950/60 border-blue-800 text-blue-300'
                 : 'bg-rose-950/60 border-rose-800 text-rose-300'
-            }`}
+              }`}
           >
             T2: {isUnpriced ? 'Unpriced [●]' : `+${frothPct}% Froth`}
           </span>
@@ -173,11 +171,10 @@ export const CompactCockpitHUD: React.FC<CompactCockpitHUDProps> = ({
           {/* Expand / Collapse Button */}
           <button
             onClick={onToggleExpand}
-            className={`px-2.5 py-1 rounded text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm ${
-              isExpanded
+            className={`px-2.5 py-1 rounded text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm ${isExpanded
                 ? 'bg-cyan-500/20 border border-cyan-400 text-cyan-200'
                 : 'bg-[#152033] hover:bg-[#1C2C47] border border-cyan-800 text-cyan-300'
-            }`}
+              }`}
           >
             <span>{isExpanded ? '[-] Collapse Cockpit' : '[+] Full Cockpit & Towers'}</span>
             {isExpanded ? (
