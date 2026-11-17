@@ -1,7 +1,7 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 17 November 2026 17:40 IST (Pre-IPO Terminal v3.5.0 — Phase B Econometric Lab & Vault 5 Release)  
-**Active Baseline Branch:** `feature/pre-ipo-cockpit-vault-v35` (working head on `master`)  
+**Last Updated:** 17 November 2026 18:15 IST (Pre-IPO Terminal v3.5.0 — Phase B Econometric Lab & Vault 5 Committed)  
+**Active Baseline Branch:** `feature/pre-ipo-cockpit-vault-v35` (commit `81a043f2`)  
 **Release Tag:** `v3.5.0-vault5-econometrics-verified` (Expanded 84-Attribute Schema, Vault 4 Provenance Ledger & Vault 5 Econometric Lab Verified)  
 **React Terminal URL:** `http://localhost:5173/` (Vite v8.3.8 + React 19 + TypeScript + Tailwind v4 — ACTIVE DAEMON)  
 **FastAPI Bridge URL:** `http://localhost:8000/` (Uvicorn 0.32+ / SEBI RA 2014 Compliance Engine — ACTIVE DAEMON)  
@@ -110,10 +110,14 @@ Session 2 achieved complete implementation, mathematical verification, backend c
 
 ---
 
-## 4. Immediate Resume Point for Session 2
-1. **Canonical Hand-off Specification:** Consult [`HANDOFF_SESSION1_84_ATTRIBUTE_AND_VAULT4.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/HANDOFF_SESSION1_84_ATTRIBUTE_AND_VAULT4.md) and [`docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md).
-2. **Execute Phase B Tasks:**
-   - Author `models/pre_ipo_econometrics.py` implementing the 7 institutional models (Beneish M-Score, Dickinson cash-flow lifecycle, Huber RLM peer regression, stub seasonality / Chow break, Ind AS 116 lease adjustments, Altman $Z''$-Score, lock-in cliff supply overhang) and automated 3-part interpretation payload.
-   - Register econometric endpoints in `api/server.py` with `assert_capability_allowed` fail-closed gating.
-   - Implement Vault 5 (`frontend/src/components/vaults/EconometricLabVault.tsx`) with econometric cards, benchmark gauges, and automated buy-side interpretation panels.
-   - Write pytest tests in `tests/test_pre_ipo_84_schema_and_econometrics.py` and run TypeScript typecheck.
+## 4. Immediate Resume Point for Session 3: Unified Decision Intelligence & Interpretation Contract
+1. **Governing Specification:** Consult [`docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md) (Section 4: Unified Decision Intelligence & Interpretation Contract).
+2. **Execute Unified Interpretation Deliverables:**
+   - **Backend Data Contract (`models/pre_ipo_econometrics.py` & `api/server.py`):**
+     - Extend computed models with deterministic `AnalyticalInterpretation` objects (`metricId`, `polarity`, `headline`, `whatItMeans`, `evidenceBasis`, `callToAction`, `missingDataAndBlindSpots`).
+     - Polarity union: `'POSITIVE_CONTRIBUTOR' | 'NEGATIVE_CONTRIBUTOR' | 'NEUTRAL_MONITOR' | 'BLOCKING_RISK'`.
+   - **Frontend Reusable Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):**
+     - Renders evidence basis formulas, cited DRHP inputs with clickable page links, actionable underwriting calls to action, and missing data / blind-spot warning accordions.
+   - **Right-Hand Canvas Integration Across Every Vault:**
+     - Vault 1 (Valuation & Peers), Vault 2 (Unlisted & Lock-in Arbitrage), Vault 3 (Econometric Lab), Vault 4 (Provenance Ledger), Vault 5 (Red-Flag Radar), Vaults 6 & 7 (Stakeholder Lens & IC Board Deck).
+   - **Verification:** Run synchronous pytest tests and `tsc --noEmit`.

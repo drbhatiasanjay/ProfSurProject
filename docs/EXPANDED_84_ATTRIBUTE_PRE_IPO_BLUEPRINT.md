@@ -260,7 +260,63 @@ To present 84 attributes and 7 econometric models without interface fragmentatio
 
 ---
 
-## 4. Master Antigravity Implementation Prompt
+## 4. Unified Decision Intelligence & Interpretation Contract (Backend → Frontend)
+
+To ensure every single data point, computed ratio, and econometric model output across all left-hand navigation vaults is accompanied by evidence-based narrative interpretation, contribution polarity (positive vs. negative), actionable call to action, and missing-data / blind-spot warnings, a unified Decision Intelligence & Interpretation Contract is enforced from the Python backend down to a reusable React UI component.
+
+### 4.1 The Unified AnalyticalInsightCard Contract (Backend → Frontend)
+
+Instead of each vault rendering raw numbers or ad-hoc strings, every computed metric or econometric output returned by FastAPI (`models/pre_ipo_econometrics.py` & `api/server.py`) must attach a deterministic `AnalyticalInterpretation` object:
+
+```typescript
+export type Polarity = 'POSITIVE_CONTRIBUTOR' | 'NEGATIVE_CONTRIBUTOR' | 'NEUTRAL_MONITOR' | 'BLOCKING_RISK';
+
+export interface AnalyticalInterpretation {
+  metricId: string;
+  polarity: Polarity;
+  headline: string;                 // e.g., "Valuation Premium +1.85 SD Above Huber Peer Line"
+  whatItMeans: string;              // Plain-English explanation of the computed number (e.g., what Huber RLM residual X means economically)
+  evidenceBasis: {
+    formulaOrMethod: string;        // e.g., "Huber M-Estimator RLM (k=1.345) across 14 CMIE Beverage/FMCG Peers"
+    citedInputs: Array<{
+      attributeId: string;
+      label: string;
+      valueDisplay: string;
+      pageNumber: number;           // Clickable link back to DRHP/RHP page
+    }>;
+  };
+  callToAction: string;             // Concrete underwriting action (e.g., "Demand 12–15% valuation haircut at bid; anchor on lower band")
+  missingDataAndBlindSpots: string[]; // Explicit gaps user must check (e.g., "Q1 FY27 stub reflects peak summer beverage demand; verify Q3/Q4 off-season margins")
+}
+```
+
+### 4.2 Right-Hand Canvas Implementation Across Every Vault
+
+Build a single reusable component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`) and embed it in the right-hand canvas of every left-hand sidebar vault:
+
+- **Vault 1 — Valuation & Peer Multiples (`ValuationEngineVault`):** Explains what the Huber RLM predicted multiple vs. IPO ask means in standard deviations ($\sigma$), cites the exact ROCE/margin inputs and DRHP page numbers, states whether pricing is a `POSITIVE_CONTRIBUTOR` or `NEGATIVE_CONTRIBUTOR`, and flags missing peer/stub adjustments.
+- **Vault 2 — Unlisted & Lock-In Arbitrage (`UnlistedArbitrageVault`):** Explains Section 56(2)(x) tax drag, Rule 11UA FMV gap, and T+90/T+180 float unlock overhang with concrete entry/exit calls to action.
+- **Vault 3 — Econometric & Lifecycle Lab (`EconometricLabVault`):** Translates Beneish M-Score, Sloan Accruals, Dickinson (2011) Cash Flow Vector, and Ind AS 116 Lease-Adjusted Leverage from academic statistics into clear institutional verdicts.
+- **Vault 4 — Provenance Ledger (`ProvenanceLedgerVault`):** Explains why `NEEDS_RECONFIRMATION` or `NOT_FOUND` attributes block downstream gates and lists exactly what must be verified in the RHP addendum.
+- **Vault 5 — Forensic Red-Flag Radar (`RedFlagScannerVault`):** Explains triggered flags (e.g., related-party concentrate pricing, contingent liabilities vs. Tangible Net Worth) and what supplementary diligence documents to request.
+- **Vault 6 & 7 — Stakeholder Lens & IC Board Deck (`StakeholderLensVault`, `ICBoardDeckVault`):** Synthesizes all positive vs. negative contributors into an institutional Subscribe / Haircut / Avoid mandate with explicit blind-spot disclosures.
+
+### 4.3 How This Transforms the User Experience
+
+Instead of an analyst seeing "Huber RLM Residual: +1.85" or "Ind AS 116 Lease Debt: ₹1,280.50 Cr" and having to guess what to do with it, every right-hand vault card immediately answers four questions in one glance:
+
+1. **Is this helping or hurting the deal?**
+   - Categorized by polarity (`+ POSITIVE_CONTRIBUTOR` vs. `- NEGATIVE_CONTRIBUTOR`, `NEUTRAL_MONITOR`, or `BLOCKING_RISK`).
+2. **What does this number actually mean?**
+   - Grounded in the exact DRHP inputs, mathematical formulation, and clickable page numbers.
+3. **What should I do next?**
+   - Direct, actionable underwriting directive (concrete bid price, haircut %, allocation sizing, or diligence action).
+4. **What is missing from this picture?**
+   - Auto-populated from `NOT_FOUND` / `NEEDS_RECONFIRMATION` fields, stub seasonality distortions, and sector blind spots.
+
+---
+
+## 5. Master Antigravity Implementation Prompt
 
 The prompt below is structured for direct invocation in a clean session, adhering strictly to the `AGENTS.md` engineering invariants.
 
@@ -273,7 +329,7 @@ You are executing under the strict engineering directives of `c:\Users\hemas\Dow
 1. **Workspace Boundary:** Strictly confined to `ProfSurProject`.
 2. **Zero Python Truthiness (Rule E.3):** Never write `val or default`. Treat `0.0`, `0%`, and `0` as distinct valid disclosures. Always use explicit checks (`if val is None:`).
 3. **Fail-Closed Capability Architecture (Rule E.2):** All valuation, export, and econometric endpoints must enforce `assert_capability_allowed`. Unreviewed or missing models fail closed (`ExportBlockedError`).
-4. **TypeScript Discriminated Unions:** Enforce strict discriminated unions across all data models (`DealPricingState`, `ProvenanceField<T>`, `EconometricStatus`). Zero unchecked `as Type` casts. Zero multi-boolean flags.
+4. **TypeScript Discriminated Unions:** Enforce strict discriminated unions across all data models (`DealPricingState`, `ProvenanceField<T>`, `EconometricStatus`, `Polarity`). Zero unchecked `as Type` casts. Zero multi-boolean flags.
 5. **Database Transaction Atomicity (Rule E.5):** No `conn.executescript()` inside active transaction blocks. All schema migrations must be rollback-verified.
 
 #### IMPLEMENTATION STAGES:
@@ -283,7 +339,7 @@ You are executing under the strict engineering directives of `c:\Users\hemas\Dow
   - Add statutory references (SEBI ICDR Schedule VI clauses) and strict data types for attributes 43–84.
   - Implement fallback and extraction mocks for both benchmark filings (`Hindustan_Coca_Cola_Holdings_DRHP.pdf` and `NTPC_Green_Energy_DRHP.pdf`).
 
-- **Stage 2: Institutional Econometric Suite (`models/pre_ipo_econometrics.py`)**
+- **Stage 2: Institutional Econometric Suite & Analytical Interpretation (`models/pre_ipo_econometrics.py`)**
   - Implement the 7 quantitative models using `numpy`, `scipy.stats`, and `statsmodels`:
     1. Beneish M-Score & Sloan Accruals.
     2. Dickinson Cash Flow Life-Cycle classifier.
@@ -292,7 +348,7 @@ You are executing under the strict engineering directives of `c:\Users\hemas\Dow
     5. Monte Carlo Reverse DCF with 10,000 parameter draws.
     6. Lock-In Supply Overhang & Sec 56(2)(x) Rule 11UA tax model.
     7. Altman $Z''$-Score & Ind AS 116 Lease Unwinding.
-  - Implement the Automated Narrative & Statistical Interpretation Engine emitting structured 3-part summaries (Finding, Mechanism, IC Takeaway).
+  - Attach the deterministic `AnalyticalInterpretation` contract payload (`metricId`, `polarity`, `headline`, `whatItMeans`, `evidenceBasis`, `callToAction`, `missingDataAndBlindSpots`) across all models and computed metrics.
 
 - **Stage 3: FastAPI Bridge Endpoints (`api/server.py`)**
   - Update `@app.get("/api/pre-ipo/schema")` to return the complete 84-attribute registry.
@@ -300,13 +356,14 @@ You are executing under the strict engineering directives of `c:\Users\hemas\Dow
   - Expose `@app.get("/api/pre-ipo/econometrics/{symbol}")` returning results and interpretations for all 7 models.
 
 - **Stage 4: Frontend Type Contracts & Service Layer (`frontend/src/`)**
-  - Update `types/terminal.ts` to expand `CanonicalSection` to all 10 sections and add typed contracts for the 7 econometric models.
+  - Update `types/terminal.ts` to expand `CanonicalSection` to all 10 sections, add typed contracts for `Polarity` and `AnalyticalInterpretation`, and type the 7 econometric models.
   - Update `services/canonicalProvenance.ts` to contain the full 84-attribute frontend fallback dictionary.
   - Ensure total count telemetry strictly validates: `foundCount + notFoundCount + reconfirmCount === 84`.
 
-- **Stage 5: Vault 4 & Vault 5 UI Components (`frontend/src/components/vaults/`)**
-  - `ProvenanceLedgerVault.tsx`: Render all 10 collapsible accordions, live search, section filter dropdown, and coordinate inspection drawer for all 84 attributes.
-  - `EconometricLabVault.tsx`: Implement interactive analytical cards for each of the 7 engines with visual plots and the 3-part narrative interpretation panel.
+- **Stage 5: Unified EvidenceInterpretationPanel & Vault Components (`frontend/src/components/`)**
+  - Build `frontend/src/components/shared/EvidenceInterpretationPanel.tsx` rendering evidence basis citations, polarity chips, actionable calls to action, and blind-spot warning accordions.
+  - Embed in Vaults 1–7 right-hand canvas:
+    - Vault 1 (Valuation & Peers), Vault 2 (Unlisted & Lock-in Arbitrage), Vault 3 (Econometric Lab), Vault 4 (Provenance Ledger), Vault 5 (Red-Flag Radar), Vaults 6 & 7 (Stakeholder Lens & IC Board Deck).
 
 - **Stage 6: Verification & Test Suite (`tests/test_pre_ipo_84_attributes.py`)**
   - Author adversarial unit tests:
@@ -318,7 +375,7 @@ You are executing under the strict engineering directives of `c:\Users\hemas\Dow
 
 ---
 
-## 5. Architectural Quality Checklist
+## 6. Architectural Quality Checklist
 
 - [x] **SEBI ICDR Schedule VI Alignment:** All 84 attributes mapped to explicit statutory disclosure clauses.
 - [x] **Peer-Reviewed Econometric Foundations:** Models grounded in Dickinson (2011), Beneish (1999), Huber (1964), and Altman (2002).
@@ -326,4 +383,5 @@ You are executing under the strict engineering directives of `c:\Users\hemas\Dow
 - [x] **Multi-Period Stub Awareness:** Solves the seasonal run-rate annualization trap in quarterly DRHP/RHP stubs.
 - [x] **Lease-Adjusted Solvency:** Integrates Ind AS 116 lease liability unwinding into standard credit metrics.
 - [x] **Provenance Traceability:** Every attribute links to document citation, page number, bounding box, and cryptographic hash.
+- [x] **Unified Decision Intelligence Contract:** Every data point and econometric output couples with evidence, polarity, call to action, and blind-spot disclosures.
 - [x] **Token-Optimized UI Hierarchy:** Partitioned into Cockpit telemetry and specialized analytical vaults.
