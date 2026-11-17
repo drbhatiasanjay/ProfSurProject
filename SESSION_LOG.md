@@ -1,5 +1,104 @@
 # ProfSurProject — Session Log
 
+## MILESTONE — Expanded 84-Attribute Schema & Vault 4 Implementation (Session 1 Complete) (2026-11-17 17:05 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Completed Phase A (84-Attribute Canonical Schema & Backend Extraction) and Vault 4 (Statutory Provenance Ledger UI across 10 canonical sections). Phase B (Econometric Lab Vault 5 & full econometric calculations) deferred to Session 2 per explicit user instruction.
+- **Core Deliverables & Governance Completed:**
+  1. **Canonical 84-Attribute Registry & Ingest Engine (`models/pre_ipo_schema.py`):**
+     - Single source of truth for all 84 attributes partitioned into Tier 1 (1–42 core baseline) and Tier 2 (43–84 deep intelligence) across 10 statutory sections:
+       `Offer Structure` (10), `Objects` (6), `P&L` (12), `Balance Sheet` (10), `Working Capital` (11), `Indebtedness` (9), `Cap Table & Lock-In` (8), `Governance & RPT` (6), `Contingent Liabilities` (6), `Unit Economics & Capacity` (6).
+     - Defined `CanonicalSection` enum (10 members), `CANONICAL_SECTIONS` list, and `CANONICAL_SECTIONS_42` (backward compatibility).
+     - Expanded `ExpectedUnit` enum with `COUNT`, `VOLUME_UNITS`, `INR_PER_SHARE`, `INR_PER_UNIT`, `MULTIPLE`.
+     - Implemented `extract_canonical_84_provenance(dossier, is_hccb, offer_data)` with strict Rule E.3 Zero-Truthiness preservation (`0.0` fresh issue, `0.0%` pledge, `0.0` secured term loans preserved as `FOUND` with `value: 0.0`), unpriced `[•]` DRHP variables emitted as `NOT_FOUND` with syndicate reconfirmation reason, and backward compatibility wrapper `extract_canonical_42_provenance`.
+  2. **FastAPI Endpoints (`api/server.py`):**
+     - Updated `@app.get("/api/pre-ipo/schema")` returning all 84 attributes and 10 canonical sections (`totalCount: 84`).
+     - Updated `@app.get("/api/pre-ipo/market-status")` computing `provenanceLedger` and `provenanceSummary` across all 84 canonical items.
+  3. **Frontend Typing & Services (`frontend/src/`):**
+     - Extended `frontend/src/types/terminal.ts` with 10 canonical sections, new units, and `downstreamModels` in `AttributeDefinition`.
+     - Updated `frontend/src/services/canonicalProvenance.ts` with `CANONICAL_SECTIONS` (10 sections), `CANONICAL_84_ATTRIBUTES` (84 items), `getCanonical84ProvenanceFallback`, and `getCanonical42ProvenanceFallback`.
+  4. **Vault 4 UI/UX (`frontend/src/components/vaults/ProvenanceLedgerVault.tsx`):**
+     - Dynamic rendering across all 84 attributes (zero hardcoded arrays).
+     - Top Telemetry Strip invariant: `foundCount + pendingCount + reconfirmCount === 84`.
+     - 10 Collapsible Statutory Section Accordions with per-section completion pills (`10/10 Verified`, `11/12 Verified · 1 Exception`, etc.).
+     - Dynamic instant search bar across 84 attributes, section selector dropdown covering all 10 sections (`Offer Structure` to `Unit Economics & Capacity`), and status quick filters (`All (84)`, `Verified`, `Reconfirm`, `Pending RHP`).
+     - Extended unit badge renderer supporting `₹ Cr`, `%`, `Shares`, `Days`, `Ratio (x)`, `Count`, `Units`, `₹ / Unit`, `Date`, and `Text`.
+     - Bounding box inspector drawer and analyst verification / flag controls preserved with full audit trail.
+  5. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_84_schema.py`: 11/11 PASSED (0.34s).
+     - TypeScript compiler `node frontend/node_modules/typescript/bin/tsc --noEmit -p frontend/tsconfig.json`: 0 errors (Exit code 0).
+- **Session 2 Handoff:**
+  - Proceed with Phase B: Econometric, Forensic & Narrative Interpretation Engine (`models/pre_ipo_econometrics.py`), Vault 5 (`EconometricLabVault.tsx`), and automated interpretation cards.
+
+## MILESTONE — Expanded 84-Attribute Pre-IPO Research Blueprint Documented (2026-11-17 16:42 IST)
+
+- **Document Created:** [`docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md)
+- **Scope & Deliverables:**
+  1. **Expanded 84-Attribute Pre-IPO Taxonomy:** Partitioned into Tier 1 (Baseline 1–42) and Tier 2 (Deep Intelligence 43–84) across 10 statutory SEBI ICDR Schedule VI chapters (Offer Structure, Objects, P&L, Balance Sheet, Cash Flow, Indebtedness, Cap Table & Lock-In, Governance, Contingent Liabilities & Litigation, Unit Economics & Capacity).
+  2. **Institutional Econometric, Forensic & ML Analytical Suite:** 7 quantitative models (Beneish M-Score & Sloan Accruals, Dickinson Life-Cycle Vector, Huber Robust Peer Regression, STL Seasonality & Chow Break Test, Monte Carlo Reverse DCF, Lock-In Supply Overhang & Sec 56(2)(x) Rule 11UA, Altman $Z''$-Score & Ind AS 116 Lease Unwinding) paired with an Automated 3-Part Narrative Interpretation Engine (Statistical Finding, Economic Mechanism, IC Actionable Takeaway).
+  3. **4-Layer Screen Architecture & UI Vault Mapping:** Pinned Telemetry Strip (`CompactCockpitHUD.tsx` & `StatutoryOfferHero.tsx`), Vault 4 Fact & Provenance Ledger (`ProvenanceLedgerVault.tsx`), Vault 5 Econometric Lab (`EconometricLabVault.tsx`), and Vaults 6–10 Decision Synthesis Workbench.
+  4. **Master Antigravity Implementation Prompt:** Actionable prompt enforcing all `AGENTS.md` invariants (Zero Truthiness, Discriminated Unions, Fail-Closed Gates, Transaction Atomicity).
+
+---
+
+## MILESTONE — Full 42-Attribute SEBI ICDR Taxonomy & Vault 4 Provenance Ledger (2026-11-17 16:35 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Canonical Hand-off Baseline:** `CURRENT_STATUS.md` & `.agent/refactor-handoff.md`
+- **Core Deliverables & Governance Completed:**
+  1. **Authoritative 42-Attribute Schema Registry (`models/pre_ipo_schema.py`):**
+     - Single source of truth for the 42 statutory DRHP/RHP attributes, grouped strictly across 7 canonical sections (6 attributes per section): `Offer Structure`, `Objects`, `P&L`, `Balance Sheet`, `Working Capital`, `Indebtedness`, and `Governance`.
+     - Strict provenance extraction invariants: `status: 'FOUND'` requires non-empty `source_document`, `page_number >= 1`, verbatim quote, bounding box coordinates, and `confidence_score >= 0.85`.
+     - Zero Truthiness (Rule E.3): `0.0` is treated as a valid observed financial disclosure (`0.00 Cr` fresh issue and `0.00%` promoter pledge in HCCH 100% OFS are marked `FOUND`, never collapsed to `NOT_FOUND`).
+  2. **FastAPI Endpoints (`api/server.py`):**
+     - Registered `@app.get("/api/pre-ipo/schema")` returning the 42-attribute taxonomy with SEBI ICDR Schedule VI statutory references and expected units.
+     - Updated `@app.get("/api/pre-ipo/market-status")` returning the 42-item `provenanceLedger` and summary counts (`foundCount`, `notFoundCount`, `reconfirmCount`, total: 42).
+  3. **Frontend Typing & Services (`frontend/src/`):**
+     - Updated `types/terminal.ts` with discriminated unions for `CanonicalSection`, `ExpectedUnit`, `AttributeDefinition`, `ProvenanceSummary`, and extended `ProvenanceField<T>` with attribute metadata.
+     - Created `services/canonicalProvenance.ts` and updated `services/dataService.ts` to dynamically supply the 42-item ledger.
+  4. **Institutional Vault 4 UI/UX (`frontend/src/components/vaults/ProvenanceLedgerVault.tsx`):**
+     - Dynamic 42-item rendering (zero hardcoded arrays).
+     - Top Telemetry Strip invariant: `foundCount + pendingCount + reconfirmCount === 42`.
+     - 7 Canonical Section Accordions with completion pills (`6/6 Verified`, `5/6 Verified · 1 Exception`).
+     - Instant client-side search across labels, attribute IDs, quotes, and Schedule VI references.
+     - Section dropdown filter + quick status buttons (`All (42)`, `Verified`, `Reconfirm`, `Pending RHP`).
+     - High-density table with tabular numerals, explicit unit badges (`₹ Cr`, `%`, `Shares`, `Days`, `Ratio`, `Text`, `Date`), clickable PDF citation badges (`[Ch. V p. 280]`), confidence score indicators, expandable inline verbatim quote drawer, and interactive analyst sign-off controls (`Verify & Accept` / `Flag Exception`).
+     - Coordinate Inspector Drawer: displays target variable, ID, SEBI ICDR statutory clause, citation, geometric bounding box `[x0, y0, x1, y1]`, PyMuPDF OCR tag, and SHA-256 audit trail.
+  5. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_42_attributes.py`: 5/5 PASSED (16.75s).
+     - TypeScript compilation `node frontend/node_modules/typescript/bin/tsc --noEmit -p frontend`: 0 errors (Exit code 0).
+- **Live Infrastructure State:**
+  - Vite Frontend: `http://localhost:5173/` (Active background daemon)
+  - FastAPI Backend: `http://127.0.0.1:8000/` (Active background daemon)
+  - Database: `capital_structure.db` preserved at 45.64 MB (SHA-256 unchanged).
+
+---
+
+- **Branch:** `feature/unified-lintel-m3-pre-ipo` (Designated isolated branch: `feature/pre-ipo-cockpit-vault-v35`)
+- **Canonical Hand-off Baseline:** `HANDOFF_BASELINE_PRE_IPO_TERMINAL_V35.md`
+- **Master Redesign Specification:** `IPO_TERMINAL_REDESIGN_SPECIFICATION.md`
+- **Core Deliverables & Governance Completed:**
+  1. **Option A Dual-Layer Cockpit & Vault Resolution:**
+     - Anchored top cockpit (~38% viewport) containing SEBI Evidence Containment Banner, Hero Dossier (6 statutory badges + exact share count `997,461,456`), and 3 Cockpit Towers (Reg 7 Capital Split, Huber Fair vs Asking Stretch with unpriced failsafe, Day-180 Float Overhang Cliff).
+     - 10 full-width specialized deep workspaces swapped dynamically via the left sidebar.
+  2. **54-Page Master Guide Audit ("Pre-IPO Intelligence & Valuation Architecture"):**
+     - Complete audit of all 25 analytical capabilities across Parts I–XXIII.
+     - 17 Adopted: Dual-Layer Cockpit, Tri-State Header Counters (`36 Verified | 4 Pending | 2 Reconfirm`), Tri-State Cell Visuals (preventing false zeros), Interactive Price-Band Simulator Slider (₹70–₹140), Trailing vs. Seasonality FY27E Forward Toggle, Mainboard vs. SME Emerge Switcher, 6-Rule Red-Flag Scanner HUD (Vault 8), Unlisted Post-Tax Arbitrage Simulator (Vault 9), AQI 0–100 & Day-90 Overhang, 18M WACA Step-Up, Quantile Valuation Envelopes (P10/P50/P90), 5-Point Accounting Gate Status Card, Customer Concentration Bar, 6-Persona Stakeholder Lens, 1-Click PPTX/PDF Exports, 4-Pillar Narrative Intelligence Layer, and Lightweight SVG Bounding-Box Snippet Inspector.
+     - 8 Non-Adopted with Justifications: Heavy Client-Side PDF.js Canvas, In-Browser Playwright Scraping, Local 70B LLM Fine-Tuning, Multi-Tenant RBAC, Direct FIX Broker Bidding, Monolithic 42-Field Flat Table, Automated Bidding Placement, and Synthetic Proxy Imputation.
+  3. **8-Parameter Adversarial Rubric Review:**
+     - Evaluated and iteratively hardened across 8 parameters to a verified 10/10 rating.
+  4. **5-Pillar End-to-End Red Team Audit:**
+     - Cleared across Architecture, Current Codebase, UI/UX, Backend API, and Integration Dataflow.
+  5. **Session Post-Mortem & Learned Operational Safeguards:**
+     - Enforced 5 hard gates: Mandatory Physical Evidence Gate (Playwright screenshots verified on disk), Zero-Truthiness Financial Rule (Rule E.3), Unpriced DRHP Robustness (`is_undisclosed: true`), Python Script Isolation (Rule A), and Background Task Lifecycle Governance.
+- **Infrastructure Status:**
+  - Vite Frontend: `http://localhost:5173/` (Healthy)
+  - FastAPI BFF: `http://localhost:8000/` (Healthy)
+  - Streamlit Platform: `http://localhost:8501/` (Healthy)
+  - Database: `capital_structure.db` preserved at 45.64 MB (< 50 MB budget, SHA-256 unchanged).
+
+---
+
 ## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
 
 - **Branch:** `master` · **Target Repository:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -687,7 +786,37 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 ---
 
-# ProfSurProject — Session Log (2026-09-06 Recovery & Context Consolidation)
+# ProfSurProject — Session Log
+
+## MILESTONE — Expanded 84-Attribute Schema & Vault 4 Implementation (Session 1 Complete) (2026-11-17 17:05 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Completed Phase A (84-Attribute Canonical Schema & Backend Extraction) and Vault 4 (Statutory Provenance Ledger UI across 10 canonical sections). Phase B (Econometric Lab Vault 5 & full econometric calculations) deferred to Session 2 per explicit user instruction.
+- **Core Deliverables & Governance Completed:**
+  1. **Canonical 84-Attribute Registry & Ingest Engine (`models/pre_ipo_schema.py`):**
+     - Single source of truth for all 84 attributes partitioned into Tier 1 (1–42 core baseline) and Tier 2 (43–84 deep intelligence) across 10 statutory sections:
+       `Offer Structure` (10), `Objects` (6), `P&L` (12), `Balance Sheet` (10), `Working Capital` (11), `Indebtedness` (9), `Cap Table & Lock-In` (8), `Governance & RPT` (6), `Contingent Liabilities` (6), `Unit Economics & Capacity` (6).
+     - Defined `CanonicalSection` enum (10 members), `CANONICAL_SECTIONS` list, and `CANONICAL_SECTIONS_42` (backward compatibility).
+     - Expanded `ExpectedUnit` enum with `COUNT`, `VOLUME_UNITS`, `INR_PER_SHARE`, `INR_PER_UNIT`, `MULTIPLE`.
+     - Implemented `extract_canonical_84_provenance(dossier, is_hccb, offer_data)` with strict Rule E.3 Zero-Truthiness preservation (`0.0` fresh issue, `0.0%` pledge, `0.0` secured term loans preserved as `FOUND` with `value: 0.0`), unpriced `[•]` DRHP variables emitted as `NOT_FOUND` with syndicate reconfirmation reason, and backward compatibility wrapper `extract_canonical_42_provenance`.
+  2. **FastAPI Endpoints (`api/server.py`):**
+     - Updated `@app.get("/api/pre-ipo/schema")` returning all 84 attributes and 10 canonical sections (`totalCount: 84`).
+     - Updated `@app.get("/api/pre-ipo/market-status")` computing `provenanceLedger` and `provenanceSummary` across all 84 canonical items.
+  3. **Frontend Typing & Services (`frontend/src/`):**
+     - Extended `frontend/src/types/terminal.ts` with 10 canonical sections, new units, and `downstreamModels` in `AttributeDefinition`.
+     - Updated `frontend/src/services/canonicalProvenance.ts` with `CANONICAL_SECTIONS` (10 sections), `CANONICAL_84_ATTRIBUTES` (84 items), `getCanonical84ProvenanceFallback`, and `getCanonical42ProvenanceFallback`.
+  4. **Vault 4 UI/UX (`frontend/src/components/vaults/ProvenanceLedgerVault.tsx`):**
+     - Dynamic rendering across all 84 attributes (zero hardcoded arrays).
+     - Top Telemetry Strip invariant: `foundCount + pendingCount + reconfirmCount === 84`.
+     - 10 Collapsible Statutory Section Accordions with per-section completion pills (`10/10 Verified`, `11/12 Verified · 1 Exception`, etc.).
+     - Dynamic instant search bar across 84 attributes, section selector dropdown covering all 10 sections (`Offer Structure` to `Unit Economics & Capacity`), and status quick filters (`All (84)`, `Verified`, `Reconfirm`, `Pending RHP`).
+     - Extended unit badge renderer supporting `₹ Cr`, `%`, `Shares`, `Days`, `Ratio (x)`, `Count`, `Units`, `₹ / Unit`, `Date`, and `Text`.
+     - Bounding box inspector drawer and analyst verification / flag controls preserved with full audit trail.
+  5. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_84_schema.py`: 11/11 PASSED (0.34s).
+     - TypeScript compiler `node frontend/node_modules/typescript/bin/tsc --noEmit -p frontend/tsconfig.json`: 0 errors (Exit code 0).
+- **Session 2 Handoff:**
+  - Proceed with Phase B: Econometric, Forensic & Narrative Interpretation Engine (`models/pre_ipo_econometrics.py`), Vault 5 (`EconometricLabVault.tsx`), and automated interpretation cards. (2026-09-06 Recovery & Context Consolidation)
 
 ## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
 
@@ -748,7 +877,37 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 ---
 
-# ProfSurProject — Session Log (2026-09-07 Stata Studio Compatibility & Error Hardening)
+# ProfSurProject — Session Log
+
+## MILESTONE — Expanded 84-Attribute Schema & Vault 4 Implementation (Session 1 Complete) (2026-11-17 17:05 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Completed Phase A (84-Attribute Canonical Schema & Backend Extraction) and Vault 4 (Statutory Provenance Ledger UI across 10 canonical sections). Phase B (Econometric Lab Vault 5 & full econometric calculations) deferred to Session 2 per explicit user instruction.
+- **Core Deliverables & Governance Completed:**
+  1. **Canonical 84-Attribute Registry & Ingest Engine (`models/pre_ipo_schema.py`):**
+     - Single source of truth for all 84 attributes partitioned into Tier 1 (1–42 core baseline) and Tier 2 (43–84 deep intelligence) across 10 statutory sections:
+       `Offer Structure` (10), `Objects` (6), `P&L` (12), `Balance Sheet` (10), `Working Capital` (11), `Indebtedness` (9), `Cap Table & Lock-In` (8), `Governance & RPT` (6), `Contingent Liabilities` (6), `Unit Economics & Capacity` (6).
+     - Defined `CanonicalSection` enum (10 members), `CANONICAL_SECTIONS` list, and `CANONICAL_SECTIONS_42` (backward compatibility).
+     - Expanded `ExpectedUnit` enum with `COUNT`, `VOLUME_UNITS`, `INR_PER_SHARE`, `INR_PER_UNIT`, `MULTIPLE`.
+     - Implemented `extract_canonical_84_provenance(dossier, is_hccb, offer_data)` with strict Rule E.3 Zero-Truthiness preservation (`0.0` fresh issue, `0.0%` pledge, `0.0` secured term loans preserved as `FOUND` with `value: 0.0`), unpriced `[•]` DRHP variables emitted as `NOT_FOUND` with syndicate reconfirmation reason, and backward compatibility wrapper `extract_canonical_42_provenance`.
+  2. **FastAPI Endpoints (`api/server.py`):**
+     - Updated `@app.get("/api/pre-ipo/schema")` returning all 84 attributes and 10 canonical sections (`totalCount: 84`).
+     - Updated `@app.get("/api/pre-ipo/market-status")` computing `provenanceLedger` and `provenanceSummary` across all 84 canonical items.
+  3. **Frontend Typing & Services (`frontend/src/`):**
+     - Extended `frontend/src/types/terminal.ts` with 10 canonical sections, new units, and `downstreamModels` in `AttributeDefinition`.
+     - Updated `frontend/src/services/canonicalProvenance.ts` with `CANONICAL_SECTIONS` (10 sections), `CANONICAL_84_ATTRIBUTES` (84 items), `getCanonical84ProvenanceFallback`, and `getCanonical42ProvenanceFallback`.
+  4. **Vault 4 UI/UX (`frontend/src/components/vaults/ProvenanceLedgerVault.tsx`):**
+     - Dynamic rendering across all 84 attributes (zero hardcoded arrays).
+     - Top Telemetry Strip invariant: `foundCount + pendingCount + reconfirmCount === 84`.
+     - 10 Collapsible Statutory Section Accordions with per-section completion pills (`10/10 Verified`, `11/12 Verified · 1 Exception`, etc.).
+     - Dynamic instant search bar across 84 attributes, section selector dropdown covering all 10 sections (`Offer Structure` to `Unit Economics & Capacity`), and status quick filters (`All (84)`, `Verified`, `Reconfirm`, `Pending RHP`).
+     - Extended unit badge renderer supporting `₹ Cr`, `%`, `Shares`, `Days`, `Ratio (x)`, `Count`, `Units`, `₹ / Unit`, `Date`, and `Text`.
+     - Bounding box inspector drawer and analyst verification / flag controls preserved with full audit trail.
+  5. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_84_schema.py`: 11/11 PASSED (0.34s).
+     - TypeScript compiler `node frontend/node_modules/typescript/bin/tsc --noEmit -p frontend/tsconfig.json`: 0 errors (Exit code 0).
+- **Session 2 Handoff:**
+  - Proceed with Phase B: Econometric, Forensic & Narrative Interpretation Engine (`models/pre_ipo_econometrics.py`), Vault 5 (`EconometricLabVault.tsx`), and automated interpretation cards. (2026-09-07 Stata Studio Compatibility & Error Hardening)
 
 ## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
 
@@ -797,7 +956,37 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 ---
 
-# ProfSurProject — Session Log (2026-09-07 Local Online Verification)
+# ProfSurProject — Session Log
+
+## MILESTONE — Expanded 84-Attribute Schema & Vault 4 Implementation (Session 1 Complete) (2026-11-17 17:05 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Completed Phase A (84-Attribute Canonical Schema & Backend Extraction) and Vault 4 (Statutory Provenance Ledger UI across 10 canonical sections). Phase B (Econometric Lab Vault 5 & full econometric calculations) deferred to Session 2 per explicit user instruction.
+- **Core Deliverables & Governance Completed:**
+  1. **Canonical 84-Attribute Registry & Ingest Engine (`models/pre_ipo_schema.py`):**
+     - Single source of truth for all 84 attributes partitioned into Tier 1 (1–42 core baseline) and Tier 2 (43–84 deep intelligence) across 10 statutory sections:
+       `Offer Structure` (10), `Objects` (6), `P&L` (12), `Balance Sheet` (10), `Working Capital` (11), `Indebtedness` (9), `Cap Table & Lock-In` (8), `Governance & RPT` (6), `Contingent Liabilities` (6), `Unit Economics & Capacity` (6).
+     - Defined `CanonicalSection` enum (10 members), `CANONICAL_SECTIONS` list, and `CANONICAL_SECTIONS_42` (backward compatibility).
+     - Expanded `ExpectedUnit` enum with `COUNT`, `VOLUME_UNITS`, `INR_PER_SHARE`, `INR_PER_UNIT`, `MULTIPLE`.
+     - Implemented `extract_canonical_84_provenance(dossier, is_hccb, offer_data)` with strict Rule E.3 Zero-Truthiness preservation (`0.0` fresh issue, `0.0%` pledge, `0.0` secured term loans preserved as `FOUND` with `value: 0.0`), unpriced `[•]` DRHP variables emitted as `NOT_FOUND` with syndicate reconfirmation reason, and backward compatibility wrapper `extract_canonical_42_provenance`.
+  2. **FastAPI Endpoints (`api/server.py`):**
+     - Updated `@app.get("/api/pre-ipo/schema")` returning all 84 attributes and 10 canonical sections (`totalCount: 84`).
+     - Updated `@app.get("/api/pre-ipo/market-status")` computing `provenanceLedger` and `provenanceSummary` across all 84 canonical items.
+  3. **Frontend Typing & Services (`frontend/src/`):**
+     - Extended `frontend/src/types/terminal.ts` with 10 canonical sections, new units, and `downstreamModels` in `AttributeDefinition`.
+     - Updated `frontend/src/services/canonicalProvenance.ts` with `CANONICAL_SECTIONS` (10 sections), `CANONICAL_84_ATTRIBUTES` (84 items), `getCanonical84ProvenanceFallback`, and `getCanonical42ProvenanceFallback`.
+  4. **Vault 4 UI/UX (`frontend/src/components/vaults/ProvenanceLedgerVault.tsx`):**
+     - Dynamic rendering across all 84 attributes (zero hardcoded arrays).
+     - Top Telemetry Strip invariant: `foundCount + pendingCount + reconfirmCount === 84`.
+     - 10 Collapsible Statutory Section Accordions with per-section completion pills (`10/10 Verified`, `11/12 Verified · 1 Exception`, etc.).
+     - Dynamic instant search bar across 84 attributes, section selector dropdown covering all 10 sections (`Offer Structure` to `Unit Economics & Capacity`), and status quick filters (`All (84)`, `Verified`, `Reconfirm`, `Pending RHP`).
+     - Extended unit badge renderer supporting `₹ Cr`, `%`, `Shares`, `Days`, `Ratio (x)`, `Count`, `Units`, `₹ / Unit`, `Date`, and `Text`.
+     - Bounding box inspector drawer and analyst verification / flag controls preserved with full audit trail.
+  5. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_84_schema.py`: 11/11 PASSED (0.34s).
+     - TypeScript compiler `node frontend/node_modules/typescript/bin/tsc --noEmit -p frontend/tsconfig.json`: 0 errors (Exit code 0).
+- **Session 2 Handoff:**
+  - Proceed with Phase B: Econometric, Forensic & Narrative Interpretation Engine (`models/pre_ipo_econometrics.py`), Vault 5 (`EconometricLabVault.tsx`), and automated interpretation cards. (2026-09-07 Local Online Verification)
 
 ## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
 
@@ -841,7 +1030,37 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 ---
 
-# ProfSurProject — Session Log (2026-09-07 Wave 1 ModelResultContext Verification)
+# ProfSurProject — Session Log
+
+## MILESTONE — Expanded 84-Attribute Schema & Vault 4 Implementation (Session 1 Complete) (2026-11-17 17:05 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Completed Phase A (84-Attribute Canonical Schema & Backend Extraction) and Vault 4 (Statutory Provenance Ledger UI across 10 canonical sections). Phase B (Econometric Lab Vault 5 & full econometric calculations) deferred to Session 2 per explicit user instruction.
+- **Core Deliverables & Governance Completed:**
+  1. **Canonical 84-Attribute Registry & Ingest Engine (`models/pre_ipo_schema.py`):**
+     - Single source of truth for all 84 attributes partitioned into Tier 1 (1–42 core baseline) and Tier 2 (43–84 deep intelligence) across 10 statutory sections:
+       `Offer Structure` (10), `Objects` (6), `P&L` (12), `Balance Sheet` (10), `Working Capital` (11), `Indebtedness` (9), `Cap Table & Lock-In` (8), `Governance & RPT` (6), `Contingent Liabilities` (6), `Unit Economics & Capacity` (6).
+     - Defined `CanonicalSection` enum (10 members), `CANONICAL_SECTIONS` list, and `CANONICAL_SECTIONS_42` (backward compatibility).
+     - Expanded `ExpectedUnit` enum with `COUNT`, `VOLUME_UNITS`, `INR_PER_SHARE`, `INR_PER_UNIT`, `MULTIPLE`.
+     - Implemented `extract_canonical_84_provenance(dossier, is_hccb, offer_data)` with strict Rule E.3 Zero-Truthiness preservation (`0.0` fresh issue, `0.0%` pledge, `0.0` secured term loans preserved as `FOUND` with `value: 0.0`), unpriced `[•]` DRHP variables emitted as `NOT_FOUND` with syndicate reconfirmation reason, and backward compatibility wrapper `extract_canonical_42_provenance`.
+  2. **FastAPI Endpoints (`api/server.py`):**
+     - Updated `@app.get("/api/pre-ipo/schema")` returning all 84 attributes and 10 canonical sections (`totalCount: 84`).
+     - Updated `@app.get("/api/pre-ipo/market-status")` computing `provenanceLedger` and `provenanceSummary` across all 84 canonical items.
+  3. **Frontend Typing & Services (`frontend/src/`):**
+     - Extended `frontend/src/types/terminal.ts` with 10 canonical sections, new units, and `downstreamModels` in `AttributeDefinition`.
+     - Updated `frontend/src/services/canonicalProvenance.ts` with `CANONICAL_SECTIONS` (10 sections), `CANONICAL_84_ATTRIBUTES` (84 items), `getCanonical84ProvenanceFallback`, and `getCanonical42ProvenanceFallback`.
+  4. **Vault 4 UI/UX (`frontend/src/components/vaults/ProvenanceLedgerVault.tsx`):**
+     - Dynamic rendering across all 84 attributes (zero hardcoded arrays).
+     - Top Telemetry Strip invariant: `foundCount + pendingCount + reconfirmCount === 84`.
+     - 10 Collapsible Statutory Section Accordions with per-section completion pills (`10/10 Verified`, `11/12 Verified · 1 Exception`, etc.).
+     - Dynamic instant search bar across 84 attributes, section selector dropdown covering all 10 sections (`Offer Structure` to `Unit Economics & Capacity`), and status quick filters (`All (84)`, `Verified`, `Reconfirm`, `Pending RHP`).
+     - Extended unit badge renderer supporting `₹ Cr`, `%`, `Shares`, `Days`, `Ratio (x)`, `Count`, `Units`, `₹ / Unit`, `Date`, and `Text`.
+     - Bounding box inspector drawer and analyst verification / flag controls preserved with full audit trail.
+  5. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_84_schema.py`: 11/11 PASSED (0.34s).
+     - TypeScript compiler `node frontend/node_modules/typescript/bin/tsc --noEmit -p frontend/tsconfig.json`: 0 errors (Exit code 0).
+- **Session 2 Handoff:**
+  - Proceed with Phase B: Econometric, Forensic & Narrative Interpretation Engine (`models/pre_ipo_econometrics.py`), Vault 5 (`EconometricLabVault.tsx`), and automated interpretation cards. (2026-09-07 Wave 1 ModelResultContext Verification)
 
 ## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
 
@@ -896,7 +1115,37 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 ---
 
-# ProfSurProject — Session Log (2026-09-07 Workstream 2 Citation Inspector Verification)
+# ProfSurProject — Session Log
+
+## MILESTONE — Expanded 84-Attribute Schema & Vault 4 Implementation (Session 1 Complete) (2026-11-17 17:05 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Completed Phase A (84-Attribute Canonical Schema & Backend Extraction) and Vault 4 (Statutory Provenance Ledger UI across 10 canonical sections). Phase B (Econometric Lab Vault 5 & full econometric calculations) deferred to Session 2 per explicit user instruction.
+- **Core Deliverables & Governance Completed:**
+  1. **Canonical 84-Attribute Registry & Ingest Engine (`models/pre_ipo_schema.py`):**
+     - Single source of truth for all 84 attributes partitioned into Tier 1 (1–42 core baseline) and Tier 2 (43–84 deep intelligence) across 10 statutory sections:
+       `Offer Structure` (10), `Objects` (6), `P&L` (12), `Balance Sheet` (10), `Working Capital` (11), `Indebtedness` (9), `Cap Table & Lock-In` (8), `Governance & RPT` (6), `Contingent Liabilities` (6), `Unit Economics & Capacity` (6).
+     - Defined `CanonicalSection` enum (10 members), `CANONICAL_SECTIONS` list, and `CANONICAL_SECTIONS_42` (backward compatibility).
+     - Expanded `ExpectedUnit` enum with `COUNT`, `VOLUME_UNITS`, `INR_PER_SHARE`, `INR_PER_UNIT`, `MULTIPLE`.
+     - Implemented `extract_canonical_84_provenance(dossier, is_hccb, offer_data)` with strict Rule E.3 Zero-Truthiness preservation (`0.0` fresh issue, `0.0%` pledge, `0.0` secured term loans preserved as `FOUND` with `value: 0.0`), unpriced `[•]` DRHP variables emitted as `NOT_FOUND` with syndicate reconfirmation reason, and backward compatibility wrapper `extract_canonical_42_provenance`.
+  2. **FastAPI Endpoints (`api/server.py`):**
+     - Updated `@app.get("/api/pre-ipo/schema")` returning all 84 attributes and 10 canonical sections (`totalCount: 84`).
+     - Updated `@app.get("/api/pre-ipo/market-status")` computing `provenanceLedger` and `provenanceSummary` across all 84 canonical items.
+  3. **Frontend Typing & Services (`frontend/src/`):**
+     - Extended `frontend/src/types/terminal.ts` with 10 canonical sections, new units, and `downstreamModels` in `AttributeDefinition`.
+     - Updated `frontend/src/services/canonicalProvenance.ts` with `CANONICAL_SECTIONS` (10 sections), `CANONICAL_84_ATTRIBUTES` (84 items), `getCanonical84ProvenanceFallback`, and `getCanonical42ProvenanceFallback`.
+  4. **Vault 4 UI/UX (`frontend/src/components/vaults/ProvenanceLedgerVault.tsx`):**
+     - Dynamic rendering across all 84 attributes (zero hardcoded arrays).
+     - Top Telemetry Strip invariant: `foundCount + pendingCount + reconfirmCount === 84`.
+     - 10 Collapsible Statutory Section Accordions with per-section completion pills (`10/10 Verified`, `11/12 Verified · 1 Exception`, etc.).
+     - Dynamic instant search bar across 84 attributes, section selector dropdown covering all 10 sections (`Offer Structure` to `Unit Economics & Capacity`), and status quick filters (`All (84)`, `Verified`, `Reconfirm`, `Pending RHP`).
+     - Extended unit badge renderer supporting `₹ Cr`, `%`, `Shares`, `Days`, `Ratio (x)`, `Count`, `Units`, `₹ / Unit`, `Date`, and `Text`.
+     - Bounding box inspector drawer and analyst verification / flag controls preserved with full audit trail.
+  5. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_84_schema.py`: 11/11 PASSED (0.34s).
+     - TypeScript compiler `node frontend/node_modules/typescript/bin/tsc --noEmit -p frontend/tsconfig.json`: 0 errors (Exit code 0).
+- **Session 2 Handoff:**
+  - Proceed with Phase B: Econometric, Forensic & Narrative Interpretation Engine (`models/pre_ipo_econometrics.py`), Vault 5 (`EconometricLabVault.tsx`), and automated interpretation cards. (2026-09-07 Workstream 2 Citation Inspector Verification)
 
 ## MILESTONE — SEBI ICDR 2018 Unpriced DRHP Circuit Breakers & Deck Integrity Fixes (2026-11-13 14:45 IST)
 

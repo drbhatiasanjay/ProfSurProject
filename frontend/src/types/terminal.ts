@@ -16,6 +16,8 @@ export type DealPricingState =
   | { status: 'RHP_PRICED'; priceBandMin: number; priceBandMax: number; isContained: boolean }
   | { status: 'TRADING_LIVE'; listingPrice: number; ltp: number };
 
+export type DealIntegrity = 'PASS' | 'CONDITIONAL' | 'BLOCKED';
+
 export interface StatutoryOfferDetails {
   symbol: string;
   companyName: string;
@@ -28,6 +30,8 @@ export interface StatutoryOfferDetails {
   issueStartDate: string;
   issueEndDate: string;
   pricingState: DealPricingState;
+  dealIntegrity: DealIntegrity;
+  reconciliationGate?: FivePointReconciliationGate;
   priceBandDisplay?: string; // e.g. "₹102 - ₹108" or "Drafting / Unpriced (₹[●])"
   lotSize: number | null;
   minCommitmentInr?: number | null;
@@ -52,6 +56,8 @@ export interface StatutoryOfferDetails {
   gcpAllocationCr?: number;
   gcpAllocationPct?: number; // GCP % of Fresh (must be <= 25%)
   isGcpCompliant?: boolean;
+  provenanceLedger?: ProvenanceField<string | number>[];
+  provenanceSummary?: ProvenanceSummary;
 }
 
 export interface SubscriptionCategory {
@@ -248,6 +254,49 @@ export interface FivePointReconciliationGate {
   };
 }
 
+export type CanonicalSection =
+  | 'Offer Structure'
+  | 'Objects'
+  | 'P&L'
+  | 'Balance Sheet'
+  | 'Working Capital'
+  | 'Indebtedness'
+  | 'Cap Table & Lock-In'
+  | 'Governance & RPT'
+  | 'Contingent Liabilities'
+  | 'Unit Economics & Capacity';
+
+export type ExpectedUnit =
+  | 'INR_CRORES'
+  | 'PERCENTAGE'
+  | 'SHARES'
+  | 'DAYS'
+  | 'RATIO'
+  | 'TEXT'
+  | 'DATE'
+  | 'COUNT'
+  | 'VOLUME_UNITS'
+  | 'INR_PER_SHARE'
+  | 'INR_PER_UNIT'
+  | 'MULTIPLE';
+
+export interface AttributeDefinition {
+  attributeId: string;
+  section: CanonicalSection;
+  label: string;
+  expectedUnit: ExpectedUnit;
+  statutoryReference: string;
+  requiredForGate: boolean;
+  downstreamModels?: string[];
+}
+
+export interface ProvenanceSummary {
+  foundCount: number;
+  notFoundCount: number;
+  reconfirmCount: number;
+  totalCount: number;
+}
+
 export type ProvenanceField<T> =
   | {
       status: 'FOUND';
@@ -260,6 +309,13 @@ export type ProvenanceField<T> =
       printedPageLabel?: string;
       chapterName?: string;
       verbatimSnippet?: string;
+      sourceQuote?: string;
+      sourceDocument?: string;
+      attributeId?: string;
+      section?: CanonicalSection | string;
+      expectedUnit?: ExpectedUnit | string;
+      statutoryReference?: string;
+      requiredForGate?: boolean;
       reconfirmationReason?: never;
     }
   | {
@@ -273,6 +329,13 @@ export type ProvenanceField<T> =
       printedPageLabel?: string;
       chapterName?: string;
       verbatimSnippet?: string;
+      sourceQuote?: string;
+      sourceDocument?: string;
+      attributeId?: string;
+      section?: CanonicalSection | string;
+      expectedUnit?: ExpectedUnit | string;
+      statutoryReference?: string;
+      requiredForGate?: boolean;
       reconfirmationReason?: string;
     }
   | {
@@ -286,6 +349,13 @@ export type ProvenanceField<T> =
       printedPageLabel?: string;
       chapterName?: string;
       verbatimSnippet?: string;
+      sourceQuote?: string;
+      sourceDocument?: string;
+      attributeId?: string;
+      section?: CanonicalSection | string;
+      expectedUnit?: ExpectedUnit | string;
+      statutoryReference?: string;
+      requiredForGate?: boolean;
       reconfirmationReason: string; // Non-optional on NEEDS_RECONFIRMATION
     };
 

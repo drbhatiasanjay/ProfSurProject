@@ -87,6 +87,18 @@ def health_check():
         "service": "ProfSur Quantitative Terminal API"
     }
 
+@app.get("/api/pre-ipo/schema")
+def get_canonical_schema():
+    """
+    Returns authoritative 84-attribute SEBI ICDR schema registry and canonical sections.
+    """
+    from models.pre_ipo_schema import CANONICAL_84_ATTRIBUTES, CANONICAL_SECTIONS
+    return {
+        "sections": CANONICAL_SECTIONS,
+        "totalCount": len(CANONICAL_84_ATTRIBUTES),
+        "attributes": [attr.to_dict() for attr in CANONICAL_84_ATTRIBUTES],
+    }
+
 @app.get("/api/pre-ipo/market-status")
 def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO symbol")):
     """
@@ -676,6 +688,12 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
     from models.pre_ipo_data import PRE_IPO_REGISTRY
     from models.pre_ipo_engine import compute_dynamic_huber_valuation, generate_valuation_evidence_narrative
     from models.pre_ipo_capability_gate import assert_capability_allowed, CapabilityType, ExportBlockedError
+    from models.pre_ipo_reconciliation import get_reconciliation_for_deal
+
+    # Pre-compute 5-Point Accounting Reconciliation Gate and Deal Integrity once at data boundary
+    recon_result = get_reconciliation_for_deal(offer_data)
+    offer_data["reconciliationGate"] = recon_result["gates"]
+    offer_data["dealIntegrity"] = recon_result["dealIntegrity"]
 
     dossier_key = "ntpc_green"
     if "coca" in symbol.lower() or "hccb" in symbol.lower():
@@ -821,6 +839,23 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
         ]
     }
 
+    # 8. Provenance Ledger & 84-Attribute SEBI ICDR Registry
+    from models.pre_ipo_schema import extract_canonical_84_provenance
+    provenance_records = extract_canonical_84_provenance(dossier, is_hccb=is_hccb, offer_data=offer_data)
+    found_count = sum(1 for r in provenance_records if r["status"] == "FOUND")
+    reconfirm_count = sum(1 for r in provenance_records if r["status"] == "NEEDS_RECONFIRMATION")
+    not_found_count = sum(1 for r in provenance_records if r["status"] == "NOT_FOUND")
+
+    provenance_summary = {
+        "foundCount": found_count,
+        "reconfirmCount": reconfirm_count,
+        "notFoundCount": not_found_count,
+        "totalCount": len(provenance_records),
+    }
+
+    offer_data["provenanceLedger"] = provenance_records
+    offer_data["provenanceSummary"] = provenance_summary
+
     return {
         "indices": indices_data,
         "offer": offer_data,
@@ -828,7 +863,10 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
         "peers": peers_data,
         "calibration": calibration_data,
         "scorecard": scorecard_data,
-        "compliance": compliance_data
+        "compliance": compliance_data,
+        "reconciliation": recon_result["gates"],
+        "provenanceLedger": provenance_records,
+        "provenanceSummary": provenance_summary,
     }
 
 if __name__ == "__main__":
