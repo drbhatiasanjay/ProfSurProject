@@ -5,6 +5,7 @@ import {
   EconometricVerdict
 } from '../../types/terminal';
 import { fetchEconometricSuite, getMockEconometricSuite } from '../../services/dataService';
+import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
 import {
   Calculator,
   Activity,
@@ -106,57 +107,83 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
     }
   };
 
+  const tabMetricMap: Record<string, string> = {
+    beneish: 'beneish_m_score',
+    dickinson: 'dickinson_lifecycle',
+    huber: 'valuation_multiple',
+    stub: 'stub_seasonality',
+    indas116: 'lease_adjusted_leverage',
+    altman: 'altman_z_score',
+    lockin: 'lockin_supply_cliff',
+    stress_grid: 'valuation_multiple',
+  };
+
   // Interpretation Box Component
   const renderInterpretationPanel = (
     verdict: EconometricVerdict | string,
     summary: string,
     mechanism: string,
     icRecommendation: string
-  ) => (
-    <div className="rounded-xl border border-[#223044] bg-[#0A0F18] p-5 space-y-4">
-      <div className="flex items-center justify-between border-b border-[#1E2B3E] pb-3">
-        <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-300">
-            Automated Buy-Side Interpretation & Forensic Synthesis
-          </span>
+  ) => {
+    const metricId = tabMetricMap[activeTab];
+    const richInterpretation =
+      suiteData.interpretations?.[metricId] || offer.interpretations?.[metricId];
+
+    if (richInterpretation) {
+      return (
+        <EvidenceInterpretationPanel
+          interpretation={richInterpretation}
+          title={`Engine Intelligence: ${metricId.replace(/_/g, ' ').toUpperCase()}`}
+        />
+      );
+    }
+
+    return (
+      <div className="rounded-xl border border-[#223044] bg-[#0A0F18] p-5 space-y-4">
+        <div className="flex items-center justify-between border-b border-[#1E2B3E] pb-3">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-cyan-400" />
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-300">
+              Automated Buy-Side Interpretation & Forensic Synthesis
+            </span>
+          </div>
+          {getVerdictBadge(verdict)}
         </div>
-        {getVerdictBadge(verdict)}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-sans">
+          {/* 1. Statistical Finding */}
+          <div className="bg-[#101726] border border-[#1E2B3E] rounded-lg p-3.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px] font-bold uppercase">
+              <span className="text-sky-400 font-mono">1.</span> Statistical Finding
+            </div>
+            <p className="text-slate-200 leading-relaxed font-mono text-[11.5px]">
+              {summary}
+            </p>
+          </div>
+
+          {/* 2. Economic Mechanism */}
+          <div className="bg-[#101726] border border-[#1E2B3E] rounded-lg p-3.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px] font-bold uppercase">
+              <span className="text-cyan-400 font-mono">2.</span> Economic Mechanism
+            </div>
+            <p className="text-slate-300 leading-relaxed text-[11.5px]">
+              {mechanism}
+            </p>
+          </div>
+
+          {/* 3. IC Recommendation */}
+          <div className="bg-[#101726] border border-cyan-900/60 rounded-lg p-3.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-cyan-300 font-mono text-[11px] font-bold uppercase">
+              <span className="text-amber-400 font-mono">3.</span> IC Actionable Directive
+            </div>
+            <p className="text-slate-100 font-medium leading-relaxed text-[11.5px]">
+              {icRecommendation}
+            </p>
+          </div>
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-sans">
-        {/* 1. Statistical Finding */}
-        <div className="bg-[#101726] border border-[#1E2B3E] rounded-lg p-3.5 space-y-2">
-          <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px] font-bold uppercase">
-            <span className="text-sky-400 font-mono">1.</span> Statistical Finding
-          </div>
-          <p className="text-slate-200 leading-relaxed font-mono text-[11.5px]">
-            {summary}
-          </p>
-        </div>
-
-        {/* 2. Economic Mechanism */}
-        <div className="bg-[#101726] border border-[#1E2B3E] rounded-lg p-3.5 space-y-2">
-          <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px] font-bold uppercase">
-            <span className="text-cyan-400 font-mono">2.</span> Economic Mechanism
-          </div>
-          <p className="text-slate-300 leading-relaxed text-[11.5px]">
-            {mechanism}
-          </p>
-        </div>
-
-        {/* 3. IC Recommendation */}
-        <div className="bg-[#101726] border border-cyan-900/60 rounded-lg p-3.5 space-y-2">
-          <div className="flex items-center gap-1.5 text-cyan-300 font-mono text-[11px] font-bold uppercase">
-            <span className="text-amber-400 font-mono">3.</span> IC Actionable Directive
-          </div>
-          <p className="text-slate-100 font-medium leading-relaxed text-[11.5px]">
-            {icRecommendation}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans animate-fade-in">

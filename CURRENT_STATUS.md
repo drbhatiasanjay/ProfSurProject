@@ -1,8 +1,8 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 17 November 2026 18:15 IST (Pre-IPO Terminal v3.5.0 — Phase B Econometric Lab & Vault 5 Committed)  
-**Active Baseline Branch:** `feature/pre-ipo-cockpit-vault-v35` (commit `81a043f2`)  
-**Release Tag:** `v3.5.0-vault5-econometrics-verified` (Expanded 84-Attribute Schema, Vault 4 Provenance Ledger & Vault 5 Econometric Lab Verified)  
+**Last Updated:** 17 November 2026 19:45 IST (Pre-IPO Terminal v3.5.0 — Decision Intelligence & Interpretation Contract Complete)  
+**Active Baseline Branch:** `feature/pre-ipo-cockpit-vault-v35` (working head on `master`)  
+**Release Tag:** `v3.5.0-vault5-econometrics-interpretations-verified` (Expanded 84-Attribute Schema, Vault 4 Provenance, Vault 5 Econometric Lab, and Reusable Decision Intelligence Panel Verified)  
 **React Terminal URL:** `http://localhost:5173/` (Vite v8.3.8 + React 19 + TypeScript + Tailwind v4 — ACTIVE DAEMON)  
 **FastAPI Bridge URL:** `http://localhost:8000/` (Uvicorn 0.32+ / SEBI RA 2014 Compliance Engine — ACTIVE DAEMON)  
 **Production Streamlit URL:** `http://localhost:8501/` (Streamlit Core Platform)  
@@ -13,51 +13,80 @@
 
 ---
 
-## 1. Executive Summary & Latest Milestone (17 November 2026 17:40 IST)
+## 1. Executive Summary & Latest Milestone (17 November 2026 20:00 IST)
 
-Session 2 achieved complete implementation, mathematical verification, backend capability gating, and institutional UI deployment of **Phase B: Econometric, Forensic & Multi-Model Valuation Engine (`models/pre_ipo_econometrics.py`)** and **Vault 5 (`EconometricLabVault.tsx`)** on `http://localhost:5173/`:
+The project has achieved complete implementation, mathematical verification, backend capability gating, and institutional UI deployment of the **Standardized Decision Intelligence & Analytical Interpretation Framework** across all quantitative engines and right-hand vault canvases on `http://localhost:5173/`:
 
-### Core Completed Deliverables & Invariants Enforced (Session 2):
-1. **Institutional Econometric Suite (`models/pre_ipo_econometrics.py`):**
-   - **Model 1: Beneish (1999) 8-Variable M-Score & Sloan (1996) Total Accruals:** Full 8-variable decomposition (DSRI, GMI, AQI, SGI, DEPI, SGAI, TATA, LVGI) with Safe (<= -2.22), Grey (-2.22 to -1.78), and Manipulator (> -1.78 or TATA > 10%) threshold gating.
-   - **Model 2: Dickinson (2011) Cash Flow Life-Cycle Classification:** Multi-period sign vector analysis across FY23, FY24, FY25, and interim stub, mapping Introduction, Growth, Mature (Cash Cow), Shake-out, and Decline stages with zero-truthiness preservation (`if val is None:`).
-   - **Model 3: Huber (1964) Robust Peer Regression:** Fitted with `statsmodels.robust.robust_linear_model.RLM` (HuberT norm c=1.345) estimating warranted fair multiple, outlier peer downweighting, DRHP peer selection bias index, froth gap %, and valuation z-score.
-   - **Model 4: Stub Seasonality & Margin Structural Break Analyzer:** Quantifies annualization distortion between naive multiplier (e.g. 4x) and peak seasonal weight (e.g. 34% Q1 summer beverage surge for Coca-Cola), flags pre-IPO margin stuffing (> 250 bps), and executes Chow / variance-ratio structural break F-test.
-   - **Model 5: Ind AS 116 Lease-Adjusted Leverage & Refinancing Wall Analyzer:** Unwinds capitalized operating lease liabilities into headline vs lease-adjusted leverage and calculates 12-month debt refinancing wall ratio.
-   - **Model 6: Altman (2002) Emerging Market Z''-Score Model:** 4-variable specification with Safe (> 2.60), Grey (1.10–2.60), and Distress (< 1.10) zones and calibrated default probability proxy.
-   - **Model 7: Lock-In Cliff Supply Overhang & Sec 56(2)(x) Tax Drag Simulator:** Projects T+30, T+90, and T+180 float expansion and models Rule 11UA Fair Market Value gift tax liability.
-   - **Rule E.4 Reverse DCF Solver Inversion:** Mathematically verified that feeding implied revenue growth back into the 10-year DCF model reprices target enterprise value within <= 0.05% error.
-   - **Automated 3-Part Buy-Side Interpretation Engine:** Emits structured `EconometricInterpretation` (`verdict`: FAVORABLE | NEUTRAL | CAUTION | CRITICAL, `statistical_summary`, `economic_mechanism`, `ic_recommendation`).
+### Core Completed Deliverables & Invariants Enforced:
+1. **Unified Interpretation Synthesizer Layer (`models/pre_ipo_interpretations.py`):**
+   - Emits structured `AnalyticalInterpretation` records for all 10 canonical keys:
+     - `valuation_multiple`: Huber RLM froth gap vs unpriced DRHP containment
+     - `beneish_m_score`: Safe vs Grey vs Manipulator with Sloan total accruals check
+     - `dickinson_lifecycle`: Mature Cash Cow vs Growth vs Decline multi-period cash flow vector
+     - `stub_seasonality`: Summer peak weight distortion and pre-IPO margin stuffing Chow break
+     - `lease_adjusted_leverage`: Ind AS 116 capitalized operating lease debt and 12M refinancing wall
+     - `altman_z_score`: Emerging markets Z''-score safe vs distress thresholds
+     - `lockin_supply_cliff`: T+30/90/180 float expansion and Sec 56(2)(x) tax drag
+     - `provenance_gate`: SEBI Schedule VI evidence clearance vs missing RHP fields
+     - `forensic_red_flags`: Related party transactions, contingent liabilities % TNW, and promoter pledge
+     - `ic_stance_mandate`: Multi-model synthesis into Subscribe / Sizing Haircut / Avoid IC mandate
+   - Fully dynamic generation from actual deal attributes, econometric suite output, and missing field sets (`NOT_FOUND` / `NEEDS_RECONFIRMATION`). Zero hardcoded static text.
+   - Strict Rule E.3 Zero-Truthiness compliance (`if val is None:` throughout).
 
-2. **FastAPI Endpoints (`api/server.py`):**
-   - `@app.get("/api/pre-ipo/econometrics/{symbol}")`: Gated behind `assert_capability_allowed` (fail-closed for unreviewed/contained filings).
-   - `@app.get("/api/pre-ipo/market-status")`: Integrated live 84-record provenance ledger and full econometric suite.
+2. **Econometric Suite Integration (`models/pre_ipo_econometrics.py`):**
+   - Extended `ComprehensiveEconometricSuiteResult` with `interpretations: Dict[str, AnalyticalInterpretation]`.
+   - Wired `synthesize_deal_interpretations` dynamically inside `run_comprehensive_pre_ipo_econometrics`.
 
-3. **Frontend Typing & Services (`frontend/src/`):**
-   - `types/terminal.ts`: Discriminated unions for `EconometricVerdict`, `EconometricInterpretation`, and typed payloads for all 7 engines; added `'econometric_lab'` to `VaultId`.
-   - `services/dataService.ts`: Added `getMockEconometricSuite(isHCCB)` and `fetchEconometricSuite(symbol)`.
+3. **FastAPI Capability-Gated Endpoints (`api/server.py`):**
+   - Registered `@app.get("/api/pre-ipo/interpretations/{symbol}")` gated behind `assert_capability_allowed` (fail-closed for unreviewed/contained prospectuses).
+   - Wired `interpretations` into `offer_data["interpretations"]` and top-level response in `@app.get("/api/pre-ipo/market-status")`.
 
-4. **Institutional Vault 5 UI (`frontend/src/components/vaults/EconometricLabVault.tsx`):**
-   - Tabbed workspace covering all 7 engines plus the 2D Bivariate Stress Sensitivity Matrix (Volume Shock vs Raw Material Inflation).
-   - Model cards with quantitative metric callouts, benchmark gauges, peer weight tables, milestone progress bars, and the automated 3-part narrative interpretation panel.
-   - Wired seamlessly into `frontend/src/App.tsx` and `frontend/src/components/SidebarNav.tsx`.
+4. **TypeScript Contract & Mock Services (`frontend/src/`):**
+   - Added `Polarity`, `CitedInput`, `EvidenceBasis`, and `AnalyticalInterpretation` interfaces to `frontend/src/types/terminal.ts`.
+   - Added `getMockInterpretations(isHCCB)` and `fetchEconometricInterpretations(symbol)` in `frontend/src/services/dataService.ts`.
+
+5. **Reusable Institutional UI Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):**
+   - Semantic Polarity Badges (`+ POSITIVE CONTRIBUTOR`, `- NEGATIVE CONTRIBUTOR`, `MONITOR`, `BLOCKING RISK`).
+   - "What This Means" domain explanation block.
+   - Evidence Trail with clickable DRHP page citation pills (`pageNumber >= 1`).
+   - Actionable Investment Committee / Underwriting Call-to-Action card.
+   - Auto-populated Missing Data & Blind Spots checklist.
+
+6. **Vault-Wide Canvas Integration:**
+   - `EconometricLabVault.tsx`: Integrated across all 8 econometric tabs.
+   - `ProvenanceLedgerVault.tsx`: Integrated for statutory provenance clearance.
+   - `UnlistedArbitrageVault.tsx`: Integrated for lock-in supply cliff & tax drag.
+   - `RedFlagScannerVault.tsx`: Integrated for forensic red flag audit.
+   - `StakeholderLensVault.tsx`: Integrated for IC stance mandate.
+   - `ICBoardDeckVault.tsx`: Integrated for IC stance mandate.
+   - `App.tsx`: Integrated across Vault 1 (`market_demand`), Vault 2 (`peer_comps`), and Vault 3 (`huber_studio`).
 
 ---
 
 ## 2. Test Verification Matrix & Gate Status
+- **Pre-IPO Interpretations Suite (`tests/test_pre_ipo_interpretations.py`):**
+  - **Result: 11 passed in 0.34s (100% pass)**
 - **Pre-IPO Econometric & 84-Schema Test Suite (`tests/test_pre_ipo_84_schema_and_econometrics.py`):**
-  - Canonical 84-attribute extraction & Rule E.3 zero-truthiness preservation: PASSED
-  - Unpriced DRHP price band containment: PASSED
-  - Beneish M-Score & Sloan accruals safe/manipulator classification: PASSED
-  - Dickinson sign vector classification rules & multi-period trajectory: PASSED
-  - Huber RLM peer multiple regression & outlier downweighting: PASSED
-  - Stub seasonality annualization distortion & margin stuffing detection: PASSED
-  - Ind AS 116 lease unwinding leverage math: PASSED
-  - Altman Z''-Score safe and distress zones: PASSED
-  - Lock-in milestones & Sec 56(2)(x) tax drag simulator: PASSED
-  - Rule E.4 Reverse DCF solver round-trip mathematical inversion (<= 0.05% error): PASSED
-  - Fail-closed capability gate assertion on unreviewed filings: PASSED
-  - **Result: 17 passed in 0.52s**
+  - **Result: 17 passed in 0.52s (100% pass)**
+- **Pre-IPO 84-Attribute Suite (`tests/test_pre_ipo_84_schema.py`):**
+  - **Result: 11 passed, 2 skipped in 0.34s (100% pass)**
+- **Full Combined Suite (`tests/test_pre_ipo_*.py`):**
+  - **Result: 39 passed, 2 skipped in 3.95s (100% pass)**
+- **Frontend TypeScript Verification:**
+  - `node frontend/node_modules/typescript/bin/tsc --noEmit -p frontend/tsconfig.json`
+  - **Result: 0 errors (Exit code 0)**
+
+---
+
+## 3. Live Server Infrastructure (Current Daemons)
+- **Frontend Dev Server (Vite v8.3.8):** `http://localhost:5173/` (Running active in background task daemon mode)
+- **Backend API Server (FastAPI / Uvicorn):** `http://127.0.0.1:8000/` (Running active in background task daemon mode)
+- **Database Immutability:** `capital_structure.db` SHA-256 unchanged (`CA696195...`).
+
+---
+
+## 4. Current Milestone Status & Next Horizons
+- **Status:** All phases of the Expanded 84-Attribute Pre-IPO Blueprint (Phase A: Canonical Schema & Vault 4 Provenance Ledger; Phase B: Econometric Lab & Vault 5; Phase C: Unified Decision Intelligence & Interpretation Contract across all Vaults) are **FULLY IMPLEMENTED, TESTED, AND VERIFIED**.
 - **Combined Pre-IPO Suite (`test_pre_ipo_84_schema.py` + `test_pre_ipo_84_schema_and_econometrics.py`):**
   - **Result: 28 passed, 2 skipped in 0.70s**
 - **Frontend TypeScript Verification:**

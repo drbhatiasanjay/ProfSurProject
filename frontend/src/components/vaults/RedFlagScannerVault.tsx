@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { RedFlagItem, StatutoryOfferDetails } from '../../types/terminal';
 import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
+import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
 import { AlertOctagon, CheckCircle2, AlertTriangle, ShieldAlert, FileText, ArrowUpRight } from 'lucide-react';
 
 interface RedFlagScannerVaultProps {
@@ -283,6 +284,14 @@ export const RedFlagScannerVault: React.FC<RedFlagScannerVaultProps> = ({ offer 
           })}
         </div>
       </div>
+
+      {/* Unified Decision Intelligence & Action Panel */}
+      {offer.interpretations?.forensic_red_flags && (
+        <EvidenceInterpretationPanel
+          interpretation={offer.interpretations.forensic_red_flags}
+          title="Vault 8: Forensic Governance & Red-Flag Audit Clearance"
+        />
+      )}
 
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer

@@ -58,6 +58,7 @@ export interface StatutoryOfferDetails {
   isGcpCompliant?: boolean;
   provenanceLedger?: ProvenanceField<string | number>[];
   provenanceSummary?: ProvenanceSummary;
+  interpretations?: Record<string, AnalyticalInterpretation>;
 }
 
 export interface SubscriptionCategory {
@@ -381,6 +382,30 @@ export interface EconometricInterpretation {
   icRecommendation: string;
 }
 
+export type Polarity = 'POSITIVE_CONTRIBUTOR' | 'NEGATIVE_CONTRIBUTOR' | 'NEUTRAL_MONITOR' | 'BLOCKING_RISK';
+
+export interface CitedInput {
+  attributeId: string;
+  label: string;
+  valueDisplay: string;
+  pageNumber: number;
+}
+
+export interface EvidenceBasis {
+  formulaOrMethod: string;
+  citedInputs: CitedInput[];
+}
+
+export interface AnalyticalInterpretation {
+  metricId: string;
+  polarity: Polarity;
+  headline: string;
+  whatItMeans: string;
+  evidenceBasis: EvidenceBasis;
+  callToAction: string;
+  missingDataAndBlindSpots: string[];
+}
+
 export interface BeneishMScoreData {
   mScore: number;
   isManipulator: boolean;
@@ -526,4 +551,5 @@ export interface ComprehensiveEconometricSuiteData {
     altmanZScore?: AltmanZScoreData;
     lockInTaxDrag?: LockInAndTaxDragData;
   };
+  interpretations?: Record<string, AnalyticalInterpretation>;
 }

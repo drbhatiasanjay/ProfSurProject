@@ -10,6 +10,7 @@ import { SHAPWaterfallChart } from './components/SHAPWaterfallChart';
 import { SEBIComplianceStamp } from './components/SEBIComplianceStamp';
 import { IngestModal } from './components/IngestModal';
 import { AnalystInsightDrawer } from './components/AnalystInsightDrawer';
+import { EvidenceInterpretationPanel } from './components/shared/EvidenceInterpretationPanel';
 
 // Specialized Vault Views
 import { ProvenanceLedgerVault } from './components/vaults/ProvenanceLedgerVault';
@@ -149,6 +150,12 @@ export const App: React.FC = () => {
                     <WalkForwardMLScorecard scorecard={scorecard} />
                   </div>
                   <SHAPWaterfallChart features={scorecard.shapTopFeatures} />
+                  {offer?.interpretations?.ic_stance_mandate && (
+                    <EvidenceInterpretationPanel
+                      interpretation={offer.interpretations.ic_stance_mandate}
+                      title="Vault 1: Market Demand & Allocation Directive"
+                    />
+                  )}
                   <AnalystInsightDrawer
                     title="Market Demand & Order Book Intelligence"
                     narrative={{
@@ -165,6 +172,12 @@ export const App: React.FC = () => {
               {activeView === 'peer_comps' && (
                 <div className="space-y-6 animate-fade-in">
                   <LivePeerCompsTable peers={peers} />
+                  {offer?.interpretations?.valuation_multiple && (
+                    <EvidenceInterpretationPanel
+                      interpretation={offer.interpretations.valuation_multiple}
+                      title="Vault 2: Peer Comps & Multiple Disparity Intelligence"
+                    />
+                  )}
                   <AnalystInsightDrawer
                     title="Live Peer Comps & WACA Multiple Step-Up Synthesizer"
                     narrative={{
@@ -181,6 +194,12 @@ export const App: React.FC = () => {
               {activeView === 'huber_studio' && (
                 <div className="space-y-6 animate-fade-in">
                   <HuberCalibrationCard calibration={calibration} />
+                  {offer?.interpretations?.valuation_multiple && (
+                    <EvidenceInterpretationPanel
+                      interpretation={offer.interpretations.valuation_multiple}
+                      title="Vault 3: Huber RLM Econometric Benchmark Intelligence"
+                    />
+                  )}
                   <LivePeerCompsTable peers={peers} />
                 </div>
               )}

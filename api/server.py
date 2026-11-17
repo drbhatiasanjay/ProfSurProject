@@ -141,6 +141,56 @@ def get_pre_ipo_econometrics(symbol: str):
 
     return suite_result.to_dict()
 
+@app.get("/api/pre-ipo/interpretations/{symbol}")
+def get_pre_ipo_interpretations(symbol: str):
+    """
+    Returns unified Decision Intelligence & Interpretation Contract records for the target IPO symbol.
+    Gated behind assert_capability_allowed (fail-closed for unreviewed/contained filings).
+    """
+    from models.pre_ipo_capability_gate import assert_capability_allowed, CapabilityType, ExportBlockedError
+    from models.pre_ipo_econometrics import run_comprehensive_pre_ipo_econometrics
+    from models.pre_ipo_data import PRE_IPO_REGISTRY
+    from models.pre_ipo_schema import extract_canonical_84_provenance
+
+    is_hccb = any(k in symbol.lower() for k in ("coca", "hccb", "hcch"))
+    dossier_key = "hindustan_coca_cola" if is_hccb else "ntpc_green"
+    dossier = PRE_IPO_REGISTRY.get(dossier_key, PRE_IPO_REGISTRY["ntpc_green"])
+
+    offer_repr = {
+        "symbol": symbol.upper(),
+        "companyName": "Hindustan Coca-Cola Beverages Limited" if is_hccb else "NTPC Green Energy Limited",
+        "origin": "INGESTED" if is_hccb else "SYNTHETIC",
+        "snapshot_status": "ACCEPTED_FOR_ANALYSIS",
+        "is_contained": False,
+        "isContained": False,
+    }
+
+    try:
+        assert_capability_allowed(offer_repr, CapabilityType.FINANCIAL_ANALYSIS)
+    except ExportBlockedError as e:
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "EXPORT_BLOCKED",
+                "message": str(e),
+                "capability": CapabilityType.FINANCIAL_ANALYSIS.value,
+                "status": "BLOCKED",
+            }
+        )
+
+    provenance_records = extract_canonical_84_provenance(dossier, is_hccb=is_hccb, offer_data=offer_repr)
+    suite_result = run_comprehensive_pre_ipo_econometrics(
+        symbol=symbol.upper(),
+        provenance_records=provenance_records,
+        offer_data=offer_repr
+    )
+
+    return {
+        "symbol": symbol.upper(),
+        "companyName": offer_repr["companyName"],
+        "interpretations": suite_result.interpretations,
+    }
+
 @app.get("/api/pre-ipo/market-status")
 def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO symbol")):
     """
@@ -915,8 +965,12 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
             "overallVerdict": "CRITICAL",
             "isBlocked": True,
             "blockedReason": "Prospectus unreviewed or contained; econometric models failed closed.",
-            "models": {}
+            "models": {},
+            "interpretations": {},
         }
+
+    interps = econometric_suite.get("interpretations", {})
+    offer_data["interpretations"] = interps
 
     return {
         "indices": indices_data,
@@ -930,6 +984,7 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
         "provenanceLedger": provenance_records,
         "provenanceSummary": provenance_summary,
         "econometrics": econometric_suite,
+        "interpretations": interps,
     }
 
 if __name__ == "__main__":

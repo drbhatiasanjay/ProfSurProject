@@ -6,7 +6,8 @@ import {
   HuberCalibrationResults,
   WalkForwardMLScorecardData,
   SEBIComplianceRecord,
-  ComprehensiveEconometricSuiteData
+  ComprehensiveEconometricSuiteData,
+  AnalyticalInterpretation
 } from '../types/terminal';
 import { getCanonical42ProvenanceFallback } from './canonicalProvenance';
 
@@ -935,6 +936,367 @@ export function getMockEconometricSuite(isHCCB: boolean): ComprehensiveEconometr
           icRecommendation: 'LOCK-IN CLEARANCE: No tactical hedging required on secondary allocation. Hold through T+90.'
         }
       }
+    },
+    interpretations: getMockInterpretations(isHCCB)
+  };
+}
+
+export function getMockInterpretations(isHCCB: boolean): Record<string, AnalyticalInterpretation> {
+  if (isHCCB) {
+    return {
+      valuation_multiple: {
+        metricId: 'valuation_multiple',
+        polarity: 'NEUTRAL_MONITOR',
+        headline: 'Valuation Gated: Price Band Undisclosed in Statutory DRHP (Warranted Multiple: 34.2x EV/EBITDA)',
+        whatItMeans: 'The issuer has filed a Draft Red Herring Prospectus (DRHP) under SEBI ICDR Regulation 28 without a declared price band. While the Huber RLM model indicates a warranted multiple of 34.2x EV/EBITDA based on peer ROCE (24.5%) and growth, statutory valuation models remain conditionally gated until lead managers announce the RHP bidding band.',
+        evidenceBasis: {
+          formulaOrMethod: 'Huber (1964) Robust M-Estimator Regression (k=1.345) & Bounded-Influence Residual Analysis',
+          citedInputs: [
+            { attributeId: 'offer.price_band_min', label: 'Price Band Floor', valueDisplay: 'Undisclosed [●]', pageNumber: 48 },
+            { attributeId: 'offer.price_band_max', label: 'Price Band Cap', valueDisplay: 'Undisclosed [●]', pageNumber: 48 },
+            { attributeId: 'pl.revenue_ops_cr', label: 'Revenue from Operations (FY25)', valueDisplay: '₹14,580.00 Cr', pageNumber: 82 },
+            { attributeId: 'pl.ebitda_restated_annual_inr_cr', label: 'Restated EBITDA (FY25)', valueDisplay: '₹1,840.00 Cr', pageNumber: 82 },
+            { attributeId: 'bs.roce_pct', label: 'Return on Capital Employed (%)', valueDisplay: '24.50%', pageNumber: 110 }
+          ]
+        },
+        callToAction: 'Enforce syndication discovery gate. Request indicative anchor book price guidance from BRLMs and ensure final IPO pricing does not exceed warranted multiple.',
+        missingDataAndBlindSpots: [
+          'Price Band undisclosed in DRHP ([•]); syndicate book-building discovery required in RHP addendum.',
+          'Implied Enterprise Value at Cap requires final price band confirmation.'
+        ]
+      },
+      beneish_m_score: {
+        metricId: 'beneish_m_score',
+        polarity: 'POSITIVE_CONTRIBUTOR',
+        headline: 'Clean Earnings Quality: Beneish M-Score -2.84 (Safe Zone) · Low Accruals (4.2%)',
+        whatItMeans: 'Earnings quality is robust. The M-Score of -2.84 is comfortably below the -2.22 manipulation threshold, and total accruals remain low at 4.2% of total assets, confirming reported earnings are supported by authentic cash collections.',
+        evidenceBasis: {
+          formulaOrMethod: 'Beneish (1999) 8-Variable M-Score & Sloan (1996) Balance Sheet Accrual Decomposition',
+          citedInputs: [
+            { attributeId: 'pl.revenue_ops_cr', label: 'Revenue from Operations (FY25)', valueDisplay: '₹14,580.00 Cr', pageNumber: 82 },
+            { attributeId: 'wc.trade_receivables_inr_cr', label: 'Trade Receivables', valueDisplay: '₹412.00 Cr', pageNumber: 94 },
+            { attributeId: 'wc.cfo_annual_inr_cr', label: 'Cash Flow from Operations (CFO)', valueDisplay: '₹1,620.00 Cr', pageNumber: 102 }
+          ]
+        },
+        callToAction: 'Forensic clearance granted: earnings are high-grade with minimal revenue recognition risk.',
+        missingDataAndBlindSpots: [
+          'All core forensic inputs verified against restated FY23–FY25 financial statements.'
+        ]
+      },
+      dickinson_lifecycle: {
+        metricId: 'dickinson_lifecycle',
+        polarity: 'POSITIVE_CONTRIBUTOR',
+        headline: 'Prime Cash Cow: Mature Life-Cycle (+, -, -) with High Cash Conversion (88.0%)',
+        whatItMeans: 'The entity displays textbook Mature (Cash Cow) lifecycle characteristics with positive operating cash flow (+CFO), disciplined maintenance capex (-CFI), and net debt paydown (-CFF). Operating cash conversion of 88.0% demonstrates internal self-funding.',
+        evidenceBasis: {
+          formulaOrMethod: 'Dickinson (2011) Triple Sign Vector Life-Cycle Theory (Sign of CFO, CFI, CFF)',
+          citedInputs: [
+            { attributeId: 'wc.cfo_annual_inr_cr', label: 'Cash Flow from Operations (CFO)', valueDisplay: '₹1,620.00 Cr', pageNumber: 102 },
+            { attributeId: 'wc.cfi_annual_inr_cr', label: 'Cash Flow from Investing (CFI)', valueDisplay: '-₹480.00 Cr', pageNumber: 102 },
+            { attributeId: 'wc.cff_annual_inr_cr', label: 'Cash Flow from Financing (CFF)', valueDisplay: '-₹310.00 Cr', pageNumber: 102 }
+          ]
+        },
+        callToAction: 'Favorable buy-side stance: mature cash generator with minimal post-issue primary cash infusion requirement and high dividend payout capacity.',
+        missingDataAndBlindSpots: [
+          'Interim stub cash flow statement reflects peak summer quarter; examine trailing 12-month seasonality.'
+        ]
+      },
+      stub_seasonality: {
+        metricId: 'stub_seasonality',
+        polarity: 'NEGATIVE_CONTRIBUTOR',
+        headline: 'Stub Distortion: +28.5% Run-Rate Bias · Q1 Summer Peak Concentration (34.0%)',
+        whatItMeans: 'Annualizing interim stub performance via a naive 4x multiplier severely overstates full-year earnings. In the beverage sector, Q1 accounts for 34.0% of annual sales; flat run-rate extrapolation inflates implied run-rate revenue by ₹1,240 Cr.',
+        evidenceBasis: {
+          formulaOrMethod: 'Chow (1960) Structural Stability F-Test & Seasonal Run-Rate Decomposition',
+          citedInputs: [
+            { attributeId: 'pl.rev_ops_stub_cr', label: 'Revenue from Operations (Stub)', valueDisplay: '₹4,250.00 Cr', pageNumber: 86 },
+            { attributeId: 'pl.ebitda_stub_cr', label: 'Restated EBITDA (Stub)', valueDisplay: '₹620.00 Cr', pageNumber: 86 }
+          ]
+        },
+        callToAction: 'Do not underwrite on naive annualized run-rate. Apply seasonal quarterly weighting factors and discount valuation by the annualization distortion factor.',
+        missingDataAndBlindSpots: [
+          'Month-by-month volume breakdown undisclosed; seasonal winter quarter margin contraction must be modeled.'
+        ]
+      },
+      lease_adjusted_leverage: {
+        metricId: 'lease_adjusted_leverage',
+        polarity: 'POSITIVE_CONTRIBUTOR',
+        headline: 'Conservative Balance Sheet: Lease-Adjusted Leverage 0.44x EBITDA (Reported: 0.22x)',
+        whatItMeans: 'Even after capitalizing Ind AS 116 operating leases of ₹722.0 Cr (warehouse and bottling line leases), total net debt is ₹750.0 Cr, resulting in conservative economic leverage of 0.44x EBITDA.',
+        evidenceBasis: {
+          formulaOrMethod: 'Ind AS 116 Operating Lease Capitalization & 12-Month Debt Refinancing Wall Analysis',
+          citedInputs: [
+            { attributeId: 'debt.total_borrowings_ex_leases_inr_cr', label: 'Funded Borrowings (ex-Lease)', valueDisplay: '₹440.50 Cr', pageNumber: 98 },
+            { attributeId: 'debt.lease_liabilities_ind_as_116_inr_cr', label: 'Ind AS 116 Lease Liabilities', valueDisplay: '₹722.00 Cr', pageNumber: 98 },
+            { attributeId: 'wc.cash_and_cash_equivalents_inr_cr', label: 'Cash & Cash Equivalents', valueDisplay: '₹412.50 Cr', pageNumber: 94 }
+          ]
+        },
+        callToAction: 'Pristine solvency profile: balance sheet has substantial debt headroom for strategic capex.',
+        missingDataAndBlindSpots: [
+          'Variable lease payment escalations tied to electricity tariffs not capitalized on balance sheet.'
+        ]
+      },
+      altman_z_score: {
+        metricId: 'altman_z_score',
+        polarity: 'POSITIVE_CONTRIBUTOR',
+        headline: 'Superior Solvency Distance: Altman Z\'\'-Score 4.12 (Safe Zone · 1.5% Default Risk)',
+        whatItMeans: 'The company demonstrates exceptional balance sheet durability. The Altman Z\'\'-Score of 4.12 is well above the 2.60 safe zone threshold, reflecting strong retained earnings, positive working capital, and high asset productivity.',
+        evidenceBasis: {
+          formulaOrMethod: 'Altman (2002) Emerging Market Z\'\'-Score Model (Z\'\' = 6.56*X1 + 3.26*X2 + 6.72*X3 + 1.05*X4)',
+          citedInputs: [
+            { attributeId: 'wc.net_working_capital_inr_cr', label: 'Net Working Capital', valueDisplay: '₹360.00 Cr', pageNumber: 94 },
+            { attributeId: 'bs.retained_earnings_reserves_inr_cr', label: 'Retained Earnings & Reserves', valueDisplay: '₹2,410.00 Cr', pageNumber: 90 },
+            { attributeId: 'bs.restated_net_worth_inr_cr', label: 'Restated Net Worth', valueDisplay: '₹2,840.00 Cr', pageNumber: 90 }
+          ]
+        },
+        callToAction: 'Credit clearance granted: insolvency probability is negligible, supporting maximum allocation conviction.',
+        missingDataAndBlindSpots: [
+          'Parent corporate guarantees do not extend to public unlisted equity tranches.'
+        ]
+      },
+      lockin_supply_cliff: {
+        metricId: 'lockin_supply_cliff',
+        polarity: 'NEGATIVE_CONTRIBUTOR',
+        headline: 'Supply Overhang Alert: Float Expands +85.0% at T+180 · Sec 56(2)(x) Tax Drag ₹0.00/Share',
+        whatItMeans: 'Public free float expands significantly from 15.0% at listing to 27.8% upon expiration of the statutory 180-day non-promoter lock-in cliff. Anchor lock-in releases at Day 30 (50%) and Day 90 (remaining 50%) require phased position sizing.',
+        evidenceBasis: {
+          formulaOrMethod: 'SEBI ICDR Reg 17 Lock-In Expiry Schedule & Income Tax Act Section 56(2)(x) Rule 11UA',
+          citedInputs: [
+            { attributeId: 'cap.pre_issue_paid_up_shares_cr', label: 'Pre-Issue Paid-Up Shares', valueDisplay: '99.75 Cr', pageNumber: 48 },
+            { attributeId: 'offer.total_issue_shares', label: 'Total Offering Shares', valueDisplay: '997,461,456', pageNumber: 48 }
+          ]
+        },
+        callToAction: 'Model post-listing liquidity exit window prior to Day 90 anchor lock-in release; hedge supply expansion.',
+        missingDataAndBlindSpots: [
+          'Voluntary lock-in extension commitments from minority shareholders unconfirmed.'
+        ]
+      },
+      provenance_gate: {
+        metricId: 'provenance_gate',
+        polarity: 'NEUTRAL_MONITOR',
+        headline: 'Statutory Ledger: 81/84 Verified · Price Band Containment Active',
+        whatItMeans: '81 of 84 canonical statutory attributes are verified with verbatim citations and OCR bounding boxes. Price band and net inflow attributes remain pending RHP publication.',
+        evidenceBasis: {
+          formulaOrMethod: 'SEBI (ICDR) Regulations, 2018 Schedule VI Part A 84-Attribute Verification Framework',
+          citedInputs: [
+            { attributeId: 'offer.issue_type', label: 'Offer Structure Route', valueDisplay: '100% OFS', pageNumber: 48 },
+            { attributeId: 'offer.total_issue_shares', label: 'Total Offering Shares', valueDisplay: '997,461,456', pageNumber: 48 }
+          ]
+        },
+        callToAction: 'Maintain valuation export gate closed until final price band is filed in RHP addendum.',
+        missingDataAndBlindSpots: [
+          'Price Band Floor and Cap pending syndicate announcement.',
+          'Issue Expenses and Net Proceeds to Company pending price determination.'
+        ]
+      },
+      forensic_red_flags: {
+        metricId: 'forensic_red_flags',
+        polarity: 'NEUTRAL_MONITOR',
+        headline: 'Governance Friction: Parent Concentrate Royalty Pricing Formula Requires Monitoring',
+        whatItMeans: 'Related party transactions represent 3.4% of revenue, and promoters have pledged 0.00% of their equity. However, exclusive parent licensing agreements require monitoring for royalty fee revisions post-listing.',
+        evidenceBasis: {
+          formulaOrMethod: 'SEBI LODR 2015 Governance Compliance & Companies Act 2013 Section 188 RPT Audit Filter',
+          citedInputs: [
+            { attributeId: 'gov.rpt_pct_of_rev', label: 'Related Party Transactions (% of Rev)', valueDisplay: '3.40%', pageNumber: 124 },
+            { attributeId: 'cap.promoter_pledge_pct', label: 'Promoter Share Pledge (%)', valueDisplay: '0.00%', pageNumber: 52 }
+          ]
+        },
+        callToAction: 'Review 10-year concentrate pricing agreement and ensure parent royalty is capped at current rates.',
+        missingDataAndBlindSpots: [
+          'Post-listing parent brand royalty escalation covenants undisclosed.'
+        ]
+      },
+      ic_stance_mandate: {
+        metricId: 'ic_stance_mandate',
+        polarity: 'NEUTRAL_MONITOR',
+        headline: 'IC Mandate: CONDITIONAL DILIGENCE CLEARANCE (Pending RHP Price Band)',
+        whatItMeans: 'Hindustan Coca-Cola demonstrates exceptional operational and balance sheet strength (clean Beneish M-score, 88% cash conversion, 0.44x leverage). Final capital allocation remains conditional on syndicate price band discovery.',
+        evidenceBasis: {
+          formulaOrMethod: 'Multivariate Pre-IPO Underwriting Synthesis & IC Capital Allocation Framework',
+          citedInputs: [
+            { attributeId: 'metric.positive_count', label: 'Positive Investment Contributors', valueDisplay: '5 Engines', pageNumber: 1 },
+            { attributeId: 'metric.negative_count', label: 'Negative Risk Contributors', valueDisplay: '2 Engines', pageNumber: 1 },
+            { attributeId: 'metric.blocking_count', label: 'Blocking Governance Risks', valueDisplay: '0 Engines', pageNumber: 1 }
+          ]
+        },
+        callToAction: 'Authorize provisional syndicate bids anchored to Huber warranted multiple (34.2x EV/EBITDA); demand lower band allocation.',
+        missingDataAndBlindSpots: [
+          'Price Band undisclosed in DRHP ([•]).',
+          'Stub seasonality Q1 summer concentration requires trailing 12-month smoothing.'
+        ]
+      }
+    };
+  }
+
+  // Default: NTPCGREEN
+  return {
+    valuation_multiple: {
+      metricId: 'valuation_multiple',
+      polarity: 'NEGATIVE_CONTRIBUTOR',
+      headline: 'Valuation Froth: Ask EV/EBITDA 38.0x is +33.3% Above Huber Peer Line (+1.85σ Spread)',
+      whatItMeans: 'The issuer asks for 38.0x EV/EBITDA, which sits 1.85 standard deviations above the robust Huber regression benchmark (28.5x) fitted across listed renewable peers. The premium prices in aggressive capacity execution beyond current operating grid scale.',
+      evidenceBasis: {
+        formulaOrMethod: 'Huber (1964) Robust M-Estimator Regression (k=1.345) & Bounded-Influence Residual Analysis',
+        citedInputs: [
+          { attributeId: 'offer.price_band_min', label: 'Price Band Floor', valueDisplay: '₹102.00', pageNumber: 45 },
+          { attributeId: 'offer.price_band_max', label: 'Price Band Cap', valueDisplay: '₹108.00', pageNumber: 45 },
+          { attributeId: 'pl.revenue_ops_cr', label: 'Revenue from Operations (FY25)', valueDisplay: '₹1,962.60 Cr', pageNumber: 78 },
+          { attributeId: 'pl.ebitda_restated_annual_inr_cr', label: 'Restated EBITDA (FY25)', valueDisplay: '₹1,450.00 Cr', pageNumber: 78 }
+        ]
+      },
+      callToAction: 'Demand a 12–15% valuation haircut at final pricing. Anchor institutional bids strictly at the lower band (₹102).',
+      missingDataAndBlindSpots: [
+        'Discom PPA receivables realization schedules must be verified against state electricity board off-take records.'
+      ]
+    },
+    beneish_m_score: {
+      metricId: 'beneish_m_score',
+      polarity: 'NEUTRAL_MONITOR',
+      headline: 'Forensic Caution: Beneish M-Score -1.94 in Grey Zone · Sloan Accruals 14.8%',
+      whatItMeans: 'The M-Score of -1.94 sits in the indeterminate grey zone (-2.22 to -1.78), driven by elevated accruals (14.8% of assets) from capital work-in-progress and unbilled power generation receivables.',
+      evidenceBasis: {
+        formulaOrMethod: 'Beneish (1999) 8-Variable M-Score & Sloan (1996) Balance Sheet Accrual Decomposition',
+        citedInputs: [
+          { attributeId: 'pl.revenue_ops_cr', label: 'Revenue from Operations', valueDisplay: '₹1,962.60 Cr', pageNumber: 78 },
+          { attributeId: 'wc.cfo_annual_inr_cr', label: 'Cash Flow from Operations (CFO)', valueDisplay: '₹348.00 Cr', pageNumber: 88 }
+        ]
+      },
+      callToAction: 'Verify state discom billing cycles and confirm that revenue cut-off procedures align with physical meter readings.',
+      missingDataAndBlindSpots: [
+        'Unbilled revenue aging schedule requires independent auditor confirmation.'
+      ]
+    },
+    dickinson_lifecycle: {
+      metricId: 'dickinson_lifecycle',
+      polarity: 'POSITIVE_CONTRIBUTOR',
+      headline: 'Accelerated Expansion: Growth Life-Cycle (+, -, +) with 100% Fresh Capital Reinvestment',
+      whatItMeans: 'The entity operates in an accelerated Growth phase (+CFO, -CFI, +CFF). Operating cash flow is positive but heavy capex outlays require the ₹10,000 Cr fresh issue to build out the 19 GW renewable pipeline.',
+      evidenceBasis: {
+        formulaOrMethod: 'Dickinson (2011) Triple Sign Vector Life-Cycle Theory (Sign of CFO, CFI, CFF)',
+        citedInputs: [
+          { attributeId: 'wc.cfo_annual_inr_cr', label: 'Cash Flow from Operations (CFO)', valueDisplay: '₹348.00 Cr', pageNumber: 88 },
+          { attributeId: 'wc.cfi_annual_inr_cr', label: 'Cash Flow from Investing (CFI)', valueDisplay: '-₹2,840.00 Cr', pageNumber: 88 }
+        ]
+      },
+      callToAction: 'Verify commissioning milestones of under-construction solar/wind parks to ensure ROIC exceeds debt costs.',
+      missingDataAndBlindSpots: [
+        'Interim stub cash flow statements reflect early-stage project outlays.'
+      ]
+    },
+    stub_seasonality: {
+      metricId: 'stub_seasonality',
+      polarity: 'POSITIVE_CONTRIBUTOR',
+      headline: 'Stable Solar Insolation Run-Rate: Minimal Seasonal Distortion (+4.2%)',
+      whatItMeans: 'Operating generation profiles show steady base-load renewable power delivery with minimal quarterly variance.',
+      evidenceBasis: {
+        formulaOrMethod: 'Chow (1960) Structural Stability F-Test & Seasonal Run-Rate Decomposition',
+        citedInputs: [
+          { attributeId: 'pl.rev_ops_stub_cr', label: 'Revenue from Operations (Stub)', valueDisplay: '₹512.00 Cr', pageNumber: 80 }
+        ]
+      },
+      callToAction: 'Accept trailing annual run-rates with standard monsoon grid curtailment adjustments.',
+      missingDataAndBlindSpots: [
+        'Monsoon transmission curtailment data undisclosed in statutory footnotes.'
+      ]
+    },
+    lease_adjusted_leverage: {
+      metricId: 'lease_adjusted_leverage',
+      polarity: 'NEGATIVE_CONTRIBUTOR',
+      headline: 'Refinancing Wall Alert: 12M Debt Maturing Ratio 3.50x · Net Debt ₹4,470 Cr',
+      whatItMeans: 'Headline net debt is ₹4,020 Cr (2.77x EBITDA), expanding to ₹4,470 Cr (2.96x) with Ind AS 116 land leases. ₹1,845 Cr in bank debt matures within 12 months, making fresh issue debt prepayment essential.',
+      evidenceBasis: {
+        formulaOrMethod: 'Ind AS 116 Operating Lease Capitalization & 12-Month Debt Refinancing Wall Analysis',
+        citedInputs: [
+          { attributeId: 'debt.total_borrowings_ex_leases_inr_cr', label: 'Funded Borrowings', valueDisplay: '₹4,200.00 Cr', pageNumber: 92 },
+          { attributeId: 'objects.debt_prepayment_cr', label: 'Debt Prepayment Allocation', valueDisplay: '₹4,000.00 Cr', pageNumber: 64 }
+        ]
+      },
+      callToAction: 'Mandate that the earmarked ₹4,000 Cr fresh issue debt repayment is executed within 30 days of listing.',
+      missingDataAndBlindSpots: [
+        'Floating-rate benchmark reset dates unconfirmed across term loan syndicates.'
+      ]
+    },
+    altman_z_score: {
+      metricId: 'altman_z_score',
+      polarity: 'NEUTRAL_MONITOR',
+      headline: 'Credit Watch: Altman Z\'\'-Score 2.14 in Grey Zone (1.10 to 2.60)',
+      whatItMeans: 'The score sits in the intermediate grey zone (2.14). Balance sheet solvency is backed by parent NTPC patronage, but negative net working capital requires careful monitoring.',
+      evidenceBasis: {
+        formulaOrMethod: 'Altman (2002) Emerging Market Z\'\'-Score Model',
+        citedInputs: [
+          { attributeId: 'bs.restated_net_worth_inr_cr', label: 'Restated Net Worth', valueDisplay: '₹4,100.00 Cr', pageNumber: 84 }
+        ]
+      },
+      callToAction: 'Price in 50–75 bps liquidity risk spread when benchmarking required equity hurdle rate.',
+      missingDataAndBlindSpots: [
+        'Standalone credit rating unrated; relies on sovereign Maharatna parent covenant backing.'
+      ]
+    },
+    lockin_supply_cliff: {
+      metricId: 'lockin_supply_cliff',
+      polarity: 'POSITIVE_CONTRIBUTOR',
+      headline: 'Managed Float Schedule: 100% Fresh Issue Dilution with Zero OFS Insider Selling',
+      whatItMeans: 'The entire ₹10,000 Cr offering constitutes primary capital. No promoter shares are sold, aligning long-term incentives.',
+      evidenceBasis: {
+        formulaOrMethod: 'SEBI ICDR Reg 17 Lock-In Expiry Schedule',
+        citedInputs: [
+          { attributeId: 'offer.fresh_issue_cr', label: 'Fresh Issue Proceeds', valueDisplay: '₹10,000.00 Cr', pageNumber: 45 },
+          { attributeId: 'offer.ofs_issue_cr', label: 'Offer for Sale (OFS)', valueDisplay: '₹0.00 Cr', pageNumber: 45 }
+        ]
+      },
+      callToAction: 'Zero secondary supply risk: hold core allocation through initial listing window.',
+      missingDataAndBlindSpots: [
+        'Anchor QIB lock-in release dates calendar confirmed.'
+      ]
+    },
+    provenance_gate: {
+      metricId: 'provenance_gate',
+      polarity: 'POSITIVE_CONTRIBUTOR',
+      headline: '100% Statutory Clearance: All 84 SEBI Schedule VI Attributes Verified',
+      whatItMeans: 'All 84 statutory attributes are fully verified with OCR bounding box citations from the Red Herring Prospectus.',
+      evidenceBasis: {
+        formulaOrMethod: 'SEBI (ICDR) Regulations, 2018 Schedule VI Part A 84-Attribute Verification Framework',
+        citedInputs: [
+          { attributeId: 'offer.issue_type', label: 'Offer Route', valueDisplay: '100% FRESH', pageNumber: 45 }
+        ]
+      },
+      callToAction: 'Proceed to formal Investment Committee approval.',
+      missingDataAndBlindSpots: [
+        'All primary disclosures verified against RHP.'
+      ]
+    },
+    forensic_red_flags: {
+      metricId: 'forensic_red_flags',
+      polarity: 'POSITIVE_CONTRIBUTOR',
+      headline: 'Sovereign Parent Governance: Zero Promoter Pledge (0.0%) · Maharatna Backing',
+      whatItMeans: 'Corporate governance safeguards are robust under public sector Maharatna oversight. Promoter pledge is 0.00%.',
+      evidenceBasis: {
+        formulaOrMethod: 'SEBI LODR 2015 Governance Compliance',
+        citedInputs: [
+          { attributeId: 'cap.promoter_pledge_pct', label: 'Promoter Share Pledge (%)', valueDisplay: '0.00%', pageNumber: 52 }
+        ]
+      },
+      callToAction: 'Governance gate approved with zero adverse audit exceptions.',
+      missingDataAndBlindSpots: [
+        'PSU procurement guidelines may slow vendor dispute settlements.'
+      ]
+    },
+    ic_stance_mandate: {
+      metricId: 'ic_stance_mandate',
+      polarity: 'NEGATIVE_CONTRIBUTOR',
+      headline: 'IC Mandate: BINDING VALUATION HAIRCUT REQUIRED (12–15% Below Upper Band ₹108)',
+      whatItMeans: 'The renewable capacity scale and sovereign parent backing are top-tier, but the 38.0x ask multiple exceeds peer regression benchmarks. Bidding at cut-off leaves insufficient margin of safety.',
+      evidenceBasis: {
+        formulaOrMethod: 'Multivariate Pre-IPO Underwriting Synthesis & IC Capital Allocation Framework',
+        citedInputs: [
+          { attributeId: 'metric.positive_count', label: 'Positive Investment Contributors', valueDisplay: '4 Engines', pageNumber: 1 },
+          { attributeId: 'metric.negative_count', label: 'Negative Risk Contributors', valueDisplay: '3 Engines', pageNumber: 1 }
+        ]
+      },
+      callToAction: 'Anchor bids strictly at or below ₹102.00 (lower band); demand syndication discount.',
+      missingDataAndBlindSpots: [
+        'Discom tariff negotiations and grid curtailment risks.'
+      ]
     }
   };
 }
@@ -948,6 +1310,18 @@ export async function fetchEconometricSuite(symbol: string = 'NTPCGREEN'): Promi
     return data;
   } catch {
     return getMockEconometricSuite(isHCCB);
+  }
+}
+
+export async function fetchEconometricInterpretations(symbol: string = 'NTPCGREEN'): Promise<Record<string, AnalyticalInterpretation>> {
+  const isHCCB = symbol.toUpperCase().includes('HCCB') || symbol.toUpperCase().includes('COCA');
+  try {
+    const res = await fetch(`http://localhost:8000/api/pre-ipo/interpretations/${encodeURIComponent(symbol)}`);
+    if (!res.ok) throw new Error('API Offline');
+    const data = await res.json();
+    return data.interpretations || getMockInterpretations(isHCCB);
+  } catch {
+    return getMockInterpretations(isHCCB);
   }
 }
 
@@ -983,10 +1357,13 @@ function getFallbackForSymbol(symbol: string) {
     baseOffer = waareeOfferDetails;
   }
 
+  const mockInterps = getMockInterpretations(isHCCB);
+
   const offer: StatutoryOfferDetails = {
     ...baseOffer,
     provenanceLedger: fallbackLedger,
-    provenanceSummary: fallbackSummary
+    provenanceSummary: fallbackSummary,
+    interpretations: mockInterps,
   };
 
   return {
@@ -999,7 +1376,8 @@ function getFallbackForSymbol(symbol: string) {
     compliance: mockSEBICompliance,
     provenanceLedger: fallbackLedger,
     provenanceSummary: fallbackSummary,
-    econometrics: getMockEconometricSuite(isHCCB)
+    econometrics: getMockEconometricSuite(isHCCB),
+    interpretations: mockInterps,
   };
 }
 

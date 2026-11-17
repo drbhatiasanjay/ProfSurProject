@@ -1417,6 +1417,7 @@ class ComprehensiveEconometricSuiteResult:
     altman_z_score: AltmanZScoreResult
     lock_in_tax_drag: LockInAndTaxDragResult
     overall_verdict: str
+    interpretations: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -1432,7 +1433,8 @@ class ComprehensiveEconometricSuiteResult:
                 "indAs116Leverage": self.ind_as_116_leverage.to_dict(),
                 "altmanZScore": self.altman_z_score.to_dict(),
                 "lockInTaxDrag": self.lock_in_tax_drag.to_dict(),
-            }
+            },
+            "interpretations": self.interpretations,
         }
 
 
@@ -1620,6 +1622,25 @@ def run_comprehensive_pre_ipo_econometrics(
     else:
         overall = EconometricVerdict.FAVORABLE.value
 
+    # Synthesize Unified Decision Intelligence & Interpretation Contract
+    from models.pre_ipo_interpretations import synthesize_deal_interpretations
+    prov_records = provenance_records or []
+    models_dict = {
+        "beneishMScore": beneish_res.to_dict(),
+        "dickinsonLifecycle": dickinson_res.to_dict(),
+        "huberPeerRegression": huber_res.to_dict(),
+        "stubSeasonality": stub_res.to_dict(),
+        "indAs116Leverage": lease_res.to_dict(),
+        "altmanZScore": altman_res.to_dict(),
+        "lockInTaxDrag": lockin_res.to_dict(),
+    }
+    deal_interps = synthesize_deal_interpretations(
+        provenance_records=prov_records,
+        econometric_suite={"models": models_dict},
+        offer_data=offer_data or {"symbol": symbol, "companyName": company_name},
+    )
+    interps_dict = {k: v.to_dict() for k, v in deal_interps.items()}
+
     return ComprehensiveEconometricSuiteResult(
         symbol=symbol,
         company_name=company_name,
@@ -1632,4 +1653,5 @@ def run_comprehensive_pre_ipo_econometrics(
         altman_z_score=altman_res,
         lock_in_tax_drag=lockin_res,
         overall_verdict=overall,
+        interpretations=interps_dict,
     )

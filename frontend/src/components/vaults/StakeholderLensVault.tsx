@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StatutoryOfferDetails } from '../../types/terminal';
 import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
+import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
 import { Users, Briefcase, Landmark, TrendingUp, ShieldCheck, UserCheck, AlertCircle } from 'lucide-react';
 
 interface StakeholderLensVaultProps {
@@ -152,6 +153,14 @@ export const StakeholderLensVault: React.FC<StakeholderLensVaultProps> = ({ offe
           {currentPersona.focus}
         </div>
       </div>
+
+      {/* Unified Decision Intelligence & Action Panel */}
+      {offer.interpretations?.ic_stance_mandate && (
+        <EvidenceInterpretationPanel
+          interpretation={offer.interpretations.ic_stance_mandate}
+          title="Vault 7: Multi-Stakeholder Consensus & IC Mandate"
+        />
+      )}
 
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer

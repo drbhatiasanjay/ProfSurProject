@@ -129,8 +129,34 @@ Every phase of implementation has satisfied the following **8-pillar verificatio
 - [x] Capture and verify 6 physical `.png` screenshots on disk
 - **Status:** complete
 
-### Phase 7: Final Review & Milestone Commit
-- [ ] Record milestone achievements in `findings.md` and `progress.md`
-- [ ] Create git commit on branch `feature/pre-ipo-cockpit-vault-v35`
-- [ ] Provide user handoff summary with clickable links to all evidence artifacts
-- **Status:** in_progress
+### Phase 7: Milestone Commit (v3.5.0 Cockpit Baseline)
+- [x] Record milestone achievements in `findings.md` and `progress.md`
+- [x] Create git commit on branch `feature/pre-ipo-cockpit-vault-v35` (`107f2505`)
+- [x] Provide user handoff summary with clickable links to all evidence artifacts
+- **Status:** complete
+
+### Phase 8: Pinned-HUD Architecture & Left-Right Scroll Synchronization (Elephant-Goldfish Synthesis)
+- [x] Build `frontend/src/components/CompactCockpitHUD.tsx`
+- [x] Refactor `SidebarNav.tsx` (Viewport-lock the sidebar)
+- [x] Refactor `App.tsx` (Wire `CompactCockpitHUD`, auto-reset scroll to $y=0$)
+- [x] Milestone commit on `feature/pre-ipo-cockpit-vault-v35`
+- **Status:** complete
+
+### Phase 9: Standardized Narrative Interpretation & Action Framework (Decision Intelligence Engine)
+- [x] Create `models/pre_ipo_interpretations.py`:
+  - Deterministic synthesis layer producing `AnalyticalInterpretation` with `polarity`, `headline`, `what_it_means`, `evidence_basis` (with `cited_inputs` and DRHP page numbers), `call_to_action`, and `missing_data_and_blind_spots`
+  - Zero Python truthiness, dynamic grounding in actual extracted metrics and missing fields
+- [x] Wire into `models/pre_ipo_econometrics.py` & `api/server.py`:
+  - Expose `@app.get("/api/pre-ipo/interpretations/{symbol}")` and attach to market-status
+  - Fail-closed capability gating via `assert_capability_allowed`
+- [x] Frontend Contract & Data Service (`frontend/src/types/terminal.ts`, `dataService.ts`):
+  - Add `Polarity` and `AnalyticalInterpretation` interfaces
+  - Add API fetchers and fallback mock datasets
+- [x] Reusable Right-Hand Canvas Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):
+  - Polarity badge, "What This Means", Evidence Trail with clickable citation pills, Call to Action, Missing Data & Blind Spots checklist
+- [x] Embed into Vaults:
+  - `EconometricLabVault.tsx`, `ProvenanceLedgerVault.tsx`, `UnlistedArbitrageVault.tsx`, `RedFlagScannerVault.tsx`, `StakeholderLensVault.tsx`, `ICBoardDeckVault.tsx`, and `App.tsx` (Valuation & Peers views)
+- [x] Verification & Tests:
+  - Unit tests in `tests/test_pre_ipo_interpretations.py` (11/11 passed)
+  - Synchronous pytest suite (39 passed, 2 skipped) and TypeScript (`tsc --noEmit`) passes with 0 errors
+- **Status:** complete

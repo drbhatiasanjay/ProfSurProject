@@ -1,5 +1,52 @@
 # ProfSurProject — Session Log
 
+## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Implemented the unified Decision Intelligence & Analytical Interpretation Framework across all quantitative engines and right-hand canvas vault screens.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Interpretation Synthesizer Layer (`models/pre_ipo_interpretations.py`):**
+     - Emits structured `AnalyticalInterpretation` records for all 10 canonical keys:
+       - `valuation_multiple`: Huber RLM froth gap vs unpriced DRHP containment
+       - `beneish_m_score`: Safe vs Grey vs Manipulator with Sloan total accruals check
+       - `dickinson_lifecycle`: Mature Cash Cow vs Growth vs Decline multi-period cash flow vector
+       - `stub_seasonality`: Summer peak weight distortion and pre-IPO margin stuffing Chow break
+       - `lease_adjusted_leverage`: Ind AS 116 capitalized operating lease debt and 12M refinancing wall
+       - `altman_z_score`: Emerging markets Z''-score safe vs distress thresholds
+       - `lockin_supply_cliff`: T+30/90/180 float expansion and Sec 56(2)(x) tax drag
+       - `provenance_gate`: SEBI Schedule VI evidence clearance vs missing RHP fields
+       - `forensic_red_flags`: Related party transactions, contingent liabilities % TNW, and promoter pledge
+       - `ic_stance_mandate`: Multi-model synthesis into Subscribe / Sizing Haircut / Avoid IC mandate
+     - Zero hardcoded static text; fully dynamic generation from actual deal attributes, econometric suite output, and missing field sets (`NOT_FOUND` / `NEEDS_RECONFIRMATION`).
+     - Strict Rule E.3 Zero-Truthiness compliance (`if val is None:` throughout).
+  2. **Econometric Suite Integration (`models/pre_ipo_econometrics.py`):**
+     - Extended `ComprehensiveEconometricSuiteResult` with `interpretations: Dict[str, AnalyticalInterpretation]`.
+     - Integrated `synthesize_deal_interpretations` dynamically inside `run_comprehensive_pre_ipo_econometrics`.
+  3. **FastAPI Capability-Gated Endpoints (`api/server.py`):**
+     - Registered `@app.get("/api/pre-ipo/interpretations/{symbol}")` gated behind `assert_capability_allowed` (fail-closed for unreviewed/contained prospectuses).
+     - Wired `interpretations` into `offer_data["interpretations"]` and top-level response in `@app.get("/api/pre-ipo/market-status")`.
+  4. **TypeScript Contract & Mock Services (`frontend/src/`):**
+     - Added `Polarity`, `CitedInput`, `EvidenceBasis`, and `AnalyticalInterpretation` interfaces to `frontend/src/types/terminal.ts`.
+     - Added `getMockInterpretations(isHCCB)` and `fetchEconometricInterpretations(symbol)` in `frontend/src/services/dataService.ts`.
+  5. **Reusable Institutional UI Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):**
+     - Semantic Polarity Badges (`+ POSITIVE CONTRIBUTOR`, `- NEGATIVE CONTRIBUTOR`, `MONITOR`, `BLOCKING RISK`).
+     - "What This Means" domain explanation block.
+     - Evidence Trail with clickable DRHP page citation pills (`pageNumber >= 1`).
+     - Actionable Investment Committee / Underwriting Call-to-Action card.
+     - Auto-populated Missing Data & Blind Spots checklist.
+  6. **Vault-Wide Canvas Integration:**
+     - `EconometricLabVault.tsx`: Integrated across all 8 econometric tabs.
+     - `ProvenanceLedgerVault.tsx`: Integrated for statutory provenance clearance.
+     - `UnlistedArbitrageVault.tsx`: Integrated for lock-in supply cliff & tax drag.
+     - `RedFlagScannerVault.tsx`: Integrated for forensic red flag audit.
+     - `StakeholderLensVault.tsx`: Integrated for IC stance mandate.
+     - `ICBoardDeckVault.tsx`: Integrated for IC stance mandate.
+     - `App.tsx`: Integrated across Vault 1 (`market_demand`), Vault 2 (`peer_comps`), and Vault 3 (`huber_studio`).
+  7. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_interpretations.py`: **11/11 PASSED** (0.34s).
+     - Full Pre-IPO suite (schema + econometrics + interpretations): **39 PASSED, 2 SKIPPED** (3.95s).
+     - TypeScript compiler check (`tsc --noEmit`): **0 errors** (Exit code 0).
+
 ## MILESTONE — Phase B Execution & Vault 5 Econometric Lab Complete (Session 2 Complete) (2026-11-17 17:35 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -820,6 +867,53 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log
 
+## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Implemented the unified Decision Intelligence & Analytical Interpretation Framework across all quantitative engines and right-hand canvas vault screens.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Interpretation Synthesizer Layer (`models/pre_ipo_interpretations.py`):**
+     - Emits structured `AnalyticalInterpretation` records for all 10 canonical keys:
+       - `valuation_multiple`: Huber RLM froth gap vs unpriced DRHP containment
+       - `beneish_m_score`: Safe vs Grey vs Manipulator with Sloan total accruals check
+       - `dickinson_lifecycle`: Mature Cash Cow vs Growth vs Decline multi-period cash flow vector
+       - `stub_seasonality`: Summer peak weight distortion and pre-IPO margin stuffing Chow break
+       - `lease_adjusted_leverage`: Ind AS 116 capitalized operating lease debt and 12M refinancing wall
+       - `altman_z_score`: Emerging markets Z''-score safe vs distress thresholds
+       - `lockin_supply_cliff`: T+30/90/180 float expansion and Sec 56(2)(x) tax drag
+       - `provenance_gate`: SEBI Schedule VI evidence clearance vs missing RHP fields
+       - `forensic_red_flags`: Related party transactions, contingent liabilities % TNW, and promoter pledge
+       - `ic_stance_mandate`: Multi-model synthesis into Subscribe / Sizing Haircut / Avoid IC mandate
+     - Zero hardcoded static text; fully dynamic generation from actual deal attributes, econometric suite output, and missing field sets (`NOT_FOUND` / `NEEDS_RECONFIRMATION`).
+     - Strict Rule E.3 Zero-Truthiness compliance (`if val is None:` throughout).
+  2. **Econometric Suite Integration (`models/pre_ipo_econometrics.py`):**
+     - Extended `ComprehensiveEconometricSuiteResult` with `interpretations: Dict[str, AnalyticalInterpretation]`.
+     - Integrated `synthesize_deal_interpretations` dynamically inside `run_comprehensive_pre_ipo_econometrics`.
+  3. **FastAPI Capability-Gated Endpoints (`api/server.py`):**
+     - Registered `@app.get("/api/pre-ipo/interpretations/{symbol}")` gated behind `assert_capability_allowed` (fail-closed for unreviewed/contained prospectuses).
+     - Wired `interpretations` into `offer_data["interpretations"]` and top-level response in `@app.get("/api/pre-ipo/market-status")`.
+  4. **TypeScript Contract & Mock Services (`frontend/src/`):**
+     - Added `Polarity`, `CitedInput`, `EvidenceBasis`, and `AnalyticalInterpretation` interfaces to `frontend/src/types/terminal.ts`.
+     - Added `getMockInterpretations(isHCCB)` and `fetchEconometricInterpretations(symbol)` in `frontend/src/services/dataService.ts`.
+  5. **Reusable Institutional UI Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):**
+     - Semantic Polarity Badges (`+ POSITIVE CONTRIBUTOR`, `- NEGATIVE CONTRIBUTOR`, `MONITOR`, `BLOCKING RISK`).
+     - "What This Means" domain explanation block.
+     - Evidence Trail with clickable DRHP page citation pills (`pageNumber >= 1`).
+     - Actionable Investment Committee / Underwriting Call-to-Action card.
+     - Auto-populated Missing Data & Blind Spots checklist.
+  6. **Vault-Wide Canvas Integration:**
+     - `EconometricLabVault.tsx`: Integrated across all 8 econometric tabs.
+     - `ProvenanceLedgerVault.tsx`: Integrated for statutory provenance clearance.
+     - `UnlistedArbitrageVault.tsx`: Integrated for lock-in supply cliff & tax drag.
+     - `RedFlagScannerVault.tsx`: Integrated for forensic red flag audit.
+     - `StakeholderLensVault.tsx`: Integrated for IC stance mandate.
+     - `ICBoardDeckVault.tsx`: Integrated for IC stance mandate.
+     - `App.tsx`: Integrated across Vault 1 (`market_demand`), Vault 2 (`peer_comps`), and Vault 3 (`huber_studio`).
+  7. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_interpretations.py`: **11/11 PASSED** (0.34s).
+     - Full Pre-IPO suite (schema + econometrics + interpretations): **39 PASSED, 2 SKIPPED** (3.95s).
+     - TypeScript compiler check (`tsc --noEmit`): **0 errors** (Exit code 0).
+
 ## MILESTONE — Phase B Execution & Vault 5 Econometric Lab Complete (Session 2 Complete) (2026-11-17 17:35 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -943,6 +1037,53 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log
 
+## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Implemented the unified Decision Intelligence & Analytical Interpretation Framework across all quantitative engines and right-hand canvas vault screens.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Interpretation Synthesizer Layer (`models/pre_ipo_interpretations.py`):**
+     - Emits structured `AnalyticalInterpretation` records for all 10 canonical keys:
+       - `valuation_multiple`: Huber RLM froth gap vs unpriced DRHP containment
+       - `beneish_m_score`: Safe vs Grey vs Manipulator with Sloan total accruals check
+       - `dickinson_lifecycle`: Mature Cash Cow vs Growth vs Decline multi-period cash flow vector
+       - `stub_seasonality`: Summer peak weight distortion and pre-IPO margin stuffing Chow break
+       - `lease_adjusted_leverage`: Ind AS 116 capitalized operating lease debt and 12M refinancing wall
+       - `altman_z_score`: Emerging markets Z''-score safe vs distress thresholds
+       - `lockin_supply_cliff`: T+30/90/180 float expansion and Sec 56(2)(x) tax drag
+       - `provenance_gate`: SEBI Schedule VI evidence clearance vs missing RHP fields
+       - `forensic_red_flags`: Related party transactions, contingent liabilities % TNW, and promoter pledge
+       - `ic_stance_mandate`: Multi-model synthesis into Subscribe / Sizing Haircut / Avoid IC mandate
+     - Zero hardcoded static text; fully dynamic generation from actual deal attributes, econometric suite output, and missing field sets (`NOT_FOUND` / `NEEDS_RECONFIRMATION`).
+     - Strict Rule E.3 Zero-Truthiness compliance (`if val is None:` throughout).
+  2. **Econometric Suite Integration (`models/pre_ipo_econometrics.py`):**
+     - Extended `ComprehensiveEconometricSuiteResult` with `interpretations: Dict[str, AnalyticalInterpretation]`.
+     - Integrated `synthesize_deal_interpretations` dynamically inside `run_comprehensive_pre_ipo_econometrics`.
+  3. **FastAPI Capability-Gated Endpoints (`api/server.py`):**
+     - Registered `@app.get("/api/pre-ipo/interpretations/{symbol}")` gated behind `assert_capability_allowed` (fail-closed for unreviewed/contained prospectuses).
+     - Wired `interpretations` into `offer_data["interpretations"]` and top-level response in `@app.get("/api/pre-ipo/market-status")`.
+  4. **TypeScript Contract & Mock Services (`frontend/src/`):**
+     - Added `Polarity`, `CitedInput`, `EvidenceBasis`, and `AnalyticalInterpretation` interfaces to `frontend/src/types/terminal.ts`.
+     - Added `getMockInterpretations(isHCCB)` and `fetchEconometricInterpretations(symbol)` in `frontend/src/services/dataService.ts`.
+  5. **Reusable Institutional UI Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):**
+     - Semantic Polarity Badges (`+ POSITIVE CONTRIBUTOR`, `- NEGATIVE CONTRIBUTOR`, `MONITOR`, `BLOCKING RISK`).
+     - "What This Means" domain explanation block.
+     - Evidence Trail with clickable DRHP page citation pills (`pageNumber >= 1`).
+     - Actionable Investment Committee / Underwriting Call-to-Action card.
+     - Auto-populated Missing Data & Blind Spots checklist.
+  6. **Vault-Wide Canvas Integration:**
+     - `EconometricLabVault.tsx`: Integrated across all 8 econometric tabs.
+     - `ProvenanceLedgerVault.tsx`: Integrated for statutory provenance clearance.
+     - `UnlistedArbitrageVault.tsx`: Integrated for lock-in supply cliff & tax drag.
+     - `RedFlagScannerVault.tsx`: Integrated for forensic red flag audit.
+     - `StakeholderLensVault.tsx`: Integrated for IC stance mandate.
+     - `ICBoardDeckVault.tsx`: Integrated for IC stance mandate.
+     - `App.tsx`: Integrated across Vault 1 (`market_demand`), Vault 2 (`peer_comps`), and Vault 3 (`huber_studio`).
+  7. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_interpretations.py`: **11/11 PASSED** (0.34s).
+     - Full Pre-IPO suite (schema + econometrics + interpretations): **39 PASSED, 2 SKIPPED** (3.95s).
+     - TypeScript compiler check (`tsc --noEmit`): **0 errors** (Exit code 0).
+
 ## MILESTONE — Phase B Execution & Vault 5 Econometric Lab Complete (Session 2 Complete) (2026-11-17 17:35 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -1054,6 +1195,53 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log
 
+## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Implemented the unified Decision Intelligence & Analytical Interpretation Framework across all quantitative engines and right-hand canvas vault screens.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Interpretation Synthesizer Layer (`models/pre_ipo_interpretations.py`):**
+     - Emits structured `AnalyticalInterpretation` records for all 10 canonical keys:
+       - `valuation_multiple`: Huber RLM froth gap vs unpriced DRHP containment
+       - `beneish_m_score`: Safe vs Grey vs Manipulator with Sloan total accruals check
+       - `dickinson_lifecycle`: Mature Cash Cow vs Growth vs Decline multi-period cash flow vector
+       - `stub_seasonality`: Summer peak weight distortion and pre-IPO margin stuffing Chow break
+       - `lease_adjusted_leverage`: Ind AS 116 capitalized operating lease debt and 12M refinancing wall
+       - `altman_z_score`: Emerging markets Z''-score safe vs distress thresholds
+       - `lockin_supply_cliff`: T+30/90/180 float expansion and Sec 56(2)(x) tax drag
+       - `provenance_gate`: SEBI Schedule VI evidence clearance vs missing RHP fields
+       - `forensic_red_flags`: Related party transactions, contingent liabilities % TNW, and promoter pledge
+       - `ic_stance_mandate`: Multi-model synthesis into Subscribe / Sizing Haircut / Avoid IC mandate
+     - Zero hardcoded static text; fully dynamic generation from actual deal attributes, econometric suite output, and missing field sets (`NOT_FOUND` / `NEEDS_RECONFIRMATION`).
+     - Strict Rule E.3 Zero-Truthiness compliance (`if val is None:` throughout).
+  2. **Econometric Suite Integration (`models/pre_ipo_econometrics.py`):**
+     - Extended `ComprehensiveEconometricSuiteResult` with `interpretations: Dict[str, AnalyticalInterpretation]`.
+     - Integrated `synthesize_deal_interpretations` dynamically inside `run_comprehensive_pre_ipo_econometrics`.
+  3. **FastAPI Capability-Gated Endpoints (`api/server.py`):**
+     - Registered `@app.get("/api/pre-ipo/interpretations/{symbol}")` gated behind `assert_capability_allowed` (fail-closed for unreviewed/contained prospectuses).
+     - Wired `interpretations` into `offer_data["interpretations"]` and top-level response in `@app.get("/api/pre-ipo/market-status")`.
+  4. **TypeScript Contract & Mock Services (`frontend/src/`):**
+     - Added `Polarity`, `CitedInput`, `EvidenceBasis`, and `AnalyticalInterpretation` interfaces to `frontend/src/types/terminal.ts`.
+     - Added `getMockInterpretations(isHCCB)` and `fetchEconometricInterpretations(symbol)` in `frontend/src/services/dataService.ts`.
+  5. **Reusable Institutional UI Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):**
+     - Semantic Polarity Badges (`+ POSITIVE CONTRIBUTOR`, `- NEGATIVE CONTRIBUTOR`, `MONITOR`, `BLOCKING RISK`).
+     - "What This Means" domain explanation block.
+     - Evidence Trail with clickable DRHP page citation pills (`pageNumber >= 1`).
+     - Actionable Investment Committee / Underwriting Call-to-Action card.
+     - Auto-populated Missing Data & Blind Spots checklist.
+  6. **Vault-Wide Canvas Integration:**
+     - `EconometricLabVault.tsx`: Integrated across all 8 econometric tabs.
+     - `ProvenanceLedgerVault.tsx`: Integrated for statutory provenance clearance.
+     - `UnlistedArbitrageVault.tsx`: Integrated for lock-in supply cliff & tax drag.
+     - `RedFlagScannerVault.tsx`: Integrated for forensic red flag audit.
+     - `StakeholderLensVault.tsx`: Integrated for IC stance mandate.
+     - `ICBoardDeckVault.tsx`: Integrated for IC stance mandate.
+     - `App.tsx`: Integrated across Vault 1 (`market_demand`), Vault 2 (`peer_comps`), and Vault 3 (`huber_studio`).
+  7. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_interpretations.py`: **11/11 PASSED** (0.34s).
+     - Full Pre-IPO suite (schema + econometrics + interpretations): **39 PASSED, 2 SKIPPED** (3.95s).
+     - TypeScript compiler check (`tsc --noEmit`): **0 errors** (Exit code 0).
+
 ## MILESTONE — Phase B Execution & Vault 5 Econometric Lab Complete (Session 2 Complete) (2026-11-17 17:35 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -1159,6 +1347,53 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 ---
 
 # ProfSurProject — Session Log
+
+## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Implemented the unified Decision Intelligence & Analytical Interpretation Framework across all quantitative engines and right-hand canvas vault screens.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Interpretation Synthesizer Layer (`models/pre_ipo_interpretations.py`):**
+     - Emits structured `AnalyticalInterpretation` records for all 10 canonical keys:
+       - `valuation_multiple`: Huber RLM froth gap vs unpriced DRHP containment
+       - `beneish_m_score`: Safe vs Grey vs Manipulator with Sloan total accruals check
+       - `dickinson_lifecycle`: Mature Cash Cow vs Growth vs Decline multi-period cash flow vector
+       - `stub_seasonality`: Summer peak weight distortion and pre-IPO margin stuffing Chow break
+       - `lease_adjusted_leverage`: Ind AS 116 capitalized operating lease debt and 12M refinancing wall
+       - `altman_z_score`: Emerging markets Z''-score safe vs distress thresholds
+       - `lockin_supply_cliff`: T+30/90/180 float expansion and Sec 56(2)(x) tax drag
+       - `provenance_gate`: SEBI Schedule VI evidence clearance vs missing RHP fields
+       - `forensic_red_flags`: Related party transactions, contingent liabilities % TNW, and promoter pledge
+       - `ic_stance_mandate`: Multi-model synthesis into Subscribe / Sizing Haircut / Avoid IC mandate
+     - Zero hardcoded static text; fully dynamic generation from actual deal attributes, econometric suite output, and missing field sets (`NOT_FOUND` / `NEEDS_RECONFIRMATION`).
+     - Strict Rule E.3 Zero-Truthiness compliance (`if val is None:` throughout).
+  2. **Econometric Suite Integration (`models/pre_ipo_econometrics.py`):**
+     - Extended `ComprehensiveEconometricSuiteResult` with `interpretations: Dict[str, AnalyticalInterpretation]`.
+     - Integrated `synthesize_deal_interpretations` dynamically inside `run_comprehensive_pre_ipo_econometrics`.
+  3. **FastAPI Capability-Gated Endpoints (`api/server.py`):**
+     - Registered `@app.get("/api/pre-ipo/interpretations/{symbol}")` gated behind `assert_capability_allowed` (fail-closed for unreviewed/contained prospectuses).
+     - Wired `interpretations` into `offer_data["interpretations"]` and top-level response in `@app.get("/api/pre-ipo/market-status")`.
+  4. **TypeScript Contract & Mock Services (`frontend/src/`):**
+     - Added `Polarity`, `CitedInput`, `EvidenceBasis`, and `AnalyticalInterpretation` interfaces to `frontend/src/types/terminal.ts`.
+     - Added `getMockInterpretations(isHCCB)` and `fetchEconometricInterpretations(symbol)` in `frontend/src/services/dataService.ts`.
+  5. **Reusable Institutional UI Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):**
+     - Semantic Polarity Badges (`+ POSITIVE CONTRIBUTOR`, `- NEGATIVE CONTRIBUTOR`, `MONITOR`, `BLOCKING RISK`).
+     - "What This Means" domain explanation block.
+     - Evidence Trail with clickable DRHP page citation pills (`pageNumber >= 1`).
+     - Actionable Investment Committee / Underwriting Call-to-Action card.
+     - Auto-populated Missing Data & Blind Spots checklist.
+  6. **Vault-Wide Canvas Integration:**
+     - `EconometricLabVault.tsx`: Integrated across all 8 econometric tabs.
+     - `ProvenanceLedgerVault.tsx`: Integrated for statutory provenance clearance.
+     - `UnlistedArbitrageVault.tsx`: Integrated for lock-in supply cliff & tax drag.
+     - `RedFlagScannerVault.tsx`: Integrated for forensic red flag audit.
+     - `StakeholderLensVault.tsx`: Integrated for IC stance mandate.
+     - `ICBoardDeckVault.tsx`: Integrated for IC stance mandate.
+     - `App.tsx`: Integrated across Vault 1 (`market_demand`), Vault 2 (`peer_comps`), and Vault 3 (`huber_studio`).
+  7. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_interpretations.py`: **11/11 PASSED** (0.34s).
+     - Full Pre-IPO suite (schema + econometrics + interpretations): **39 PASSED, 2 SKIPPED** (3.95s).
+     - TypeScript compiler check (`tsc --noEmit`): **0 errors** (Exit code 0).
 
 ## MILESTONE — Phase B Execution & Vault 5 Econometric Lab Complete (Session 2 Complete) (2026-11-17 17:35 IST)
 
@@ -1276,6 +1511,53 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 ---
 
 # ProfSurProject — Session Log
+
+## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Implemented the unified Decision Intelligence & Analytical Interpretation Framework across all quantitative engines and right-hand canvas vault screens.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Interpretation Synthesizer Layer (`models/pre_ipo_interpretations.py`):**
+     - Emits structured `AnalyticalInterpretation` records for all 10 canonical keys:
+       - `valuation_multiple`: Huber RLM froth gap vs unpriced DRHP containment
+       - `beneish_m_score`: Safe vs Grey vs Manipulator with Sloan total accruals check
+       - `dickinson_lifecycle`: Mature Cash Cow vs Growth vs Decline multi-period cash flow vector
+       - `stub_seasonality`: Summer peak weight distortion and pre-IPO margin stuffing Chow break
+       - `lease_adjusted_leverage`: Ind AS 116 capitalized operating lease debt and 12M refinancing wall
+       - `altman_z_score`: Emerging markets Z''-score safe vs distress thresholds
+       - `lockin_supply_cliff`: T+30/90/180 float expansion and Sec 56(2)(x) tax drag
+       - `provenance_gate`: SEBI Schedule VI evidence clearance vs missing RHP fields
+       - `forensic_red_flags`: Related party transactions, contingent liabilities % TNW, and promoter pledge
+       - `ic_stance_mandate`: Multi-model synthesis into Subscribe / Sizing Haircut / Avoid IC mandate
+     - Zero hardcoded static text; fully dynamic generation from actual deal attributes, econometric suite output, and missing field sets (`NOT_FOUND` / `NEEDS_RECONFIRMATION`).
+     - Strict Rule E.3 Zero-Truthiness compliance (`if val is None:` throughout).
+  2. **Econometric Suite Integration (`models/pre_ipo_econometrics.py`):**
+     - Extended `ComprehensiveEconometricSuiteResult` with `interpretations: Dict[str, AnalyticalInterpretation]`.
+     - Integrated `synthesize_deal_interpretations` dynamically inside `run_comprehensive_pre_ipo_econometrics`.
+  3. **FastAPI Capability-Gated Endpoints (`api/server.py`):**
+     - Registered `@app.get("/api/pre-ipo/interpretations/{symbol}")` gated behind `assert_capability_allowed` (fail-closed for unreviewed/contained prospectuses).
+     - Wired `interpretations` into `offer_data["interpretations"]` and top-level response in `@app.get("/api/pre-ipo/market-status")`.
+  4. **TypeScript Contract & Mock Services (`frontend/src/`):**
+     - Added `Polarity`, `CitedInput`, `EvidenceBasis`, and `AnalyticalInterpretation` interfaces to `frontend/src/types/terminal.ts`.
+     - Added `getMockInterpretations(isHCCB)` and `fetchEconometricInterpretations(symbol)` in `frontend/src/services/dataService.ts`.
+  5. **Reusable Institutional UI Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):**
+     - Semantic Polarity Badges (`+ POSITIVE CONTRIBUTOR`, `- NEGATIVE CONTRIBUTOR`, `MONITOR`, `BLOCKING RISK`).
+     - "What This Means" domain explanation block.
+     - Evidence Trail with clickable DRHP page citation pills (`pageNumber >= 1`).
+     - Actionable Investment Committee / Underwriting Call-to-Action card.
+     - Auto-populated Missing Data & Blind Spots checklist.
+  6. **Vault-Wide Canvas Integration:**
+     - `EconometricLabVault.tsx`: Integrated across all 8 econometric tabs.
+     - `ProvenanceLedgerVault.tsx`: Integrated for statutory provenance clearance.
+     - `UnlistedArbitrageVault.tsx`: Integrated for lock-in supply cliff & tax drag.
+     - `RedFlagScannerVault.tsx`: Integrated for forensic red flag audit.
+     - `StakeholderLensVault.tsx`: Integrated for IC stance mandate.
+     - `ICBoardDeckVault.tsx`: Integrated for IC stance mandate.
+     - `App.tsx`: Integrated across Vault 1 (`market_demand`), Vault 2 (`peer_comps`), and Vault 3 (`huber_studio`).
+  7. **Verification Matrix:**
+     - Pytest suite `tests/test_pre_ipo_interpretations.py`: **11/11 PASSED** (0.34s).
+     - Full Pre-IPO suite (schema + econometrics + interpretations): **39 PASSED, 2 SKIPPED** (3.95s).
+     - TypeScript compiler check (`tsc --noEmit`): **0 errors** (Exit code 0).
 
 ## MILESTONE — Phase B Execution & Vault 5 Econometric Lab Complete (Session 2 Complete) (2026-11-17 17:35 IST)
 

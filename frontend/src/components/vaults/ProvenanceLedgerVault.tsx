@@ -8,6 +8,7 @@ import {
 } from '../../types/terminal';
 import { CANONICAL_SECTIONS, getCanonical84ProvenanceFallback, getCanonical42ProvenanceFallback } from '../../services/canonicalProvenance';
 import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
+import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
 import {
   ShieldCheck,
   AlertTriangle,
@@ -227,87 +228,87 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
   // 5-Point Accounting Reconciliation Gate (Pre-computed at data/model boundary)
   const reconciliationGate: FivePointReconciliationGate = offer.reconciliationGate ?? (isHCCB
     ? {
-        gate1BalanceSheet: {
-          status: 'PASS',
-          assetsCr: 4120.45,
-          liabilitiesAndEquityCr: 4120.45,
-          variancePct: 0.0,
-          citation: 'Ch. V p. 280 (Restated Statement of Assets & Liabilities)'
-        },
-        gate2OfferSplit: {
-          status: 'PASS',
-          freshCr: 0.0,
-          ofsCr: 9975.0,
-          totalCr: 9975.0,
-          citation: 'Ch. III p. 48 (The Offer Structure)'
-        },
-        gate3CashToPnl: {
-          status: 'PASS',
-          cfoCr: 980.20,
-          ebitdaCr: 1114.0,
-          patCr: 684.50,
-          cfoToEbitda: 0.88,
-          citation: 'Ch. V p. 284 (Cash Flows Statement)'
-        },
-        gate4CapTableDilution: {
-          status: 'PASS',
-          preShares: 997461456,
-          convertedCcps: 0,
-          freshShares: 0,
-          postShares: 997461456,
-          citation: 'Ch. III p. 54 (Capital Structure)'
-        },
-        gate5ObjectsGcpCap: {
-          status: 'PASS',
-          capexCr: 0.0,
-          debtCr: 0.0,
-          wcCr: 0.0,
-          gcpCr: 0.0,
-          gcpPctOfFresh: 0.0,
-          citation: 'Ch. III p. 62 (Objects of the Offer - 100% OFS, No GCP)'
-        }
+      gate1BalanceSheet: {
+        status: 'PASS',
+        assetsCr: 4120.45,
+        liabilitiesAndEquityCr: 4120.45,
+        variancePct: 0.0,
+        citation: 'Ch. V p. 280 (Restated Statement of Assets & Liabilities)'
+      },
+      gate2OfferSplit: {
+        status: 'PASS',
+        freshCr: 0.0,
+        ofsCr: 9975.0,
+        totalCr: 9975.0,
+        citation: 'Ch. III p. 48 (The Offer Structure)'
+      },
+      gate3CashToPnl: {
+        status: 'PASS',
+        cfoCr: 980.20,
+        ebitdaCr: 1114.0,
+        patCr: 684.50,
+        cfoToEbitda: 0.88,
+        citation: 'Ch. V p. 284 (Cash Flows Statement)'
+      },
+      gate4CapTableDilution: {
+        status: 'PASS',
+        preShares: 997461456,
+        convertedCcps: 0,
+        freshShares: 0,
+        postShares: 997461456,
+        citation: 'Ch. III p. 54 (Capital Structure)'
+      },
+      gate5ObjectsGcpCap: {
+        status: 'PASS',
+        capexCr: 0.0,
+        debtCr: 0.0,
+        wcCr: 0.0,
+        gcpCr: 0.0,
+        gcpPctOfFresh: 0.0,
+        citation: 'Ch. III p. 62 (Objects of the Offer - 100% OFS, No GCP)'
       }
+    }
     : {
-        gate1BalanceSheet: {
-          status: 'PASS',
-          assetsCr: 16500.0,
-          liabilitiesAndEquityCr: 16500.0,
-          variancePct: 0.0,
-          citation: 'Ch. V p. 192 (Restated Balance Sheet)'
-        },
-        gate2OfferSplit: {
-          status: 'PASS',
-          freshCr: 10000.0,
-          ofsCr: 0.0,
-          totalCr: 10000.0,
-          citation: 'Ch. III p. 45 (The Offer)'
-        },
-        gate3CashToPnl: {
-          status: 'PASS',
-          cfoCr: 680.0,
-          ebitdaCr: 1620.0,
-          patCr: 340.0,
-          cfoToEbitda: 0.42,
-          citation: 'Ch. V p. 198 (Cash Flow Statement)'
-        },
-        gate4CapTableDilution: {
-          status: 'PASS',
-          preShares: 8333333333,
-          convertedCcps: 0,
-          freshShares: 925925925,
-          postShares: 9259259258,
-          citation: 'Ch. III p. 52 (Capital Structure)'
-        },
-        gate5ObjectsGcpCap: {
-          status: 'PASS',
-          capexCr: 7500.0,
-          debtCr: 0.0,
-          wcCr: 0.0,
-          gcpCr: 2500.0,
-          gcpPctOfFresh: 25.0,
-          citation: 'Ch. III p. 68 (Objects of the Offer - GCP exactly 25% Cap)'
-        }
-      });
+      gate1BalanceSheet: {
+        status: 'PASS',
+        assetsCr: 16500.0,
+        liabilitiesAndEquityCr: 16500.0,
+        variancePct: 0.0,
+        citation: 'Ch. V p. 192 (Restated Balance Sheet)'
+      },
+      gate2OfferSplit: {
+        status: 'PASS',
+        freshCr: 10000.0,
+        ofsCr: 0.0,
+        totalCr: 10000.0,
+        citation: 'Ch. III p. 45 (The Offer)'
+      },
+      gate3CashToPnl: {
+        status: 'PASS',
+        cfoCr: 680.0,
+        ebitdaCr: 1620.0,
+        patCr: 340.0,
+        cfoToEbitda: 0.42,
+        citation: 'Ch. V p. 198 (Cash Flow Statement)'
+      },
+      gate4CapTableDilution: {
+        status: 'PASS',
+        preShares: 8333333333,
+        convertedCcps: 0,
+        freshShares: 925925925,
+        postShares: 9259259258,
+        citation: 'Ch. III p. 52 (Capital Structure)'
+      },
+      gate5ObjectsGcpCap: {
+        status: 'PASS',
+        capexCr: 7500.0,
+        debtCr: 0.0,
+        wcCr: 0.0,
+        gcpCr: 2500.0,
+        gcpPctOfFresh: 25.0,
+        citation: 'Ch. III p. 68 (Objects of the Offer - GCP exactly 25% Cap)'
+      }
+    });
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
@@ -361,13 +362,12 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
               Five-Point Statutory Accounting Reconciliation Gate (SEBI ICDR Schedule VI)
             </span>
             <span
-              className={`px-2.5 py-0.5 rounded font-mono text-[11px] font-bold flex items-center gap-1.5 self-start sm:self-auto border ${
-                offer.dealIntegrity === 'PASS'
-                  ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300'
-                  : offer.dealIntegrity === 'CONDITIONAL'
+              className={`px-2.5 py-0.5 rounded font-mono text-[11px] font-bold flex items-center gap-1.5 self-start sm:self-auto border ${offer.dealIntegrity === 'PASS'
+                ? 'bg-emerald-950/80 border-emerald-600 text-emerald-300'
+                : offer.dealIntegrity === 'CONDITIONAL'
                   ? 'bg-amber-950/80 border-amber-600 text-amber-300'
                   : 'bg-rose-950/80 border-rose-600 text-rose-300'
-              }`}
+                }`}
             >
               {offer.dealIntegrity === 'PASS' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
               {offer.dealIntegrity === 'CONDITIONAL' && <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />}
@@ -395,13 +395,12 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
                 </div>
                 <div className="text-[9px] font-mono text-slate-500 mt-0.5">Assets = Liabilities + Equity</div>
               </div>
-              <span className={`text-[9px] font-mono mt-1.5 ${
-                reconciliationGate.gate1BalanceSheet.status === 'PASS'
-                  ? 'text-emerald-400'
-                  : reconciliationGate.gate1BalanceSheet.status === 'RECONFIRM'
+              <span className={`text-[9px] font-mono mt-1.5 ${reconciliationGate.gate1BalanceSheet.status === 'PASS'
+                ? 'text-emerald-400'
+                : reconciliationGate.gate1BalanceSheet.status === 'RECONFIRM'
                   ? 'text-amber-400'
                   : 'text-rose-400'
-              }`}>
+                }`}>
                 {reconciliationGate.gate1BalanceSheet.status} ({reconciliationGate.gate1BalanceSheet.variancePct}% Variance)
               </span>
             </div>
@@ -422,9 +421,8 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
                 </div>
                 <div className="text-[9px] font-mono text-slate-500 mt-0.5">Fresh + OFS = Total</div>
               </div>
-              <span className={`text-[9px] font-mono mt-1.5 ${
-                reconciliationGate.gate2OfferSplit.status === 'PASS' ? 'text-emerald-400' : 'text-rose-400'
-              }`}>
+              <span className={`text-[9px] font-mono mt-1.5 ${reconciliationGate.gate2OfferSplit.status === 'PASS' ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
                 {reconciliationGate.gate2OfferSplit.status} (Exact Match)
               </span>
             </div>
@@ -445,9 +443,8 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
                 </div>
                 <div className="text-[9px] font-mono text-slate-500 mt-0.5">Cash Conversion Match</div>
               </div>
-              <span className={`text-[9px] font-mono mt-1.5 ${
-                reconciliationGate.gate3CashToPnl.status === 'PASS' ? 'text-emerald-400' : 'text-rose-400'
-              }`}>
+              <span className={`text-[9px] font-mono mt-1.5 ${reconciliationGate.gate3CashToPnl.status === 'PASS' ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
                 {reconciliationGate.gate3CashToPnl.status} (Verified)
               </span>
             </div>
@@ -468,9 +465,8 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
                 </div>
                 <div className="text-[9px] font-mono text-slate-500 mt-0.5">Pre + CCPS + Fresh = Post</div>
               </div>
-              <span className={`text-[9px] font-mono mt-1.5 ${
-                reconciliationGate.gate4CapTableDilution.status === 'PASS' ? 'text-emerald-400' : 'text-rose-400'
-              }`}>
+              <span className={`text-[9px] font-mono mt-1.5 ${reconciliationGate.gate4CapTableDilution.status === 'PASS' ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
                 {reconciliationGate.gate4CapTableDilution.status} (Zero Discrepancy)
               </span>
             </div>
@@ -491,9 +487,8 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
                 </div>
                 <div className="text-[9px] font-mono text-slate-500 mt-0.5">&le; 25.0% Statutory Cap</div>
               </div>
-              <span className={`text-[9px] font-mono mt-1.5 ${
-                reconciliationGate.gate5ObjectsGcpCap.status === 'PASS' ? 'text-emerald-400' : 'text-rose-400'
-              }`}>
+              <span className={`text-[9px] font-mono mt-1.5 ${reconciliationGate.gate5ObjectsGcpCap.status === 'PASS' ? 'text-emerald-400' : 'text-rose-400'
+                }`}>
                 {reconciliationGate.gate5ObjectsGcpCap.status} (Compliant)
               </span>
             </div>
@@ -552,43 +547,39 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               onClick={() => setStatusFilter('ALL')}
-              className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors ${
-                statusFilter === 'ALL'
-                  ? 'bg-cyan-950 border border-cyan-700 text-cyan-300 font-bold'
-                  : 'bg-[#080D15] border border-[#1E2B3E] text-slate-400 hover:text-slate-200'
-              }`}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors ${statusFilter === 'ALL'
+                ? 'bg-cyan-950 border border-cyan-700 text-cyan-300 font-bold'
+                : 'bg-[#080D15] border border-[#1E2B3E] text-slate-400 hover:text-slate-200'
+                }`}
             >
               All ({canonicalRecords.length})
             </button>
             <button
               onClick={() => setStatusFilter('FOUND')}
-              className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors flex items-center gap-1 ${
-                statusFilter === 'FOUND'
-                  ? 'bg-emerald-950 border border-emerald-700 text-emerald-300 font-bold'
-                  : 'bg-[#080D15] border border-[#1E2B3E] text-slate-400 hover:text-emerald-400'
-              }`}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors flex items-center gap-1 ${statusFilter === 'FOUND'
+                ? 'bg-emerald-950 border border-emerald-700 text-emerald-300 font-bold'
+                : 'bg-[#080D15] border border-[#1E2B3E] text-slate-400 hover:text-emerald-400'
+                }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
               Verified ({foundCount})
             </button>
             <button
               onClick={() => setStatusFilter('NEEDS_RECONFIRMATION')}
-              className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors flex items-center gap-1 ${
-                statusFilter === 'NEEDS_RECONFIRMATION'
-                  ? 'bg-amber-950 border border-amber-700 text-amber-300 font-bold'
-                  : 'bg-[#080D15] border border-[#1E2B3E] text-slate-400 hover:text-amber-400'
-              }`}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors flex items-center gap-1 ${statusFilter === 'NEEDS_RECONFIRMATION'
+                ? 'bg-amber-950 border border-amber-700 text-amber-300 font-bold'
+                : 'bg-[#080D15] border border-[#1E2B3E] text-slate-400 hover:text-amber-400'
+                }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
               Reconfirm ({reconfirmCount})
             </button>
             <button
               onClick={() => setStatusFilter('NOT_FOUND')}
-              className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors flex items-center gap-1 ${
-                statusFilter === 'NOT_FOUND'
-                  ? 'bg-slate-800 border border-slate-600 text-slate-200 font-bold'
-                  : 'bg-[#080D15] border border-[#1E2B3E] text-slate-400 hover:text-slate-200'
-              }`}
+              className={`px-2.5 py-1 rounded text-[11px] font-mono transition-colors flex items-center gap-1 ${statusFilter === 'NOT_FOUND'
+                ? 'bg-slate-800 border border-slate-600 text-slate-200 font-bold'
+                : 'bg-[#080D15] border border-[#1E2B3E] text-slate-400 hover:text-slate-200'
+                }`}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>
               Pending RHP ({pendingCount})
@@ -699,15 +690,14 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
                         return (
                           <div
                             key={aid}
-                            className={`p-3 transition-colors ${
-                              isSelected
-                                ? 'bg-[#152338] border-l-4 border-cyan-400'
-                                : isReconfirm
+                            className={`p-3 transition-colors ${isSelected
+                              ? 'bg-[#152338] border-l-4 border-cyan-400'
+                              : isReconfirm
                                 ? 'border-l-4 border-amber-500 bg-amber-950/10'
                                 : isPending
-                                ? 'border-l-4 border-slate-600 bg-slate-900/40'
-                                : 'border-l-4 border-emerald-500 hover:bg-[#121B29]'
-                            }`}
+                                  ? 'border-l-4 border-slate-600 bg-slate-900/40'
+                                  : 'border-l-4 border-emerald-500 hover:bg-[#121B29]'
+                              }`}
                           >
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
                               {/* Left: Attribute Name & Reference */}
@@ -748,9 +738,8 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
 
                               {/* Center: Disclosed Numerical Value */}
                               <div className="text-right lg:min-w-[140px] pl-5 lg:pl-0">
-                                <div className={`text-xs font-mono font-bold tabular-nums ${
-                                  isPending ? 'text-slate-400 italic' : 'text-slate-100'
-                                }`}>
+                                <div className={`text-xs font-mono font-bold tabular-nums ${isPending ? 'text-slate-400 italic' : 'text-slate-100'
+                                  }`}>
                                   {displayVal}
                                 </div>
                                 <div className="text-[9px] font-mono text-slate-500 mt-0.5">
@@ -772,11 +761,10 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
                                       statutoryReference: item.statutoryReference
                                     })
                                   }
-                                  className={`px-2 py-1 rounded border text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors shadow-sm ${
-                                    isSelected
-                                      ? 'bg-cyan-900 border-cyan-400 text-cyan-200'
-                                      : 'bg-[#101826] border-cyan-800/80 hover:border-cyan-400 text-cyan-300'
-                                  }`}
+                                  className={`px-2 py-1 rounded border text-[10px] font-mono flex items-center gap-1 cursor-pointer transition-colors shadow-sm ${isSelected
+                                    ? 'bg-cyan-900 border-cyan-400 text-cyan-200'
+                                    : 'bg-[#101826] border-cyan-800/80 hover:border-cyan-400 text-cyan-300'
+                                    }`}
                                   title="Inspect PDF Bounding Box & Coordinates"
                                 >
                                   <MapPin className="w-3 h-3 text-cyan-400" />
@@ -789,26 +777,24 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
                                     className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#080D15] border border-[#1A2638] text-slate-300 flex items-center gap-1"
                                     title={`Extraction Confidence: ${(item.confidenceScore * 100).toFixed(0)}%`}
                                   >
-                                    <span className={`w-1.5 h-1.5 rounded-full ${
-                                      item.confidenceScore >= 0.95
-                                        ? 'bg-emerald-400'
-                                        : item.confidenceScore >= 0.85
+                                    <span className={`w-1.5 h-1.5 rounded-full ${item.confidenceScore >= 0.95
+                                      ? 'bg-emerald-400'
+                                      : item.confidenceScore >= 0.85
                                         ? 'bg-cyan-400'
                                         : 'bg-amber-400'
-                                    }`}></span>
+                                      }`}></span>
                                     {(item.confidenceScore * 100).toFixed(0)}%
                                   </span>
                                 )}
 
                                 {/* Status Badge */}
                                 <span
-                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                                    isFound
-                                      ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-400'
-                                      : isPending
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${isFound
+                                    ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-400'
+                                    : isPending
                                       ? 'bg-slate-800/60 border border-slate-700 text-slate-400 border-dashed'
                                       : 'bg-amber-950/60 border border-amber-800 text-amber-400'
-                                  }`}
+                                    }`}
                                 >
                                   {item.status}
                                 </span>
@@ -930,6 +916,14 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           </div>
         </div>
       </div>
+
+      {/* Unified Decision Intelligence & Action Panel */}
+      {offer.interpretations?.provenance_gate && (
+        <EvidenceInterpretationPanel
+          interpretation={offer.interpretations.provenance_gate}
+          title="Vault 4: Statutory Provenance & Evidence Clearance"
+        />
+      )}
 
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer

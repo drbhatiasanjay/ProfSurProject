@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { StatutoryOfferDetails } from '../../types/terminal';
 import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
+import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
 import { Coins, Calculator, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight, Percent } from 'lucide-react';
 
 interface UnlistedArbitrageVaultProps {
@@ -13,12 +14,21 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
   // Ground truth Rule 11UA statutory Fair Market Value
   const rule11UaFmv = isHCCB ? 85.0 : 92.0;
 
+  // Regulatory holding period threshold: 24 months for unlisted shares, 12 months post-listing
+  const isPostListing = offer.pricingState.status === 'TRADING_LIVE';
+  const ltcgThresholdMonths = isPostListing ? 12 : 24;
+
   // Interactive inputs state
   const [unlistedPrice, setUnlistedPrice] = useState<number>(isHCCB ? 115 : 105);
   const [holdingPeriodMonths, setHoldingPeriodMonths] = useState<number>(6);
   const [annualCarryCostPct, setAnnualCarryCostPct] = useState<number>(10.0);
   const [targetMarginOfSafetyPct, setTargetMarginOfSafetyPct] = useState<number>(15.0);
-  const [taxRegime, setTaxRegime] = useState<'STCG' | 'LTCG'>('STCG');
+  const [isTaxRegimeOverridden, setIsTaxRegimeOverridden] = useState<boolean>(false);
+  const [overriddenTaxRegime, setOverriddenTaxRegime] = useState<'STCG' | 'LTCG'>('STCG');
+
+  // Single source of truth: deterministically derive tax regime unless explicitly overridden
+  const autoDerivedTaxRegime: 'STCG' | 'LTCG' = holdingPeriodMonths >= ltcgThresholdMonths ? 'LTCG' : 'STCG';
+  const taxRegime: 'STCG' | 'LTCG' = isTaxRegimeOverridden ? overriddenTaxRegime : autoDerivedTaxRegime;
 
   // Mathematical solver with strict Rule E.3 zero-truthiness
   const model = useMemo(() => {
@@ -216,33 +226,88 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
             </div>
           </div>
 
-          {/* Tax Regime Selector */}
-          <div>
-            <label className="text-xs font-mono text-slate-300 block mb-1.5">Tax Regime on Listing Exit</label>
+          {/* Tax Regime Selector with Single Source of Truth & Explicit Override */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-mono text-slate-300">Tax Regime on Listing Exit</label>
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                  isTaxRegimeOverridden
+                    ? 'bg-amber-950/60 border-amber-800 text-amber-300'
+                    : 'bg-emerald-950/60 border-emerald-800 text-emerald-300'
+                }`}>
+                  {isTaxRegimeOverridden ? 'MANUAL OVERRIDE' : `AUTO (${ltcgThresholdMonths}M RULE)`}
+                </span>
+              </div>
+              <label className="flex items-center gap-1.5 cursor-pointer text-[11px] font-mono text-slate-400 hover:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={isTaxRegimeOverridden}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsTaxRegimeOverridden(checked);
+                    if (checked) {
+                      setOverriddenTaxRegime(autoDerivedTaxRegime);
+                    }
+                  }}
+                  className="rounded border-[#223044] bg-[#101620] text-cyan-500 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5 accent-cyan-500 cursor-pointer"
+                />
+                <span>Override</span>
+              </label>
+            </div>
+
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => setTaxRegime('STCG')}
-                className={`p-2.5 rounded-lg border text-xs font-mono transition-colors cursor-pointer text-left ${
+                type="button"
+                disabled={!isTaxRegimeOverridden}
+                onClick={() => isTaxRegimeOverridden && setOverriddenTaxRegime('STCG')}
+                className={`p-2.5 rounded-lg border text-xs font-mono transition-colors text-left ${
                   taxRegime === 'STCG'
-                    ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200 font-bold'
-                    : 'bg-[#101620] border-[#223044] text-slate-400 hover:text-slate-200'
+                    ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200 font-bold shadow-[0_0_10px_rgba(6,182,212,0.15)]'
+                    : 'bg-[#101620] border-[#223044] text-slate-400'
+                } ${
+                  isTaxRegimeOverridden ? 'cursor-pointer hover:border-cyan-600' : 'cursor-default opacity-90'
                 }`}
               >
-                <div>20.0% STCG</div>
-                <div className="text-[10px] text-slate-500">Exit &lt; 24 Months</div>
+                <div className="flex items-center justify-between">
+                  <span>20.0% STCG</span>
+                  {taxRegime === 'STCG' && !isTaxRegimeOverridden && (
+                    <span className="text-[9px] bg-cyan-900/60 text-cyan-300 px-1 py-0.2 rounded font-normal">AUTO</span>
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">
+                  {isPostListing ? 'Held < 12 Months' : 'Held < 24 Months'}
+                </div>
               </button>
               <button
-                onClick={() => setTaxRegime('LTCG')}
-                className={`p-2.5 rounded-lg border text-xs font-mono transition-colors cursor-pointer text-left ${
+                type="button"
+                disabled={!isTaxRegimeOverridden}
+                onClick={() => isTaxRegimeOverridden && setOverriddenTaxRegime('LTCG')}
+                className={`p-2.5 rounded-lg border text-xs font-mono transition-colors text-left ${
                   taxRegime === 'LTCG'
-                    ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200 font-bold'
-                    : 'bg-[#101620] border-[#223044] text-slate-400 hover:text-slate-200'
+                    ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200 font-bold shadow-[0_0_10px_rgba(6,182,212,0.15)]'
+                    : 'bg-[#101620] border-[#223044] text-slate-400'
+                } ${
+                  isTaxRegimeOverridden ? 'cursor-pointer hover:border-cyan-600' : 'cursor-default opacity-90'
                 }`}
               >
-                <div>12.5% LTCG</div>
-                <div className="text-[10px] text-slate-500">Held &ge; 24 Months</div>
+                <div className="flex items-center justify-between">
+                  <span>12.5% LTCG</span>
+                  {taxRegime === 'LTCG' && !isTaxRegimeOverridden && (
+                    <span className="text-[9px] bg-cyan-900/60 text-cyan-300 px-1 py-0.2 rounded font-normal">AUTO</span>
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-500 mt-0.5">
+                  {isPostListing ? 'Held ≥ 12 Months' : 'Held ≥ 24 Months'}
+                </div>
               </button>
             </div>
+
+            <p className="text-[10px] font-mono text-slate-500">
+              {isTaxRegimeOverridden
+                ? 'Manual tax regime override active. Statutory holding period threshold is bypassed.'
+                : `Finance Act 2024: ${isPostListing ? '12M post-listing threshold' : '24M unlisted threshold'}. Deterministically assigned to ${taxRegime}.`}
+            </p>
           </div>
 
           {/* Slider 3: Target Margin of Safety */}
@@ -326,6 +391,14 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
           </div>
         </div>
       </div>
+
+      {/* Unified Decision Intelligence & Action Panel */}
+      {offer.interpretations?.lockin_supply_cliff && (
+        <EvidenceInterpretationPanel
+          interpretation={offer.interpretations.lockin_supply_cliff}
+          title="Vault 2 / 9: Lock-In Cliff & Section 56(2)(x) Tax Drag Intelligence"
+        />
+      )}
 
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer

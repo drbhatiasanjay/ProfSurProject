@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StatutoryOfferDetails } from '../../types/terminal';
 import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
+import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
 import { FileText, Download, CheckCircle2, Presentation, ShieldCheck, Printer, Clock } from 'lucide-react';
 
 interface ICBoardDeckVaultProps {
@@ -83,6 +84,15 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
           </div>
 
           <div className="flex items-center gap-2">
+            <span className={`px-2.5 py-1.5 rounded-lg border font-mono text-xs font-bold flex items-center gap-1.5 ${
+              offer.dealIntegrity === 'PASS'
+                ? 'bg-emerald-950/70 border-emerald-800 text-emerald-300'
+                : offer.dealIntegrity === 'CONDITIONAL'
+                ? 'bg-amber-950/70 border-amber-800 text-amber-300'
+                : 'bg-rose-950/70 border-rose-800 text-rose-300'
+            }`}>
+              INTEGRITY: {offer.dealIntegrity}
+            </span>
             <span className={`px-3 py-1.5 rounded-lg border font-mono text-xs font-bold ${
               icMandate.verdict === 'STRONG_BUY_ALPHA'
                 ? 'bg-emerald-950/70 border-emerald-800 text-emerald-300'
@@ -161,6 +171,14 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
           </div>
         </div>
       </div>
+
+      {/* Unified Decision Intelligence & Action Panel */}
+      {offer.interpretations?.ic_stance_mandate && (
+        <EvidenceInterpretationPanel
+          interpretation={offer.interpretations.ic_stance_mandate}
+          title="Vault 10: Investment Committee Binding Action Mandate"
+        />
+      )}
 
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer
