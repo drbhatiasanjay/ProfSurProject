@@ -8,7 +8,28 @@ interface LintelTowersProps {
 }
 
 export const LintelTowers: React.FC<LintelTowersProps> = ({ offer, calibration }) => {
-  const isUnpriced = offer.isPriceUndisclosed || !offer.priceBandMax || offer.priceBandMax === 0;
+  // Exhaustive switch on pricingState.status
+  let isUnpriced = false;
+  let askingPe: number | null = null;
+
+  switch (offer.pricingState.status) {
+    case 'DRHP_UNPRICED':
+      isUnpriced = true;
+      askingPe = null;
+      break;
+    case 'RHP_PRICED':
+      isUnpriced = false;
+      askingPe = 2349.7; // Asking P/E at upper price band
+      break;
+    case 'TRADING_LIVE':
+      isUnpriced = false;
+      askingPe = 2349.7;
+      break;
+    default: {
+      const _exhaustiveCheck: never = offer.pricingState;
+      throw new Error(`Unhandled pricing state: ${JSON.stringify(_exhaustiveCheck)}`);
+    }
+  }
 
   // Tower 1 Metrics
   const freshPct = offer.freshIssuePct ?? (offer.issueSizeCr && offer.freshIssueCr !== null ? Math.round((offer.freshIssueCr / Math.max(1, offer.issueSizeCr)) * 100) : 100);
@@ -18,7 +39,6 @@ export const LintelTowers: React.FC<LintelTowersProps> = ({ offer, calibration }
 
   // Tower 2 Metrics
   const huberFair = calibration.warrantedFairMultiple || 49.6;
-  const askingPe = isUnpriced ? null : 2349.7; // Asking P/E at upper price band
   const frothPct = isUnpriced ? null : (calibration.unbackedFrothPct || 1508.8);
   const frothMultipleDiff = askingPe ? (askingPe - huberFair) : null;
 

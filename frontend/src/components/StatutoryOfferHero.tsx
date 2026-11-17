@@ -23,10 +23,58 @@ export const StatutoryOfferHero: React.FC<StatutoryOfferHeroProps> = ({
   const freshPct = offer.freshIssuePct ?? (offer.issueSizeCr && offer.freshIssueCr !== null ? Math.round((offer.freshIssueCr / Math.max(1, offer.issueSizeCr)) * 100) : 100);
   const ofsPct = offer.ofsPct ?? (offer.issueSizeCr && offer.ofsCr !== null ? Math.round((offer.ofsCr / Math.max(1, offer.issueSizeCr)) * 100) : 0);
 
+  // Exhaustive switch on pricingState.status
+  let isContained = false;
+  let priceCardContent: React.ReactNode = null;
+  let hasValidPrice = false;
+
+  switch (offer.pricingState.status) {
+    case 'DRHP_UNPRICED':
+      isContained = offer.pricingState.isContained;
+      hasValidPrice = false;
+      priceCardContent = (
+        <>
+          <div className="text-sm font-bold font-mono text-cyan-400 pt-0.5">
+            Drafting / Unpriced
+          </div>
+          <span className="text-[10px] text-slate-500 font-mono">SEBI Book-Build [●]</span>
+        </>
+      );
+      break;
+    case 'RHP_PRICED':
+      isContained = offer.pricingState.isContained;
+      hasValidPrice = true;
+      priceCardContent = (
+        <>
+          <div className="text-lg font-bold font-mono text-slate-100 tabular-nums">
+            ₹{offer.pricingState.priceBandMin} - ₹{offer.pricingState.priceBandMax}
+          </div>
+          <span className="text-[10px] text-slate-500 font-mono">Per Equity Share</span>
+        </>
+      );
+      break;
+    case 'TRADING_LIVE':
+      isContained = false;
+      hasValidPrice = true;
+      priceCardContent = (
+        <>
+          <div className="text-lg font-bold font-mono text-slate-100 tabular-nums">
+            LTP ₹{offer.pricingState.ltp}
+          </div>
+          <span className="text-[10px] text-slate-500 font-mono">List: ₹{offer.pricingState.listingPrice}</span>
+        </>
+      );
+      break;
+    default: {
+      const _exhaustiveCheck: never = offer.pricingState;
+      throw new Error(`Unhandled pricing state: ${JSON.stringify(_exhaustiveCheck)}`);
+    }
+  }
+
   return (
     <div className="rounded-lg border border-[#223044] bg-[#101620] p-5 shadow-sm space-y-4">
       {/* ⚠️ SEBI ICDR 2018 Statutory Evidence Containment Banner (when isContained === true) */}
-      {offer.isContained && (
+      {isContained && (
         <div className="rounded-md border-l-4 border-amber-500 bg-amber-950/40 border border-amber-900/60 p-3.5 text-xs text-amber-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-start gap-2.5">
             <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
@@ -61,7 +109,7 @@ export const StatutoryOfferHero: React.FC<StatutoryOfferHeroProps> = ({
         </span>
 
         {/* Badge 3: Audit / Containment Status */}
-        {offer.isContained ? (
+        {isContained ? (
           <span className="px-2 py-0.5 rounded bg-rose-950/70 border border-rose-800 text-rose-300 font-semibold flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
             ⚠️ CONTAINED — AWAITING EVIDENCE REVIEW
@@ -164,27 +212,13 @@ export const StatutoryOfferHero: React.FC<StatutoryOfferHeroProps> = ({
         {/* Card 1: Price Band */}
         <div className="p-3 rounded bg-[#090D12] border border-[#1E293B]">
           <span className="text-[11px] text-slate-400 block mb-1">Price Band</span>
-          {offer.priceBandMax && offer.priceBandMax > 0 ? (
-            <>
-              <div className="text-lg font-bold font-mono text-slate-100 tabular-nums">
-                ₹{offer.priceBandMin} - ₹{offer.priceBandMax}
-              </div>
-              <span className="text-[10px] text-slate-500 font-mono">Per Equity Share</span>
-            </>
-          ) : (
-            <>
-              <div className="text-sm font-bold font-mono text-cyan-400 pt-0.5">
-                Drafting / Unpriced
-              </div>
-              <span className="text-[10px] text-slate-500 font-mono">SEBI Book-Build [●]</span>
-            </>
-          )}
+          {priceCardContent}
         </div>
 
         {/* Card 2: Market Lot */}
         <div className="p-3 rounded bg-[#090D12] border border-[#1E293B]">
           <span className="text-[11px] text-slate-400 block mb-1">Market Lot</span>
-          {offer.lotSize && offer.priceBandMax && offer.lotSize > 0 ? (
+          {offer.lotSize && hasValidPrice && offer.lotSize > 0 ? (
             <>
               <div className="text-lg font-bold font-mono text-slate-100 tabular-nums">
                 {offer.lotSize} <span className="text-xs font-normal text-slate-400">shares</span>

@@ -145,6 +145,86 @@ def evaluate_capability_gate(
     )
 
 
+def _get_deal_attr(deal: Any, attr: str, default: Any = None) -> Any:
+    if deal is None:
+        return default
+    if isinstance(deal, dict):
+        return deal.get(attr, default)
+    return getattr(deal, attr, default)
+
+
+def assert_capability_allowed(deal: Any, capability: CapabilityType) -> None:
+    """
+    Fail-closed backend assertion enforcing analytical gating:
+    - Raises ExportBlockedError whenever origin == "INGESTED" and snapshot_status != "ACCEPTED_FOR_ANALYSIS".
+    - Raises ExportBlockedError whenever is_contained blocks valuation or board-deck exports.
+    - Raises ExportBlockedError whenever unpriced deal attempts valuation, WACC, or reverse DCF.
+    - Raises ExportBlockedError on LEGACY_EXAMPLE origins or automated recommendations under P0-08.
+    """
+    origin = _get_deal_attr(deal, "origin", None)
+    snapshot_status = _get_deal_attr(deal, "snapshot_status", None)
+    is_contained = bool(_get_deal_attr(deal, "is_contained", False) or _get_deal_attr(deal, "isContained", False))
+
+    # Check pricing state / unpriced
+    pricing_state = _get_deal_attr(deal, "pricing_state", None) or _get_deal_attr(deal, "pricingState", None)
+    if isinstance(pricing_state, dict):
+        pricing_status = pricing_state.get("status")
+        if pricing_status == "DRHP_UNPRICED":
+            is_unpriced = True
+            is_contained = is_contained or bool(pricing_state.get("isContained", False))
+        else:
+            is_unpriced = False
+            is_contained = is_contained or bool(pricing_state.get("isContained", False))
+    else:
+        is_unpriced = bool(_get_deal_attr(deal, "is_unpriced", False) or _get_deal_attr(deal, "isPriceUndisclosed", False))
+
+    company_name = str(_get_deal_attr(deal, "company_name", "") or _get_deal_attr(deal, "companyName", ""))
+    deal_id = str(_get_deal_attr(deal, "deal_id", "") or _get_deal_attr(deal, "symbol", ""))
+    cin = str(_get_deal_attr(deal, "cin", ""))
+
+    # 1. Reject LEGACY_EXAMPLE unconditionally
+    if origin == "LEGACY_EXAMPLE":
+        raise ExportBlockedError(
+            "LEGACY_EXAMPLE origin is strictly prohibited from analytical processing or evidence derivation under P1-02."
+        )
+
+    # 2. Origin INGESTED requires snapshot_status == 'ACCEPTED_FOR_ANALYSIS'
+    if origin == "INGESTED" and snapshot_status != "ACCEPTED_FOR_ANALYSIS":
+        raise ExportBlockedError(
+            f"Ingested deal '{deal_id or company_name}' is unreviewed or in status '{snapshot_status or 'UNREVIEWED'}'. "
+            "Only ACCEPTED_FOR_ANALYSIS snapshots are authorized for analytical processing."
+        )
+
+    # 3. Block unreviewed built-in registry or unaccepted HCCH under P0-01 containment
+    if is_hcch_entity(deal_id, company_name, cin):
+        if origin == "LEGACY_REGISTRY" or snapshot_status != "ACCEPTED_FOR_ANALYSIS" or is_contained:
+            if capability in (CapabilityType.VALUATION, CapabilityType.BOARD_DECK_EXPORT, CapabilityType.WACC_ROIC, CapabilityType.REVERSE_DCF):
+                raise ExportBlockedError(
+                    f"Analytical capability '{capability.value}' is BLOCKED for {company_name or 'HCCH'} under P0-01 containment. "
+                    "Evidence snapshot must be reviewed and accepted in Provenance Ledger."
+                )
+
+    # 4. is_contained blocks valuation and board-deck exports
+    if is_contained and capability in (CapabilityType.VALUATION, CapabilityType.BOARD_DECK_EXPORT, CapabilityType.WACC_ROIC, CapabilityType.REVERSE_DCF):
+        raise ExportBlockedError(
+            f"Analytical capability '{capability.value}' is BLOCKED because deal is currently marked QUARANTINED (is_contained=True). "
+            "Evidence must be audited and accepted before valuation or IC board deck export."
+        )
+
+    # 5. Recommendation / Approval ban (P0-08)
+    if capability == CapabilityType.RECOMMENDATIONS:
+        raise ExportBlockedError(
+            "Automated investment committee approvals, agency credit ratings, and definitive anchor recommendations are strictly prohibited under P0-08."
+        )
+
+    # 6. Unpriced book-building circuit breaker (P0-03, P0-07)
+    if is_unpriced and capability in (CapabilityType.VALUATION, CapabilityType.WACC_ROIC, CapabilityType.REVERSE_DCF):
+        raise ExportBlockedError(
+            f"Unpriced DRHP with undisclosed issue price under SEBI ICDR 2018 Regulation 26(1). "
+            f"Analytical capability '{capability.value}' cannot be computed without accepted price."
+        )
+
+
 def assert_export_allowed(
     dossier: Any,
     snapshot_id: Optional[str] = None,

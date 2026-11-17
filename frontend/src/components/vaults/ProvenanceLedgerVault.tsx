@@ -111,10 +111,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: '997,461,456 Equity Shares',
           confidenceScore: 0.99,
+          bboxCoordinates: [72.0, 140.5, 480.0, 168.0],
+          bbox: [72.0, 140.5, 480.0, 168.0],
           pdfPageNumber: 48,
           printedPageLabel: 'Ch. III p. 48',
           chapterName: 'The Offer',
-          bbox: [72.0, 140.5, 480.0, 168.0],
           verbatimSnippet: 'Initial Public Offering of up to 997,461,456 Equity Shares of face value of ₹10 each of Hindustan Coca-Cola Beverages Limited ("Company" or "Issuer") comprising an Offer for Sale...'
         },
         {
@@ -122,10 +123,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: '₹0.00 Cr (100% OFS Structure)',
           confidenceScore: 0.98,
+          bboxCoordinates: [72.0, 192.0, 480.0, 218.0],
+          bbox: [72.0, 192.0, 480.0, 218.0],
           pdfPageNumber: 48,
           printedPageLabel: 'Ch. III p. 48',
           chapterName: 'The Offer',
-          bbox: [72.0, 192.0, 480.0, 218.0],
           verbatimSnippet: 'The entire Offer constitutes an Offer for Sale by the Selling Shareholder. The Company will not receive any proceeds from the Offer.'
         },
         {
@@ -133,10 +135,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'NOT_FOUND',
           value: 'Undisclosed [●] (Drafting DRHP)',
           confidenceScore: 0.95,
+          bboxCoordinates: [100.0, 280.0, 420.0, 310.0],
+          bbox: [100.0, 280.0, 420.0, 310.0],
           pdfPageNumber: 1,
           printedPageLabel: 'Cover Page',
           chapterName: 'Cover Details',
-          bbox: [100.0, 280.0, 420.0, 310.0],
           verbatimSnippet: 'The Price Band and the minimum Bid Lot will be decided by our Company in consultation with the BRLMs and will be advertised in [●] editions of [●] at least two Working Days prior to the Bid/Offer Opening Date...',
           reconfirmationReason: 'Awaiting Red Herring Prospectus (RHP) syndicate pricing announcement'
         },
@@ -145,10 +148,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: 'Bottling Investments Group (BIG)',
           confidenceScore: 0.99,
+          bboxCoordinates: [72.0, 330.0, 510.0, 360.0],
+          bbox: [72.0, 330.0, 510.0, 360.0],
           pdfPageNumber: 52,
           printedPageLabel: 'Ch. III p. 52',
           chapterName: 'The Offer',
-          bbox: [72.0, 330.0, 510.0, 360.0],
           verbatimSnippet: 'Offer for Sale of up to 997,461,456 Equity Shares by European Refreshments UC ("Promoter Selling Shareholder"), an indirect wholly owned subsidiary of The Coca-Cola Company.'
         },
         {
@@ -156,10 +160,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: '₹14,021.50 Cr',
           confidenceScore: 0.97,
+          bboxCoordinates: [80.0, 110.0, 520.0, 135.0],
+          bbox: [80.0, 110.0, 520.0, 135.0],
           pdfPageNumber: 282,
           printedPageLabel: 'Ch. V p. 282',
           chapterName: 'Restated Financial Information',
-          bbox: [80.0, 110.0, 520.0, 135.0],
           verbatimSnippet: 'Revenue from operations for the financial year ended March 31, 2024 stood at ₹14,021.50 crore compared to ₹12,840.20 crore in the previous financial year.'
         },
         {
@@ -167,10 +172,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'NEEDS_RECONFIRMATION',
           value: '13.8% (Reported vs. 15.2% Normalized)',
           confidenceScore: 0.84,
+          bboxCoordinates: [72.0, 410.0, 490.0, 445.0],
+          bbox: [72.0, 410.0, 490.0, 445.0],
           pdfPageNumber: 290,
           printedPageLabel: 'Ch. V p. 290',
           chapterName: 'Financial Discussion',
-          bbox: [72.0, 410.0, 490.0, 445.0],
           verbatimSnippet: 'Restated operating EBITDA margin was 13.80% in FY24 after accounting for non-operating logistics restructuring charges of ₹184.20 crore.',
           reconfirmationReason: 'Discrepancy between reported IFRS EBITDA and pro-forma adjusted EBITDA with one-time logistics write-offs'
         },
@@ -179,10 +185,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: '₹0.00 Cr (Pristine Net Cash)',
           confidenceScore: 0.99,
+          bboxCoordinates: [72.0, 490.0, 450.0, 515.0],
+          bbox: [72.0, 490.0, 450.0, 515.0],
           pdfPageNumber: 280,
           printedPageLabel: 'Ch. V p. 280',
           chapterName: 'Statement of Borrowings',
-          bbox: [72.0, 490.0, 450.0, 515.0],
           verbatimSnippet: 'As of March 31, 2024, our Company has zero long-term borrowings and zero short-term working capital bank borrowings.'
         },
         {
@@ -190,10 +197,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: '180 Days (SEBI ICDR Reg 17)',
           confidenceScore: 0.96,
+          bboxCoordinates: [72.0, 540.0, 500.0, 570.0],
+          bbox: [72.0, 540.0, 500.0, 570.0],
           pdfPageNumber: 58,
           printedPageLabel: 'Ch. III p. 58',
           chapterName: 'Capital Structure',
-          bbox: [72.0, 540.0, 500.0, 570.0],
           verbatimSnippet: 'In accordance with Regulation 17 of the SEBI ICDR Regulations, the entire pre-IPO equity share capital held by persons other than the Promoters shall be locked-in for a period of six months from the date of Allotment.'
         }
       ]
@@ -203,10 +211,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: '₹10,000.00 Cr (100% Fresh Issue)',
           confidenceScore: 0.99,
+          bboxCoordinates: [72.0, 120.0, 480.0, 145.0],
+          bbox: [72.0, 120.0, 480.0, 145.0],
           pdfPageNumber: 45,
           printedPageLabel: 'Ch. III p. 45',
           chapterName: 'The Offer',
-          bbox: [72.0, 120.0, 480.0, 145.0],
           verbatimSnippet: 'Initial Public Offering of Equity Shares of face value of ₹10 each for cash at a price of ₹108 per Equity Share aggregating up to ₹10,000.00 crore.'
         },
         {
@@ -214,10 +223,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: '₹102 to ₹108 per Share',
           confidenceScore: 0.99,
+          bboxCoordinates: [90.0, 200.0, 450.0, 230.0],
+          bbox: [90.0, 200.0, 450.0, 230.0],
           pdfPageNumber: 1,
           printedPageLabel: 'Cover Details',
           chapterName: 'Price Announcement',
-          bbox: [90.0, 200.0, 450.0, 230.0],
           verbatimSnippet: 'The Price Band has been fixed at ₹102 to ₹108 per Equity Share of face value of ₹10 each.'
         },
         {
@@ -225,10 +235,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: '₹2,500.00 Cr (Exactly 25.0% of Fresh)',
           confidenceScore: 0.98,
+          bboxCoordinates: [72.0, 310.0, 520.0, 340.0],
+          bbox: [72.0, 310.0, 520.0, 340.0],
           pdfPageNumber: 68,
           printedPageLabel: 'Ch. III p. 68',
           chapterName: 'Objects of Offer',
-          bbox: [72.0, 310.0, 520.0, 340.0],
           verbatimSnippet: 'The amount utilized for general corporate purposes shall not exceed 25.00% of the Gross Proceeds from the Fresh Issue, being ₹2,500.00 crore.'
         },
         {
@@ -236,10 +247,11 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
           status: 'FOUND',
           value: '₹7,500.00 Cr (75.0% of Fresh)',
           confidenceScore: 0.99,
+          bboxCoordinates: [72.0, 360.0, 500.0, 390.0],
+          bbox: [72.0, 360.0, 500.0, 390.0],
           pdfPageNumber: 69,
           printedPageLabel: 'Ch. III p. 69',
           chapterName: 'Objects of Offer',
-          bbox: [72.0, 360.0, 500.0, 390.0],
           verbatimSnippet: 'Investment in our wholly owned subsidiary, NTPC Renewable Energy Limited (NREL) for repayment/prepayment in full or in part of certain outstanding borrowings.'
         }
       ];

@@ -11,6 +11,11 @@ export interface MarketIndex {
 
 export type BoardSegment = 'Mainboard' | 'NSE_Emerge' | 'BSE_SME';
 
+export type DealPricingState =
+  | { status: 'DRHP_UNPRICED'; isContained: boolean }
+  | { status: 'RHP_PRICED'; priceBandMin: number; priceBandMax: number; isContained: boolean }
+  | { status: 'TRADING_LIVE'; listingPrice: number; ltp: number };
+
 export interface StatutoryOfferDetails {
   symbol: string;
   companyName: string;
@@ -22,9 +27,7 @@ export interface StatutoryOfferDetails {
   filingDate?: string;
   issueStartDate: string;
   issueEndDate: string;
-  priceBandMin: number | null;
-  priceBandMax: number | null;
-  isPriceUndisclosed?: boolean;
+  pricingState: DealPricingState;
   priceBandDisplay?: string; // e.g. "₹102 - ₹108" or "Drafting / Unpriced (₹[●])"
   lotSize: number | null;
   minCommitmentInr?: number | null;
@@ -43,7 +46,6 @@ export interface StatutoryOfferDetails {
   sebiEligibilityRoute: string; // e.g. "Regulation 6(2) 75% QIB Book Building"
   lockInDaysQIBAnchor: number;
   lockInDaysPreIPOShareholders: number;
-  isContained?: boolean;
   containmentReason?: string;
   dickinsonStage?: string; // "MATURE (CASH COW)"
   cashFlowPattern?: string; // "(+, -, -)"
@@ -246,18 +248,46 @@ export interface FivePointReconciliationGate {
   };
 }
 
-export interface ProvenanceField<T> {
-  fieldName: string;
-  status: 'FOUND' | 'NOT_FOUND' | 'NEEDS_RECONFIRMATION';
-  value: T | null;
-  confidenceScore: number;
-  pdfPageNumber?: number;
-  printedPageLabel?: string;
-  chapterName?: string;
-  bbox?: [number, number, number, number]; // [x0, y0, x1, y1]
-  verbatimSnippet?: string;
-  reconfirmationReason?: string;
-}
+export type ProvenanceField<T> =
+  | {
+      status: 'FOUND';
+      fieldName: string;
+      value: T;
+      confidenceScore: number; // Non-optional on FOUND
+      bboxCoordinates: [number, number, number, number]; // Non-optional on FOUND
+      bbox?: [number, number, number, number];
+      pdfPageNumber?: number;
+      printedPageLabel?: string;
+      chapterName?: string;
+      verbatimSnippet?: string;
+      reconfirmationReason?: never;
+    }
+  | {
+      status: 'NOT_FOUND';
+      fieldName: string;
+      value: T | null;
+      confidenceScore?: number;
+      bboxCoordinates?: [number, number, number, number];
+      bbox?: [number, number, number, number];
+      pdfPageNumber?: number;
+      printedPageLabel?: string;
+      chapterName?: string;
+      verbatimSnippet?: string;
+      reconfirmationReason?: string;
+    }
+  | {
+      status: 'NEEDS_RECONFIRMATION';
+      fieldName: string;
+      value: T | null;
+      confidenceScore?: number;
+      bboxCoordinates?: [number, number, number, number];
+      bbox?: [number, number, number, number];
+      pdfPageNumber?: number;
+      printedPageLabel?: string;
+      chapterName?: string;
+      verbatimSnippet?: string;
+      reconfirmationReason: string; // Non-optional on NEEDS_RECONFIRMATION
+    };
 
 export interface NarrativeIntelligencePillars {
   sectorContext: string;

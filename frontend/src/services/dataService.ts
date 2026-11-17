@@ -60,9 +60,12 @@ export const mockOfferDetails: StatutoryOfferDetails = {
   filingDateLabel: 'RHP · NOVEMBER 2024',
   issueStartDate: '2024-11-19',
   issueEndDate: '2024-11-22',
-  priceBandMin: 102,
-  priceBandMax: 108,
-  isPriceUndisclosed: false,
+  pricingState: {
+    status: 'RHP_PRICED',
+    priceBandMin: 102,
+    priceBandMax: 108,
+    isContained: false
+  },
   priceBandDisplay: '₹102 - ₹108',
   lotSize: 138,
   minCommitmentInr: 14904,
@@ -84,7 +87,6 @@ export const mockOfferDetails: StatutoryOfferDetails = {
   sebiEligibilityRoute: 'Regulation 6(2) 75% QIB Book Building',
   lockInDaysQIBAnchor: 90,
   lockInDaysPreIPOShareholders: 180,
-  isContained: false,
   dickinsonStage: 'GROWTH',
   cashFlowPattern: '(+, -, +)',
   gcpAllocationCr: 2500.0,
@@ -321,9 +323,10 @@ export const hccbOfferDetails: StatutoryOfferDetails = {
   filingDateLabel: 'DRHP · OCTOBER 2026',
   issueStartDate: 'Statutory DRHP',
   issueEndDate: 'Under Review (SEBI)',
-  priceBandMin: null,
-  priceBandMax: null,
-  isPriceUndisclosed: true,
+  pricingState: {
+    status: 'DRHP_UNPRICED',
+    isContained: true
+  },
   priceBandDisplay: 'Drafting / Unpriced (₹[●])',
   lotSize: null,
   minCommitmentInr: null,
@@ -347,7 +350,6 @@ export const hccbOfferDetails: StatutoryOfferDetails = {
   sebiEligibilityRoute: 'Regulation 6(2) 75% QIB Book Building',
   lockInDaysQIBAnchor: 90,
   lockInDaysPreIPOShareholders: 180,
-  isContained: true,
   containmentReason: 'SEBI ICDR 2018 statutory guidelines, real analytical processing (Offer Valuation, WACC/ROIC, Reverse DCF, and Board Deck generation) is strictly BLOCKED until the 513-page parent DRHP is fully indexed and its evidence ledger reviewed and accepted in Tab 2 (Provenance Ledger). All values shown below are candidate unreviewed disclosures and cannot be used for investment, credit, or underwriting decisions.',
   dickinsonStage: 'MATURE (CASH COW)',
   cashFlowPattern: '(+, -, -)',
@@ -549,8 +551,12 @@ export const swiggyOfferDetails: StatutoryOfferDetails = {
   issueType: 'Mainboard',
   issueStartDate: '2024-11-06',
   issueEndDate: '2024-11-08',
-  priceBandMin: 371,
-  priceBandMax: 390,
+  pricingState: {
+    status: 'RHP_PRICED',
+    priceBandMin: 371,
+    priceBandMax: 390,
+    isContained: false
+  },
   lotSize: 38,
   issueSizeCr: 11327.43,
   freshIssueCr: 4499.00,
@@ -570,8 +576,12 @@ export const waareeOfferDetails: StatutoryOfferDetails = {
   issueType: 'Mainboard',
   issueStartDate: '2024-10-21',
   issueEndDate: '2024-10-23',
-  priceBandMin: 1427,
-  priceBandMax: 1503,
+  pricingState: {
+    status: 'RHP_PRICED',
+    priceBandMin: 1427,
+    priceBandMax: 1503,
+    isContained: false
+  },
   lotSize: 9,
   issueSizeCr: 4321.44,
   freshIssueCr: 3600.00,
@@ -636,6 +646,21 @@ export async function fetchLiveMarketData(symbol: string = 'NTPCGREEN') {
     const res = await fetch(`http://localhost:8000/api/pre-ipo/market-status?symbol=${encodeURIComponent(symbol)}`);
     if (!res.ok) throw new Error('Backend offline');
     const data = await res.json();
+    if (data?.offer && !data.offer.pricingState) {
+      if (data.offer.isPriceUndisclosed || !data.offer.priceBandMax) {
+        data.offer.pricingState = {
+          status: 'DRHP_UNPRICED',
+          isContained: Boolean(data.offer.isContained)
+        };
+      } else {
+        data.offer.pricingState = {
+          status: 'RHP_PRICED',
+          priceBandMin: Number(data.offer.priceBandMin ?? 0),
+          priceBandMax: Number(data.offer.priceBandMax ?? 0),
+          isContained: Boolean(data.offer.isContained)
+        };
+      }
+    }
     return data;
   } catch {
     return getFallbackForSymbol(symbol);

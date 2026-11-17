@@ -167,6 +167,10 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
             "issueType": "DRHP",
             "issueStartDate": "Statutory DRHP",
             "issueEndDate": "Under Review (SEBI)",
+            "pricingState": {
+                "status": "DRHP_UNPRICED",
+                "isContained": True
+            },
             "priceBandMin": None,
             "priceBandMax": None,
             "isPriceUndisclosed": True,
@@ -327,6 +331,12 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
             "issueType": "Mainboard",
             "issueStartDate": "2024-11-06",
             "issueEndDate": "2024-11-08",
+            "pricingState": {
+                "status": "RHP_PRICED",
+                "priceBandMin": 371,
+                "priceBandMax": 390,
+                "isContained": False
+            },
             "priceBandMin": 371,
             "priceBandMax": 390,
             "lotSize": 38,
@@ -418,6 +428,12 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
             "issueType": "Mainboard",
             "issueStartDate": "2024-10-21",
             "issueEndDate": "2024-10-23",
+            "pricingState": {
+                "status": "RHP_PRICED",
+                "priceBandMin": 1427,
+                "priceBandMax": 1503,
+                "isContained": False
+            },
             "priceBandMin": 1427,
             "priceBandMax": 1503,
             "lotSize": 9,
@@ -510,6 +526,12 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
             "issueType": "Mainboard",
             "issueStartDate": "2024-11-19",
             "issueEndDate": "2024-11-22",
+            "pricingState": {
+                "status": "RHP_PRICED",
+                "priceBandMin": 102,
+                "priceBandMax": 108,
+                "isContained": False
+            },
             "priceBandMin": 102,
             "priceBandMax": 108,
             "isPriceUndisclosed": False,
@@ -653,6 +675,7 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
     # 5. Huber Calibration Results & 5-Part Narrative (Dynamic Econometric Engine)
     from models.pre_ipo_data import PRE_IPO_REGISTRY
     from models.pre_ipo_engine import compute_dynamic_huber_valuation, generate_valuation_evidence_narrative
+    from models.pre_ipo_capability_gate import assert_capability_allowed, CapabilityType, ExportBlockedError
 
     dossier_key = "ntpc_green"
     if "coca" in symbol.lower() or "hccb" in symbol.lower():
@@ -667,38 +690,68 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
         dossier_key = "tata_technologies"
 
     dossier = PRE_IPO_REGISTRY.get(dossier_key, PRE_IPO_REGISTRY["ntpc_green"])
-    huber_res = compute_dynamic_huber_valuation(dossier)
-    narrative = generate_valuation_evidence_narrative(dossier, huber_res)
 
-    coef_list = []
-    for k, v in huber_res.coefficients.items():
-        if k != "const":
-            coef_list.append({"feature": k, "weight": round(v, 4), "tStat": 2.50})
+    try:
+        # Enforce fail-closed capability gate
+        assert_capability_allowed(offer_data, CapabilityType.VALUATION)
+        huber_res = compute_dynamic_huber_valuation(dossier)
+        narrative = generate_valuation_evidence_narrative(dossier, huber_res)
 
-    calibration_data = {
-        "metric": "Price-to-Earnings (P/E)",
-        "declaredPeerMedian": huber_res.declared_peer_median,
-        "algorithmicPeerMedian": huber_res.algo_peer_median,
-        "drhpBiasIndex": huber_res.drhp_peer_bias_index,
-        "warrantedFairMultiple": huber_res.warranted_fair_multiple,
-        "unbackedFrothPct": huber_res.unbacked_froth_pct,
-        "formula": "P/E = β0 + β1*(RevCAGR) + β2*(EBITDA%) + β3*(ROCE) + β4*(CFO/EBITDA)",
-        "coefficients": coef_list if coef_list else [
-            {"feature": "Revenue CAGR 3Y (%)", "weight": 0.482, "tStat": 3.42},
-            {"feature": "EBITDA Margin (%)", "weight": 0.351, "tStat": 2.89},
-            {"feature": "ROCE (%)", "weight": 0.224, "tStat": 2.14},
-            {"feature": "CFO / EBITDA Cash Conversion", "weight": 8.650, "tStat": 3.91},
-        ],
-        "rSquaredRobust": huber_res.r_squared_pseudo,
-        "narrative": narrative,
-    }
+        coef_list = []
+        for k, v in huber_res.coefficients.items():
+            if k != "const":
+                coef_list.append({"feature": k, "weight": round(v, 4), "tStat": 2.50})
+
+        calibration_data = {
+            "metric": "Price-to-Earnings (P/E)",
+            "declaredPeerMedian": huber_res.declared_peer_median,
+            "algorithmicPeerMedian": huber_res.algo_peer_median,
+            "drhpBiasIndex": huber_res.drhp_peer_bias_index,
+            "warrantedFairMultiple": huber_res.warranted_fair_multiple,
+            "unbackedFrothPct": huber_res.unbacked_froth_pct,
+            "formula": "P/E = β0 + β1*(RevCAGR) + β2*(EBITDA%) + β3*(ROCE) + β4*(CFO/EBITDA)",
+            "coefficients": coef_list if coef_list else [
+                {"feature": "Revenue CAGR 3Y (%)", "weight": 0.482, "tStat": 3.42},
+                {"feature": "EBITDA Margin (%)", "weight": 0.351, "tStat": 2.89},
+                {"feature": "ROCE (%)", "weight": 0.224, "tStat": 2.14},
+                {"feature": "CFO / EBITDA Cash Conversion", "weight": 8.650, "tStat": 3.91},
+            ],
+            "rSquaredRobust": huber_res.r_squared_pseudo,
+            "narrative": narrative,
+        }
+
+        fund_score = round(max(5.0, min(95.0, 100.0 - (huber_res.unbacked_froth_pct * 0.5))), 1) if huber_res.unbacked_froth_pct > 0 else round(min(95.0, 75.0 + abs(huber_res.unbacked_froth_pct) * 0.3), 1)
+        composite_verdict = narrative["verdict"]
+
+    except ExportBlockedError as gate_err:
+        calibration_data = {
+            "metric": "Price-to-Earnings (P/E) [CONTAINED / REVIEW REQUIRED]",
+            "declaredPeerMedian": 0.0,
+            "algorithmicPeerMedian": 0.0,
+            "drhpBiasIndex": 0.0,
+            "warrantedFairMultiple": 0.0,
+            "unbackedFrothPct": 0.0,
+            "formula": f"BLOCKED: {str(gate_err)}",
+            "coefficients": [],
+            "rSquaredRobust": 0.0,
+            "isUnpricedFailsafe": True,
+            "unpricedNotice": str(gate_err),
+            "narrative": {
+                "verdict": "QUARANTINED / REVIEW_REQUIRED",
+                "rationale": str(gate_err),
+                "sectorContext": "SEBI ICDR 2018 Statutory Evidence Containment active.",
+                "lifecyclePrecedents": "Unreviewed or unpriced prospectus.",
+                "riskRadar": "Analytical valuation models barred pending evidence acceptance.",
+            }
+        }
+        fund_score = 0.0
+        composite_verdict = "QUARANTINED / REVIEW_REQUIRED"
 
     # 6. ML Scorecard & SHAP
-    fund_score = round(max(5.0, min(95.0, 100.0 - (huber_res.unbacked_froth_pct * 0.5))), 1) if huber_res.unbacked_froth_pct > 0 else round(min(95.0, 75.0 + abs(huber_res.unbacked_froth_pct) * 0.3), 1)
     scorecard_data = {
         "fundamentalScore": fund_score,
         "sentimentScore": 47.0,
-        "compositeRating": narrative["verdict"],
+        "compositeRating": composite_verdict,
         "prob180DOutperformance": 14.2,
         "expectedMonth6LockinCAR": -10.4,
         "lockinExpiryDate": "2025-05-22",

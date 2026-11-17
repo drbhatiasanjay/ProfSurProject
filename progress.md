@@ -112,5 +112,58 @@
   - 6 verified `.png` screenshots in brain artifact directory.
 
 ### Phase 7: Final Review & Milestone Commit
-- **Status:** in_progress
+- **Status:** complete
 - **Started:** 2026-11-17 01:38 IST
+- **Completed:** 2026-11-17 01:45 IST
+- Committed Option A dual-layer cockpit baseline at `107f2505`.
+
+### Phase 8: Option 2 Pinned-HUD & Synchronized Zero-Scroll
+- **Status:** complete
+- **Started:** 2026-11-17 12:15 IST
+- **Completed:** 2026-11-17 12:25 IST
+- Implemented `CompactCockpitHUD.tsx` (46px pinned strip with expand/collapse toggle).
+- Pinned `SidebarNav.tsx` to prevent navigation disappearing during content scroll.
+- Built scroll reset to $y=0$ in `App.tsx` on vault change.
+
+### Phase 9: Viewport Height Normalization & Display Fix
+- **Status:** complete
+- **Started:** 2026-11-17 12:35 IST
+- **Completed:** 2026-11-17 12:50 IST
+- **Root Cause Diagnosed**:
+  1. CSS Flexbox collapse: Root container was using `min-h-screen` without explicit `h-screen` / `height: 100%`, causing flex child with `flex-1 overflow-hidden` to compute to `height: 0px` in Chromium/Edge desktop browsers.
+  2. Missing defensive optional chaining: `offer.companyName.includes(...)` in `CompactCockpitHUD.tsx` risked null reference during dynamic deal switches.
+- **Remediation Applied**:
+  1. `frontend/src/index.css`: Added explicit `html, body, #root { height: 100%; margin: 0; padding: 0; }`.
+  2. `frontend/src/App.tsx`: Normalized outer viewport to `<div className="h-screen w-full bg-[#090D12] text-slate-100 flex flex-col font-sans overflow-hidden">` with `min-h-0 min-w-0` on flex items so height never computes to 0px.
+  3. `frontend/src/components/SidebarNav.tsx`: Set to `h-full overflow-hidden` with `flex-1 overflow-y-auto` internal scrolling.
+  4. `frontend/src/components/CompactCockpitHUD.tsx`: Wrapped all deal accesses in optional chaining (`offer?.symbol`, `offer?.companyName?.includes`, `offer?.issueSizeCr ?? 0`).
+- **Live Automated Verification**:
+  - Script `scripts/diagnose_browser_error.py` executed against live `http://localhost:5173/`.
+  - HTTP Status: `200 OK`.
+  - DOM Rendered: `Root HTML length = 41,624 bytes`.
+  - Browser Page Errors: `0`.
+  - Vault 2 Live Peer Comps Table: `visible = True` at $y=0$.
+  - Verification Artifacts on disk: `current_live_screen.png` and `current_live_screen_vault2.png`.
+
+### Phase 10: Discriminated Unions & SEBI Gate Hardening
+- **Status:** complete
+- **Started:** 2026-11-17 13:05 IST
+- **Completed:** 2026-11-17 13:35 IST
+- **Refactored Items**:
+  1. **Deal Statutory & Pricing Lifecycle (`DealPricingState`)**:
+     - Converted loose booleans (`isPriceUndisclosed`, `priceBandMin`, `priceBandMax`, `isContained`) into a TypeScript discriminated union:
+       - `{ status: 'DRHP_UNPRICED'; isContained: boolean }`
+       - `{ status: 'RHP_PRICED'; priceBandMin: number; priceBandMax: number; isContained: boolean }`
+       - `{ status: 'TRADING_LIVE'; listingPrice: number; ltp: number }`
+     - Updated `CompactCockpitHUD.tsx`, `LintelTowers.tsx`, `StatutoryOfferHero.tsx`, and `dataService.ts` using exhaustive `switch (pricingState.status)` checks with compile-time exhaustiveness assertions (`const _exhaustiveCheck: never = offer.pricingState`).
+  2. **SEBI ICDR Regulatory Capability & Containment Gate (`assert_capability_allowed`)**:
+     - Added unified fail-closed backend assertion `assert_capability_allowed(deal, capability)` in `models/pre_ipo_capability_gate.py`.
+     - Strictly raises `ExportBlockedError` whenever `origin == "INGESTED"` without `ACCEPTED_FOR_ANALYSIS`, when `is_contained == True` on valuation/board-deck exports, when unpriced DRHP attempts valuation/WACC/DCF, or when automated recommendations are requested under P0-08.
+     - Wired into FastAPI endpoint `/api/pre-ipo/market-status` in `api/server.py` to catch `ExportBlockedError` and return a safe, quarantined payload with diagnostic rationale.
+  3. **Tri-State Provenance Reconciliation Machine (`ProvenanceField<T>`)**:
+     - Converted `ProvenanceField<T>` into a discriminated union enforcing non-optional `bboxCoordinates` and `confidenceScore` on `status: 'FOUND'`, and non-optional `reconfirmationReason` on `status: 'NEEDS_RECONFIRMATION'`.
+     - Updated all provenance records in `ProvenanceLedgerVault.tsx` with explicit `bboxCoordinates` and high confidence scores.
+- **Verification Evidence**:
+  - `tests/test_assert_capability_allowed.py`: All 5 adversarial capability tests pass first-time-right.
+  - `tests/test_api_capability_gate.py`: FastAPI endpoint tests pass with strict validation of `pricingState` discriminated union.
+  - Vite HMR: Zero compile warnings or errors across all modified frontend components.
