@@ -27,6 +27,7 @@ export const StatutoryOfferHero: React.FC<StatutoryOfferHeroProps> = ({
   let isContained = false;
   let priceCardContent: React.ReactNode = null;
   let hasValidPrice = false;
+  let priceBandMax: number | null = null;
 
   switch (offer.pricingState.status) {
     case 'DRHP_UNPRICED':
@@ -44,6 +45,7 @@ export const StatutoryOfferHero: React.FC<StatutoryOfferHeroProps> = ({
     case 'RHP_PRICED':
       isContained = offer.pricingState.isContained;
       hasValidPrice = true;
+      priceBandMax = offer.pricingState.priceBandMax;
       priceCardContent = (
         <>
           <div className="text-lg font-bold font-mono text-slate-100 tabular-nums">
@@ -56,6 +58,7 @@ export const StatutoryOfferHero: React.FC<StatutoryOfferHeroProps> = ({
     case 'TRADING_LIVE':
       isContained = false;
       hasValidPrice = true;
+      priceBandMax = offer.pricingState.listingPrice;
       priceCardContent = (
         <>
           <div className="text-lg font-bold font-mono text-slate-100 tabular-nums">
@@ -108,18 +111,27 @@ export const StatutoryOfferHero: React.FC<StatutoryOfferHeroProps> = ({
           {offer.boardSegment || 'MAINBOARD'} BOOK-BUILD
         </span>
 
-        {/* Badge 3: Audit / Containment Status */}
-        {isContained ? (
-          <span className="px-2 py-0.5 rounded bg-rose-950/70 border border-rose-800 text-rose-300 font-semibold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>
-            ⚠️ CONTAINED — AWAITING EVIDENCE REVIEW
-          </span>
-        ) : (
-          <span className="px-2 py-0.5 rounded bg-emerald-950/70 border border-emerald-800 text-emerald-300 font-semibold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            ✓ AUDITED & UNLOCKED
-          </span>
-        )}
+        {/* Badge 3: Audit / Containment & Single Deal Integrity */}
+        <span
+          className={`px-2 py-0.5 rounded font-semibold flex items-center gap-1.5 border ${
+            offer.dealIntegrity === 'PASS'
+              ? 'bg-emerald-950/70 border-emerald-800 text-emerald-300'
+              : offer.dealIntegrity === 'CONDITIONAL'
+              ? 'bg-amber-950/70 border-amber-800 text-amber-300'
+              : 'bg-rose-950/70 border-rose-800 text-rose-300'
+          }`}
+        >
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              offer.dealIntegrity === 'PASS'
+                ? 'bg-emerald-400'
+                : offer.dealIntegrity === 'CONDITIONAL'
+                ? 'bg-amber-400 animate-pulse'
+                : 'bg-rose-400 animate-pulse'
+            }`}
+          ></span>
+          INTEGRITY: {offer.dealIntegrity}
+        </span>
 
         {/* Badge 4: Filing Date */}
         <span className="px-2 py-0.5 rounded bg-blue-950/60 border border-blue-800 text-blue-300">
@@ -224,7 +236,7 @@ export const StatutoryOfferHero: React.FC<StatutoryOfferHeroProps> = ({
                 {offer.lotSize} <span className="text-xs font-normal text-slate-400">shares</span>
               </div>
               <span className="text-[10px] text-slate-500 font-mono">
-                Min ₹{(offer.lotSize * offer.priceBandMax).toLocaleString('en-IN')} Commitment
+                Min ₹{(offer.lotSize * (priceBandMax ?? 0)).toLocaleString('en-IN')} Commitment
               </span>
             </>
           ) : (

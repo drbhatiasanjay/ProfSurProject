@@ -42,3 +42,16 @@
 3. **PowerShell Multi-line Delimiters:** Running inline `-c` scripts with quotes/LaTeX `$`. Fixed by writing standalone `.py` scripts.
 4. **Financial Truthiness Bugs:** Writing `val or default` which treated valid $0.0$ debt as missing. Fixed by enforcing explicit presence checks (`if val is None:` and `val !== null && val !== undefined`).
 5. **Unpriced DRHP Crashes:** Missing price bands causing `NaN`. Fixed by building typed `is_undisclosed` branch logic.
+
+## Phase 10 Architecture Findings: 84 Attributes & Decision Intelligence UI
+1. **84-Attribute Fallback Gating:** In `frontend/src/components/vaults/ProvenanceLedgerVault.tsx`, the threshold `offer.provenanceLedger.length >= 42` accepted legacy 42-attribute arrays from cached mock states. Updating to `>= 84` and binding `getCanonical84ProvenanceFallback` guarantees all 84 statutory attributes across 10 sections render deterministically.
+2. **Tripartite Evidence Quoting Standard:** Buy-side Investment Committees reject unsubstantiated commentary. Solid inference outcomes require fusing: (a) exact computed engine numbers and deltas, (b) verbatim primary filing quotes with pageNumber ≥ 1 and bounding boxes, and (c) verbatim literature quotes from the 16-entry `CITATION_REGISTRY`.
+3. **UI Progressive Disclosure (Google Material 3):** Comparing UI patterns for presenting educational formulas vs. actionable verdicts:
+   - *Generic `<details>` Accordion:* Causes vertical page jumping and hides critical data.
+   - *Separate Modal / Drawer:* Introduces modal friction.
+   - *Dual-Layer Bento Card (Option D):* Best-in-class pattern. Executive verdict and IC directive are permanently anchored at the top; a 3-pill segmented utility shelf (`[ Method & Context ]`, `[ Primary DRHP Quote ]`, `[ Literature Standard ]`) provides instant tabbed access without layout shifts.
+4. **Option B Navigation Hierarchy:** Expanding `SidebarNav.tsx` from 10 to 12 dedicated vaults grants dedicated institutional real estate to Section 9 (Contingent Litigation) and Section 10 (Unit Economics).
+5. **Physical Screenshot Verification Evidence on Disk:**
+   - `verified_contingent_litigation_vault.png` (285,524 bytes): Verified Vault 7 Contingent Litigation Radar with 4-Tier Risk Gauge and SEBI LODR 2.0% Materiality Cap.
+   - `verified_unit_economics_vault.png` (269,285 bytes): Verified Vault 8 Unit Economics with 78.5% sweet-spot utilization and 2.5M outlet retail distribution moat.
+   - `verified_dual_layer_bento_econometric_lab.png` (205,458 bytes): Verified Vault 5 Econometric Lab with Dual-Layer Bento Card and 16-entry authoritative citation linking.

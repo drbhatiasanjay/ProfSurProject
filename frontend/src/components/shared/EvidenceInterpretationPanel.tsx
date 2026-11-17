@@ -1,5 +1,21 @@
 import React, { useState } from 'react';
-import { AnalyticalInterpretation, Polarity, CitedInput } from '../../types/terminal';
+import {
+  AnalyticalInterpretation,
+  Polarity,
+  CitedInput,
+  LiteratureEvidenceCitation,
+} from '../../types/terminal';
+import {
+  Calculator,
+  FileText,
+  BookOpen,
+  ChevronDown,
+  AlertTriangle,
+  ExternalLink,
+  ShieldAlert,
+  Sparkles,
+  Info,
+} from 'lucide-react';
 
 interface EvidenceInterpretationPanelProps {
   interpretation?: AnalyticalInterpretation;
@@ -16,13 +32,21 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
   compact = false,
   onCitationClick,
 }) => {
+  const [activeShelfTab, setActiveShelfTab] = useState<'method' | 'drhp' | 'literature'>('method');
   const [isBlindSpotsExpanded, setIsBlindSpotsExpanded] = useState<boolean>(true);
 
   if (!interpretation) {
     return null;
   }
 
-  const { polarity, headline, whatItMeans, evidenceBasis, callToAction, missingDataAndBlindSpots } = interpretation;
+  const {
+    polarity,
+    headline,
+    whatItMeans,
+    evidenceBasis,
+    callToAction,
+    missingDataAndBlindSpots,
+  } = interpretation;
 
   // Semantic visual mapping for Polarity
   const getPolarityBadge = (p: Polarity) => {
@@ -87,130 +111,307 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
     }
   };
 
+  const lit = evidenceBasis?.governingLiterature;
+  const computedVars = evidenceBasis?.computedVariables;
+
   return (
     <div
-      className={`rounded-xl border border-slate-800/80 bg-gradient-to-b from-[#0F172A]/90 to-[#0B0F19]/90 backdrop-blur-md shadow-xl overflow-hidden ${className}`}
+      className={`rounded-xl border border-slate-800/80 bg-gradient-to-b from-[#0F172A]/95 to-[#0B0F19]/95 backdrop-blur-md shadow-xl overflow-hidden ${className}`}
     >
-      {/* Panel Header */}
-      <div className={`px-5 py-4 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 border-l-4 ${getBorderAccent(polarity)}`}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]" />
-          <h4 className="text-sm font-semibold tracking-wide text-slate-100 uppercase">
+      {/* ─────────────────────────────────────────────────────────────
+          PANEL HEADER: Title, Formula Chip & Polarity Badge
+          ───────────────────────────────────────────────────────────── */}
+      <div
+        className={`px-5 py-4 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-3 border-l-4 ${getBorderAccent(
+          polarity
+        )}`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] shrink-0" />
+          <h4 className="text-sm font-semibold tracking-wide text-slate-100 uppercase truncate">
             {title || 'Evidence-Based Decision Intelligence'}
           </h4>
         </div>
-        {getPolarityBadge(polarity)}
+        <div className="flex items-center gap-2 shrink-0">
+          {lit && (
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-cyan-950/80 text-cyan-300 border border-cyan-800">
+              {lit.shortTag}
+            </span>
+          )}
+          {getPolarityBadge(polarity)}
+        </div>
       </div>
 
       <div className="p-5 space-y-5">
-        {/* 1. Headline Banner */}
-        <div className="bg-slate-900/60 rounded-lg p-3.5 border border-slate-800 flex items-start gap-3">
+        {/* ─────────────────────────────────────────────────────────────
+            TOP EXECUTIVE LAYER: Finding Headline, Economic Meaning & IC CTA
+            ───────────────────────────────────────────────────────────── */}
+        {/* 1. Finding Headline Banner */}
+        <div className="bg-slate-900/70 rounded-lg p-3.5 border border-slate-800 flex items-start gap-3">
           <div className="mt-0.5 text-cyan-400 shrink-0">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <Sparkles className="w-4 h-4 text-cyan-400" />
           </div>
           <div>
-            <div className="text-xs uppercase tracking-wider font-mono text-slate-400 mb-0.5">Institutional Finding</div>
+            <div className="text-[10px] uppercase tracking-wider font-mono text-slate-400 mb-0.5">
+              Institutional Finding
+            </div>
             <div className="text-sm font-semibold text-slate-100 leading-snug">{headline}</div>
           </div>
         </div>
 
-        {/* 2. "What This Means" Domain-Specific Narrative */}
+        {/* 2. "What This Number Means Economically" Narrative */}
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 uppercase tracking-wider">
-            <svg className="w-3.5 h-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+            <Info className="w-3.5 h-3.5 text-blue-400" />
             What This Number Means Economically
           </div>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed bg-slate-900/30 p-3 rounded-lg border border-slate-800/50">
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed bg-slate-900/40 p-3.5 rounded-lg border border-slate-800/60 font-sans">
             {whatItMeans}
           </p>
         </div>
 
-        {/* 3. Evidence Basis & Cited DRHP Inputs */}
-        {evidenceBasis && (
-          <div className="space-y-2 bg-slate-900/40 p-3.5 rounded-lg border border-slate-800/60">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-mono text-slate-400 uppercase tracking-wider">Governing Formulation</span>
-              <span className="font-mono text-cyan-300 font-medium text-[11px] truncate max-w-[280px] sm:max-w-md">
-                {evidenceBasis.formulaOrMethod}
-              </span>
-            </div>
-
-            {evidenceBasis.citedInputs && evidenceBasis.citedInputs.length > 0 && (
-              <div className="pt-2 border-t border-slate-800/60">
-                <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wider mb-1.5">
-                  Verified Upstream DRHP Inputs
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {evidenceBasis.citedInputs.map((input: CitedInput, idx: number) => (
-                    <div
-                      key={`${input.attributeId}-${idx}`}
-                      className="flex items-center justify-between bg-slate-950/60 px-2.5 py-1.5 rounded border border-slate-800 text-xs hover:border-cyan-500/40 transition-colors"
-                    >
-                      <span className="text-slate-300 truncate mr-2" title={input.label}>
-                        {input.label}
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="font-mono font-semibold text-slate-100 tabular-nums">
-                          {input.valueDisplay}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => onCitationClick?.(input.pageNumber, input.attributeId)}
-                          className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 text-[10px] font-mono font-semibold border border-blue-500/30 transition-colors"
-                          title={`Click to view citation on DRHP Page ${input.pageNumber}`}
-                        >
-                          p. {input.pageNumber}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 4. Actionable Underwriting Call To Action */}
+        {/* 3. Actionable Underwriting Call To Action Card */}
         <div className={`rounded-lg p-3.5 border ${getCtaCardStyling(polarity)}`}>
           <div className="flex items-center gap-2 mb-1">
-            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
+            <ShieldAlert className="w-4 h-4 shrink-0" />
             <span className="text-xs uppercase font-mono tracking-wider font-bold">
-              Investment Committee Call to Action
+              Investment Committee Action Directive
             </span>
           </div>
-          <div className="text-xs sm:text-sm font-medium leading-snug pl-6">
+          <div className="text-xs sm:text-sm font-medium leading-snug pl-6 font-sans">
             {callToAction}
           </div>
         </div>
 
-        {/* 5. Missing Data & Blind Spots Accordion */}
+        {/* ─────────────────────────────────────────────────────────────
+            BOTTOM UTILITY SHELF: Google M3 3-Pill Segmented Navigation
+            ───────────────────────────────────────────────────────────── */}
+        <div className="border border-slate-800 rounded-xl overflow-hidden bg-[#0A0E17]/80">
+          {/* Segmented Control Header */}
+          <div className="flex items-center border-b border-slate-800 bg-slate-950/70 p-1">
+            <button
+              type="button"
+              onClick={() => setActiveShelfTab('method')}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                activeShelfTab === 'method'
+                  ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Calculator className="w-3.5 h-3.5 shrink-0" />
+              <span>[ 📐 Method & Context ]</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveShelfTab('drhp')}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                activeShelfTab === 'drhp'
+                  ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5 shrink-0" />
+              <span>[ 📑 Primary DRHP Evidence ]</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveShelfTab('literature')}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                activeShelfTab === 'literature'
+                  ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5 shrink-0" />
+              <span>[ 📚 Literature Standard ]</span>
+            </button>
+          </div>
+
+          {/* Segmented Tab Body */}
+          <div className="p-4 text-xs font-sans">
+            {/* TAB 1: Method & Pre-IPO Context */}
+            {activeShelfTab === 'method' && (
+              <div className="space-y-3.5 animate-fade-in">
+                {/* Method Concept */}
+                {evidenceBasis?.methodologyConcept && (
+                  <div>
+                    <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider mb-1">
+                      Methodology Concept
+                    </div>
+                    <p className="text-slate-300 leading-relaxed bg-slate-900/50 p-2.5 rounded border border-slate-800/70">
+                      {evidenceBasis.methodologyConcept}
+                    </p>
+                  </div>
+                )}
+
+                {/* Pre-IPO Underwriting Rationale */}
+                {evidenceBasis?.preIpoRationale && (
+                  <div>
+                    <div className="text-[10px] font-mono text-amber-400 uppercase tracking-wider mb-1">
+                      Pre-IPO Underwriting Rationale
+                    </div>
+                    <p className="text-slate-300 leading-relaxed bg-amber-950/20 p-2.5 rounded border border-amber-900/40">
+                      {evidenceBasis.preIpoRationale}
+                    </p>
+                  </div>
+                )}
+
+                {/* Core Formula & Cut-offs */}
+                <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 font-mono space-y-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400 uppercase">Core Formula</span>
+                    <span className="text-cyan-300 font-bold">{evidenceBasis?.formulaOrMethod}</span>
+                  </div>
+                  {evidenceBasis?.benchmarkCutoffs && (
+                    <div className="pt-2 border-t border-slate-800/70 flex items-start justify-between text-[11px]">
+                      <span className="text-slate-400 uppercase shrink-0 mr-2">Cut-offs</span>
+                      <span className="text-emerald-400 text-right">{evidenceBasis.benchmarkCutoffs}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Computed Variables Grid */}
+                {computedVars && Object.keys(computedVars).length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1.5">
+                      Computed Quantitative Variables
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 font-mono">
+                      {Object.entries(computedVars).map(([k, v]) => (
+                        <span
+                          key={k}
+                          className="px-2 py-1 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-200"
+                        >
+                          <span className="text-slate-400 mr-1">{k}:</span>
+                          <span className="text-cyan-300 font-bold">
+                            {typeof v === 'number'
+                              ? Number.isInteger(v)
+                                ? v.toLocaleString()
+                                : v.toFixed(3)
+                              : String(v)}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 2: Primary DRHP Filing Evidence */}
+            {activeShelfTab === 'drhp' && (
+              <div className="space-y-3 animate-fade-in">
+                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1">
+                  Statutory Prospectus Disclosures & Verbatim Excerpts
+                </div>
+                {evidenceBasis?.citedInputs && evidenceBasis.citedInputs.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {evidenceBasis.citedInputs.map((input: CitedInput, idx: number) => (
+                      <div
+                        key={`${input.attributeId}-${idx}`}
+                        className="bg-slate-950/70 p-3 rounded-lg border border-slate-800 hover:border-cyan-500/40 transition-colors"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <span className="text-slate-200 font-semibold text-xs">{input.label}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-cyan-300 text-xs">
+                              {input.valueDisplay}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onCitationClick?.(input.pageNumber, input.attributeId)}
+                              className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 text-[10px] font-mono font-bold border border-blue-500/30 flex items-center gap-1 cursor-pointer transition-colors"
+                              title={`Inspect filing on DRHP page ${input.pageNumber}`}
+                            >
+                              <span>p. {input.pageNumber}</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {input.chapterOrNote && (
+                          <div className="text-[10px] font-mono text-slate-500 mb-1">
+                            {input.chapterOrNote}
+                          </div>
+                        )}
+
+                        {input.verbatimSourceQuote && (
+                          <p className="text-[11px] text-slate-400 italic bg-slate-900/40 p-2 rounded border border-slate-800/50">
+                            "{input.verbatimSourceQuote}"
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-slate-500 text-xs italic">No primary cited inputs recorded.</div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: Governing Literature / Statutory Standard */}
+            {activeShelfTab === 'literature' && (
+              <div className="space-y-3.5 animate-fade-in">
+                {lit ? (
+                  <div className="bg-slate-950/70 p-3.5 rounded-lg border border-slate-800 space-y-3 font-sans">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">
+                          Authoritative Reference
+                        </div>
+                        <div className="text-xs font-semibold text-slate-100 font-mono mt-0.5">
+                          {lit.formalCitation}
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-800 shrink-0">
+                        {lit.shortTag}
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-900/60 p-3 rounded border border-slate-800 text-xs text-slate-300 italic leading-relaxed">
+                      "{lit.statutoryOrPaperQuote}"
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] font-mono pt-2 border-t border-slate-800">
+                      <div>
+                        <span className="text-slate-500 block">Verified Cut-off / Rule:</span>
+                        <span className="text-emerald-400 font-bold">{lit.verifiedCutoff}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Journal / Regulatory Body:</span>
+                        <span className="text-slate-300">{lit.governingBodyOrJournal}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-slate-500 text-xs italic">
+                    Governing literature citation not attached to this metric.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ─────────────────────────────────────────────────────────────
+            COLLAPSIBLE MISSING DATA & SECTOR BLIND SPOTS
+            ───────────────────────────────────────────────────────────── */}
         {missingDataAndBlindSpots && missingDataAndBlindSpots.length > 0 && (
           <div className="border border-slate-800/80 rounded-lg overflow-hidden">
             <button
               type="button"
               onClick={() => setIsBlindSpotsExpanded(!isBlindSpotsExpanded)}
-              className="w-full px-3.5 py-2.5 bg-slate-900/80 hover:bg-slate-900 flex items-center justify-between text-xs font-semibold text-slate-300 transition-colors"
+              className="w-full px-3.5 py-2.5 bg-slate-900/80 hover:bg-slate-900 flex items-center justify-between text-xs font-semibold text-slate-300 transition-colors cursor-pointer"
             >
               <div className="flex items-center gap-2">
-                <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                 <span>Missing Data & Sector Blind Spots ({missingDataAndBlindSpots.length})</span>
               </div>
-              <svg
-                className={`w-4 h-4 text-slate-400 transform transition-transform ${isBlindSpotsExpanded ? 'rotate-180' : ''}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              <ChevronDown
+                className={`w-4 h-4 text-slate-400 transform transition-transform ${
+                  isBlindSpotsExpanded ? 'rotate-180' : ''
+                }`}
+              />
             </button>
 
             {isBlindSpotsExpanded && (

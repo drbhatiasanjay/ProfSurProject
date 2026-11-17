@@ -165,6 +165,8 @@ export const StakeholderLensVault: React.FC<StakeholderLensVaultProps> = ({ offe
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer
         title="Stakeholder Alignment & Constituency Governance Synthesizer"
+        offer={offer}
+        vaultId="stakeholder_lens"
         narrative={{
           sectorContext: "Constituency objectives diverge during IPO roadshows: CFOs optimize valuation multiple, lenders demand covenant de-leveraging, and QIBs demand margin of safety.",
           lifecyclePrecedents: "During SBI Cards IPO, credit lenders and retail investors held divergent views on provisioning buffers following macroeconomic shocks.",

@@ -9,7 +9,7 @@ import {
   ComprehensiveEconometricSuiteData,
   AnalyticalInterpretation
 } from '../types/terminal';
-import { getCanonical42ProvenanceFallback } from './canonicalProvenance';
+import { getCanonical84ProvenanceFallback } from './canonicalProvenance';
 
 export const mockMarketIndices: MarketIndex[] = [
   {
@@ -96,6 +96,13 @@ export const mockOfferDetails: StatutoryOfferDetails = {
   gcpAllocationCr: 2500.0,
   gcpAllocationPct: 25.0,
   isGcpCompliant: true,
+  provenanceLedger: getCanonical84ProvenanceFallback(false),
+  provenanceSummary: {
+    foundCount: 84,
+    notFoundCount: 0,
+    reconfirmCount: 0,
+    totalCount: 84
+  },
 };
 
 export const mockSubscriptionBook: SubscriptionBook = {
@@ -361,6 +368,13 @@ export const hccbOfferDetails: StatutoryOfferDetails = {
   gcpAllocationCr: 0.0,
   gcpAllocationPct: 0.0,
   isGcpCompliant: true,
+  provenanceLedger: getCanonical84ProvenanceFallback(true),
+  provenanceSummary: {
+    foundCount: 76,
+    notFoundCount: 4,
+    reconfirmCount: 4,
+    totalCount: 84
+  },
 };
 
 export const hccbSubscriptionBook: SubscriptionBook = {
@@ -1106,6 +1120,81 @@ export function getMockInterpretations(isHCCB: boolean): Record<string, Analytic
           'Post-listing parent brand royalty escalation covenants undisclosed.'
         ]
       },
+      contingent_litigation_radar: {
+        metricId: 'contingent_litigation_radar',
+        polarity: 'NEGATIVE_CONTRIBUTOR',
+        headline: 'Litigation Overhang: Disputed Tax Breaches SEBI LODR Cap by +14.9% (₹285.2 Cr)',
+        whatItMeans: 'Disputed direct and indirect tax demands of ₹285.20 Cr exceed the SEBI LODR 2.0% consolidated turnover threshold (₹248.21 Cr), representing 11.4% of Net Worth. While below the 25% distress line, mandatory 10% appellate pre-deposits create cash drag.',
+        evidenceBasis: {
+          formulaOrMethod: 'SEBI LODR Reg 30(4)(i)(c) Quantitative Materiality & Ind AS 37 Contingent Risk Profiling',
+          citedInputs: [
+            { attributeId: 'contingent.total_claims_inr_cr', label: 'Total Disputed Contingent Claims', valueDisplay: '₹324.50 Cr', pageNumber: 310 },
+            { attributeId: 'contingent.disputed_tax_inr_cr', label: 'Disputed Direct/Indirect Tax Demands', valueDisplay: '₹285.20 Cr', pageNumber: 310 },
+            { attributeId: 'bs.restated_net_worth_inr_cr', label: 'Restated Net Worth', valueDisplay: '₹2,840.10 Cr', pageNumber: 90 }
+          ],
+          governingLiterature: {
+            citationId: 'CIT_SEBI_LODR_REG30',
+            shortTag: '[SEBI LODR Reg 30]',
+            formalCitation: 'SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015. Regulation 30(4)(i)(c).',
+            statutoryOrPaperQuote: 'A disclosure is deemed quantitatively material if the omission or misstatement of an event exceeds 2% of turnover, or 2% of net worth, or 5% of average net profit/loss after tax for the three preceding audited fiscal years.',
+            verifiedCutoff: 'Claims > 2.0% Turnover or > 15.0% Net Worth',
+            governingBodyOrJournal: 'Securities and Exchange Board of India (SEBI)',
+            downstreamModule: 'Section 9: Contingent Liabilities & Legal Radar'
+          },
+          computedVariables: {
+            totalContingentCr: 324.50,
+            disputedTaxCr: 285.20,
+            contingentToNetWorthPct: 11.43,
+            sebiLodrMaterialityCapCr: 248.21,
+            taxBreachPct: 14.90
+          },
+          methodologyConcept: 'Statutory legal materiality auditor and economic net worth haircut model evaluating direct/indirect tax appeals and litigation.',
+          preIpoRationale: 'Issuers frequently bury tax demands in footnotes under Ind AS 37 as "possible" liabilities. If an appellate court issues adverse rulings, mandatory 10%-20% cash pre-deposits impair equity net worth.',
+          benchmarkCutoffs: 'Pristine: <5.0% NW · Routine Appellate: 5.0%-15.0% NW · Elevated: 15.0%-25.0% NW · Critical Block: >25.0% NW or Criminal > 0'
+        },
+        callToAction: 'MANDATE 10% PRE-DEPOSIT ESCROW. Require syndicate confirmation that ₹32.5 Cr in appellate pre-deposits is funded in reserves before book clearing.',
+        missingDataAndBlindSpots: [
+          'Hearing schedule and timeline for state environmental show-cause notices undisclosed.'
+        ]
+      },
+      unit_economics_studio: {
+        metricId: 'unit_economics_studio',
+        polarity: 'POSITIVE_CONTRIBUTOR',
+        headline: 'Operational Moat: 78.5% Utilization Sweet Spot · 2,500,000+ Outlets · Gross Margin 42.6%',
+        whatItMeans: '78.50% capacity utilization across 16 owned plants delivers maximal fixed-cost absorption without bottleneck overtime costs. Direct and indirect distribution reach of over 2.5 million retail touchpoints establishes a formidable competitive moat.',
+        evidenceBasis: {
+          formulaOrMethod: 'Porter (1985) Operational Scale Analysis & Nameplate Capacity Throughput Audit',
+          citedInputs: [
+            { attributeId: 'ops.installed_capacity_units', label: 'Installed Annual Bottling Capacity', valueDisplay: '1,450.0M Cases', pageNumber: 148 },
+            { attributeId: 'ops.capacity_utilization_pct', label: 'Operational Capacity Utilization', valueDisplay: '78.50%', pageNumber: 148 },
+            { attributeId: 'ops.distribution_reach_count', label: 'Direct & Indirect Retail Reach', valueDisplay: '2,500,000+ Outlets', pageNumber: 150 },
+            { attributeId: 'ops.gross_margin_pct', label: 'Gross Contribution Margin (%)', valueDisplay: '42.60%', pageNumber: 112 }
+          ],
+          governingLiterature: {
+            citationId: 'CIT_PORTER_1985',
+            shortTag: '[Porter 1985]',
+            formalCitation: 'Porter, M. E. (1985). "Competitive Advantage: Creating and Sustaining Superior Performance". Free Press.',
+            statutoryOrPaperQuote: 'Economies of scale arise from the ability to perform activities differently and more efficiently at higher volume, or from the ability to amortize the cost of intangibles such as R&D and national advertising over a greater sales volume.',
+            verifiedCutoff: 'Capacity Utilization 75.0% - 85.0%',
+            governingBodyOrJournal: 'Free Press / Harvard Business School',
+            downstreamModule: 'Section 10: Unit Economics & Operational Moat'
+          },
+          computedVariables: {
+            capacityUtilizationPct: 78.50,
+            installedCapacityUnits: 1450.0,
+            distributionReachCount: 2500000,
+            grossMarginPct: 42.60,
+            isInSweetSpot: true
+          },
+          methodologyConcept: 'Operational efficiency, capacity utilization, and distribution moat model assessing fixed-cost absorption and retail footprint.',
+          preIpoRationale: 'Operating below 65% capacity indicates severe idle asset drag on margins, while operating above 90% indicates impending bottlenecks requiring dilutive capex. The 75%-85% window represents peak scale.',
+          benchmarkCutoffs: 'Optimal Sweet Spot: 75.0%-85.0% · Sub-Optimal/Tight: 65.0%-74.9% or >85.0% · Idle Asset Drag: <65.0% or Gross Margin <30.0%'
+        },
+        callToAction: 'UNDERWRITE SCALE ADVANTAGE: Scale and distribution density confirm top-line execution capability. Sizing can be safely expanded.',
+        missingDataAndBlindSpots: [
+          'Raw beverage concentrate import pricing formula from parent entity redacted in DRHP Annexure.'
+        ]
+      },
       ic_stance_mandate: {
         metricId: 'ic_stance_mandate',
         polarity: 'NEUTRAL_MONITOR',
@@ -1281,6 +1370,64 @@ export function getMockInterpretations(isHCCB: boolean): Record<string, Analytic
         'PSU procurement guidelines may slow vendor dispute settlements.'
       ]
     },
+    contingent_litigation_radar: {
+      metricId: 'contingent_litigation_radar',
+      polarity: 'NEUTRAL_MONITOR',
+      headline: 'Sovereign Litigation Insulation: Claims ₹1,240.8 Cr · 14.7% of Net Worth',
+      whatItMeans: 'Disputed direct and indirect tax demands aggregate to ₹890.50 Cr against ₹8,420.50 Cr in Net Worth (14.73%). While significant, sovereign parent indemnities insulate operational cash flow.',
+      evidenceBasis: {
+        formulaOrMethod: 'SEBI LODR Reg 30(4)(i)(c) Quantitative Materiality & Ind AS 37 Contingent Risk Profiling',
+        citedInputs: [
+          { attributeId: 'contingent.total_claims_inr_cr', label: 'Total Disputed Contingent Claims', valueDisplay: '₹1,240.80 Cr', pageNumber: 215 },
+          { attributeId: 'bs.restated_net_worth_inr_cr', label: 'Restated Net Worth', valueDisplay: '₹8,420.50 Cr', pageNumber: 85 }
+        ],
+        governingLiterature: {
+          citationId: 'CIT_SEBI_LODR_REG30',
+          shortTag: '[SEBI LODR Reg 30]',
+          formalCitation: 'SEBI (Listing Obligations and Disclosure Requirements) Regulations, 2015. Regulation 30(4)(i)(c).',
+          statutoryOrPaperQuote: 'A disclosure is deemed quantitatively material if the omission or misstatement of an event exceeds 2% of turnover, or 2% of net worth.',
+          verifiedCutoff: 'Claims > 2.0% Turnover or > 15.0% Net Worth',
+          governingBodyOrJournal: 'Securities and Exchange Board of India (SEBI)',
+          downstreamModule: 'Section 9: Contingent Liabilities & Legal Radar'
+        },
+        methodologyConcept: 'Statutory legal materiality auditor and economic net worth haircut model.',
+        preIpoRationale: 'Pre-IPO issuers in renewable utility sectors encounter land acquisition disputes and transmission tariff appeals.',
+        benchmarkCutoffs: 'Pristine: <5.0% NW · Routine: 5.0%-15.0% NW · Elevated: 15.0%-25.0% NW'
+      },
+      callToAction: 'Verify sovereign parent indemnification letters for land acquisition appeals.',
+      missingDataAndBlindSpots: [
+        'Transmission corridor right-of-way disputes schedule.'
+      ]
+    },
+    unit_economics_studio: {
+      metricId: 'unit_economics_studio',
+      polarity: 'POSITIVE_CONTRIBUTOR',
+      headline: 'Renewable Scale Moat: 3,071 MW Operational Capacity · 88.2% Grid Availability',
+      whatItMeans: 'Operational renewable generation capacity of 3,071 MW with grid availability factor of 88.20% and 25-year long-term power purchase agreements (PPAs).',
+      evidenceBasis: {
+        formulaOrMethod: 'Porter (1985) Operational Scale Analysis & Nameplate Capacity Throughput Audit',
+        citedInputs: [
+          { attributeId: 'ops.installed_capacity_units', label: 'Installed Generation Capacity', valueDisplay: '3,071 MW', pageNumber: 120 },
+          { attributeId: 'ops.capacity_utilization_pct', label: 'Grid Availability Factor', valueDisplay: '88.20%', pageNumber: 120 }
+        ],
+        governingLiterature: {
+          citationId: 'CIT_PORTER_1985',
+          shortTag: '[Porter 1985]',
+          formalCitation: 'Porter, M. E. (1985). "Competitive Advantage: Creating and Sustaining Superior Performance". Free Press.',
+          statutoryOrPaperQuote: 'Economies of scale arise from the ability to perform activities differently and more efficiently at higher volume.',
+          verifiedCutoff: 'Capacity Utilization 75.0% - 85.0%',
+          governingBodyOrJournal: 'Free Press / Harvard Business School',
+          downstreamModule: 'Section 10: Unit Economics & Operational Moat'
+        },
+        methodologyConcept: 'Operational efficiency and power generation moat model.',
+        preIpoRationale: 'Utility scale assets require high plant load factors (PLF) and long-term off-taker agreements to protect ROE.',
+        benchmarkCutoffs: 'Optimal PLF: >80.0% · Sub-Optimal: <70.0%'
+      },
+      callToAction: 'Underwrite long-term solar/wind capacity pipeline with sovereign utility counter-party risk mitigation.',
+      missingDataAndBlindSpots: [
+        'Inter-state transmission system (ISTS) waiver phase-out impact schedule.'
+      ]
+    },
     ic_stance_mandate: {
       metricId: 'ic_stance_mandate',
       polarity: 'NEGATIVE_CONTRIBUTOR',
@@ -1325,10 +1472,12 @@ export async function fetchEconometricInterpretations(symbol: string = 'NTPCGREE
   }
 }
 
+export const fetchPreIpoInterpretations = fetchEconometricInterpretations;
+
 function getFallbackForSymbol(symbol: string) {
   const s = symbol.toUpperCase();
   const isHCCB = s === 'HCCB' || s.includes('COCA');
-  const fallbackLedger = getCanonical42ProvenanceFallback(isHCCB);
+  const fallbackLedger = getCanonical84ProvenanceFallback(isHCCB);
   const foundCount = fallbackLedger.filter(r => r.status === 'FOUND').length;
   const notFoundCount = fallbackLedger.filter(r => r.status === 'NOT_FOUND').length;
   const reconfirmCount = fallbackLedger.filter(r => r.status === 'NEEDS_RECONFIRMATION').length;
@@ -1412,9 +1561,23 @@ export async function fetchLiveMarketData(symbol: string = 'NTPCGREEN') {
       if (!data.offer.provenanceSummary && data.provenanceSummary) {
         data.offer.provenanceSummary = data.provenanceSummary;
       }
-      if (!data.offer.provenanceLedger) {
-        const isHCCB = symbol.toUpperCase().includes('HCCB') || symbol.toUpperCase().includes('COCA');
-        data.offer.provenanceLedger = getCanonical42ProvenanceFallback(isHCCB);
+      const isHCCB = symbol.toUpperCase().includes('HCCB') || symbol.toUpperCase().includes('COCA');
+      if (!data.offer.provenanceLedger || data.offer.provenanceLedger.length < 84) {
+        data.offer.provenanceLedger = getCanonical84ProvenanceFallback(isHCCB);
+        data.offer.provenanceSummary = {
+          foundCount: data.offer.provenanceLedger.filter((r: any) => r.status === 'FOUND').length,
+          notFoundCount: data.offer.provenanceLedger.filter((r: any) => r.status === 'NOT_FOUND').length,
+          reconfirmCount: data.offer.provenanceLedger.filter((r: any) => r.status === 'NEEDS_RECONFIRMATION').length,
+          totalCount: 84
+        };
+      }
+      if (!data.offer.interpretations || Object.keys(data.offer.interpretations).length === 0) {
+        if (data.interpretations && Object.keys(data.interpretations).length > 0) {
+          data.offer.interpretations = data.interpretations;
+        } else {
+          const isHCCB = symbol.toUpperCase().includes('HCCB') || symbol.toUpperCase().includes('COCA');
+          data.offer.interpretations = getMockInterpretations(isHCCB);
+        }
       }
     }
     return data;

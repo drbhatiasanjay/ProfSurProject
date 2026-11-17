@@ -12,7 +12,9 @@ import {
   Coins,
   Presentation,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Scale,
+  Factory
 } from 'lucide-react';
 import { VaultId } from '../types/terminal';
 
@@ -34,66 +36,98 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   onSymbolChange,
   onOpenIngestModal
 }) => {
-  const navItems = [
+  const navSections = [
     {
-      id: 'market_demand' as TerminalView,
-      label: '1. Market Demand & Book',
-      sublabel: 'Live bidding, AQI & ML',
-      icon: Activity,
+      title: 'SECTION I: DEAL & VALUATION DISCOVERY',
+      items: [
+        {
+          id: 'market_demand' as TerminalView,
+          label: '1. Market Demand & Book',
+          sublabel: 'Live bidding, AQI & ML',
+          icon: Activity,
+        },
+        {
+          id: 'peer_comps' as TerminalView,
+          label: '2. Live Peer Comps',
+          sublabel: 'WACA step-up & Mueller ROCE',
+          icon: Layers,
+        },
+        {
+          id: 'huber_studio' as TerminalView,
+          label: '3. Huber Econometric Studio',
+          sublabel: 'Bias Index & Quantile Cones',
+          icon: Calculator,
+        },
+      ],
     },
     {
-      id: 'peer_comps' as TerminalView,
-      label: '2. Live Peer Comps',
-      sublabel: 'WACA step-up & Mueller ROCE',
-      icon: Layers,
+      title: 'SECTION II: EVIDENCE & ECONOMETRICS',
+      items: [
+        {
+          id: 'provenance_ledger' as TerminalView,
+          label: '4. Provenance Evidence Ledger',
+          sublabel: '84-Attr BBox & 5-Gate Accounting',
+          icon: FileText,
+        },
+        {
+          id: 'stress_workpapers' as TerminalView,
+          label: '5. Econometric & Forensic Lab',
+          sublabel: '7 Institutional Econometric Models',
+          icon: Sliders,
+        },
+        {
+          id: 'red_flag_scanner' as TerminalView,
+          label: '6. 6-Rule Red-Flag Scanner',
+          sublabel: 'Governance & Beneish M-Score',
+          icon: AlertOctagon,
+        },
+      ],
     },
     {
-      id: 'huber_studio' as TerminalView,
-      label: '3. Huber Econometric Studio',
-      sublabel: 'Bias Index & Quantile Cones',
-      icon: Calculator,
+      title: 'SECTION III: FORENSIC & SCALE DILIGENCE',
+      items: [
+        {
+          id: 'contingent_litigation' as TerminalView,
+          label: '7. Contingent Litigation Radar',
+          sublabel: 'SEBI LODR 2% & Ind AS 37',
+          icon: Scale,
+        },
+        {
+          id: 'unit_economics' as TerminalView,
+          label: '8. Unit Economics & Scale',
+          sublabel: '75-85% Sweet Spot & Outlet Moat',
+          icon: Factory,
+        },
+        {
+          id: 'unlisted_arbitrage' as TerminalView,
+          label: '9. Unlisted Post-Tax Arbitrage',
+          sublabel: 'Sec 56(2)(x) & Breakeven Solver',
+          icon: Coins,
+        },
+      ],
     },
     {
-      id: 'provenance_ledger' as TerminalView,
-      label: '4. Provenance Evidence Ledger',
-      sublabel: '513p BBox & 5-Gate Accounting',
-      icon: FileText,
-    },
-    {
-      id: 'stress_workpapers' as TerminalView,
-      label: '5. Econometric & Forensic Lab',
-      sublabel: '7 Models · Beneish, Dickinson, Huber, Altman',
-      icon: Sliders,
-    },
-    {
-      id: 'investor_qa' as TerminalView,
-      label: '6. Institutional Q&A',
-      sublabel: '14 Questions & Churn Shock',
-      icon: HelpCircle,
-    },
-    {
-      id: 'stakeholder_lens' as TerminalView,
-      label: '7. 6-Persona Stakeholder Lens',
-      sublabel: 'CFO, Lender, QIB, Retail, RA',
-      icon: Users,
-    },
-    {
-      id: 'red_flag_scanner' as TerminalView,
-      label: '8. 6-Rule Red-Flag Scanner',
-      sublabel: 'Governance & Beneish M-Score',
-      icon: AlertOctagon,
-    },
-    {
-      id: 'unlisted_arbitrage' as TerminalView,
-      label: '9. Unlisted Post-Tax Arbitrage',
-      sublabel: 'Sec 56(2)(x) & Breakeven Solver',
-      icon: Coins,
-    },
-    {
-      id: 'ic_board_deck' as TerminalView,
-      label: '10. IC Stance & Board Deck',
-      sublabel: 'Mandate & 1-Click PPTX/PDF',
-      icon: Presentation,
+      title: 'SECTION IV: GOVERNANCE & IC MANDATE',
+      items: [
+        {
+          id: 'investor_qa' as TerminalView,
+          label: '10. Institutional Q&A',
+          sublabel: '14 Questions & Churn Shock',
+          icon: HelpCircle,
+        },
+        {
+          id: 'stakeholder_lens' as TerminalView,
+          label: '11. 6-Persona Stakeholder Lens',
+          sublabel: 'CFO, Lender, QIB, Retail, RA',
+          icon: Users,
+        },
+        {
+          id: 'ic_board_deck' as TerminalView,
+          label: '12. IC Stance & Board Deck',
+          sublabel: 'Mandate & 1-Click PPTX/PDF',
+          icon: Presentation,
+        },
+      ],
     },
   ];
 
@@ -154,35 +188,38 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
         </div>
       </div>
 
-      {/* Navigation Workspace Menu (10 Specialized Vaults) */}
-      <nav className="p-3 space-y-1 flex-1 overflow-y-auto">
-        <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wider px-2 block mb-2 font-semibold">
-          10 Specialized Vaults
-        </span>
+      {/* Navigation Workspace Menu (12 Specialized Vaults in 4 Sections) */}
+      <nav className="p-3 space-y-4 flex-1 overflow-y-auto">
+        {navSections.map((section, sIdx) => (
+          <div key={sIdx} className="space-y-1">
+            <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider px-2 block font-semibold">
+              {section.title}
+            </span>
+            {section.items.map((item) => {
+              const isActive = activeView === item.id;
+              const Icon = item.icon;
 
-        {navItems.map((item) => {
-          const isActive = activeView === item.id;
-          const Icon = item.icon;
-
-          return (
-            <button
-              key={item.id}
-              onClick={() => onViewChange(item.id)}
-              className={`w-full text-left p-2.5 rounded-lg transition-all flex items-center gap-2.5 cursor-pointer ${
-                isActive
-                  ? 'bg-gradient-to-r from-cyan-950/70 to-[#0A101C] border-l-2 border-cyan-400 text-slate-100 font-semibold shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-[#101620]'
-              }`}
-            >
-              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-cyan-400' : 'text-slate-500'}`} />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium font-sans truncate">{item.label}</div>
-                <div className="text-[10px] text-slate-500 font-mono truncate">{item.sublabel}</div>
-              </div>
-              {isActive && <ChevronRight className="w-3.5 h-3.5 text-cyan-400" />}
-            </button>
-          );
-        })}
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onViewChange(item.id)}
+                  className={`w-full text-left p-2 rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+                    isActive
+                      ? 'bg-gradient-to-r from-cyan-950/70 to-[#0A101C] border-l-2 border-cyan-400 text-slate-100 font-semibold shadow-sm'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-[#101620]'
+                  }`}
+                >
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-cyan-400' : 'text-slate-500'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium font-sans truncate">{item.label}</div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate">{item.sublabel}</div>
+                  </div>
+                  {isActive && <ChevronRight className="w-3 h-3 text-cyan-400 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Footer Info */}

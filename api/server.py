@@ -959,6 +959,15 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
             peers_data=peers_data,
         ).to_dict()
     except ExportBlockedError:
+        from models.pre_ipo_interpretations import synthesize_deal_interpretations
+        synthesized_interps = {
+            k: v.to_dict()
+            for k, v in synthesize_deal_interpretations(
+                provenance_records=provenance_records,
+                econometric_suite={},
+                offer_data=offer_data,
+            ).items()
+        }
         econometric_suite = {
             "symbol": symbol,
             "companyName": offer_data.get("companyName", ""),
@@ -966,7 +975,7 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
             "isBlocked": True,
             "blockedReason": "Prospectus unreviewed or contained; econometric models failed closed.",
             "models": {},
-            "interpretations": {},
+            "interpretations": synthesized_interps,
         }
 
     interps = econometric_suite.get("interpretations", {})

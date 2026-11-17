@@ -27,7 +27,10 @@ from models.pre_ipo_interpretations import (
     synthesize_lockin_tax_interpretation,
     synthesize_provenance_gate_interpretation,
     synthesize_forensic_red_flags_interpretation,
+    synthesize_contingent_liabilities_interpretation,
+    synthesize_unit_economics_interpretation,
     synthesize_ic_stance_interpretation,
+    LiteratureEvidenceCitation,
 )
 from models.pre_ipo_schema import extract_canonical_84_provenance
 from models.pre_ipo_data import PRE_IPO_REGISTRY
@@ -46,8 +49,8 @@ class TestPreIPOInterpretations:
         dossier = PRE_IPO_REGISTRY["ntpc_green"]
         return extract_canonical_84_provenance(dossier, is_hccb=False)
 
-    def test_synthesis_returns_all_10_canonical_metrics(self, hccb_provenance):
-        """Verify that synthesize_deal_interpretations outputs all 10 canonical keys."""
+    def test_synthesis_returns_all_canonical_metrics(self, hccb_provenance):
+        """Verify that synthesize_deal_interpretations outputs all 12 canonical keys with tripartite evidence."""
         offer = {
             "symbol": "HCCB",
             "companyName": "Hindustan Coca-Cola Beverages Limited",
@@ -68,6 +71,8 @@ class TestPreIPOInterpretations:
             "lockin_supply_cliff",
             "provenance_gate",
             "forensic_red_flags",
+            "contingent_litigation_radar",
+            "unit_economics_studio",
             "ic_stance_mandate",
         ]
         for key in expected_keys:
@@ -84,6 +89,16 @@ class TestPreIPOInterpretations:
                 assert ci.page_number >= 1
                 assert len(ci.value_display) > 0
                 assert len(ci.label) > 0
+
+            # Tripartite Citation Law checks
+            if it.evidence_basis.governing_literature is not None:
+                lit = it.evidence_basis.governing_literature
+                assert isinstance(lit, LiteratureEvidenceCitation)
+                assert len(lit.citation_id) > 2
+                assert len(lit.short_tag) > 2
+                assert len(lit.formal_citation) > 5
+                assert len(lit.statutory_or_paper_quote) > 10
+                assert len(lit.verified_cutoff) > 2
 
     def test_unpriced_drhp_valuation_is_gated_neutral_monitor(self, hccb_provenance):
         """Assert unpriced DRHP (HCCB) classifies valuation as NEUTRAL_MONITOR with explicit DRHP warning."""
@@ -239,3 +254,62 @@ class TestPreIPOInterpretations:
         assert ic_it.polarity in [p.value for p in Polarity]
         assert "IC Mandate" in ic_it.headline
         assert len(ic_it.missing_data_and_blind_spots) >= 1
+
+    def test_contingent_litigation_interpretation_evaluates_correctly(self, hccb_provenance):
+        """Assert contingent liabilities ratio triggers appropriate polarity and literature citation."""
+        prov_map = {r["attributeId"]: r for r in hccb_provenance}
+        
+        # Test default/actual HCCB values
+        it = synthesize_contingent_liabilities_interpretation(
+            prov_map=prov_map,
+        )
+        assert it.polarity in [p.value for p in Polarity]
+        assert it.evidence_basis.governing_literature is not None
+        assert "CIT_SEBI_LODR_REG30" == it.evidence_basis.governing_literature.citation_id
+
+        # Test extreme synthetic liability (>25% net worth -> BLOCKING_RISK)
+        extreme_map = dict(prov_map)
+        extreme_map["contingent.total_claims_inr_cr"] = {
+            "attributeId": "contingent.total_claims_inr_cr",
+            "name": "Total Contingent Claims",
+            "value": 5000.0,
+            "pageNumber": 165,
+            "verbatimQuote": "Total claims against the company not acknowledged as debt: Rs. 5000.0 Cr",
+        }
+        extreme_map["bs.restated_net_worth_inr_cr"] = {
+            "attributeId": "bs.restated_net_worth_inr_cr",
+            "name": "Restated Net Worth",
+            "value": 2000.0,
+            "pageNumber": 280,
+            "verbatimQuote": "Restated Net Worth Rs 2000.0 Cr",
+        }
+        extreme_it = synthesize_contingent_liabilities_interpretation(
+            prov_map=extreme_map,
+        )
+        assert extreme_it.polarity == Polarity.BLOCKING_RISK.value
+
+    def test_unit_economics_interpretation_evaluates_correctly(self, hccb_provenance):
+        """Assert unit economics capacity utilization and gross margin classify accurately with Porter (1985) citation."""
+        prov_map = {r["attributeId"]: r for r in hccb_provenance}
+
+        healthy_it = synthesize_unit_economics_interpretation(
+            prov_map=prov_map,
+        )
+        assert healthy_it.polarity == Polarity.POSITIVE_CONTRIBUTOR.value
+        assert healthy_it.evidence_basis.governing_literature is not None
+        assert "CIT_PORTER_1985" == healthy_it.evidence_basis.governing_literature.citation_id
+
+        # Test sub-scale utilization (<65% -> NEGATIVE_CONTRIBUTOR)
+        subscale_map = dict(prov_map)
+        subscale_map["ops.capacity_utilization_pct"] = {
+            "attributeId": "ops.capacity_utilization_pct",
+            "name": "Capacity Utilization",
+            "value": 52.0,
+            "pageNumber": 148,
+            "verbatimQuote": "Capacity utilization stood at 52.0%",
+        }
+        subscale_it = synthesize_unit_economics_interpretation(
+            prov_map=subscale_map,
+        )
+        assert subscale_it.polarity == Polarity.NEGATIVE_CONTRIBUTOR.value
+

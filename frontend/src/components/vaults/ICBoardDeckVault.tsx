@@ -183,6 +183,8 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer
         title="Investment Committee Governance &amp; Execution Synthesizer"
+        offer={offer}
+        vaultId="ic_board_deck"
         narrative={{
           sectorContext: "Syndicate bidding requires rigorous risk-reward calibration to ensure institutional mandate compliance.",
           lifecyclePrecedents: "Institutional accounts that maintained strict price ceilings avoided subsequent capital erosion during post-2021 tech IPO de-ratings.",

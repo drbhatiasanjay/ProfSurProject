@@ -167,3 +167,59 @@
   - `tests/test_assert_capability_allowed.py`: All 5 adversarial capability tests pass first-time-right.
   - `tests/test_api_capability_gate.py`: FastAPI endpoint tests pass with strict validation of `pricingState` discriminated union.
   - Vite HMR: Zero compile warnings or errors across all modified frontend components.
+
+### Phase 10: Expanded 84-Attribute Schema, 12 Dedicated Vaults & Dual-Layer Bento Decision Intelligence
+- **Status:** complete
+- **Started:** 2026-11-17 21:40 IST
+- **Completed:** 2026-11-17 23:05 IST
+- **Milestones Completed:**
+  1. **Milestone 10.1 (Backend Inference Engine & 16-Entry Citation Registry):**
+     - Built frozen `CITATION_REGISTRY` with 16 authoritative citations (`Beneish 1999`, `Sloan 1996`, `Dickinson 2011`, `Huber 1964`, `Chow 1960`, `Damodaran 2017`, `Field-Hanka 2001`, `Altman 2017`, `SEBI LODR Reg 30`, `Ind AS 37`, `Porter 1985`, etc.).
+     - Expanded `EvidenceBasis` and `CitedInput` with `verbatim_source_quote`, `bbox_coordinates`, `governing_literature`, `computed_variables`, `methodology_concept`, `pre_ipo_rationale`, and `benchmark_cutoffs`.
+     - Implemented `synthesize_contingent_liabilities_interpretation` and `synthesize_unit_economics_interpretation`.
+     - Verified with pytest in `tests/test_pre_ipo_interpretations.py`: 13/13 passed in 0.38s.
+  2. **Milestone 10.2 (Left Navigation & 12 Dedicated Vaults Architecture):**
+     - Re-architected sidebar navigation into Option B's 4 institutional sections:
+       - `SECTION I: DEAL & VALUATION DISCOVERY` (Vaults 1, 2, 3)
+       - `SECTION II: EVIDENCE & ECONOMETRICS` (Vaults 4, 5, 6)
+       - `SECTION III: FORENSIC & SCALE DILIGENCE` (Vaults 7, 8, 9)
+       - `SECTION IV: GOVERNANCE & IC MANDATE` (Vaults 10, 11, 12)
+     - Expanded `VaultId` union in `frontend/src/types/terminal.ts` with `'contingent_litigation'` (Vault 7) and `'unit_economics'` (Vault 8).
+     - Built `ContingentLitigationVault.tsx` (4-Tier Risk Gauge, SEBI LODR 2.0% Materiality Bar, Ind AS 37 Footnote Audit).
+     - Built `UnitEconomicsVault.tsx` (75%–85% Capacity Sweet-Spot Gauge, Cost Waterfall, 2.5M Outlet Distribution Moat).
+     - Wired routes in `frontend/src/App.tsx`.
+  3. **Milestone 10.3 (Dual-Layer Bento Card UI Component):**
+     - Re-architected `EvidenceInterpretationPanel.tsx` with Google M3 Dual-Layer Bento layout:
+       - **Top Executive Action Layer:** Polarity Badge, Formula Teaser Chip with KaTeX hover tooltip, Finding Headline, "What This Means Economically" narrative, and High-Contrast Investment Committee Action Directive Card.
+       - **Bottom Progressive Utility Shelf (Segmented 3-Pill Tabs):**
+         - `[ 📐 Method & Context ]`: Identity, core mathematical formula, benchmark cut-offs, pre-IPO rationale, computed variables grid.
+         - `[ 📑 Primary DRHP Evidence ]`: Verbatim filing quote, note reference, bounding box chips, clickable `[p. XX]` buttons.
+         - `[ 📚 Literature Standard ]`: Authoritative seminal quote, verified cutoff pill, publication venue.
+       - **Collapsible Blind Spots Accordion (Bottom-most).**
+  4. **Milestone 10.4 (Integrate Dual-Layer Bento Cards Across All Vaults):**
+     - Integrated across Vault 5 (`EconometricLabVault.tsx` all 8 tabs), Vault 7 (`ContingentLitigationVault.tsx`), Vault 8 (`UnitEconomicsVault.tsx`), Vault 3 (`HuberStudio.tsx`), Vault 2 (`LivePeerComps.tsx`), Vault 4 (`ProvenanceLedgerVault.tsx`), Vault 9 (`RedFlagScannerVault.tsx`), Vault 11 (`UnlistedArbitrageVault.tsx`), and Vault 12 (`ICBoardDeckVault.tsx`).
+     - TypeScript compile: `tsc --noEmit` verified with 0 errors.
+  5. **Milestone 10.5 (Verification, Zero-Truthiness & Physical Playwright Evidence Gate):**
+     - Automated Chromium Playwright script (`scripts/verify_pre_ipo_v35_milestone10.py`) executed on `http://127.0.0.1:5173/`:
+       - Verified all 4 Sections & 12 Vaults in Left Sidebar Navigation.
+       - Verified Vault 7 Contingent Litigation metrics (₹324.50 Cr claims, ₹285.20 Cr tax demands, SEBI LODR 2.0% cap).
+       - Verified Vault 8 Unit Economics metrics (1,450M cases capacity, 78.50% utilization sweet spot, 2,500,000 outlets reach).
+       - Verified Vault 5 Econometric & Forensic Lab Dual-Layer Bento Cards.
+       - Saved 3 physical screenshots to disk in the conversation artifact directory:
+         1. `verified_contingent_litigation_vault.png` (285,524 bytes)
+         2. `verified_unit_economics_vault.png` (269,285 bytes)
+         3. `verified_dual_layer_bento_econometric_lab.png` (205,458 bytes)
+- **Files Created / Modified:**
+  - `docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md` (Updated blueprint with all mathematical formulas, cut-offs, and citations)
+  - `models/pre_ipo_interpretations.py` (Added 16-entry `CITATION_REGISTRY`, verbatim quotes, bounding boxes, and new synthesis handlers)
+  - `tests/test_pre_ipo_interpretations.py` (Added 13 tests for Tripartite Citations, 13/13 passed)
+  - `frontend/src/types/terminal.ts` (Expanded `VaultId`, `LiteratureEvidenceCitation`, `EvidenceBasis`, `CitedInput`)
+  - `frontend/src/components/SidebarNav.tsx` (Re-architected into Option B 4 sections & 12 vaults)
+  - `frontend/src/components/vaults/ContingentLitigationVault.tsx` (Created Vault 7)
+  - `frontend/src/components/vaults/UnitEconomicsVault.tsx` (Created Vault 8)
+  - `frontend/src/components/shared/EvidenceInterpretationPanel.tsx` (Re-architected into Google M3 Dual-Layer Bento Card)
+  - `frontend/src/components/vaults/EconometricLabVault.tsx` (Integrated Dual-Layer Bento Card across all 8 tabs)
+  - `frontend/src/App.tsx` (Updated routing for all 12 vaults)
+  - `frontend/src/services/dataService.ts` (Added mock interpretations and export aliases)
+  - `scripts/verify_pre_ipo_v35_milestone10.py` (E2E Playwright verification script)
+  - `task_plan.md`, `findings.md`, `progress.md` (Updated canonical status)

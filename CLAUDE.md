@@ -1,5 +1,8 @@
 # Engineering Standard & Lessons Learnt Directives (30 Sept 2026 Update)
 
+> [!IMPORTANT]
+> **Canonical Single Source of Truth:** `AGENTS.md` is the authoritative single source of truth for all operational directives, engineering standards, architectural invariants, and pre-completion self-checks. See [AGENTS.md](file:///c:/Users/hemas/Downloads/ProfSurProject/AGENTS.md).
+
 ## A. Windows File Writing & Escaping Rules
 - NEVER pass inline Python code containing `$` (LaTeX variables like `$Y_{it}$`) or complex nested quotes inside PowerShell `-c "..."`. PowerShell expands `$` into empty variables or breaks string delimiters.
 - ALWAYS use PowerShell verbatim single-quoted here-strings (`@' ... '@ | Out-File -FilePath <path> -Encoding utf8`) or standalone python scripts.

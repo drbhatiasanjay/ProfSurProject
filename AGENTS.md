@@ -126,4 +126,34 @@ Detailed rule: `.agents/rules/engineering_safeguards.md`.
   5. **Sun Pharma (Pharma):** Cross-border M&A, Euro Notes natural currency FX hedge.
 - **Subtitle Governance:** Floating subtitles must be anchored at `MarginV=90` in clean upper white space to guarantee zero chat input bar or control occlusion.
 
+## Architectural Invariants & Anti-Drift Rules
+
+### 1. State Modeling & Discriminated Unions
+- Mutually exclusive states must never be represented by multiple independent booleans (e.g. `isLoading`, `isPriceUndisclosed`, `priceBandMin`).
+- Enforce TypeScript discriminated unions with compile-time exhaustive `switch` checks (`const _exhaustive: never = state;`).
+- Standard references: `DealPricingState` (`DRHP_UNPRICED` | `RHP_PRICED` | `TRADING_LIVE`) and `ProvenanceField<T>` (`FOUND` | `NOT_FOUND` | `NEEDS_RECONFIRMATION`) in `frontend/src/types/terminal.ts`.
+
+### 2. Single Source of Truth
+- Never duplicate derived domain values (e.g. `dealIntegrity`, `taxRegime`) into component local state.
+- Never recompute business rules or statutory gates (e.g. 5-point reconciliation) inside UI render loops.
+- Compute once at the backend/model boundary and consume directly via typed props or API responses.
+
+### 3. Capability & Trust Boundaries
+- Route all analytical, valuation, and export endpoints through `assert_capability_allowed` (`models/pre_ipo_capability_gate.py`). Unreviewed or unpriced filings must fail closed (`ExportBlockedError`).
+- Validate external and incoming payloads at runtime; never bypass validation with unchecked TypeScript `as Type` assertions.
+
+### 4. Persistence & Async Safety
+- Persist security, challenge, and lockout state in SQLite (`models/user_store.py`) rather than process memory to survive server and container restarts.
+- Guard async effects against race conditions, component unmounts, and strictly forbid silent `catch` blocks.
+
+### 5. Windows Execution Hygiene
+- Always use synchronous workflow commands or invoke `.venv/Scripts/python.exe` directly without PowerShell profile hooks when running checks.
+
+## Pre-Completion Self-Check
+- [ ] State & Type Exhaustiveness: Verify all mutually exclusive states use discriminated unions with exhaustive switch checks; confirm zero multi-boolean flags and zero unvalidated as Type assertions.
+- [ ] Single Source of Truth: Confirm derived values (e.g. dealIntegrity, taxRegime) are computed exclusively at the model/data boundary and never duplicated or recalculated in UI render loops.
+- [ ] Capability & Persistence Gates: Verify all analytical and export endpoints invoke assert_capability_allowed (failing closed), and security/lockout state is persisted in SQLite via UserStore.
+- [ ] Execution Hygiene & Error Handling: Verify async calls guard against race conditions with zero silent catch blocks, and test/script execution targets .venv/Scripts/python.exe synchronously.
+
+
 

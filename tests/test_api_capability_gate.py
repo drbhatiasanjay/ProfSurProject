@@ -24,7 +24,10 @@ assert pricing_ntpc.get("status") == "RHP_PRICED", f"Expected RHP_PRICED, got {p
 assert pricing_ntpc.get("priceBandMin") == 102
 assert pricing_ntpc.get("priceBandMax") == 108
 assert pricing_ntpc.get("isContained") is False
-print("PASS: NTPCGREEN returned valid RHP_PRICED discriminated union")
+assert offer_ntpc.get("dealIntegrity") == "PASS", f"Expected PASS for NTPCGREEN dealIntegrity, got {offer_ntpc.get('dealIntegrity')}"
+assert "gate1BalanceSheet" in offer_ntpc.get("reconciliationGate", {})
+assert data_ntpc.get("reconciliation", {}).get("gate1BalanceSheet", {}).get("status") == "PASS"
+print("PASS: NTPCGREEN returned valid RHP_PRICED discriminated union and dealIntegrity=PASS")
 
 # 3. HCCB (Unpriced, Contained)
 res_hccb = client.get("/api/pre-ipo/market-status?symbol=HCCB")
@@ -39,6 +42,8 @@ print(f"HCCB calibration metric: {calib_hccb.get('metric')}")
 print(f"HCCB composite rating: {scorecard_hccb.get('compositeRating')}")
 assert pricing_hccb.get("status") == "DRHP_UNPRICED", f"Expected DRHP_UNPRICED, got {pricing_hccb}"
 assert pricing_hccb.get("isContained") is True
+assert offer_hccb.get("dealIntegrity") == "CONDITIONAL", f"Expected CONDITIONAL for HCCB dealIntegrity, got {offer_hccb.get('dealIntegrity')}"
+assert "gate1BalanceSheet" in offer_hccb.get("reconciliationGate", {})
 assert calib_hccb.get("isUnpricedFailsafe") is True
 assert "QUARANTINED" in scorecard_hccb.get("compositeRating")
 print("PASS: HCCB properly blocked & quarantined via assert_capability_allowed")

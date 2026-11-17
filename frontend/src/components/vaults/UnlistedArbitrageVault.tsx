@@ -403,6 +403,8 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer
         title="Unlisted Arbitrage & Tax Friction Synthesizer"
+        offer={offer}
+        vaultId="unlisted_arbitrage"
         narrative={{
           sectorContext: "Pre-IPO unlisted secondary trading in India frequently trades at 15-30% premium to prospective RHP price bands due to limited retail float availability, exposing late entrants to negative listing arbitrage.",
           lifecyclePrecedents: "Swiggy unlisted shares traded at ₹480-510 prior to RHP filing before the official price band was set at ₹371-390, inflicting a 23% immediate pre-listing mark-to-market haircut on grey market purchasers.",

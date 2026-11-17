@@ -138,6 +138,33 @@ def cmd_verify(args):
         sys.exit(2)
     asyncio.run(_run_verify_async(url, args.user, password, out_img))
 
+def cmd_deploy_terminal(args):
+    print("=== DEPLOYING STANDALONE PRE-IPO TERMINAL SPIN-OFF TO GCP ===")
+    project_id = args.project
+    region = args.region
+    service_name = args.service
+    frontend_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "frontend")
+    print(f"Directory: {frontend_dir}")
+    print(f"Service:   {service_name} (Completely isolated from ProfSur Streamlit)")
+    print(f"Project:   {project_id}")
+    print(f"Region:    {region}")
+    
+    cmd = [
+        "gcloud", "run", "deploy", service_name,
+        "--source", frontend_dir,
+        "--region", region,
+        "--project", project_id,
+        "--port", "8080",
+        "--allow-unauthenticated"
+    ]
+    print("\nExecuting: " + " ".join(cmd))
+    res = subprocess.run(cmd)
+    if res.returncode == 0:
+        print("\n✓ DEPLOYMENT SUCCESSFUL! Share the Cloud Run URL above.")
+    else:
+        print("\n✗ Deployment failed with exit code:", res.returncode)
+        sys.exit(res.returncode)
+
 def main():
     parser = argparse.ArgumentParser(description="LifeCycle Leverage Project Ops CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -160,6 +187,13 @@ def main():
     p_verify.add_argument("--env", choices=["local", "gcp"], default="gcp", help="Target environment")
     p_verify.add_argument("--user", default="profsurkumar", help="Login username")
     p_verify.set_defaults(func=cmd_verify)
+
+    # deploy-terminal
+    p_deploy = subparsers.add_parser("deploy-terminal", help="Deploy standalone Pre-IPO terminal spin-off to Cloud Run")
+    p_deploy.add_argument("--project", default="tempproject-462219", help="GCP Project ID")
+    p_deploy.add_argument("--region", default="us-east1", help="GCP Region")
+    p_deploy.add_argument("--service", default="pre-ipo-terminal", help="Cloud Run service name")
+    p_deploy.set_defaults(func=cmd_deploy_terminal)
 
     args = parser.parse_args()
     args.func(args)

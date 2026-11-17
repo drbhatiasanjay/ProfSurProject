@@ -84,3 +84,62 @@ def test_failed_logins_lock_the_account(auth_db):
     for _ in range(auth_db.MAX_LOGIN_FAILURES):
         assert auth_db.authenticate("locked_user", "wrong password") is None
     assert auth_db.authenticate("locked_user", "correct horse battery staple 2026!") is None
+
+
+def test_lockout_and_security_state_persists_across_store_reinitialization(tmp_path, monkeypatch):
+    """Item #10 verification: Store re-initialization must not reset lockouts or security state."""
+    db_file = tmp_path / "persistent_auth.sqlite3"
+    monkeypatch.setenv("PROFSUR_DB_PATH", str(db_file))
+    monkeypatch.setenv("AUTH_TEST_MODE", "1")
+    monkeypatch.setenv("AUTH_TEST_OUTBOX", str(tmp_path / "outbox.jsonl"))
+
+    import db
+    monkeypatch.setattr(db, "DB_PATH", str(db_file))
+
+    from models.user_store import UserStore
+    import auth
+
+    # 1. Initialize store instance #1 and enroll user
+    store1 = UserStore(str(db_file))
+    user = auth.enroll_user("persistent_lockout_user", "persist@example.com", "+919876543219")
+    auth.issue_email_code(user["id"])
+    code = auth.latest_test_code(user["id"])
+    auth.verify_email_code(user["id"], code)
+    auth.set_password(user["id"], "correct horse battery staple 2026!")
+
+    # 2. Trigger failed logins on store1 until lockout
+    for _ in range(auth.MAX_LOGIN_FAILURES):
+        assert store1.authenticate("persistent_lockout_user", "wrong_pass") is None
+
+    # Assert store1 sees user as locked
+    assert store1.is_locked("persistent_lockout_user") is True
+    locked_until_1 = store1.get_locked_until("persistent_lockout_user")
+    assert locked_until_1 is not None
+    assert store1.get_failed_attempts("persistent_lockout_user") == auth.MAX_LOGIN_FAILURES
+
+    # 3. Simulate container/server restart: re-initialize a completely new UserStore instance #2
+    store2 = UserStore(str(db_file))
+
+    # Assert store2 immediately sees the persisted lockout and failure count
+    assert store2.is_locked("persistent_lockout_user") is True
+    assert store2.get_locked_until("persistent_lockout_user") == locked_until_1
+    assert store2.get_failed_attempts("persistent_lockout_user") == auth.MAX_LOGIN_FAILURES
+
+    # Even with the CORRECT password, store2 MUST reject authentication due to active lockout
+    assert store2.authenticate("persistent_lockout_user", "correct horse battery staple 2026!") is None
+
+    # Also test verification_code and code_expires_at persistence across store re-initialization
+    user2 = auth.enroll_user("code_user", "code@example.com", "+919876543220")
+    store2.set_verification_code(user2["id"], "123456", ttl_seconds=600)
+    stored_code_info = store2.get_verification_code(user2["id"])
+    assert stored_code_info is not None
+
+    # Re-initialize store instance #3
+    store3 = UserStore(str(db_file))
+    reloaded_code_info = store3.get_verification_code(user2["id"])
+    assert reloaded_code_info is not None
+    assert reloaded_code_info["verification_code"] == stored_code_info["verification_code"]
+    assert reloaded_code_info["code_expires_at"] == stored_code_info["code_expires_at"]
+    # Verification succeeds across re-initialization
+    assert store3.verify_code(user2["id"], "123456") is True
+

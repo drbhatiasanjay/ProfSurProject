@@ -60,26 +60,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# Independent additive workflow; the existing terminal remains the default.
-if "pre_ipo_target_workspace" in st.session_state:
-    st.session_state["pre_ipo_workspace"] = st.session_state.pop("pre_ipo_target_workspace")
 
-with st.container(key="pre_ipo_workspace_switch"):
-    if st.session_state.get("theme") == "light":
-        render_html('''<style>
-        .st-key-pre_ipo_workspace_switch label,
-        .st-key-pre_ipo_workspace_switch label p,
-        .st-key-pre_ipo_workspace_switch [data-testid="stWidgetLabel"] p { color: #0f172a !important; }
-        </style>''')
-    workspace = st.radio("Pre-IPO workspace", ["Existing Pre-IPO terminal", "Facts & evidence review", "Decision-depth workbench"], horizontal=True, key="pre_ipo_workspace")
-if workspace == "Facts & evidence review":
-    from components.pre_ipo_evidence_review import render
-    render()
-    st.stop()
-if workspace == "Decision-depth workbench":
-    from components.pre_ipo_decision_workbench import render
-    render()
-    st.stop()
 
 
 # Apply Sovereign Financial Terminal Glassmorphic Theme CSS

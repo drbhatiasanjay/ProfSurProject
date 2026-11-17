@@ -20,6 +20,8 @@ import { StressWorkpapersVault } from './components/vaults/StressWorkpapersVault
 import { EconometricLabVault } from './components/vaults/EconometricLabVault';
 import { InvestorQAVault } from './components/vaults/InvestorQAVault';
 import { StakeholderLensVault } from './components/vaults/StakeholderLensVault';
+import { ContingentLitigationVault } from './components/vaults/ContingentLitigationVault';
+import { UnitEconomicsVault } from './components/vaults/UnitEconomicsVault';
 import { ICBoardDeckVault } from './components/vaults/ICBoardDeckVault';
 
 import {
@@ -158,6 +160,8 @@ export const App: React.FC = () => {
                   )}
                   <AnalystInsightDrawer
                     title="Market Demand & Order Book Intelligence"
+                    offer={offer}
+                    vaultId="market_demand"
                     narrative={{
                       sectorContext: "QIB Anchor demand serves as the foundational liquidity benchmark. High institutional anchor allocation reduces listing day retail volatility.",
                       lifecyclePrecedents: "Mega public offerings with heavy anchor subscription historically achieved 76% higher listing day survival during market drawdowns.",
@@ -180,6 +184,8 @@ export const App: React.FC = () => {
                   )}
                   <AnalystInsightDrawer
                     title="Live Peer Comps & WACA Multiple Step-Up Synthesizer"
+                    offer={offer}
+                    vaultId="peer_comps"
                     narrative={{
                       sectorContext: "Peers in Indian renewables and FMCG trade on diverging multiples: capital-intensive asset owners at 18-24x EV/EBITDA, FMCG bottlers at 45-55x P/E.",
                       lifecyclePrecedents: "Waaree Energies maintained premium pricing due to integrated module manufacturing, whereas pure-play solar EPC peers traded at 30% discount.",
@@ -201,6 +207,11 @@ export const App: React.FC = () => {
                     />
                   )}
                   <LivePeerCompsTable peers={peers} />
+                  <AnalystInsightDrawer
+                    title="Huber M-Estimator & Econometric Selection Bias Synthesizer"
+                    offer={offer}
+                    vaultId="huber_studio"
+                  />
                 </div>
               )}
 
@@ -239,14 +250,28 @@ export const App: React.FC = () => {
                 </div>
               )}
 
-              {/* Vault 9: Unlisted Post-Tax Arbitrage */}
+              {/* Vault 9: Contingent Litigation Radar */}
+              {activeView === 'contingent_litigation' && (
+                <div className="animate-fade-in">
+                  <ContingentLitigationVault offer={offer} />
+                </div>
+              )}
+
+              {/* Vault 10: Unit Economics & Operational Scale */}
+              {activeView === 'unit_economics' && (
+                <div className="animate-fade-in">
+                  <UnitEconomicsVault offer={offer} />
+                </div>
+              )}
+
+              {/* Vault 11: Unlisted Post-Tax Arbitrage */}
               {activeView === 'unlisted_arbitrage' && (
                 <div className="animate-fade-in">
                   <UnlistedArbitrageVault offer={offer} />
                 </div>
               )}
 
-              {/* Vault 10: IC Stance & Board Deck Export */}
+              {/* Vault 12: IC Stance & Board Deck Export */}
               {activeView === 'ic_board_deck' && (
                 <div className="space-y-6 animate-fade-in">
                   <ICBoardDeckVault offer={offer} />

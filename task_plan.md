@@ -160,3 +160,38 @@ Every phase of implementation has satisfied the following **8-pillar verificatio
   - Unit tests in `tests/test_pre_ipo_interpretations.py` (11/11 passed)
   - Synchronous pytest suite (39 passed, 2 skipped) and TypeScript (`tsc --noEmit`) passes with 0 errors
 - **Status:** complete
+
+---
+
+### Phase 10: Expanded 84-Attribute Schema, 12 Dedicated Vaults & Dual-Layer Bento Decision Intelligence Implementation
+- [x] **Milestone 10.1: Backend Inference Engine & 16-Entry Citation Registry (`models/pre_ipo_interpretations.py`):**
+  - Implement frozen `CITATION_REGISTRY` of 16 academic and statutory citations (Beneish 1999, Sloan 1996, Dickinson 2011, Huber 1964, Chow 1960, Damodaran 2017, Field-Hanka 2001, Altman 2017, SEBI LODR Reg 30, Ind AS 37, Porter 1985, etc.).
+  - Expand `CitedEvidenceInput` data class with `verbatim_source_quote` and `bbox_coordinates`.
+  - Add `LiteratureEvidenceCitation` data class with verbatim authoritative excerpt and verified cutoff.
+  - Implement `synthesize_contingent_liabilities_interpretation` and `synthesize_unit_economics_interpretation`.
+  - Enforce `EvidenceNarrationSynthesizer` with dynamic numerical token injection ({m_score:+.2f}, {score_delta:+.2f}, {p_value:.3f}, {wacc_pct:.1f}%) and zero truthiness (`if val is None:`).
+- [x] **Milestone 10.2: Left Navigation & 12 Dedicated Vaults Architecture (`frontend/src/`):**
+  - Expand `VaultId` union in `frontend/src/types/terminal.ts` to include `'contingent_litigation'` (Vault 7) and `'unit_economics'` (Vault 8), partitioned into 4 institutional sections per Option B.
+  - Update `frontend/src/components/SidebarNav.tsx` to render the 4-tier institutional hierarchy across all 12 Vaults (Sections I, II, III, IV) per Option B.
+  - Build `frontend/src/components/vaults/ContingentLitigationVault.tsx` (Vault 7: 4-tier risk gauge, SEBI LODR 2.0% materiality bar, litigation radar).
+  - Build `frontend/src/components/vaults/UnitEconomicsVault.tsx` (Vault 8: 75%–85% capacity sweet-spot gauge, cost waterfall, 2.5M outlet density map).
+  - Wire Vault 7 and Vault 8 into `frontend/src/App.tsx` routing.
+- [x] **Milestone 10.3: Dual-Layer Bento Card UI Component (`EvidenceInterpretationPanel.tsx`):**
+  - Implement Google M3 Dual-Layer Bento Architecture:
+    - **Executive Action Layer (Top, Always Visible):** Polarity Badge, Formula Teaser Chip with KaTeX hover tooltip, Finding Headline, "What This Means Economically" narrative, and High-Contrast Investment Committee Call-to-Action Card.
+    - **Progressive Utility Shelf (Bottom, Segmented Pill Tabs):**
+      - Tab 1: `[ 📐 Method & Pre-IPO Context ]` (Identity, formula, cut-offs, pre-IPO underwriting rationale).
+      - Tab 2: `[ 📑 Primary DRHP Evidence ]` (Verbatim filing quote, note reference, clickable `[p. XX]` inspection button).
+      - Tab 3: `[ 📚 Literature Standard ]` (Authoritative academic/statutory quote, publication, verified cutoff pill).
+    - **Collapsible Missing Data & Blind Spots Accordion (Bottom-most).**
+- [x] **Milestone 10.4: Integrate Dual-Layer Bento Cards Across All Specialized Vaults:**
+  - Wire into Vault 5 (`EconometricLabVault.tsx` across all 8 tabs).
+  - Wire into Vault 7 (`ContingentLitigationVault.tsx`), Vault 8 (`UnitEconomicsVault.tsx`), Vault 3 (`HuberStudio.tsx`), Vault 2 (`LivePeerComps.tsx`), Vault 4 (`ProvenanceLedgerVault.tsx`), Vault 9 (`RedFlagScannerVault.tsx`), Vault 11 (`UnlistedArbitrageVault.tsx`), Vault 12 (`ICBoardDeckVault.tsx`).
+- [x] **Milestone 10.5: Verification, Zero-Truthiness & Physical Evidence Gate:**
+  - Unit tests in `tests/test_pre_ipo_interpretations.py` validating 16 citations, verbatim quotes, and token injection (13 passed in 0.38s).
+  - Run TypeScript compile check: `node frontend/node_modules/typescript/bin/tsc --noEmit -p frontend/tsconfig.json` (0 errors).
+  - Automated Playwright verification (`scripts/verify_pre_ipo_v35_milestone10.py`) executed, generating 3 physical PNG screenshots on disk:
+    1. `verified_contingent_litigation_vault.png` (285,524 bytes)
+    2. `verified_unit_economics_vault.png` (269,285 bytes)
+    3. `verified_dual_layer_bento_econometric_lab.png` (205,458 bytes)
+- **Status:** complete

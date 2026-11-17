@@ -113,7 +113,18 @@ export const LintelTowers: React.FC<LintelTowersProps> = ({ offer, calibration }
               <span>Mixed Balance Sheet & OFS Dilution</span>
             )}
           </span>
-          <span className="text-slate-400">Total: ₹{(offer.issueSizeCr || 0).toLocaleString('en-IN')} Cr</span>
+          <div className="flex items-center gap-2">
+            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+              offer.dealIntegrity === 'PASS'
+                ? 'bg-emerald-950/70 border-emerald-800 text-emerald-300'
+                : offer.dealIntegrity === 'CONDITIONAL'
+                ? 'bg-amber-950/70 border-amber-800 text-amber-300'
+                : 'bg-rose-950/70 border-rose-800 text-rose-300'
+            }`}>
+              INTEGRITY: {offer.dealIntegrity}
+            </span>
+            <span className="text-slate-400">Total: ₹{(offer.issueSizeCr || 0).toLocaleString('en-IN')} Cr</span>
+          </div>
         </div>
       </div>
 

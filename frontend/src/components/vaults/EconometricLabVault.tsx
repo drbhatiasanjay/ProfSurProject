@@ -6,6 +6,7 @@ import {
 } from '../../types/terminal';
 import { fetchEconometricSuite, getMockEconometricSuite } from '../../services/dataService';
 import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
+import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
 import {
   Calculator,
   Activity,
@@ -850,6 +851,13 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
           )}
         </div>
       )}
+
+      {/* 4-Pillar Model for Vault 5: Econometric & Forensic Lab */}
+      <AnalystInsightDrawer
+        title="Econometric Suite & Multi-Model Forensic Synthesizer"
+        offer={offer}
+        vaultId="econometric_lab"
+      />
     </div>
   );
 };

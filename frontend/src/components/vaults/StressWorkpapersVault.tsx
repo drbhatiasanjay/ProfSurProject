@@ -158,6 +158,8 @@ export const StressWorkpapersVault: React.FC<StressWorkpapersVaultProps> = ({ of
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer
         title="2D Stress Resilience & Balance Sheet Buffer Synthesizer"
+        offer={offer}
+        vaultId="stress_workpapers"
         narrative={{
           sectorContext: "Commodity spikes in PET resin and aluminium cans represent the primary gross margin risk for Indian bottlers. Contractual pass-through mechanisms mitigate shocks with a 1-quarter lag.",
           lifecyclePrecedents: "During the 2022 crude rally, Varun Beverages absorbed a 240 bps PET packaging cost shock while holding market share through territory scale and energy efficiency.",

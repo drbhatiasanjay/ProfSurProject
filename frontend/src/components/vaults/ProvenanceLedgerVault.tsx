@@ -64,7 +64,7 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
 
   // Canonical 84 Attributes Source of Truth (Backend payload first, canonical fallback if absent)
   const canonicalRecords: ProvenanceField<string | number>[] = useMemo(() => {
-    const raw = (offer.provenanceLedger && offer.provenanceLedger.length >= 42)
+    const raw = (offer.provenanceLedger && offer.provenanceLedger.length >= 84)
       ? offer.provenanceLedger
       : getCanonical84ProvenanceFallback(isHCCB);
 
@@ -928,6 +928,8 @@ export const ProvenanceLedgerVault: React.FC<ProvenanceLedgerVaultProps> = ({ of
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer
         title="Prospectus Provenance & Statutory Audit Synthesizer"
+        offer={offer}
+        vaultId="provenance_ledger"
         narrative={{
           sectorContext: "Indian capital markets enforce strict liability on BRLMs and research analysts under SEBI ICDR Schedule VI for misstatements in the Red Herring Prospectus.",
           lifecyclePrecedents: "Zomato and Paytm prospectus filings required extensive multi-round SEBI observations regarding customer metrics and unit economics reconciliations before final approval.",

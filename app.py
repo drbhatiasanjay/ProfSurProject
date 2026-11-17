@@ -602,9 +602,11 @@ legacy_stata_studio = st.Page("pages/23_stata_studio.py",       title="Stata Stu
 ai_chat_guide       = st.Page("pages/24_ai_chat_guide.py",      title="AI Chat Guide",       icon=":material/menu_book:")
 pre_ipo             = st.Page("pages/27_pre_ipo_drhp.py",       title="Pre-IPO DRHP Intelligence", icon=":material/rocket_launch:")
 pre_ipo_terminal    = st.Page("pages/29_pre_ipo_terminal.py",   title="Pre-IPO Quantitative Terminal", icon=":material/candlestick_chart:")
+pre_ipo_unified     = st.Page("pages/31_pre_ipo_unified.py",    title="Pre-IPO Unified DSS (Lintel × M3)", icon=":material/hub:")
+pre_ipo_evidence_admin = st.Page("pages/30_pre_ipo_evidence_admin.py", title="Pre-IPO Evidence & Workbench", icon=":material/fact_check:")
 covenant_headroom   = st.Page("pages/28_covenant_headroom.py",   title="Covenant & Debt Headroom",   icon=":material/shield_with_heart:")
 # knowledge_graph2  = st.Page("pages/21_knowledge_graph2.py",  title="Know. GraphV2 (WIP)", icon=":material/account_tree:")  # temporarily hidden
-_admin_tools = [settings, ai_chat_guide]
+_admin_tools = [settings, ai_chat_guide, pre_ipo_evidence_admin]
 if _role in {"admin", "researcher"}:
     _admin_tools.append(bulk_upload)
 if _role == "admin":
@@ -613,6 +615,7 @@ if _role == "admin":
 if st.session_state.get("workspace_mode") == "pre_ipo":
     nav = st.navigation({
         "Pre-IPO Deal Workflow": [
+            pre_ipo_unified,
             pre_ipo,
             pre_ipo_terminal,
             covenant_headroom,
@@ -627,7 +630,7 @@ if st.session_state.get("workspace_mode") == "pre_ipo":
 else:
     nav = st.navigation({
         "": [
-            overview, dashboard, pre_ipo, pre_ipo_terminal, covenant_headroom, data_explorer, benchmarks,
+            overview, dashboard, pre_ipo_unified, pre_ipo, pre_ipo_terminal, covenant_headroom, data_explorer, benchmarks,
             life_stage_dynamics, transitions,
             scenarios, econometrics, advanced_econ, interaction_effects,
             stata_studio,

@@ -131,7 +131,7 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Deploy to Cloud Run
+      - name: Deploy to Cloud Run (ProfSur Core Platform)
         run: |
           gcloud run deploy lifecycle-leverage \
             --source . \
@@ -139,5 +139,16 @@ jobs:
             --project tempproject-462219 \
             --port 8501 \
             --memory 2Gi \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Deploy Standalone Pre-IPO Terminal Spin-off to Cloud Run
+        run: |
+          gcloud run deploy pre-ipo-terminal \
+            --source frontend \
+            --region us-east1 \
+            --project tempproject-462219 \
+            --port 8080 \
+            --memory 1Gi \
             --allow-unauthenticated \
             --quiet

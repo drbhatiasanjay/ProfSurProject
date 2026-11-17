@@ -158,17 +158,19 @@ export interface SEBIComplianceRecord {
 // ==========================================
 
 export type VaultId =
-  | 'market_demand'     // Vault 1: Live Book Bidding + Dual-Head ML + SHAP + AQI 0-100
-  | 'peer_comps'        // Vault 2: 9-Col Peer Comps + WACA Step-Up + Mueller Persistence
-  | 'huber_studio'      // Vault 3: Huber Outlier Regression + Bias Index + Quantiles
-  | 'provenance_ledger' // Vault 4: 513p Line-by-Line Table + BBox Chips + 5-Gate Card
-  | 'stress_workpapers' // Vault 5: Econometric Lab & 2D Stress Workpapers
-  | 'econometric_lab'   // Vault 5: Canonical Econometric Lab
-  | 'investor_qa'       // Vault 6: 14 Questions + Customer Concentration Shock
-  | 'stakeholder_lens'  // Vault 7: 6-Persona Switcher (CFO, Lender, Equity, Retail, etc.)
-  | 'red_flag_scanner'  // Vault 8: 6-Rule Automated Radar (FLAG-01 to 06) + Beneish M-Score
-  | 'unlisted_arbitrage'// Vault 9: Sec 56(2)(x) FMV Tax + 6M Carry Cost Breakeven Price
-  | 'ic_board_deck';    // Vault 10: Prescriptive Mandate + 1-Click PPTX / PDF Memo
+  | 'market_demand'           // Vault 1: Live Book Bidding + Dual-Head ML + SHAP + AQI 0-100
+  | 'peer_comps'              // Vault 2: 9-Col Peer Comps + WACA Step-Up + Mueller Persistence
+  | 'huber_studio'            // Vault 3: Huber Outlier Regression + Bias Index + Quantiles
+  | 'provenance_ledger'       // Vault 4: 513p Line-by-Line Table + BBox Chips + 5-Gate Card
+  | 'stress_workpapers'       // Vault 5: Econometric Lab & 2D Stress Workpapers
+  | 'econometric_lab'         // Vault 5: Canonical Econometric Lab
+  | 'investor_qa'             // Vault 6: 14 Questions + Customer Concentration Shock
+  | 'stakeholder_lens'        // Vault 7: 6-Persona Switcher (CFO, Lender, Equity, Retail, etc.)
+  | 'red_flag_scanner'        // Vault 8: 6-Rule Automated Radar (FLAG-01 to 06) + Beneish M-Score
+  | 'contingent_litigation'   // Vault 9: Contingent Liabilities & Legal Radar (SEBI LODR 2% + Ind AS 37)
+  | 'unit_economics'          // Vault 10: Unit Economics & Operational Scale Studio (75-85% Sweet Spot)
+  | 'unlisted_arbitrage'      // Vault 11: Sec 56(2)(x) FMV Tax + 6M Carry Cost Breakeven Price
+  | 'ic_board_deck';          // Vault 12: Prescriptive Mandate + 1-Click PPTX / PDF Memo
 
 export interface TriStateLedgerCounters {
   verified: number;
@@ -361,12 +363,54 @@ export type ProvenanceField<T> =
       reconfirmationReason: string; // Non-optional on NEEDS_RECONFIRMATION
     };
 
+export interface PillarEvidenceCitation {
+  citationSource: string; // e.g. "DRHP Ch. V (Restated Financials), p. 280" or "Dickinson, V. (2011), The Accounting Review"
+  sourceType: 'STATUTORY_FILING' | 'ACADEMIC_LITERATURE' | 'REGULATORY_STANDARD' | 'INDUSTRY_REPORT';
+  quote: string;
+  verifiedMetricOrCutoff?: string;
+  drhpPage?: number;
+}
+
+export interface MetricVisualData {
+  label: string;
+  value: string | number;
+  benchmark?: string | number;
+  unit?: string;
+  status?: 'SAFE' | 'WARNING' | 'CRITICAL' | 'NEUTRAL';
+  barPct?: number; // 0-100 for visual comparison
+}
+
+export interface RiskAxisBar {
+  name: string;
+  score: number; // 0 - 100
+  threshold: number; // e.g. 50
+  status: 'SAFE' | 'WARNING' | 'CRITICAL';
+  metricSnippet: string;
+  mitigation: string;
+}
+
+export interface PillarDetail {
+  headline: string;
+  narration: string; // Detailed multi-paragraph evidence-based analysis
+  subParagraph?: string; // Additional context / statutory implication
+  citations: PillarEvidenceCitation[];
+  metrics: MetricVisualData[];
+  chartType?: 'BAR_DISPERSION' | 'LIFECYCLE_TIMELINE' | 'BID_ALLOCATION_MATRIX' | 'RISK_GAUGE_BARS' | 'CUSTOM';
+  riskAxes?: RiskAxisBar[];
+  recommendationDirective?: string;
+}
+
 export interface NarrativeIntelligencePillars {
   sectorContext: string;
   lifecyclePrecedents: string;
   icDirectives?: string;
   prescriptiveMandate?: string;
   riskRadar: string;
+  // Enhanced rich structured pillars
+  detailedSector?: PillarDetail;
+  detailedLifecycle?: PillarDetail;
+  detailedIC?: PillarDetail;
+  detailedRisk?: PillarDetail;
 }
 
 // ==========================================
@@ -384,16 +428,34 @@ export interface EconometricInterpretation {
 
 export type Polarity = 'POSITIVE_CONTRIBUTOR' | 'NEGATIVE_CONTRIBUTOR' | 'NEUTRAL_MONITOR' | 'BLOCKING_RISK';
 
+export interface LiteratureEvidenceCitation {
+  citationId: string;
+  shortTag: string;
+  formalCitation: string;
+  statutoryOrPaperQuote: string;
+  verifiedCutoff: string;
+  governingBodyOrJournal: string;
+  downstreamModule: string;
+}
+
 export interface CitedInput {
   attributeId: string;
   label: string;
   valueDisplay: string;
   pageNumber: number;
+  verbatimSourceQuote?: string;
+  bboxCoordinates?: [number, number, number, number];
+  chapterOrNote?: string;
 }
 
 export interface EvidenceBasis {
   formulaOrMethod: string;
   citedInputs: CitedInput[];
+  governingLiterature?: LiteratureEvidenceCitation;
+  computedVariables?: Record<string, any>;
+  methodologyConcept?: string;
+  preIpoRationale?: string;
+  benchmarkCutoffs?: string;
 }
 
 export interface AnalyticalInterpretation {

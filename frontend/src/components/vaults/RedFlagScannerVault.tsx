@@ -296,6 +296,8 @@ export const RedFlagScannerVault: React.FC<RedFlagScannerVaultProps> = ({ offer 
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer
         title="Red-Flag Governance & Forensic Accounting Synthesizer"
+        offer={offer}
+        vaultId="red_flags"
         narrative={{
           sectorContext: isHCCB
             ? "Indian soft drinks sector features high capex and intense seasonal distributor financing. RPT leakage to Coca-Cola parent is structural across global bottlers but requires clear governance oversight."

@@ -92,38 +92,53 @@ def _validate_legacy_credentials(credentials: dict) -> None:
 def ensure_auth_tables() -> None:
     conn = db.get_connection()
     try:
-        conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS auth_users (
-                id TEXT PRIMARY KEY,
-                username TEXT NOT NULL UNIQUE,
-                email TEXT NOT NULL UNIQUE,
-                phone TEXT NOT NULL,
-                password_hash TEXT,
-                role TEXT NOT NULL DEFAULT 'viewer' CHECK(role IN ('viewer','researcher','admin')),
-                status TEXT NOT NULL DEFAULT 'pending_email' CHECK(status IN ('pending_email','password_setup','active','disabled')),
-                email_verified_at INTEGER,
-                failed_login_count INTEGER NOT NULL DEFAULT 0,
-                locked_until INTEGER,
-                created_at INTEGER NOT NULL,
-                updated_at INTEGER NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS auth_challenges (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
-                purpose TEXT NOT NULL CHECK(purpose IN ('email_verification','password_reset')),
-                code_hash TEXT NOT NULL,
-                expires_at INTEGER NOT NULL,
-                attempts INTEGER NOT NULL DEFAULT 0,
-                consumed_at INTEGER,
-                created_at INTEGER NOT NULL
-            );
-            CREATE INDEX IF NOT EXISTS idx_auth_challenges_user ON auth_challenges(user_id, purpose, created_at DESC);
-            """
-        )
-        conn.commit()
+        ensure_auth_tables_on_conn(conn)
     finally:
         conn.close()
+
+
+def ensure_auth_tables_on_conn(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS auth_users (
+            id TEXT PRIMARY KEY,
+            username TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL UNIQUE,
+            phone TEXT NOT NULL,
+            password_hash TEXT,
+            role TEXT NOT NULL DEFAULT 'viewer' CHECK(role IN ('viewer','researcher','admin')),
+            status TEXT NOT NULL DEFAULT 'pending_email' CHECK(status IN ('pending_email','password_setup','active','disabled')),
+            email_verified_at INTEGER,
+            failed_login_count INTEGER NOT NULL DEFAULT 0,
+            failed_attempts INTEGER NOT NULL DEFAULT 0,
+            locked_until INTEGER,
+            verification_code TEXT,
+            code_expires_at INTEGER,
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS auth_challenges (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+            purpose TEXT NOT NULL CHECK(purpose IN ('email_verification','password_reset')),
+            code_hash TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            consumed_at INTEGER,
+            created_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_auth_challenges_user ON auth_challenges(user_id, purpose, created_at DESC);
+        """
+    )
+    cur = conn.execute("PRAGMA table_info(auth_users)")
+    existing_cols = {row[1] for row in cur.fetchall()}
+    if "failed_attempts" not in existing_cols:
+        conn.execute("ALTER TABLE auth_users ADD COLUMN failed_attempts INTEGER NOT NULL DEFAULT 0")
+    if "verification_code" not in existing_cols:
+        conn.execute("ALTER TABLE auth_users ADD COLUMN verification_code TEXT")
+    if "code_expires_at" not in existing_cols:
+        conn.execute("ALTER TABLE auth_users ADD COLUMN code_expires_at INTEGER")
+    conn.commit()
 
 
 def bootstrap_legacy_users(credentials: dict) -> None:
@@ -212,6 +227,10 @@ def issue_email_code(user_id: str):
         conn.execute(
             "INSERT INTO auth_challenges (id,user_id,purpose,code_hash,expires_at,created_at) VALUES (?,?,?,?,?,?)",
             (challenge_id, user_id, "email_verification", _hash(code), now + CODE_TTL_SECONDS, now),
+        )
+        conn.execute(
+            "UPDATE auth_users SET verification_code=?, code_expires_at=?, updated_at=? WHERE id=?",
+            (_hash(code), now + CODE_TTL_SECONDS, now, user_id),
         )
         conn.commit()
         if _test_mode():
@@ -411,7 +430,10 @@ def verify_email_code(user_id: str, code: str) -> bool:
             conn.commit()
             return False
         conn.execute("UPDATE auth_challenges SET consumed_at=? WHERE id=? AND consumed_at IS NULL", (now, challenge["id"]))
-        conn.execute("UPDATE auth_users SET status='password_setup', email_verified_at=?, updated_at=? WHERE id=?", (now, now, user_id))
+        conn.execute(
+            "UPDATE auth_users SET status='password_setup', email_verified_at=?, verification_code=NULL, code_expires_at=NULL, updated_at=? WHERE id=?",
+            (now, now, user_id),
+        )
         conn.commit()
         return True
     finally:
@@ -450,13 +472,29 @@ def authenticate(identifier: str, password: str):
         is_currently_locked = bool(user and user["locked_until"] and user["locked_until"] > now)
         if not user or user["status"] != "active" or is_currently_locked or not valid:
             if user and user["status"] == "active" and not is_currently_locked:
-                failures = user["failed_login_count"] + 1
+                user_keys = user.keys() if hasattr(user, "keys") else []
+                curr_attempts = user["failed_attempts"] if "failed_attempts" in user_keys and user["failed_attempts"] is not None else user["failed_login_count"]
+                failures = (curr_attempts if curr_attempts is not None else 0) + 1
                 locked = now + LOCKOUT_SECONDS if failures >= MAX_LOGIN_FAILURES else None
-                conn.execute("UPDATE auth_users SET failed_login_count=?, locked_until=?, updated_at=? WHERE id=?", (failures, locked, now, user["id"]))
+                conn.execute(
+                    "UPDATE auth_users SET failed_login_count=?, failed_attempts=?, locked_until=?, updated_at=? WHERE id=?",
+                    (failures, failures, locked, now, user["id"]),
+                )
                 conn.commit()
             return None
-        conn.execute("UPDATE auth_users SET failed_login_count=0, locked_until=NULL, updated_at=? WHERE id=?", (now, user["id"]))
+        conn.execute(
+            "UPDATE auth_users SET failed_login_count=0, failed_attempts=0, locked_until=NULL, updated_at=? WHERE id=?",
+            (now, user["id"]),
+        )
         conn.commit()
         return {"id": user["id"], "username": user["username"], "email": user["email"], "role": user["role"]}
     finally:
         conn.close()
+
+
+def __getattr__(name: str):
+    if name == "UserStore":
+        from models.user_store import UserStore
+        return UserStore
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
+

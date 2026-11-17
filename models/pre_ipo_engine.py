@@ -1520,11 +1520,14 @@ def generate_equity_question_answers(
     dossier: PreIPODealDossier,
     persona: str = "Institutional Equity Investor / Analyst",
     transaction_context: str = "PUBLIC_IPO",
+    context: Optional[str] = None,
 ) -> Dict[str, EquityQuestionFinding]:
     """
     Synthesizes answers for the 10 Core Investor Questions (Q01-Q10) plus Private Extensions (PX01-PX04)
     ensuring rigorous claim lineage, alternative interpretations, and conditional actionable recommendations.
     """
+    if context is not None:
+        transaction_context = context
     # If the dossier already has high-fidelity pre-compiled equity questions, return them adapted
     if dossier.equity_questions and len(dossier.equity_questions) >= 10:
         res = dict(dossier.equity_questions)

@@ -187,6 +187,8 @@ export const InvestorQAVault: React.FC<InvestorQAVaultProps> = ({ offer }) => {
       {/* Expandable 4-Pillar Narrative Drawer */}
       <AnalystInsightDrawer
         title="Investor Q&amp;A &amp; Commercial Diligence Synthesizer"
+        offer={offer}
+        vaultId="investor_qa"
         narrative={{
           sectorContext: "Institutional roadshows in India focus overwhelmingly on customer churn defensibility and promoter alignment.",
           lifecyclePrecedents: "During Swiggy's IPO, institutional Q&A centered on quick-commerce dark store unit economics (Instamart vs. Zepto/Blinkit).",
