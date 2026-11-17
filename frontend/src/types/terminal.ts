@@ -161,7 +161,8 @@ export type VaultId =
   | 'peer_comps'        // Vault 2: 9-Col Peer Comps + WACA Step-Up + Mueller Persistence
   | 'huber_studio'      // Vault 3: Huber Outlier Regression + Bias Index + Quantiles
   | 'provenance_ledger' // Vault 4: 513p Line-by-Line Table + BBox Chips + 5-Gate Card
-  | 'stress_workpapers' // Vault 5: 2D Stress 5x5 + Sloan Accruals + Debt Ladder
+  | 'stress_workpapers' // Vault 5: Econometric Lab & 2D Stress Workpapers
+  | 'econometric_lab'   // Vault 5: Canonical Econometric Lab
   | 'investor_qa'       // Vault 6: 14 Questions + Customer Concentration Shock
   | 'stakeholder_lens'  // Vault 7: 6-Persona Switcher (CFO, Lender, Equity, Retail, etc.)
   | 'red_flag_scanner'  // Vault 8: 6-Rule Automated Radar (FLAG-01 to 06) + Beneish M-Score
@@ -365,4 +366,164 @@ export interface NarrativeIntelligencePillars {
   icDirectives?: string;
   prescriptiveMandate?: string;
   riskRadar: string;
+}
+
+// ==========================================
+// EXPANDED 7-MODEL ECONOMETRIC SUITE TYPES
+// ==========================================
+
+export type EconometricVerdict = 'FAVORABLE' | 'NEUTRAL' | 'CAUTION' | 'CRITICAL';
+
+export interface EconometricInterpretation {
+  verdict: EconometricVerdict;
+  statisticalSummary: string;
+  economicMechanism: string;
+  icRecommendation: string;
+}
+
+export interface BeneishMScoreData {
+  mScore: number;
+  isManipulator: boolean;
+  zone: 'SAFE' | 'GREY' | 'MANIPULATOR';
+  sloanAccrualRatio: number;
+  dsri: number;
+  gmi: number;
+  aqi: number;
+  sgi: number;
+  depi: number;
+  sgai: number;
+  tata: number;
+  lvgi: number;
+  variablesBreakdown: Record<string, number>;
+  interpretation: EconometricInterpretation;
+}
+
+export interface DickinsonPeriodClassification {
+  fiscalPeriod: string;
+  cfo: number;
+  cfi: number;
+  cff: number;
+  pattern: string;
+  stage: string;
+}
+
+export interface DickinsonLifecycleData {
+  currentStage: string;
+  currentPattern: string;
+  trajectory: DickinsonPeriodClassification[];
+  stageProgressionSummary: string;
+  isGrowthCongruent: boolean;
+  interpretation: EconometricInterpretation;
+}
+
+export interface HuberPeerWeight {
+  symbol: string;
+  companyName: string;
+  multiple: number;
+  predictedMultiple: number;
+  residual: number;
+  robustWeight: number;
+  isOutlier: boolean;
+}
+
+export interface HuberRobustRegressionData {
+  targetSymbol: string;
+  targetMultiple: number;
+  warrantedFairMultiple: number;
+  unbackedFrothPct: number;
+  valuationZScore: number;
+  declaredPeerMedian: number;
+  algorithmicPeerMedian: number;
+  drhpPeerBiasIndex: number;
+  rSquaredPseudo: number;
+  coefficients: Record<string, number>;
+  peerWeights: HuberPeerWeight[];
+  interpretation: EconometricInterpretation;
+}
+
+export interface StubSeasonalityBreakData {
+  stubPeriodLabel: string;
+  stubRevenueCr: number;
+  naiveAnnualizedRevenueCr: number;
+  seasonalAdjustedRevenueCr: number;
+  seasonalWeightApplied: number;
+  annualizationDistortionCr: number;
+  stubEbitdaMarginPct: number;
+  historicalMeanMarginPct: number;
+  marginSpikeBps: number;
+  isMarginStuffingAlert: boolean;
+  chowFStat: number;
+  chowPValue: number;
+  structuralBreakDetected: boolean;
+  interpretation: EconometricInterpretation;
+}
+
+export interface IndAS116LeaseLeverageData {
+  fundedDebtCr: number;
+  leaseLiabilitiesCr: number;
+  totalAdjustedDebtCr: number;
+  cashAndEquivalentsCr: number;
+  headlineNetDebtCr: number;
+  leaseAdjustedNetDebtCr: number;
+  ebitdaCr: number;
+  ebitdarCr: number;
+  headlineNetDebtToEbitda: number;
+  leaseAdjustedNetDebtToEbitdar: number;
+  leverageUnderstatementRatio: number;
+  debtDueWithin12mCr: number;
+  refinancingWallRatio: number;
+  isRefinancingWallElevated: boolean;
+  interestCoverageAdjusted: number;
+  interpretation: EconometricInterpretation;
+}
+
+export interface AltmanZScoreData {
+  zScore: number;
+  zone: 'SAFE' | 'GREY' | 'DISTRESS';
+  x1WorkingCapitalToTa: number;
+  x2RetainedEarningsToTa: number;
+  x3EbitToTa: number;
+  x4EquityToTotalLiab: number;
+  defaultProbabilityProxyPct: number;
+  interpretation: EconometricInterpretation;
+}
+
+export interface LockInCliffMilestone {
+  daysPostListing: number;
+  dateLabel: string;
+  unlockedSharesCr: number;
+  category: string;
+  floatExpansionPct: number;
+  daysToAbsorbOverhang: number;
+}
+
+export interface LockInAndTaxDragData {
+  milestones: LockInCliffMilestone[];
+  totalPreIpoSharesCr: number;
+  anchorSharesCr: number;
+  freeFloatSharesCr: number;
+  rule11UaFmvInr: number;
+  acquisitionPriceInr: number;
+  isTaxDragTriggered: boolean;
+  taxDragPerShareInr: number;
+  postTaxBreakevenListingPriceInr: number;
+  interpretation: EconometricInterpretation;
+}
+
+export interface ComprehensiveEconometricSuiteData {
+  symbol: string;
+  companyName: string;
+  timestamp: string;
+  overallVerdict: EconometricVerdict;
+  isBlocked?: boolean;
+  blockedReason?: string;
+  models: {
+    beneishMScore?: BeneishMScoreData;
+    dickinsonLifecycle?: DickinsonLifecycleData;
+    huberPeerRegression?: HuberRobustRegressionData;
+    stubSeasonality?: StubSeasonalityBreakData;
+    indAs116Leverage?: IndAS116LeaseLeverageData;
+    altmanZScore?: AltmanZScoreData;
+    lockInTaxDrag?: LockInAndTaxDragData;
+  };
 }

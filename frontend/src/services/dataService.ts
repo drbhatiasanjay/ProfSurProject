@@ -5,8 +5,10 @@ import {
   LivePeerComp,
   HuberCalibrationResults,
   WalkForwardMLScorecardData,
-  SEBIComplianceRecord
+  SEBIComplianceRecord,
+  ComprehensiveEconometricSuiteData
 } from '../types/terminal';
+import { getCanonical42ProvenanceFallback } from './canonicalProvenance';
 
 export const mockMarketIndices: MarketIndex[] = [
   {
@@ -66,6 +68,7 @@ export const mockOfferDetails: StatutoryOfferDetails = {
     priceBandMax: 108,
     isContained: false
   },
+  dealIntegrity: 'PASS',
   priceBandDisplay: '₹102 - ₹108',
   lotSize: 138,
   minCommitmentInr: 14904,
@@ -327,6 +330,7 @@ export const hccbOfferDetails: StatutoryOfferDetails = {
     status: 'DRHP_UNPRICED',
     isContained: true
   },
+  dealIntegrity: 'CONDITIONAL',
   priceBandDisplay: 'Drafting / Unpriced (₹[●])',
   lotSize: null,
   minCommitmentInr: null,
@@ -557,6 +561,7 @@ export const swiggyOfferDetails: StatutoryOfferDetails = {
     priceBandMax: 390,
     isContained: false
   },
+  dealIntegrity: 'PASS',
   lotSize: 38,
   issueSizeCr: 11327.43,
   freshIssueCr: 4499.00,
@@ -582,6 +587,7 @@ export const waareeOfferDetails: StatutoryOfferDetails = {
     priceBandMax: 1503,
     isContained: false
   },
+  dealIntegrity: 'PASS',
   lotSize: 9,
   issueSizeCr: 4321.44,
   freshIssueCr: 3600.00,
@@ -594,49 +600,406 @@ export const waareeOfferDetails: StatutoryOfferDetails = {
   lockInDaysPreIPOShareholders: 180,
 };
 
+export function getMockEconometricSuite(isHCCB: boolean): ComprehensiveEconometricSuiteData {
+  if (isHCCB) {
+    return {
+      symbol: 'HCCB',
+      companyName: 'Hindustan Coca-Cola Beverages Limited',
+      timestamp: new Date().toISOString(),
+      overallVerdict: 'FAVORABLE',
+      models: {
+        beneishMScore: {
+          mScore: -2.48,
+          isManipulator: false,
+          zone: 'SAFE',
+          sloanAccrualRatio: 0.024,
+          dsri: 1.04,
+          gmi: 0.98,
+          aqi: 0.88,
+          sgi: 1.15,
+          depi: 0.96,
+          sgai: 0.92,
+          tata: 0.024,
+          lvgi: 0.97,
+          variablesBreakdown: {
+            'DSRI (Days Sales in Receivables)': 1.04,
+            'GMI (Gross Margin Index)': 0.98,
+            'AQI (Asset Quality Index)': 0.88,
+            'SGI (Sales Growth Index)': 1.15,
+            'DEPI (Depreciation Index)': 0.96,
+            'SGAI (SGA Expense Index)': 0.92,
+            'TATA (Total Accruals / Assets)': 0.024,
+            'LVGI (Leverage Index)': 0.97
+          },
+          interpretation: {
+            verdict: 'FAVORABLE',
+            statisticalSummary: 'Beneish M-Score = -2.48 (Safe Zone <= -2.22). Sloan Accrual Ratio = 2.4% (well below 10.0% threshold). DSRI = 1.04, indicating receivables growth in sync with sales.',
+            economicMechanism: 'The issuer displays conservative accounting quality with strong cash conversion. Operating cash flow (₹1,438.5 Cr) robustly underpins reported PAT (₹1,021.4 Cr). No aggressive revenue front-loading or abnormal asset capitalization detected.',
+            icRecommendation: 'EARNINGS INTEGRITY: PASS. Trailing reported earnings are cash-backed. No forensic valuation discount or accounting hair-cut required.'
+          }
+        },
+        dickinsonLifecycle: {
+          currentStage: 'Mature (Cash Cow)',
+          currentPattern: '(+, -, -)',
+          trajectory: [
+            { fiscalPeriod: 'FY23', cfo: 1222.7, cfi: -520.0, cff: -315.0, pattern: '(+, -, -)', stage: 'Mature (Cash Cow)' },
+            { fiscalPeriod: 'FY24', cfo: 1366.5, cfi: -585.0, cff: -382.5, pattern: '(+, -, -)', stage: 'Mature (Cash Cow)' },
+            { fiscalPeriod: 'FY25', cfo: 1438.5, cfi: -650.0, cff: -450.0, pattern: '(+, -, -)', stage: 'Mature (Cash Cow)' },
+            { fiscalPeriod: 'Stub Q1', cfo: 503.5, cfi: -195.0, cff: -112.5, pattern: '(+, -, -)', stage: 'Mature (Cash Cow)' }
+          ],
+          stageProgressionSummary: 'FY23: Mature -> FY24: Mature -> FY25: Mature -> Stub Q1: Mature',
+          isGrowthCongruent: true,
+          interpretation: {
+            verdict: 'FAVORABLE',
+            statisticalSummary: 'Dickinson Cash Flow Life-Cycle: Mature (Cash Cow) (+, -, -). Multi-year migration: Pristine cash generation continuity across FY23–FY25 and interim stub.',
+            economicMechanism: 'The company generates substantial positive operating cash flows that fully fund capital investments (negative CFI) and allow net debt service or shareholder returns (negative CFF). This profile exhibits the highest return persistence and lowest solvency risk in the academic literature.',
+            icRecommendation: 'ALLOCATION: PROCEED. Cash-flow self-financing profile implies minimal post-IPO equity dilution risk. Focus underwriting on capital allocation discipline and ROIC durability.'
+          }
+        },
+        huberPeerRegression: {
+          targetSymbol: 'HCCB',
+          targetMultiple: 28.5,
+          warrantedFairMultiple: 26.8,
+          unbackedFrothPct: 6.3,
+          valuationZScore: 0.28,
+          declaredPeerMedian: 38.2,
+          algorithmicPeerMedian: 32.5,
+          drhpPeerBiasIndex: 1.18,
+          rSquaredPseudo: 0.74,
+          coefficients: {
+            const: 11.45,
+            roce: 0.285,
+            cagr: 0.342,
+            margin: 0.218,
+            nd_ebitda: -1.14
+          },
+          peerWeights: [
+            { symbol: 'VBL', companyName: 'Varun Beverages', multiple: 31.8, predictedMultiple: 30.2, residual: 1.6, robustWeight: 0.94, isOutlier: false },
+            { symbol: 'DABUR', companyName: 'Dabur India', multiple: 38.2, predictedMultiple: 36.5, residual: 1.7, robustWeight: 0.92, isOutlier: false },
+            { symbol: 'MARICO', companyName: 'Marico Ltd', multiple: 35.1, predictedMultiple: 34.0, residual: 1.1, robustWeight: 0.97, isOutlier: false },
+            { symbol: 'TATACONSUM', companyName: 'Tata Consumer', multiple: 44.5, predictedMultiple: 41.2, residual: 3.3, robustWeight: 0.81, isOutlier: false },
+            { symbol: 'OUTLIER_CO', companyName: 'Outlier Bottler', multiple: 145.0, predictedMultiple: 42.0, residual: 103.0, robustWeight: 0.12, isOutlier: true }
+          ],
+          interpretation: {
+            verdict: 'FAVORABLE',
+            statisticalSummary: 'Huber Robust Warranted Multiple: 26.8x EV/EBITDA vs Issue Multiple 28.5x (Froth Gap: +6.3%). Valuation z-score: +0.28σ.',
+            economicMechanism: 'Huber M-estimator (c=1.345) downweights high-multiple peer outliers. The issue pricing sits within the warranted fair valuation envelope supported by ROCE (24.5%) and revenue growth (26.0%).',
+            icRecommendation: 'VALUATION: ATTRACTIVE. Offer multiple offers appropriate margin of safety against fundamental peers.'
+          }
+        },
+        stubSeasonality: {
+          stubPeriodLabel: 'Q1-FY26 (3M Restated)',
+          stubRevenueCr: 4280.0,
+          naiveAnnualizedRevenueCr: 17120.0,
+          seasonalAdjustedRevenueCr: 12588.2,
+          seasonalWeightApplied: 0.34,
+          annualizationDistortionCr: 4531.8,
+          stubEbitdaMarginPct: 21.4,
+          historicalMeanMarginPct: 19.3,
+          marginSpikeBps: 210.0,
+          isMarginStuffingAlert: false,
+          chowFStat: 1.45,
+          chowPValue: 0.24,
+          structuralBreakDetected: false,
+          interpretation: {
+            verdict: 'CAUTION',
+            statisticalSummary: 'Seasonal distortion detected: Naive annualization overstates run-rate by ₹4,531.8 Cr (Seasonal weight: 34.0% vs flat 25.0%). Chow F-stat = 1.45 (p = 0.240).',
+            economicMechanism: 'Stub period captures peak seasonal sales (Q1 summer beverage surge). Naive 4x annualization artificially inflates full-year EBITDA by ~₹970 Cr.',
+            icRecommendation: 'HAIRCUT STUB EARNINGS: Reject naive 4.0x multiplier. Haircut forward EBITDA estimate to reflect true full-year seasonal cadence.'
+          }
+        },
+        indAs116Leverage: {
+          fundedDebtCr: 120.0,
+          leaseLiabilitiesCr: 722.0,
+          totalAdjustedDebtCr: 842.0,
+          cashAndEquivalentsCr: 412.5,
+          headlineNetDebtCr: -292.5,
+          leaseAdjustedNetDebtCr: 429.5,
+          ebitdaCr: 1840.0,
+          ebitdarCr: 1952.0,
+          headlineNetDebtToEbitda: 0.0,
+          leaseAdjustedNetDebtToEbitdar: 0.22,
+          leverageUnderstatementRatio: 1.0,
+          debtDueWithin12mCr: 204.0,
+          refinancingWallRatio: 0.11,
+          isRefinancingWallElevated: false,
+          interestCoverageAdjusted: 19.4,
+          interpretation: {
+            verdict: 'FAVORABLE',
+            statisticalSummary: 'Headline Net Debt/EBITDA: 0.00x | Lease-Adjusted Net Debt/EBITDAR: 0.22x. 12M Refinancing Wall Ratio: 0.11x (Liquidity buffer ample). Lease-adjusted ICR: 19.4x.',
+            economicMechanism: 'The company maintains conservative balance sheet solvency. Capitalized lease liabilities (₹722.0 Cr) are comfortably serviced by operating cash generation (CFO: ₹1,438.5 Cr). Zero covenant vulnerability.',
+            icRecommendation: 'CREDIT PROFILE: STRONG. Minimal refinancing hazard; operating cash flows provide substantial buffer.'
+          }
+        },
+        altmanZScore: {
+          zScore: 4.82,
+          zone: 'SAFE',
+          x1WorkingCapitalToTa: 0.038,
+          x2RetainedEarningsToTa: 0.254,
+          x3EbitToTa: 0.153,
+          x4EquityToTotalLiab: 0.428,
+          defaultProbabilityProxyPct: 0.5,
+          interpretation: {
+            verdict: 'FAVORABLE',
+            statisticalSummary: 'Altman Z\'\'-Score = 4.82 (Safe Zone > 2.60). Proxy 2-Year Solvency Default Risk: 0.5%. Key anchors: EBIT/Assets = 15.3%, Equity/Liabilities = 0.43x.',
+            economicMechanism: 'Strong balance sheet capitalization and asset productivity. High retained earnings buffer (25.4% of assets) insulates against macro cyclical shocks.',
+            icRecommendation: 'INSOLVENCY RISK: NEGLIGIBLE. Capital structure meets institutional high-grade credit criteria.'
+          }
+        },
+        lockInTaxDrag: {
+          milestones: [
+            { daysPostListing: 30, dateLabel: 'Listing + 30 Days (T+30)', unlockedSharesCr: 7.48, category: 'Anchor QIB 50% Tranche', floatExpansionPct: 30.0, daysToAbsorbOverhang: 16.6 },
+            { daysPostListing: 90, dateLabel: 'Listing + 90 Days (T+90)', unlockedSharesCr: 7.48, category: 'Anchor QIB Remaining 50%', floatExpansionPct: 23.1, daysToAbsorbOverhang: 16.6 },
+            { daysPostListing: 180, dateLabel: 'Listing + 180 Days (T+180)', unlockedSharesCr: 79.80, category: 'Pre-IPO Institutional / ESOP Float', floatExpansionPct: 200.0, daysToAbsorbOverhang: 177.3 }
+          ],
+          totalPreIpoSharesCr: 99.75,
+          anchorSharesCr: 14.96,
+          freeFloatSharesCr: 24.94,
+          rule11UaFmvInr: 155.0,
+          acquisitionPriceInr: 145.0,
+          isTaxDragTriggered: true,
+          taxDragPerShareInr: 3.49,
+          postTaxBreakevenListingPriceInr: 156.83,
+          interpretation: {
+            verdict: 'NEUTRAL',
+            statisticalSummary: 'Normal Lock-In Progression: T+30 unlock = 7.5 Cr shares (16.6 days ADT); T+180 unlock = 79.8 Cr shares. Sec 56 Tax Drag: ₹3.49/sh. Breakeven listing price: ₹156.83.',
+            economicMechanism: 'Float expands moderately across standard SEBI ICDR schedule. Liquidity absorption is manageable provided institutional participation remains consistent.',
+            icRecommendation: 'MONITOR DAY 30 & 90 EXPIRIES: Pre-set limit orders to manage potential anchor supply pressure.'
+          }
+        }
+      }
+    };
+  }
+
+  // NTPCGREEN Fallback
+  return {
+    symbol: 'NTPCGREEN',
+    companyName: 'NTPC Green Energy Limited',
+    timestamp: new Date().toISOString(),
+    overallVerdict: 'NEUTRAL',
+    models: {
+      beneishMScore: {
+        mScore: -2.15,
+        isManipulator: false,
+        zone: 'GREY',
+        sloanAccrualRatio: 0.068,
+        dsri: 1.12,
+        gmi: 1.02,
+        aqi: 0.95,
+        sgi: 1.18,
+        depi: 0.98,
+        sgai: 0.95,
+        tata: 0.068,
+        lvgi: 1.05,
+        variablesBreakdown: {
+          'DSRI (Days Sales in Receivables)': 1.12,
+          'GMI (Gross Margin Index)': 1.02,
+          'AQI (Asset Quality Index)': 0.95,
+          'SGI (Sales Growth Index)': 1.18,
+          'DEPI (Depreciation Index)': 0.98,
+          'SGAI (SGA Expense Index)': 0.95,
+          'TATA (Total Accruals / Assets)': 0.068,
+          'LVGI (Leverage Index)': 1.05
+        },
+        interpretation: {
+          verdict: 'NEUTRAL',
+          statisticalSummary: 'Beneish M-Score = -2.15 (Grey Zone between -2.22 and -1.78). Sloan Accruals = 6.8%. DSRI = 1.12.',
+          economicMechanism: 'Earnings quality exhibits moderate working capital absorption. While not breaching the academic threshold of aggressive manipulation, accruals warrant quarterly monitoring.',
+          icRecommendation: 'PROCEED WITH MONITORING. Require syndicate certification confirming receivables aging and verify that unbilled revenue does not exceed 10% of revenue from operations.'
+        }
+      },
+      dickinsonLifecycle: {
+        currentStage: 'Growth',
+        currentPattern: '(+, -, +)',
+        trajectory: [
+          { fiscalPeriod: 'FY23', cfo: 295.8, cfi: -1920.0, cff: 1470.0, pattern: '(+, -, +)', stage: 'Growth' },
+          { fiscalPeriod: 'FY24', cfo: 330.6, cfi: -2160.0, cff: 1785.0, pattern: '(+, -, +)', stage: 'Growth' },
+          { fiscalPeriod: 'FY25', cfo: 348.0, cfi: -2400.0, cff: 2100.0, pattern: '(+, -, +)', stage: 'Growth' },
+          { fiscalPeriod: 'Stub Q1', cfo: 121.8, cfi: -720.0, cff: 525.0, pattern: '(+, -, +)', stage: 'Growth' }
+        ],
+        stageProgressionSummary: 'FY23: Growth -> FY24: Growth -> FY25: Growth -> Stub Q1: Growth',
+        isGrowthCongruent: true,
+        interpretation: {
+          verdict: 'FAVORABLE',
+          statisticalSummary: 'Dickinson Cash Flow Life-Cycle: Growth (+, -, +). Multi-year migration: Consistent capital expansion mode across all reporting periods.',
+          economicMechanism: 'Positive CFO coupled with external capital raising (positive CFF) to finance aggressive capital expenditures (negative CFI). Characteristic of high-growth leaders expanding capacity ahead of demand.',
+          icRecommendation: 'SUBSCRIBE TO EXPANSION: Verify execution timeline of IPO-funded capex and monitor asset-turnover.'
+        }
+      },
+      huberPeerRegression: {
+        targetSymbol: 'NTPCGREEN',
+        targetMultiple: 32.0,
+        warrantedFairMultiple: 24.5,
+        unbackedFrothPct: 30.6,
+        valuationZScore: 1.15,
+        declaredPeerMedian: 36.4,
+        algorithmicPeerMedian: 23.5,
+        drhpPeerBiasIndex: 1.55,
+        rSquaredPseudo: 0.69,
+        coefficients: {
+          const: 9.80,
+          roce: 0.224,
+          cagr: 0.315,
+          margin: 0.245,
+          nd_ebitda: -1.05
+        },
+        peerWeights: [
+          { symbol: 'ADANIGREEN', companyName: 'Adani Green', multiple: 36.4, predictedMultiple: 33.2, residual: 3.2, robustWeight: 0.82, isOutlier: false },
+          { symbol: 'TATAPOWER', companyName: 'Tata Power', multiple: 14.8, predictedMultiple: 16.5, residual: -1.7, robustWeight: 0.93, isOutlier: false },
+          { symbol: 'SUZLON', companyName: 'Suzlon Energy', multiple: 32.1, predictedMultiple: 29.8, residual: 2.3, robustWeight: 0.88, isOutlier: false }
+        ],
+        interpretation: {
+          verdict: 'CAUTION',
+          statisticalSummary: 'Huber Robust Warranted Multiple: 24.5x EV/EBITDA vs Issue Multiple 32.0x (Froth Gap: +30.6%). Peer bias index: 1.55x.',
+          economicMechanism: 'Issue trades at notable premium (+30.6%) over fundamental fair multiple. Declared DRHP peers exhibit upward selection bias (36.4x vs algorithmic 23.5x).',
+          icRecommendation: 'BID AT LOWER PRICE BAND: Recommend participating strictly near the lower price band to absorb valuation froth.'
+        }
+      },
+      stubSeasonality: {
+        stubPeriodLabel: 'Q1-FY25 (3M Restated)',
+        stubRevenueCr: 520.0,
+        naiveAnnualizedRevenueCr: 2080.0,
+        seasonalAdjustedRevenueCr: 2080.0,
+        seasonalWeightApplied: 0.25,
+        annualizationDistortionCr: 0.0,
+        stubEbitdaMarginPct: 78.4,
+        historicalMeanMarginPct: 76.7,
+        marginSpikeBps: 170.0,
+        isMarginStuffingAlert: false,
+        chowFStat: 0.85,
+        chowPValue: 0.42,
+        structuralBreakDetected: false,
+        interpretation: {
+          verdict: 'FAVORABLE',
+          statisticalSummary: 'Stub run-rate verified: Seasonally adjusted revenue ₹2,080.0 Cr matches naive run-rate. EBITDA margin (78.4%) aligns with 3Y mean (76.7%).',
+          economicMechanism: 'No evidence of pre-IPO quarterly stuffing. Stub cost absorption and seasonal demand exhibit continuity with verified restated historical accounts.',
+          icRecommendation: 'ACCEPT STUB BASELINE: Utilize seasonally adjusted run-rate directly in forward earnings models.'
+        }
+      },
+      indAs116Leverage: {
+        fundedDebtCr: 4200.0,
+        leaseLiabilitiesCr: 450.0,
+        totalAdjustedDebtCr: 4650.0,
+        cashAndEquivalentsCr: 180.0,
+        headlineNetDebtCr: 4020.0,
+        leaseAdjustedNetDebtCr: 4470.0,
+        ebitdaCr: 1450.0,
+        ebitdarCr: 1510.0,
+        headlineNetDebtToEbitda: 2.77,
+        leaseAdjustedNetDebtToEbitdar: 2.96,
+        leverageUnderstatementRatio: 1.07,
+        debtDueWithin12mCr: 1845.0,
+        refinancingWallRatio: 3.50,
+        isRefinancingWallElevated: true,
+        interestCoverageAdjusted: 3.2,
+        interpretation: {
+          verdict: 'NEUTRAL',
+          statisticalSummary: 'Headline Net Debt/EBITDA: 2.77x | Lease-Adjusted Net Debt/EBITDAR: 2.96x. Understatement Factor: 1.07x. 12M Refinancing: 3.50x.',
+          economicMechanism: 'Ind AS 116 capitalization adds ₹450.0 Cr in statutory liabilities. High short-term debt due within 12M requires fresh IPO proceeds to deleverage.',
+          icRecommendation: 'MONITOR LEASE ROLLOVER: Verify landlord lease renewal terms and assess interest rate sensitivity.'
+        }
+      },
+      altmanZScore: {
+        zScore: 2.14,
+        zone: 'GREY',
+        x1WorkingCapitalToTa: -0.034,
+        x2RetainedEarningsToTa: 0.096,
+        x3EbitToTa: 0.099,
+        x4EquityToTotalLiab: 0.488,
+        defaultProbabilityProxyPct: 7.7,
+        interpretation: {
+          verdict: 'NEUTRAL',
+          statisticalSummary: 'Altman Z\'\'-Score = 2.14 (Grey Zone: 1.10 - 2.60). Default Risk Proxy: 7.7%.',
+          economicMechanism: 'Solvency is stable but sensitive to operating margin volatility or working capital lengthening. Asset productivity requires monitoring.',
+          icRecommendation: 'CREDIT SPREAD ADJUSTMENT: Price in 50-75 bps liquidity risk spread when benchmarking required return.'
+        }
+      },
+      lockInTaxDrag: {
+        milestones: [
+          { daysPostListing: 30, dateLabel: 'Listing + 30 Days (T+30)', unlockedSharesCr: 6.94, category: 'Anchor QIB 50% Tranche', floatExpansionPct: 30.0, daysToAbsorbOverhang: 15.4 },
+          { daysPostListing: 90, dateLabel: 'Listing + 90 Days (T+90)', unlockedSharesCr: 6.94, category: 'Anchor QIB Remaining 50%', floatExpansionPct: 23.1, daysToAbsorbOverhang: 15.4 },
+          { daysPostListing: 180, dateLabel: 'Listing + 180 Days (T+180)', unlockedSharesCr: 74.07, category: 'Pre-IPO Institutional / ESOP Float', floatExpansionPct: 200.0, daysToAbsorbOverhang: 164.6 }
+        ],
+        totalPreIpoSharesCr: 92.59,
+        anchorSharesCr: 13.88,
+        freeFloatSharesCr: 23.15,
+        rule11UaFmvInr: 108.0,
+        acquisitionPriceInr: 108.0,
+        isTaxDragTriggered: false,
+        taxDragPerShareInr: 0.0,
+        postTaxBreakevenListingPriceInr: 114.21,
+        interpretation: {
+          verdict: 'FAVORABLE',
+          statisticalSummary: 'Supply Overhang: Low risk (15.4 days ADT at T+30; 164.6 days at T+180). Sec 56(2)(x) Tax Drag: NIL (Entry price ₹108.00 >= Rule 11UA FMV ₹108.00).',
+          economicMechanism: 'Well-spaced liquidity absorption profile. Market float expands predictably without creating severe institutional selling air-pockets. Zero unlisted tax penalty.',
+          icRecommendation: 'LOCK-IN CLEARANCE: No tactical hedging required on secondary allocation. Hold through T+90.'
+        }
+      }
+    }
+  };
+}
+
+export async function fetchEconometricSuite(symbol: string = 'NTPCGREEN'): Promise<ComprehensiveEconometricSuiteData> {
+  const isHCCB = symbol.toUpperCase().includes('HCCB') || symbol.toUpperCase().includes('COCA');
+  try {
+    const res = await fetch(`http://localhost:8000/api/pre-ipo/econometrics/${encodeURIComponent(symbol)}`);
+    if (!res.ok) throw new Error('API Offline');
+    const data = await res.json();
+    return data;
+  } catch {
+    return getMockEconometricSuite(isHCCB);
+  }
+}
+
 function getFallbackForSymbol(symbol: string) {
   const s = symbol.toUpperCase();
-  if (s === 'HCCB' || s.includes('COCA')) {
-    return {
-      indices: mockMarketIndices,
-      offer: hccbOfferDetails,
-      subscription: hccbSubscriptionBook,
-      peers: hccbLivePeers,
-      calibration: hccbHuberCalibration,
-      scorecard: hccbMLScorecard,
-      compliance: mockSEBICompliance
-    };
+  const isHCCB = s === 'HCCB' || s.includes('COCA');
+  const fallbackLedger = getCanonical42ProvenanceFallback(isHCCB);
+  const foundCount = fallbackLedger.filter(r => r.status === 'FOUND').length;
+  const notFoundCount = fallbackLedger.filter(r => r.status === 'NOT_FOUND').length;
+  const reconfirmCount = fallbackLedger.filter(r => r.status === 'NEEDS_RECONFIRMATION').length;
+  const fallbackSummary = {
+    foundCount,
+    notFoundCount,
+    reconfirmCount,
+    totalCount: fallbackLedger.length
+  };
+
+  let baseOffer = mockOfferDetails;
+  let baseSub = mockSubscriptionBook;
+  let basePeers = mockLivePeers;
+  let baseCalib = mockHuberCalibration;
+  let baseScore = mockMLScorecard;
+
+  if (isHCCB) {
+    baseOffer = hccbOfferDetails;
+    baseSub = hccbSubscriptionBook;
+    basePeers = hccbLivePeers;
+    baseCalib = hccbHuberCalibration;
+    baseScore = hccbMLScorecard;
+  } else if (s === 'SWIGGY') {
+    baseOffer = swiggyOfferDetails;
+  } else if (s === 'WAAREE') {
+    baseOffer = waareeOfferDetails;
   }
-  if (s === 'SWIGGY') {
-    return {
-      indices: mockMarketIndices,
-      offer: swiggyOfferDetails,
-      subscription: mockSubscriptionBook,
-      peers: mockLivePeers,
-      calibration: mockHuberCalibration,
-      scorecard: mockMLScorecard,
-      compliance: mockSEBICompliance
-    };
-  }
-  if (s === 'WAAREE') {
-    return {
-      indices: mockMarketIndices,
-      offer: waareeOfferDetails,
-      subscription: mockSubscriptionBook,
-      peers: mockLivePeers,
-      calibration: mockHuberCalibration,
-      scorecard: mockMLScorecard,
-      compliance: mockSEBICompliance
-    };
-  }
+
+  const offer: StatutoryOfferDetails = {
+    ...baseOffer,
+    provenanceLedger: fallbackLedger,
+    provenanceSummary: fallbackSummary
+  };
+
   return {
     indices: mockMarketIndices,
-    offer: mockOfferDetails,
-    subscription: mockSubscriptionBook,
-    peers: mockLivePeers,
-    calibration: mockHuberCalibration,
-    scorecard: mockMLScorecard,
-    compliance: mockSEBICompliance
+    offer,
+    subscription: baseSub,
+    peers: basePeers,
+    calibration: baseCalib,
+    scorecard: baseScore,
+    compliance: mockSEBICompliance,
+    provenanceLedger: fallbackLedger,
+    provenanceSummary: fallbackSummary,
+    econometrics: getMockEconometricSuite(isHCCB)
   };
 }
 
@@ -646,19 +1009,34 @@ export async function fetchLiveMarketData(symbol: string = 'NTPCGREEN') {
     const res = await fetch(`http://localhost:8000/api/pre-ipo/market-status?symbol=${encodeURIComponent(symbol)}`);
     if (!res.ok) throw new Error('Backend offline');
     const data = await res.json();
-    if (data?.offer && !data.offer.pricingState) {
-      if (data.offer.isPriceUndisclosed || !data.offer.priceBandMax) {
-        data.offer.pricingState = {
-          status: 'DRHP_UNPRICED',
-          isContained: Boolean(data.offer.isContained)
-        };
-      } else {
-        data.offer.pricingState = {
-          status: 'RHP_PRICED',
-          priceBandMin: Number(data.offer.priceBandMin ?? 0),
-          priceBandMax: Number(data.offer.priceBandMax ?? 0),
-          isContained: Boolean(data.offer.isContained)
-        };
+    if (data?.offer) {
+      if (!data.offer.pricingState) {
+        if (data.offer.isPriceUndisclosed || !data.offer.priceBandMax) {
+          data.offer.pricingState = {
+            status: 'DRHP_UNPRICED',
+            isContained: Boolean(data.offer.isContained)
+          };
+        } else {
+          data.offer.pricingState = {
+            status: 'RHP_PRICED',
+            priceBandMin: Number(data.offer.priceBandMin ?? 0),
+            priceBandMax: Number(data.offer.priceBandMax ?? 0),
+            isContained: Boolean(data.offer.isContained)
+          };
+        }
+      }
+      if (!data.offer.dealIntegrity) {
+        data.offer.dealIntegrity = Boolean(data.offer.isContained) ? 'CONDITIONAL' : 'PASS';
+      }
+      if (!data.offer.provenanceLedger && data.provenanceLedger) {
+        data.offer.provenanceLedger = data.provenanceLedger;
+      }
+      if (!data.offer.provenanceSummary && data.provenanceSummary) {
+        data.offer.provenanceSummary = data.provenanceSummary;
+      }
+      if (!data.offer.provenanceLedger) {
+        const isHCCB = symbol.toUpperCase().includes('HCCB') || symbol.toUpperCase().includes('COCA');
+        data.offer.provenanceLedger = getCanonical42ProvenanceFallback(isHCCB);
       }
     }
     return data;

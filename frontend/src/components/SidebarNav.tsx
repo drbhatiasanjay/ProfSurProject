@@ -61,8 +61,8 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
     },
     {
       id: 'stress_workpapers' as TerminalView,
-      label: '5. 2D Stress Workpapers',
-      sublabel: '5x5 Grid & Debt Ladder',
+      label: '5. Econometric & Forensic Lab',
+      sublabel: '7 Models · Beneish, Dickinson, Huber, Altman',
       icon: Sliders,
     },
     {
@@ -98,7 +98,7 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   ];
 
   return (
-    <aside className="w-full lg:w-72 bg-[#090D12] border-r border-[#223044] flex flex-col shrink-0">
+    <aside className="w-full lg:w-72 h-full bg-[#090D12] border-r border-[#223044] flex flex-col shrink-0 z-20 overflow-hidden">
       {/* Brand Header */}
       <div className="p-4 border-b border-[#223044] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
