@@ -23,6 +23,7 @@ import { StakeholderLensVault } from './components/vaults/StakeholderLensVault';
 import { ContingentLitigationVault } from './components/vaults/ContingentLitigationVault';
 import { UnitEconomicsVault } from './components/vaults/UnitEconomicsVault';
 import { ICBoardDeckVault } from './components/vaults/ICBoardDeckVault';
+import { KnowledgeGraphStudioVault } from './components/vaults/KnowledgeGraphStudioVault';
 
 import {
   fetchLiveMarketData,
@@ -280,6 +281,13 @@ export const App: React.FC = () => {
               {activeView === 'red_flag_scanner' && (
                 <div className="animate-fade-in">
                   <RedFlagScannerVault offer={offer} />
+                </div>
+              )}
+
+              {/* Vault 13: FIBO-Aligned Pre-IPO Financial Knowledge Graph */}
+              {activeView === 'knowledge_graph' && (
+                <div className="animate-fade-in">
+                  <KnowledgeGraphStudioVault offer={offer} />
                 </div>
               )}
 

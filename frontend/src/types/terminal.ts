@@ -170,7 +170,8 @@ export type VaultId =
   | 'contingent_litigation'   // Vault 9: Contingent Liabilities & Legal Radar (SEBI LODR 2% + Ind AS 37)
   | 'unit_economics'          // Vault 10: Unit Economics & Operational Scale Studio (75-85% Sweet Spot)
   | 'unlisted_arbitrage'      // Vault 11: Sec 56(2)(x) FMV Tax + 6M Carry Cost Breakeven Price
-  | 'ic_board_deck';          // Vault 12: Prescriptive Mandate + 1-Click PPTX / PDF Memo
+  | 'ic_board_deck'           // Vault 12: Prescriptive Mandate + 1-Click PPTX / PDF Memo
+  | 'knowledge_graph';        // Vault 13: Scoped FIBO RHP Knowledge Graph & Dual-Persona Studio
 
 export interface TriStateLedgerCounters {
   verified: number;

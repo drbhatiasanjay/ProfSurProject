@@ -65,7 +65,14 @@ def root_dashboard():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:8501",
+        "http://127.0.0.1:8501",
+        "https://pre-ipo-terminal-779655496440.us-east1.run.app"
+    ],
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:[0-9]+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -996,6 +1003,130 @@ def get_market_status(symbol: str = Query("NTPCGREEN", description="Target IPO s
         "provenanceSummary": provenance_summary,
         "econometrics": econometric_suite,
         "interpretations": interps,
+    }
+
+
+# =====================================================================
+# Milestone 11: FIBO-Aligned Pre-IPO Financial Knowledge Graph Endpoints
+# =====================================================================
+
+from models.pre_ipo_kg_engine import get_kg_engine
+from models.pre_ipo_kg_ingest import ingest_hcch_benchmark_graph, build_hcch_rdf_triples
+from models.pre_ipo_shacl_engine import validate_prospectus_graph
+from models.pre_ipo_kg_queries import (
+    execute_tier1_simple_query,
+    execute_tier2_medium_query,
+    execute_tier3_complex_query,
+    route_natural_language_query
+)
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
+
+class KGQueryRequest(BaseModel):
+    query: str = Field(default="Where does the IPO money go?", description="Natural language question or recipe")
+    tier: Optional[int] = Field(default=None, description="Analytical depth tier (1, 2, or 3)")
+    pruningThreshold: Optional[float] = Field(default=0.65, description="Jev subgraph pruning threshold (0.50 - 0.95)")
+
+@app.post("/api/pre-ipo/kg/ingest")
+def ingest_pre_ipo_knowledge_graph(symbol: str = "HCCH"):
+    """
+    Ingests and validates the 513-page benchmark prospectus into the in-process Property Graph.
+    Enforces pre-commit Closed-World SHACL verification.
+    """
+    engine = get_kg_engine()
+    result = ingest_hcch_benchmark_graph(engine)
+    return result
+
+@app.get("/api/pre-ipo/kg/graph/{symbol}")
+def get_pre_ipo_graph_canvas(symbol: str = "HCCH", max_depth: int = 2):
+    """
+    Returns the Property Graph formatted for @xyflow/react canvas rendering.
+    """
+    engine = get_kg_engine()
+    if len(engine.graph.nodes) == 0:
+        ingest_hcch_benchmark_graph(engine)
+    
+    root_id = "HCCH" if symbol.upper() in ["HCCH", "HCCB"] else symbol.upper()
+    canvas_data = engine.get_subgraph(root_id, max_depth=max_depth)
+    return {
+        "symbol": symbol.upper(),
+        "totalNodes": len(engine.graph.nodes),
+        "totalEdges": len(engine.graph.edges),
+        "canvas": canvas_data
+    }
+
+@app.post("/api/pre-ipo/kg/query")
+def query_pre_ipo_knowledge_graph(request: KGQueryRequest):
+    """
+    Executes a natural language or tiered query over the Pre-IPO Knowledge Graph.
+    Returns 5-second plain-English verdict, PROV-O citation pills, and visual subgraph.
+    """
+    engine = get_kg_engine()
+    if len(engine.graph.nodes) == 0:
+        ingest_hcch_benchmark_graph(engine)
+
+    threshold = request.pruningThreshold or 0.65
+
+    if request.tier == 1:
+        return execute_tier1_simple_query(engine)
+    elif request.tier == 2:
+        return execute_tier2_medium_query(engine)
+    elif request.tier == 3:
+        return execute_tier3_complex_query(engine, pruning_threshold=threshold)
+    else:
+        return route_natural_language_query(request.query, engine)
+
+@app.get("/api/pre-ipo/kg/shacl-audit/{symbol}")
+def get_pre_ipo_shacl_audit(symbol: str = "HCCH"):
+    """
+    Returns the full Closed-World statutory SHACL validation report for the prospectus.
+    """
+    rdf_ttl = build_hcch_rdf_triples()
+    report = validate_prospectus_graph(rdf_ttl)
+    return {
+        "symbol": symbol.upper(),
+        "conforms": report.conforms,
+        "violationCount": report.violation_count,
+        "warningCount": report.warning_count,
+        "infoCount": report.info_count,
+        "violations": [
+            {
+                "focusNode": v.focus_node,
+                "resultPath": v.result_path,
+                "message": v.message,
+                "severity": v.severity
+            }
+            for v in report.violations
+        ]
+    }
+
+@app.get("/api/pre-ipo/kg/valuation-simulator/{symbol}")
+def get_pre_ipo_valuation_simulation(
+    symbol: str = "HCCH",
+    pruning_threshold: float = 0.65,
+    territory_discount: float = 25.0,
+    channel_discount: float = 10.0
+):
+    """
+    Live valuation simulator adjusting peer EV/EBITDA multiples based on forensic graph insights.
+    """
+    peer_multiple = 45.0  # VBL multiple
+    total_haircut = territory_discount + channel_discount
+    warranted = peer_multiple * (1.0 - total_haircut / 100.0)
+
+    return {
+        "symbol": symbol.upper(),
+        "benchmarkPeer": "Varun Beverages Ltd (VBL)",
+        "peerMultiple": peer_multiple,
+        "territoryDiscountPct": territory_discount,
+        "channelDiscountPct": channel_discount,
+        "totalHaircutPct": total_haircut,
+        "warrantedMultiple": round(warranted, 2),
+        "footballField": [
+            {"label": "Direct Unadjusted Peer (VBL Parity)", "min": 42.0, "max": 48.0, "current": 45.0},
+            {"label": "Territory-Adjusted Multiples", "min": 31.5, "max": 36.0, "current": 33.75},
+            {"label": "Forensic Warranted Fair Value", "min": 26.5, "max": 31.0, "current": round(warranted, 2)}
+        ]
     }
 
 if __name__ == "__main__":

@@ -1,0 +1,119 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix fibo-sec-eq-ipo: <https://spec.edmcouncil.org/fibo/ontology/SEC/Equities/EquityInitialPublicOfferings/> .
+@prefix fibo-sebi: <https://spec.profsur.org/fibo/sebi-icdr/> .
+
+<https://spec.profsur.org/fibo/sebi-icdr/shapes/> a sh:NodeShape ;
+    rdfs:label "SEBI ICDR 2018 Statutory Closed-World Shapes" .
+
+#################################################################
+# Shape 1: Offer Structure & Mathematical Reconciliation Gate
+#################################################################
+
+fibo-sebi:OfferStructureShape a sh:NodeShape ;
+    sh:targetClass fibo-sec-eq-ipo:InitialPublicOffering ;
+    sh:property [
+        sh:path fibo-sebi:totalIssueSizeCr ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minExclusive 0.0 ;
+        sh:message "Total issue size in Cr must be disclosed and strictly positive." ;
+    ] ;
+    sh:property [
+        sh:path fibo-sebi:freshIssueCr ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0.0 ;
+        sh:message "Fresh issue size in Cr must be disclosed (0.0 is valid for pure OFS under Rule E.3)." ;
+    ] ;
+    sh:property [
+        sh:path fibo-sebi:offerForSaleCr ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0.0 ;
+        sh:message "Offer for sale (OFS) in Cr must be disclosed and non-negative." ;
+    ] ;
+    # SPARQL constraint for cross-field mathematical reconciliation: Total == Fresh + OFS
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "Total Issue Size must strictly equal Gross Fresh Issue + Offer For Sale (OFS)." ;
+        sh:select """
+            PREFIX fibo-sebi: <https://spec.profsur.org/fibo/sebi-icdr/>
+            SELECT $this
+            WHERE {
+                $this fibo-sebi:totalIssueSizeCr ?total .
+                $this fibo-sebi:freshIssueCr ?fresh .
+                $this fibo-sebi:offerForSaleCr ?ofs .
+                FILTER ( ABS(?total - (?fresh + ?ofs)) > 0.05 )
+            }
+        """ ;
+    ] .
+
+#################################################################
+# Shape 2: Promoter Statutory Disclosures (SEBI Schedule VI)
+#################################################################
+
+fibo-sebi:PromoterDisclosureShape a sh:NodeShape ;
+    sh:targetClass fibo-sebi:PromoterRole ;
+    sh:property [
+        sh:path fibo-sebi:preIssueShareholdingPct ;
+        sh:minCount 1 ;
+        sh:maxCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0.0 ;
+        sh:maxInclusive 100.0 ;
+        sh:message "Promoter pre-issue shareholding % must be disclosed between 0.0% and 100.0%." ;
+    ] ;
+    sh:property [
+        sh:path fibo-sebi:postLockinPeriodDays ;
+        sh:minCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 0 ;
+        sh:message "Promoter minimum lock-in period in days must be explicitly disclosed." ;
+    ] .
+
+#################################################################
+# Shape 3: Litigation Materiality & Ring-Fencing Gate
+#################################################################
+
+fibo-sebi:LitigationMaterialityShape a sh:NodeShape ;
+    sh:targetClass fibo-sebi:LitigationProceeding ;
+    sh:property [
+        sh:path fibo-sebi:litigationAmountM ;
+        sh:minCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0.0 ;
+        sh:message "Litigation claimed amount in Millions must be disclosed (0.0 if unquantified)." ;
+    ] ;
+    sh:property [
+        sh:path fibo-sebi:contingentLiabilityPctTNW ;
+        sh:datatype xsd:decimal ;
+        sh:maxInclusive 500.0 ;
+        sh:message "Contingent liability % of Tangible Net Worth must be valid decimal." ;
+    ] .
+
+#################################################################
+# Shape 4: W3C PROV-O Lineage & Auditability Gate
+#################################################################
+
+fibo-sebi:ProvenanceIntegrityShape a sh:NodeShape ;
+    sh:targetSubjectsOf fibo-sebi:verbatimQuote ;
+    sh:property [
+        sh:path fibo-sebi:pageNumber ;
+        sh:minCount 1 ;
+        sh:datatype xsd:integer ;
+        sh:minInclusive 1 ;
+        sh:message "Every cited disclosure must anchor to physical page >= 1." ;
+    ] ;
+    sh:property [
+        sh:path fibo-sebi:confidenceScore ;
+        sh:minCount 1 ;
+        sh:datatype xsd:decimal ;
+        sh:minInclusive 0.85 ;
+        sh:message "Extraction confidence score must satisfy statutory minimum >= 0.85." ;
+    ] .

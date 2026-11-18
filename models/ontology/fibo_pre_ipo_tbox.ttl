@@ -1,0 +1,180 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix fibo-fnd-pty-pty: <https://spec.edmcouncil.org/fibo/ontology/FND/Parties/Parties/> .
+@prefix fibo-be-le-lp: <https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/> .
+@prefix fibo-fbc-dae-dbt: <https://spec.edmcouncil.org/fibo/ontology/FBC/DebtAndEquities/Debt/> .
+@prefix fibo-sec-eq-eq: <https://spec.edmcouncil.org/fibo/ontology/SEC/Equities/Equities/> .
+@prefix fibo-sec-eq-ipo: <https://spec.edmcouncil.org/fibo/ontology/SEC/Equities/EquityInitialPublicOfferings/> .
+@prefix fibo-sebi: <https://spec.profsur.org/fibo/sebi-icdr/> .
+
+<https://spec.profsur.org/fibo/sebi-icdr/> a owl:Ontology ;
+    rdfs:label "FIBO Scoped Indian SEBI ICDR Pre-IPO Ontology" ;
+    rdfs:comment "Extends FIBO (FND, BE, FBC, SEC, IND) with Indian SEBI ICDR 2018 statutory prospectus entities, roles, and reconciliations." ;
+    owl:versionInfo "1.0.0" .
+
+#################################################################
+#    Foundational Classes & Entity/Role Partitioning
+#################################################################
+
+fibo-be-le-lp:LegalEntity a owl:Class ;
+    rdfs:label "Legal Entity" ;
+    rdfs:comment "An immutable corporate person or juridical entity." .
+
+fibo-fnd-pty-pty:PartyInRole a owl:Class ;
+    rdfs:label "Party In Role" ;
+    rdfs:comment "An entity acting in a specific capacity during an event." .
+
+fibo-sebi:IssuerRole a owl:Class ;
+    rdfs:subClassOf fibo-fnd-pty-pty:PartyInRole ;
+    rdfs:label "Issuer Role" ;
+    rdfs:comment "The role played by the company filing the DRHP/RHP offering securities." .
+
+fibo-sebi:SellingShareholderRole a owl:Class ;
+    rdfs:subClassOf fibo-fnd-pty-pty:PartyInRole ;
+    rdfs:label "Selling Shareholder Role" ;
+    rdfs:comment "A shareholder selling existing equity shares in an Offer For Sale (OFS)." .
+
+fibo-sebi:PromoterRole a owl:Class ;
+    rdfs:subClassOf fibo-fnd-pty-pty:PartyInRole ;
+    rdfs:label "Promoter Role" ;
+    rdfs:comment "A person or entity in control of the issuer under SEBI ICDR Regulation 2(1)(oo)." .
+
+fibo-sebi:MaterialSubsidiaryRole a owl:Class ;
+    rdfs:subClassOf fibo-fnd-pty-pty:PartyInRole ;
+    rdfs:label "Material Subsidiary Role" ;
+    rdfs:comment "An operating subsidiary contributing >= 10% of consolidated turnover or net worth." .
+
+#################################################################
+#    Offer Mechanics & Statutory Objects
+#################################################################
+
+fibo-sec-eq-ipo:InitialPublicOffering a owl:Class ;
+    rdfs:label "Initial Public Offering" ;
+    rdfs:comment "The corporate public offering event under SEBI ICDR." .
+
+fibo-sebi:OfferObject a owl:Class ;
+    rdfs:label "Object of the Issue" ;
+    rdfs:comment "Stated utilization of proceeds under Chapter 5 of DRHP." .
+
+fibo-sebi:FreshCapitalExpenditure a owl:Class ;
+    rdfs:subClassOf fibo-sebi:OfferObject ;
+    rdfs:label "Fresh Capex Allocation" .
+
+fibo-sebi:DebtRepaymentObject a owl:Class ;
+    rdfs:subClassOf fibo-sebi:OfferObject ;
+    rdfs:label "Debt Prepayment / Repayment" .
+
+fibo-sebi:OfferForSaleObject a owl:Class ;
+    rdfs:subClassOf fibo-sebi:OfferObject ;
+    rdfs:label "Offer for Sale Proceed (Pure Exit)" .
+
+#################################################################
+#    Risk, Forensic & Commercial Relationships
+#################################################################
+
+fibo-sebi:LitigationProceeding a owl:Class ;
+    rdfs:label "Outstanding Litigation Proceeding" ;
+    rdfs:comment "Pending civil, criminal, tax, or regulatory dispute disclosed under Chapter 8." .
+
+fibo-sebi:Sec138NIActLitigation a owl:Class ;
+    rdfs:subClassOf fibo-sebi:LitigationProceeding ;
+    rdfs:label "Section 138 Negotiable Instruments Act (Cheque Bounce)" .
+
+fibo-sebi:RelatedPartyContract a owl:Class ;
+    rdfs:label "Material Related Party Agreement" ;
+    rdfs:comment "Commercial or incentive agreement disclosed under Chapter 10." .
+
+fibo-sebi:ExclusiveTerritory a owl:Class ;
+    rdfs:label "Exclusive Operating Territory" ;
+    rdfs:comment "Geographic territory or franchise bottling cluster." .
+
+#################################################################
+#    Object & Data Properties
+#################################################################
+
+fibo-sebi:playsRole a owl:ObjectProperty ;
+    rdfs:domain fibo-be-le-lp:LegalEntity ;
+    rdfs:range fibo-fnd-pty-pty:PartyInRole ;
+    rdfs:label "plays role" .
+
+fibo-sebi:participatesIn a owl:ObjectProperty ;
+    rdfs:domain fibo-fnd-pty-pty:PartyInRole ;
+    rdfs:range fibo-sec-eq-ipo:InitialPublicOffering ;
+    rdfs:label "participates in offering" .
+
+fibo-sebi:hasOfferObject a owl:ObjectProperty ;
+    rdfs:domain fibo-sec-eq-ipo:InitialPublicOffering ;
+    rdfs:range fibo-sebi:OfferObject ;
+    rdfs:label "has offer object" .
+
+fibo-sebi:hasLitigation a owl:ObjectProperty ;
+    rdfs:domain fibo-be-le-lp:LegalEntity ;
+    rdfs:range fibo-sebi:LitigationProceeding ;
+    rdfs:label "has litigation proceeding" .
+
+fibo-sebi:operatesInTerritory a owl:ObjectProperty ;
+    rdfs:domain fibo-be-le-lp:LegalEntity ;
+    rdfs:range fibo-sebi:ExclusiveTerritory ;
+    rdfs:label "operates in territory" .
+
+fibo-sebi:hasRPTContract a owl:ObjectProperty ;
+    rdfs:domain fibo-be-le-lp:LegalEntity ;
+    rdfs:range fibo-sebi:RelatedPartyContract ;
+    rdfs:label "has related party contract" .
+
+# Financial & Numerical Properties (Rule E.3 Zero-Truthiness compliant)
+fibo-sebi:totalIssueSizeCr a owl:DatatypeProperty ;
+    rdfs:domain fibo-sec-eq-ipo:InitialPublicOffering ;
+    rdfs:range xsd:decimal .
+
+fibo-sebi:freshIssueCr a owl:DatatypeProperty ;
+    rdfs:domain fibo-sec-eq-ipo:InitialPublicOffering ;
+    rdfs:range xsd:decimal .
+
+fibo-sebi:offerForSaleCr a owl:DatatypeProperty ;
+    rdfs:domain fibo-sec-eq-ipo:InitialPublicOffering ;
+    rdfs:range xsd:decimal .
+
+fibo-sebi:preIssueShareholdingPct a owl:DatatypeProperty ;
+    rdfs:domain fibo-sebi:PromoterRole ;
+    rdfs:range xsd:decimal .
+
+fibo-sebi:postLockinPeriodDays a owl:DatatypeProperty ;
+    rdfs:domain fibo-sebi:PromoterRole ;
+    rdfs:range xsd:integer .
+
+fibo-sebi:litigationAmountM a owl:DatatypeProperty ;
+    rdfs:domain fibo-sebi:LitigationProceeding ;
+    rdfs:range xsd:decimal .
+
+fibo-sebi:contingentLiabilityPctTNW a owl:DatatypeProperty ;
+    rdfs:domain fibo-sebi:LitigationProceeding ;
+    rdfs:range xsd:decimal .
+
+fibo-sebi:incentiveSharePct a owl:DatatypeProperty ;
+    rdfs:domain fibo-sebi:RelatedPartyContract ;
+    rdfs:range xsd:decimal .
+
+fibo-sebi:territoryRevenueSharePct a owl:DatatypeProperty ;
+    rdfs:domain fibo-sebi:ExclusiveTerritory ;
+    rdfs:range xsd:decimal .
+
+fibo-sebi:outletCount a owl:DatatypeProperty ;
+    rdfs:domain fibo-sebi:ExclusiveTerritory ;
+    rdfs:range xsd:integer .
+
+# W3C PROV-O Lineage Properties
+fibo-sebi:pageNumber a owl:DatatypeProperty ;
+    rdfs:range xsd:integer .
+
+fibo-sebi:boundingBox a owl:DatatypeProperty ;
+    rdfs:range xsd:string .
+
+fibo-sebi:verbatimQuote a owl:DatatypeProperty ;
+    rdfs:range xsd:string .
+
+fibo-sebi:confidenceScore a owl:DatatypeProperty ;
+    rdfs:range xsd:decimal .
