@@ -1,8 +1,10 @@
 """
-Playwright E2E UI Evidence Capture for Pre-IPO FIBO Knowledge Graph Studio
+Playwright E2E UI Evidence Capture for Pre-IPO FIBO Knowledge Graph Studio & In-App PDF Drawer
 Captures:
 1. Mode A: Novice Guided Discovery Canvas (Verdict HUD strip, recipe cards, interactive graph canvas).
-2. Mode B: Expert Quant Studio (Query console, Jev pruning slider, PROV-O inspector, football field chart).
+2. In-App PDF Bounding Box Viewer Drawer (Slide-over viewer with authentic 513p HCCH DRHP text & amber highlights).
+3. Mathematical Lineage & Canonical 84 Attributes DAG Modal (9 valuation formulas & 10 SEBI sections).
+4. Mode B: Expert Quant Studio & Cypher Query Bank (25 pre-compiled queries, execution results & graph paths).
 """
 
 import os
@@ -11,16 +13,16 @@ import asyncio
 from playwright.async_api import async_playwright
 
 async def run_evidence_capture():
-    print("=== STARTING PLAYWRIGHT EVIDENCE CAPTURE ===", flush=True)
+    print("=== STARTING PLAYWRIGHT EVIDENCE CAPTURE FOR PRE-IPO KG & PDF DRAWER ===", flush=True)
     out_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scratch")
     os.makedirs(out_dir, exist_ok=True)
 
     screen_novice = os.path.join(out_dir, "kg_studio_novice_canvas.png")
-    screen_quant = os.path.join(out_dir, "kg_studio_quant_studio.png")
-    screen_recipe = os.path.join(out_dir, "kg_studio_recipe_expanded.png")
+    screen_pdf_drawer = os.path.join(out_dir, "kg_studio_pdf_drawer.png")
+    screen_formula_modal = os.path.join(out_dir, "kg_studio_formula_lineage.png")
+    screen_cypher_bank = os.path.join(out_dir, "kg_studio_cypher_bank.png")
 
     async with async_playwright() as p:
-        # Launch Chromium headless with high-DPI viewport
         browser = await p.chromium.launch(headless=True)
         context = await browser.new_context(
             viewport={"width": 1600, "height": 1050},
@@ -47,29 +49,57 @@ async def run_evidence_capture():
         await page.screenshot(path=screen_novice, full_page=False)
         print(f"-> Saved: {screen_novice}", flush=True)
 
-        # 3. Click Recipe 2 (EBITDA margin sustainability) to test interaction
-        print("Executing Recipe 2: EBITDA Margin Sustainability...", flush=True)
-        recipe2 = page.locator('text="Is Q1 FY27 margin expansion real?"').first
-        if await recipe2.is_visible():
-            await recipe2.click()
+        # 3. Test In-App PDF Bounding Box Viewer Drawer
+        print("Testing In-App PDF Bounding Box Viewer Drawer...", flush=True)
+        pdf_btn = page.locator('button:has-text("DRHP PDF Drawer (p.18)")').first
+        if await pdf_btn.is_visible():
+            await pdf_btn.click()
             await page.wait_for_timeout(2000)
-            await page.screenshot(path=screen_recipe, full_page=False)
-            print(f"-> Saved: {screen_recipe}", flush=True)
+            await page.screenshot(path=screen_pdf_drawer, full_page=False)
+            print(f"-> Saved: {screen_pdf_drawer}", flush=True)
 
-        # 4. Switch to Mode B: Expert Quant Studio
+            # Close drawer
+            close_drawer_btn = page.locator('button:has(svg.lucide-x)').first
+            if await close_drawer_btn.is_visible():
+                await close_drawer_btn.click()
+                await page.wait_for_timeout(500)
+
+        # 4. Test Mathematical Lineage & 84 Attributes DAG Modal
+        print("Testing Mathematical Lineage & 84 Attributes DAG Modal...", flush=True)
+        formula_btn = page.locator('button:has-text("Formula Lineage (84 Attr)")').first
+        if await formula_btn.is_visible():
+            await formula_btn.click()
+            await page.wait_for_timeout(2000)
+            await page.screenshot(path=screen_formula_modal, full_page=False)
+            print(f"-> Saved: {screen_formula_modal}", flush=True)
+
+            # Close formula modal
+            close_modal_btn = page.locator('button:has(svg.lucide-x)').first
+            if await close_modal_btn.is_visible():
+                await close_modal_btn.click()
+                await page.wait_for_timeout(500)
+
+        # 5. Switch to Mode B: Expert Quant Studio & Cypher Query Bank
         print("Switching to Mode B: Expert Quant Studio...", flush=True)
-        # Scroll back to top to ensure header controls are in view
         await page.evaluate("window.scrollTo(0, 0)")
         await page.wait_for_timeout(500)
         quant_btn = page.locator('button:has-text("Expert Quant Studio")').first
         await quant_btn.scroll_into_view_if_needed()
         await quant_btn.click()
-        await page.wait_for_timeout(2500)
+        await page.wait_for_timeout(2000)
 
-        # 5. Capture Mode B (Expert Quant Studio)
-        print("Capturing Mode B: Expert Quant Studio...", flush=True)
-        await page.screenshot(path=screen_quant, full_page=False)
-        print(f"-> Saved: {screen_quant}", flush=True)
+        # 6. Execute Cypher Query in the Cypher Query Bank
+        print("Executing Cypher Query from Bank...", flush=True)
+        exec_cypher_btn = page.locator('button:has-text("Execute Cypher")').first
+        if await exec_cypher_btn.is_visible():
+            await exec_cypher_btn.scroll_into_view_if_needed()
+            await exec_cypher_btn.click()
+            await page.wait_for_timeout(2500)
+
+        # Capture Mode B with Cypher Bank execution results
+        print("Capturing Mode B: Expert Quant Studio with Cypher Bank...", flush=True)
+        await page.screenshot(path=screen_cypher_bank, full_page=False)
+        print(f"-> Saved: {screen_cypher_bank}", flush=True)
 
         await browser.close()
 

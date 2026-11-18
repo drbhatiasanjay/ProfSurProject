@@ -45,8 +45,12 @@ import {
   CheckCircle2,
   RefreshCw,
   Eye,
-  Maximize2
+  Maximize2,
+  Binary
 } from 'lucide-react';
+import { PdfBoundingBoxDrawer } from './kg/PdfBoundingBoxDrawer';
+import { FormulaLineageModal } from './kg/FormulaLineageModal';
+import { CypherBankInspector } from './kg/CypherBankInspector';
 
 // =====================================================================
 // Custom Custom Node Component for FIBO Financial Entities
@@ -185,6 +189,41 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
   const [territoryDiscount, setTerritoryDiscount] = useState<number>(25.0);
   const [channelDiscount, setChannelDiscount] = useState<number>(10.0);
   const [simResult, setSimResult] = useState<KGValuationSimulationResult | null>(null);
+
+  // In-App PDF Bounding Box Viewer Drawer State
+  const [isPdfDrawerOpen, setIsPdfDrawerOpen] = useState<boolean>(false);
+  const [pdfDrawerPage, setPdfDrawerPage] = useState<number>(18);
+  const [pdfDrawerQuote, setPdfDrawerQuote] = useState<string>('');
+  const [pdfDrawerClause, setPdfDrawerClause] = useState<string | undefined>(undefined);
+
+  // Formula Lineage DAG Modal State
+  const [isFormulaModalOpen, setIsFormulaModalOpen] = useState<boolean>(false);
+
+  const handleOpenPdfDrawer = useCallback((page: number, quote: string, clause?: string) => {
+    setPdfDrawerPage(page);
+    setPdfDrawerQuote(quote);
+    setPdfDrawerClause(clause);
+    setIsPdfDrawerOpen(true);
+  }, []);
+
+  const handleHighlightSubgraph = useCallback((nodeIds: string[], edgeIds: string[]) => {
+    setNodes(prev => prev.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        isHighlighted: nodeIds.includes(node.id)
+      }
+    })));
+    setEdges(prev => prev.map(edge => ({
+      ...edge,
+      animated: edgeIds.includes(edge.id) || edge.animated,
+      style: {
+        ...edge.style,
+        stroke: edgeIds.includes(edge.id) ? '#10b981' : edge.style?.stroke,
+        strokeWidth: edgeIds.includes(edge.id) ? 3 : 1.5
+      }
+    })));
+  }, [setNodes, setEdges]);
 
   // Handle node selection
   const handleSelectNode = useCallback((nodeId: string) => {
@@ -346,30 +385,51 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
           </div>
         </div>
 
-        {/* Mode Switcher Pill */}
-        <div className="flex items-center bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 self-start md:self-auto">
+        {/* Action Controls & Mode Switcher Pill */}
+        <div className="flex flex-wrap items-center gap-2 self-start md:self-auto">
+          {/* 84-Attribute Formula Lineage Trigger */}
           <button
-            onClick={() => setPersonaMode('novice')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              personaMode === 'novice'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            onClick={() => setIsFormulaModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-300 hover:bg-purple-500/20 text-xs font-semibold transition-all shadow-sm"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            Novice Guided Discovery
+            <Binary className="w-3.5 h-3.5 text-purple-400" />
+            Formula Lineage (84 Attr)
           </button>
+
+          {/* In-App DRHP PDF Drawer Trigger */}
           <button
-            onClick={() => setPersonaMode('quant')}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              personaMode === 'quant'
-                ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
+            onClick={() => handleOpenPdfDrawer(18, 'Offer comprises an Offer for Sale of up to 997,500,000 Equity Shares', 'Section 1: Issue Details')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 hover:bg-blue-500/20 text-xs font-semibold transition-all shadow-sm"
           >
-            <Sliders className="w-3.5 h-3.5" />
-            Expert Quant Studio
+            <FileText className="w-3.5 h-3.5 text-blue-400" />
+            DRHP PDF Drawer (p.18)
           </button>
+
+          {/* Mode Switcher Pill */}
+          <div className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+            <button
+              onClick={() => setPersonaMode('novice')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                personaMode === 'novice'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Novice Discovery
+            </button>
+            <button
+              onClick={() => setPersonaMode('quant')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                personaMode === 'quant'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              Expert Quant Studio
+            </button>
+          </div>
         </div>
       </div>
 
@@ -425,7 +485,7 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
                 <div className="mt-4 pt-3 border-t border-slate-800/60 flex flex-wrap items-center gap-2">
                   <span className="text-[11px] text-slate-400 flex items-center gap-1 font-semibold">
                     <FileText className="w-3.5 h-3.5 text-slate-500" />
-                    Verified Citations:
+                    Verified Citations (Click to view PDF highlight):
                   </span>
                   {queryResult.verdict.citations.map((c, i) => (
                     <button
@@ -433,11 +493,13 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
                       onClick={() => {
                         const targetNode = nodes.find(n => (n.data as any).pageNumber === c.page);
                         if (targetNode) setSelectedNodeId(targetNode.id);
+                        handleOpenPdfDrawer(c.page, c.quote);
                       }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] bg-slate-900/90 border border-slate-700/80 hover:border-blue-500/50 text-slate-300 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] bg-slate-900/90 border border-slate-700/80 hover:border-blue-500/50 text-slate-300 transition-colors group cursor-pointer"
                     >
-                      <span className="text-blue-400 font-semibold">{c.source} p.{c.page}</span>
+                      <span className="text-blue-400 font-semibold group-hover:underline">{c.source} p.{c.page}</span>
                       <span className="text-[10px] text-slate-400 truncate max-w-[240px]">"{c.quote}"</span>
+                      <ExternalLink className="w-3 h-3 text-blue-400 opacity-70 group-hover:opacity-100" />
                     </button>
                   ))}
                 </div>
@@ -593,11 +655,24 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
 
                 {selectedNode.quote && (
                   <div>
-                    <div className="text-[10px] text-slate-400 mb-1 font-semibold flex items-center gap-1">
-                      <FileText className="w-3 h-3 text-slate-500" />
-                      DRHP Page {selectedNode.pageNumber} Verbatim Extract:
+                    <div className="text-[10px] text-slate-400 mb-1 font-semibold flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <FileText className="w-3 h-3 text-slate-500" />
+                        DRHP Page {selectedNode.pageNumber} Extract:
+                      </span>
+                      {selectedNode.pageNumber && (
+                        <button
+                          onClick={() => handleOpenPdfDrawer(selectedNode.pageNumber!, selectedNode.quote || '')}
+                          className="text-blue-400 hover:text-blue-300 text-[10px] flex items-center gap-1 font-semibold cursor-pointer"
+                        >
+                          View in PDF Drawer <ExternalLink className="w-2.5 h-2.5" />
+                        </button>
+                      )}
                     </div>
-                    <p className="text-[11px] text-slate-300 italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+                    <p
+                      onClick={() => selectedNode.pageNumber && handleOpenPdfDrawer(selectedNode.pageNumber, selectedNode.quote || '')}
+                      className="text-[11px] text-slate-300 italic bg-slate-950/60 p-2.5 rounded-lg border border-slate-800 hover:border-blue-500/50 cursor-pointer transition-colors"
+                    >
                       "{selectedNode.quote}"
                     </p>
                   </div>
@@ -622,8 +697,14 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
       {/* Mode B: Expert Quant Studio */}
       {personaMode === 'quant' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Query Console, Valuation Simulator & Bounding Box Inspector */}
+          {/* Left Column: Cypher Bank, Query Console, Valuation Simulator & Bounding Box Inspector */}
           <div className="lg:col-span-5 space-y-6">
+            {/* Cypher Query Bank (25 Institutional Diligence Queries) */}
+            <CypherBankInspector
+              onSelectCitation={handleOpenPdfDrawer}
+              onHighlightSubgraph={handleHighlightSubgraph}
+            />
+
             {/* Natural Language Query & Analytical Depth Console */}
             <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
               <div className="flex items-center justify-between">
@@ -788,7 +869,12 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-400">Physical Page Citation:</span>
-                    <span className="font-mono font-bold text-emerald-400">Page {selectedNode.pageNumber}</span>
+                    <button
+                      onClick={() => selectedNode.pageNumber && handleOpenPdfDrawer(selectedNode.pageNumber, selectedNode.quote || '')}
+                      className="font-mono font-bold text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      Page {selectedNode.pageNumber} <ExternalLink className="w-2.5 h-2.5" />
+                    </button>
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-400">Bounding Box Coordinates:</span>
@@ -797,8 +883,14 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
                 </div>
 
                 {selectedNode.quote && (
-                  <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 italic border-l-2 border-l-cyan-500">
+                  <div
+                    onClick={() => selectedNode.pageNumber && handleOpenPdfDrawer(selectedNode.pageNumber, selectedNode.quote || '')}
+                    className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] text-slate-300 italic border-l-2 border-l-cyan-500 hover:border-cyan-400 cursor-pointer transition-all"
+                  >
                     "{selectedNode.quote}"
+                    <div className="mt-1 text-[9px] text-cyan-400 font-mono not-italic flex items-center gap-1">
+                      <ExternalLink className="w-2.5 h-2.5" /> Click to open authentic 513p PDF page highlight
+                    </div>
                   </div>
                 )}
               </div>
@@ -837,6 +929,23 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
           </div>
         </div>
       )}
+
+      {/* Slide-Over In-App PDF Bounding Box Viewer Drawer */}
+      <PdfBoundingBoxDrawer
+        isOpen={isPdfDrawerOpen}
+        onClose={() => setIsPdfDrawerOpen(false)}
+        pageNumber={pdfDrawerPage}
+        highlightQuote={pdfDrawerQuote}
+        statutoryClause={pdfDrawerClause}
+        symbol={symbol}
+      />
+
+      {/* Mathematical Lineage & 84 Attributes DAG Modal */}
+      <FormulaLineageModal
+        isOpen={isFormulaModalOpen}
+        onClose={() => setIsFormulaModalOpen(false)}
+        onSelectCitation={handleOpenPdfDrawer}
+      />
     </div>
   );
 };

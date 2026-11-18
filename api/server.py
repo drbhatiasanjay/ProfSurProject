@@ -1019,6 +1019,18 @@ from models.pre_ipo_kg_queries import (
     execute_tier3_complex_query,
     route_natural_language_query
 )
+from models.pre_ipo_cypher_bank import (
+    get_cypher_bank_catalog,
+    execute_cypher_bank_query,
+    get_query_template_by_id
+)
+from models.pre_ipo_formula_lineage import (
+    get_all_formula_lineages,
+    execute_formula_lineage_calc,
+    STATUTORY_SECTIONS
+)
+import os
+import pypdf
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
@@ -1026,6 +1038,14 @@ class KGQueryRequest(BaseModel):
     query: str = Field(default="Where does the IPO money go?", description="Natural language question or recipe")
     tier: Optional[int] = Field(default=None, description="Analytical depth tier (1, 2, or 3)")
     pruningThreshold: Optional[float] = Field(default=0.65, description="Jev subgraph pruning threshold (0.50 - 0.95)")
+
+class CypherExecRequest(BaseModel):
+    queryId: str = Field(..., description="ID of the Cypher template from the catalog")
+    overrideParams: Optional[Dict[str, Any]] = Field(default=None, description="Optional parameters")
+
+class FormulaCalcRequest(BaseModel):
+    formulaId: str = Field(..., description="ID of the mathematical formula")
+    attributes: Dict[str, Any] = Field(..., description="Key-value dictionary of 84 attributes")
 
 @app.post("/api/pre-ipo/kg/ingest")
 def ingest_pre_ipo_knowledge_graph(symbol: str = "HCCH"):
@@ -1046,7 +1066,9 @@ def get_pre_ipo_graph_canvas(symbol: str = "HCCH", max_depth: int = 2):
     if len(engine.graph.nodes) == 0:
         ingest_hcch_benchmark_graph(engine)
     
-    root_id = "HCCH" if symbol.upper() in ["HCCH", "HCCB"] else symbol.upper()
+    root_id = "HCCH"
+    if symbol.upper() in engine.graph.nodes:
+        root_id = symbol.upper()
     canvas_data = engine.get_subgraph(root_id, max_depth=max_depth)
     return {
         "symbol": symbol.upper(),
@@ -1065,7 +1087,7 @@ def query_pre_ipo_knowledge_graph(request: KGQueryRequest):
     if len(engine.graph.nodes) == 0:
         ingest_hcch_benchmark_graph(engine)
 
-    threshold = request.pruningThreshold or 0.65
+    threshold = 0.65 if request.pruningThreshold is None else request.pruningThreshold
 
     if request.tier == 1:
         return execute_tier1_simple_query(engine)
@@ -1128,6 +1150,97 @@ def get_pre_ipo_valuation_simulation(
             {"label": "Forensic Warranted Fair Value", "min": 26.5, "max": 31.0, "current": round(warranted, 2)}
         ]
     }
+
+# =====================================================================
+# Milestone 12: In-Depth Cypher Query Bank, Lineage & PDF Drawer
+# =====================================================================
+
+@app.get("/api/pre-ipo/kg/cypher-bank")
+def get_cypher_queries_catalog():
+    """Returns the full bank of 25 in-depth Cypher queries across 5 forensic categories."""
+    return {
+        "totalQueries": 25,
+        "categories": [
+            "Capital Structure & OFS Flow",
+            "Related Party & Earnings Quality",
+            "Litigation & Contagion",
+            "Debt & Solvency",
+            "Statutory Objects & Valuation"
+        ],
+        "queries": get_cypher_bank_catalog()
+    }
+
+@app.post("/api/pre-ipo/kg/cypher-exec")
+def run_cypher_bank_query(request: CypherExecRequest):
+    """Executes a pre-compiled Cypher query and returns the verdict, table, citations, and subgraph."""
+    engine = get_kg_engine()
+    if len(engine.graph.nodes) == 0:
+        ingest_hcch_benchmark_graph(engine)
+    return execute_cypher_bank_query(request.queryId, engine, request.overrideParams)
+
+@app.get("/api/pre-ipo/kg/formula-lineage")
+def get_formula_lineage_registry():
+    """Returns the 10 statutory sections (84 attributes) and the 9 analytical formula lineages."""
+    return {
+        "statutorySections": STATUTORY_SECTIONS,
+        "totalAttributes": 84,
+        "formulas": get_all_formula_lineages()
+    }
+
+@app.post("/api/pre-ipo/kg/formula-calc")
+def calculate_formula_lineage(request: FormulaCalcRequest):
+    """Calculates an analytical formula output enforcing Rule E.3 Zero-Truthiness."""
+    return execute_formula_lineage_calc(request.formulaId, request.attributes)
+
+@app.get("/api/pre-ipo/kg/pdf-page/{page_number}")
+def get_prospectus_pdf_page(page_number: int, symbol: str = "HCCH"):
+    """
+    Serves authentic DRHP PDF page text, dimensions, and paragraph layout blocks
+    from data/drhp/Hindustan_Coca_Cola_Holdings_DRHP.pdf (513 pages total).
+    """
+    pdf_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "drhp", "Hindustan_Coca_Cola_Holdings_DRHP.pdf")
+    if not os.path.exists(pdf_path):
+        pdf_path = "Hindustan_Coca_Cola_Holdings_DRHP.pdf"
+    
+    if not os.path.exists(pdf_path):
+        return {
+            "pageNumber": page_number,
+            "totalPages": 513,
+            "text": f"[DRHP Page {page_number} placeholder]",
+            "paragraphs": []
+        }
+    
+    try:
+        reader = pypdf.PdfReader(pdf_path)
+        total_pages = len(reader.pages)
+        if 1 <= page_number <= total_pages:
+            page = reader.pages[page_number - 1]
+            raw_text = page.extract_text() or ""
+            # Segment into clean paragraphs for the In-App Drawer
+            lines = [line.strip() for line in raw_text.split("\n") if line.strip()]
+            paragraphs = []
+            curr = []
+            for l in lines:
+                curr.append(l)
+                if len(curr) >= 3 or l.endswith("."):
+                    paragraphs.append(" ".join(curr))
+                    curr = []
+            if curr:
+                paragraphs.append(" ".join(curr))
+
+            return {
+                "symbol": symbol.upper(),
+                "pageNumber": page_number,
+                "totalPages": total_pages,
+                "sourceDocument": "Hindustan_Coca_Cola_Holdings_DRHP.pdf",
+                "characterCount": len(raw_text),
+                "paragraphs": paragraphs[:25],
+                "rawText": raw_text[:3500]
+            }
+        else:
+            return {"error": f"Page number {page_number} out of bounds (1-{total_pages})"}
+    except Exception as e:
+        return {"error": str(e), "pageNumber": page_number, "totalPages": 513}
 
 if __name__ == "__main__":
     import uvicorn
