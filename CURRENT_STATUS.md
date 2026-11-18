@@ -1,17 +1,23 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 18 November 2026 14:25 IST (Codebase Audit & Entropy Cleanup Verified)  
-**Active Baseline Branch:** `feature/pre-ipo-cockpit-vault-v35` (working head on `master`)  
-**Release Tag:** `v3.5.1-audit-entropy-cleanup-verified`  
-**React Terminal URL (Local):** `http://localhost:5173/` (Vite v8.3.8 + React 19 + TypeScript + Tailwind v4 — ACTIVE DAEMON)  
-**Cloud Run Production Terminal:** `https://pre-ipo-terminal-779655496440.us-east1.run.app` (Revision `pre-ipo-terminal-00007-cfn` — ACTIVE & SERVING 100% VERIFIED)  
+**Last Updated:** 18 November 2026 22:35 IST (Milestone 11 — Pre-IPO Knowledge Graph Platform Verified & Operational)  
+**Active Baseline Branch:** `feature/pre-ipo-fibo-knowledge-graph` (Latest commit: `47bb0e32`, pushed to GitHub)  
+**Release Tag:** `v3.5.2-pre-ipo-fibo-kg-verified`  
+**Governing Documents for Milestone 11:**
+- PRD: [`docs/PRD_FIBO_PRE_IPO_KNOWLEDGE_GRAPH.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/PRD_FIBO_PRE_IPO_KNOWLEDGE_GRAPH.md)
+- System Architecture Spec (SAD/TDD): [`docs/ARCHITECTURE_SPEC_FIBO_PRE_IPO_KG.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/ARCHITECTURE_SPEC_FIBO_PRE_IPO_KG.md)
+- Implementation Plan (WBS): [`docs/IMPLEMENTATION_PLAN_FIBO_PRE_IPO_KG.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/IMPLEMENTATION_PLAN_FIBO_PRE_IPO_KG.md)
+- Architecture Decision Records: [`docs/adr/ADR_001_EMBEDDED_KUZU_VS_NEO4J.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/adr/ADR_001_EMBEDDED_KUZU_VS_NEO4J.md) & [`docs/adr/ADR_002_CLOSED_WORLD_SHACL_VS_OPEN_WORLD_OWL.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/adr/ADR_002_CLOSED_WORLD_SHACL_VS_OPEN_WORLD_OWL.md)
+- Dedicated Dependencies: [`requirements-preipo-kg.txt`](file:///c:/Users/hemas/Downloads/ProfSurProject/requirements-preipo-kg.txt)  
+**React Terminal URL (Local):** `http://localhost:5173/` (Vite v8.3.8 + React 19 + TypeScript + Tailwind v4 + `@xyflow/react` — ACTIVE DAEMON)  
+**Cloud Run Production Terminal:** `https://pre-ipo-terminal-779655496440.us-east1.run.app` (Revision `pre-ipo-terminal-00007-cfn` — ACTIVE & SERVING)  
 **FastAPI Bridge URL:** `http://localhost:8000/` (Uvicorn 0.32+ / SEBI RA 2014 Compliance Engine — ACTIVE DAEMON)  
 **Production Streamlit URL:** `http://localhost:8501/` (Streamlit Core Platform — Isolated & Untouched)  
 **GCP Project:** `tempproject-462219` (Region: `us-east1`)  
 **Cloud Run Target Service:** `pre-ipo-terminal` (port 8080)  
 **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
-**Hand-off Specification File:** `HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md` & `pre_ipo_terminal_executive_brief_and_walkthrough.md`  
+**Verification Report:** [`pre_ipo_kg_verification_report.md`](file:///C:/Users/hemas/.gemini/antigravity/brain/4f716300-5b82-4463-8c40-2afc503bc17b/pre_ipo_kg_verification_report.md)  
 
 ---
 
@@ -151,14 +157,36 @@ The project has achieved complete implementation, mathematical verification, bac
 
 ---
 
-## 4. Immediate Resume Point for Session 3: Unified Decision Intelligence & Interpretation Contract
-1. **Governing Specification:** Consult [`docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md) (Section 4: Unified Decision Intelligence & Interpretation Contract).
-2. **Execute Unified Interpretation Deliverables:**
-   - **Backend Data Contract (`models/pre_ipo_econometrics.py` & `api/server.py`):**
-     - Extend computed models with deterministic `AnalyticalInterpretation` objects (`metricId`, `polarity`, `headline`, `whatItMeans`, `evidenceBasis`, `callToAction`, `missingDataAndBlindSpots`).
-     - Polarity union: `'POSITIVE_CONTRIBUTOR' | 'NEGATIVE_CONTRIBUTOR' | 'NEUTRAL_MONITOR' | 'BLOCKING_RISK'`.
-   - **Frontend Reusable Component (`frontend/src/components/shared/EvidenceInterpretationPanel.tsx`):**
-     - Renders evidence basis formulas, cited DRHP inputs with clickable page links, actionable underwriting calls to action, and missing data / blind-spot warning accordions.
-   - **Right-Hand Canvas Integration Across Every Vault:**
-     - Vault 1 (Valuation & Peers), Vault 2 (Unlisted & Lock-in Arbitrage), Vault 3 (Econometric Lab), Vault 4 (Provenance Ledger), Vault 5 (Red-Flag Radar), Vaults 6 & 7 (Stakeholder Lens & IC Board Deck).
-   - **Verification:** Run synchronous pytest tests and `tsc --noEmit`.
+## 4. Milestone 11 — Pre-IPO Generic FIBO Knowledge Graph Platform (18 Nov 2026 IST)
+**Status: 100% IMPLEMENTED & TEST VERIFIED (Milestones 11.1 - 11.4)**
+
+### Key Technical Achievements:
+1. **Milestone 11.1 (Ontology Core & Closed-World SHACL Gate):**
+   - Scoped FIBO TBox (`models/ontology/fibo_pre_ipo_tbox.ttl`) with SEBI ICDR statutory extensions.
+   - Closed-World SHACL Shapes (`models/ontology/sebi_icdr_shapes.ttl`) validating mathematical reconciliation (`Total Issue Size == Fresh Issue + OFS`) and mandatory promoter disclosures.
+   - SHACL Validation Engine (`models/pre_ipo_shacl_engine.py`) with strict fail-closed statutory gate (`ExportBlockedError`).
+   - MicroDecisionEngine (`models/pre_ipo_decision_engine.py`) implementing TypeSafe Jev fallback primitives and 3-zone threshold routing.
+   - Tests: `tests/test_pre_ipo_kg_shacl.py` (5/5 PASSED), `tests/test_pre_ipo_decision_engine.py` (3/3 PASSED).
+
+2. **Milestone 11.2 (Hybrid In-Process Storage & HCCH Ingestion):**
+   - Embedded Property Graph Engine (`models/pre_ipo_kg_engine.py`) using DuckDB for ACID relational node/edge persistence and NetworkX for sub-millisecond multi-hop pathfinding. Zero external database daemons.
+   - Layout-Aware Ingestion Pipeline (`models/pre_ipo_kg_ingest.py`) parsing 513-page HCCH DRHP with complete W3C PROV-O metadata (page >= 1, bounding box, confidence >= 0.85, verbatim quotes).
+   - Tests: `tests/test_pre_ipo_kg_ingest.py` (5/5 PASSED).
+
+3. **Milestone 11.3 (Query Engine, API Layer & Canonical SSOT Bridge):**
+   - Multi-Tier Query Engine (`models/pre_ipo_kg_queries.py`) supporting Tier 1 (1-hop proceeds routing), Tier 2 (2-hop margin sustainability audit), Tier 3 (3-hop contagion overhang & HoldCo discount), and natural language query routing.
+   - FastAPI Endpoints in `api/server.py`: `/api/pre-ipo/kg/ingest`, `/api/pre-ipo/kg/graph/{symbol}`, `/api/pre-ipo/kg/query`, `/api/pre-ipo/kg/shacl-audit/{symbol}`, `/api/pre-ipo/kg/valuation-simulator/{symbol}`.
+   - Canonical 84-Attribute & Docling Bridge (`models/pre_ipo_kg_bridge.py`): Hydrates the Knowledge Graph directly from canonical `ProvenanceField` records, ensuring a single source of truth between Vault 4 (Ledger) and Vault 13 (Knowledge Graph).
+   - Tests: `tests/test_pre_ipo_kg_api.py` (8/8 PASSED), `tests/test_pre_ipo_kg_bridge.py` (2/2 PASSED).
+
+4. **Milestone 11.4 (Dual-Persona React 19 Frontend Studio):**
+   - Installed `@xyflow/react` in `frontend/` package.json.
+   - Developed `frontend/src/components/vaults/KnowledgeGraphStudioVault.tsx`:
+     - **Mode A: Novice Guided Discovery Canvas:** 5-second plain-English verdict HUD strip with traffic-light risk badges, 1-click forensic query recipe cards, clickable DRHP page citations, and full-featured interactive canvas with custom FIBO entity cards.
+     - **Mode B: Expert Quant Studio:** Split-pane query console, Jev subgraph pruning slider (0.50 - 0.95), W3C PROV-O Bounding Box Inspector, Closed-World SHACL audit status card, and dynamic valuation simulator with Varun Beverages benchmark and Football Field EV/EBITDA multiple chart.
+   - Registered Vault 13 (`knowledge_graph`) in `frontend/src/types/terminal.ts`, `frontend/src/components/SidebarNav.tsx`, and `frontend/src/App.tsx`.
+   - Complete offline fallback support in `frontend/src/services/dataService.ts`.
+
+### Regression Verification Suite:
+- `pytest tests/test_pre_ipo_kg_shacl.py tests/test_pre_ipo_decision_engine.py tests/test_pre_ipo_kg_ingest.py tests/test_pre_ipo_kg_api.py tests/test_pre_ipo_kg_bridge.py -v`
+- **Result: 23 passed, 1 warning in 25.52s (100% PASS RATE)**
