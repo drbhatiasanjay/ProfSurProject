@@ -114,13 +114,14 @@ def get_pre_ipo_econometrics(symbol: str):
     dossier_key = "hindustan_coca_cola" if is_hccb else "ntpc_green"
     dossier = PRE_IPO_REGISTRY.get(dossier_key, PRE_IPO_REGISTRY["ntpc_green"])
 
+    is_contained = bool(dossier.get("is_contained", False) or dossier.get("isPriceUndisclosed", False))
     offer_repr = {
         "symbol": symbol.upper(),
         "companyName": "Hindustan Coca-Cola Beverages Limited" if is_hccb else "NTPC Green Energy Limited",
         "origin": "INGESTED" if is_hccb else "SYNTHETIC",
         "snapshot_status": "ACCEPTED_FOR_ANALYSIS",
-        "is_contained": False,
-        "isContained": False,
+        "is_contained": is_contained,
+        "isContained": is_contained,
     }
 
     try:
@@ -156,13 +157,14 @@ def get_pre_ipo_interpretations(symbol: str):
     dossier_key = "hindustan_coca_cola" if is_hccb else "ntpc_green"
     dossier = PRE_IPO_REGISTRY.get(dossier_key, PRE_IPO_REGISTRY["ntpc_green"])
 
+    is_contained = bool(dossier.get("is_contained", False) or dossier.get("isPriceUndisclosed", False))
     offer_repr = {
         "symbol": symbol.upper(),
         "companyName": "Hindustan Coca-Cola Beverages Limited" if is_hccb else "NTPC Green Energy Limited",
         "origin": "INGESTED" if is_hccb else "SYNTHETIC",
         "snapshot_status": "ACCEPTED_FOR_ANALYSIS",
-        "is_contained": False,
-        "isContained": False,
+        "is_contained": is_contained,
+        "isContained": is_contained,
     }
 
     try:

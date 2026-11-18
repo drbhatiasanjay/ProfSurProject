@@ -23,12 +23,18 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
   const [holdingPeriodMonths, setHoldingPeriodMonths] = useState<number>(6);
   const [annualCarryCostPct, setAnnualCarryCostPct] = useState<number>(10.0);
   const [targetMarginOfSafetyPct, setTargetMarginOfSafetyPct] = useState<number>(15.0);
-  const [isTaxRegimeOverridden, setIsTaxRegimeOverridden] = useState<boolean>(false);
-  const [overriddenTaxRegime, setOverriddenTaxRegime] = useState<'STCG' | 'LTCG'>('STCG');
+  
+  // Discriminated union for tax selection state machine
+  type TaxRegimeSelection =
+    | { mode: 'AUTO' }
+    | { mode: 'MANUAL'; regime: 'STCG' | 'LTCG' };
+
+  const [taxSelection, setTaxSelection] = useState<TaxRegimeSelection>({ mode: 'AUTO' });
 
   // Single source of truth: deterministically derive tax regime unless explicitly overridden
   const autoDerivedTaxRegime: 'STCG' | 'LTCG' = holdingPeriodMonths >= ltcgThresholdMonths ? 'LTCG' : 'STCG';
-  const taxRegime: 'STCG' | 'LTCG' = isTaxRegimeOverridden ? overriddenTaxRegime : autoDerivedTaxRegime;
+  const isTaxRegimeOverridden = taxSelection.mode === 'MANUAL';
+  const taxRegime: 'STCG' | 'LTCG' = taxSelection.mode === 'MANUAL' ? taxSelection.regime : autoDerivedTaxRegime;
 
   // Mathematical solver with strict Rule E.3 zero-truthiness
   const model = useMemo(() => {
@@ -245,9 +251,10 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
                   checked={isTaxRegimeOverridden}
                   onChange={(e) => {
                     const checked = e.target.checked;
-                    setIsTaxRegimeOverridden(checked);
                     if (checked) {
-                      setOverriddenTaxRegime(autoDerivedTaxRegime);
+                      setTaxSelection({ mode: 'MANUAL', regime: autoDerivedTaxRegime });
+                    } else {
+                      setTaxSelection({ mode: 'AUTO' });
                     }
                   }}
                   className="rounded border-[#223044] bg-[#101620] text-cyan-500 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5 accent-cyan-500 cursor-pointer"
@@ -260,7 +267,7 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
               <button
                 type="button"
                 disabled={!isTaxRegimeOverridden}
-                onClick={() => isTaxRegimeOverridden && setOverriddenTaxRegime('STCG')}
+                onClick={() => setTaxSelection({ mode: 'MANUAL', regime: 'STCG' })}
                 className={`p-2.5 rounded-lg border text-xs font-mono transition-colors text-left ${
                   taxRegime === 'STCG'
                     ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200 font-bold shadow-[0_0_10px_rgba(6,182,212,0.15)]'
@@ -282,7 +289,7 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
               <button
                 type="button"
                 disabled={!isTaxRegimeOverridden}
-                onClick={() => isTaxRegimeOverridden && setOverriddenTaxRegime('LTCG')}
+                onClick={() => setTaxSelection({ mode: 'MANUAL', regime: 'LTCG' })}
                 className={`p-2.5 rounded-lg border text-xs font-mono transition-colors text-left ${
                   taxRegime === 'LTCG'
                     ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200 font-bold shadow-[0_0_10px_rgba(6,182,212,0.15)]'

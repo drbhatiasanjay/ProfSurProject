@@ -1,24 +1,36 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 17 November 2026 19:45 IST (Pre-IPO Terminal v3.5.0 — Decision Intelligence & Interpretation Contract Complete)  
+**Last Updated:** 18 November 2026 14:25 IST (Codebase Audit & Entropy Cleanup Verified)  
 **Active Baseline Branch:** `feature/pre-ipo-cockpit-vault-v35` (working head on `master`)  
-**Release Tag:** `v3.5.0-vault5-econometrics-interpretations-verified` (Expanded 84-Attribute Schema, Vault 4 Provenance, Vault 5 Econometric Lab, and Reusable Decision Intelligence Panel Verified)  
-**React Terminal URL:** `http://localhost:5173/` (Vite v8.3.8 + React 19 + TypeScript + Tailwind v4 — ACTIVE DAEMON)  
+**Release Tag:** `v3.5.1-audit-entropy-cleanup-verified`  
+**React Terminal URL (Local):** `http://localhost:5173/` (Vite v8.3.8 + React 19 + TypeScript + Tailwind v4 — ACTIVE DAEMON)  
+**Cloud Run Production Terminal:** `https://pre-ipo-terminal-779655496440.us-east1.run.app` (Revision `pre-ipo-terminal-00007-cfn` — ACTIVE & SERVING 100% VERIFIED)  
 **FastAPI Bridge URL:** `http://localhost:8000/` (Uvicorn 0.32+ / SEBI RA 2014 Compliance Engine — ACTIVE DAEMON)  
-**Production Streamlit URL:** `http://localhost:8501/` (Streamlit Core Platform)  
+**Production Streamlit URL:** `http://localhost:8501/` (Streamlit Core Platform — Isolated & Untouched)  
 **GCP Project:** `tempproject-462219` (Region: `us-east1`)  
+**Cloud Run Target Service:** `pre-ipo-terminal` (port 8080)  
 **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
-**Hand-off Specification File:** `HANDOFF_SESSION1_84_ATTRIBUTE_AND_VAULT4.md` & `docs/EXPANDED_84_ATTRIBUTE_PRE_IPO_BLUEPRINT.md`  
+**Hand-off Specification File:** `HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md` & `pre_ipo_terminal_executive_brief_and_walkthrough.md`  
 
 ---
 
-## 1. Executive Summary & Latest Milestone (17 November 2026 20:00 IST)
+## 1. Executive Summary & Latest Milestone (18 November 2026 02:15 IST)
 
 The project has achieved complete implementation, mathematical verification, backend capability gating, and institutional UI deployment of the **Standardized Decision Intelligence & Analytical Interpretation Framework** across all quantitative engines and right-hand vault canvases on `http://localhost:5173/`:
 
 ### Core Completed Deliverables & Invariants Enforced:
 1. **Unified Interpretation Synthesizer Layer (`models/pre_ipo_interpretations.py`):**
+   - Dynamic 4-pillar narrative synthesis (Sector Context, Lifecycle Precedents, IC Directives, Risk Radar) customized per vault.
+   - Strict Rule E.3 Zero-Truthiness compliance (`if val is None:` throughout).
+
+2. **Standalone Spin-Off Packaging & Cloud Run Architecture:**
+   - Standalone multi-stage Dockerfile (`frontend/Dockerfile`) and Nginx SPA reverse-proxy (`frontend/nginx.conf`).
+   - Decoupled GitHub Actions workflow (`.github/workflows/deploy-terminal.yml`).
+   - Complete architectural isolation ensuring the core ProfSur Streamlit platform (`http://localhost:8501/`) remains untouched.
+
+3. **Executive Communication Briefing:**
+   - Complete 5-part memorandum (`pre_ipo_terminal_executive_brief_and_walkthrough.md`) for Prof. Sur Kumar covering the Problem, Solution, Architecture, Econometric Methodology, and 12-Vault HCCB Case Study.
    - Emits structured `AnalyticalInterpretation` records for all 10 canonical keys:
      - `valuation_multiple`: Huber RLM froth gap vs unpriced DRHP containment
      - `beneish_m_score`: Safe vs Grey vs Manipulator with Sloan total accruals check

@@ -14,9 +14,16 @@ export const StakeholderLensVault: React.FC<StakeholderLensVaultProps> = ({ offe
   const isHCCB = offer.symbol === 'HCCB' || offer.companyName.includes('Coca-Cola');
   const [activePersona, setActivePersona] = useState<PersonaKey>('cfo');
 
-  const personas = [
+  const personas: Array<{
+    key: PersonaKey;
+    title: string;
+    icon: typeof Briefcase;
+    badge: string;
+    verdict: string;
+    focus: string;
+  }> = [
     {
-      key: 'cfo' as PersonaKey,
+      key: 'cfo',
       title: 'Chief Financial Officer',
       icon: Briefcase,
       badge: 'Capital Structure',
@@ -26,7 +33,7 @@ export const StakeholderLensVault: React.FC<StakeholderLensVaultProps> = ({ offe
         : 'All ₹10,000 Cr fresh capital must be applied to de-lever subsidiary NREL debt, immediately unlocking ₹780 Cr in annual interest savings.'
     },
     {
-      key: 'lender' as PersonaKey,
+      key: 'lender',
       title: 'Credit Rating & Debt Lender',
       icon: Landmark,
       badge: 'Solvency & ICR',
@@ -36,7 +43,7 @@ export const StakeholderLensVault: React.FC<StakeholderLensVaultProps> = ({ offe
         : 'Post-issue ICR expands from 1.82x to 3.85x, well clear of the 1.75x covenant default threshold.'
     },
     {
-      key: 'qib' as PersonaKey,
+      key: 'qib',
       title: 'QIB Public Equity Lead',
       icon: TrendingUp,
       badge: 'Multiple Expansion',
@@ -46,7 +53,7 @@ export const StakeholderLensVault: React.FC<StakeholderLensVaultProps> = ({ offe
         : 'Upper price band of ₹108 prices the company to perfection (2,349x P/E). Recommend tactical listing gain participation only with strict trailing stop.'
     },
     {
-      key: 'retail' as PersonaKey,
+      key: 'retail',
       title: 'Retail HNI Investor',
       icon: Users,
       badge: 'Listing Gain Safety',
@@ -56,7 +63,7 @@ export const StakeholderLensVault: React.FC<StakeholderLensVaultProps> = ({ offe
         : 'Large issue size (₹10,000 Cr) requires strong institutional anchor backing to prevent listing day supply digestion overhang.'
     },
     {
-      key: 'sebi_ra' as PersonaKey,
+      key: 'sebi_ra',
       title: 'SEBI Research Analyst',
       icon: ShieldCheck,
       badge: 'Regulatory Audit',
@@ -66,7 +73,7 @@ export const StakeholderLensVault: React.FC<StakeholderLensVaultProps> = ({ offe
         : 'Regulation 6(2) book building confirmed. General Corporate Purposes strictly capped at ₹2,500 Cr (&le; 25.0% statutory threshold).'
     },
     {
-      key: 'board' as PersonaKey,
+      key: 'board',
       title: 'Board Audit Committee',
       icon: UserCheck,
       badge: 'Governance & RPT',
@@ -88,7 +95,7 @@ export const StakeholderLensVault: React.FC<StakeholderLensVaultProps> = ({ offe
             <div className="flex items-center gap-2.5">
               <Users className="w-5 h-5 text-indigo-400" />
               <h2 className="text-base font-bold text-slate-100 font-mono tracking-wide">
-                VAULT 7: 6-PERSONA STAKEHOLDER LENS
+                VAULT 11: 6-PERSONA STAKEHOLDER LENS
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-1 font-mono">

@@ -68,13 +68,16 @@ export const App: React.FC = () => {
   const [calibration, setCalibration] = useState(mockHuberCalibration);
   const [scorecard, setScorecard] = useState(mockMLScorecard);
   const [compliance, setCompliance] = useState(mockSEBICompliance);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadData = async (symbolOverride?: string) => {
-    const symbolToQuery = symbolOverride || selectedSymbol;
+  useEffect(() => {
+    let isCurrent = true;
+    const controller = new AbortController();
     setIsRefreshing(true);
-    try {
-      const data = await fetchLiveMarketData(symbolToQuery);
-      if (data) {
+
+    fetchLiveMarketData(selectedSymbol, controller.signal)
+      .then(data => {
+        if (!isCurrent || !data) return;
         if (data.indices) setIndices(data.indices);
         if (data.offer) setOffer(data.offer);
         if (data.subscription) setSubscription(data.subscription);
@@ -82,15 +85,45 @@ export const App: React.FC = () => {
         if (data.calibration) setCalibration(data.calibration);
         if (data.scorecard) setScorecard(data.scorecard);
         if (data.compliance) setCompliance(data.compliance);
-      }
-    } finally {
-      setTimeout(() => setIsRefreshing(false), 500);
-    }
-  };
+      })
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        console.warn('Failed to load market data for', selectedSymbol, err);
+      })
+      .finally(() => {
+        if (isCurrent) {
+          if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+          refreshTimerRef.current = setTimeout(() => {
+            if (isCurrent) setIsRefreshing(false);
+          }, 300);
+        }
+      });
 
-  useEffect(() => {
-    loadData(selectedSymbol);
+    return () => {
+      isCurrent = false;
+      controller.abort();
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
   }, [selectedSymbol]);
+
+  // Explicit manual refresh action
+  const handleManualRefresh = () => {
+    setIsRefreshing(true);
+    fetchLiveMarketData(selectedSymbol)
+      .then(data => {
+        if (!data) return;
+        if (data.indices) setIndices(data.indices);
+        if (data.offer) setOffer(data.offer);
+        if (data.subscription) setSubscription(data.subscription);
+        if (data.peers) setPeers(data.peers);
+        if (data.calibration) setCalibration(data.calibration);
+        if (data.scorecard) setScorecard(data.scorecard);
+        if (data.compliance) setCompliance(data.compliance);
+      })
+      .finally(() => {
+        setTimeout(() => setIsRefreshing(false), 300);
+      });
+  };
 
   // Handle left navigation change with instantaneous auto-reset to top
   const handleViewChange = (newView: TerminalView) => {
@@ -106,8 +139,8 @@ export const App: React.FC = () => {
     filingType: string;
     sector: string;
   }) => {
+    // Only update state; the useEffect([selectedSymbol]) handles the single canonical fetch
     setSelectedSymbol(newDeal.symbol);
-    loadData(newDeal.symbol);
   };
 
   return (
@@ -115,7 +148,7 @@ export const App: React.FC = () => {
       {/* Top Header Ticker Bar */}
       <HeaderTicker
         indices={indices}
-        onRefresh={() => loadData(selectedSymbol)}
+        onRefresh={handleManualRefresh}
         isRefreshing={isRefreshing}
       />
 

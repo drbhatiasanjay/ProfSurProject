@@ -7,7 +7,8 @@ import {
   WalkForwardMLScorecardData,
   SEBIComplianceRecord,
   ComprehensiveEconometricSuiteData,
-  AnalyticalInterpretation
+  AnalyticalInterpretation,
+  ProvenanceField
 } from '../types/terminal';
 import { getCanonical84ProvenanceFallback } from './canonicalProvenance';
 
@@ -1448,10 +1449,24 @@ export function getMockInterpretations(isHCCB: boolean): Record<string, Analytic
   };
 }
 
-export async function fetchEconometricSuite(symbol: string = 'NTPCGREEN'): Promise<ComprehensiveEconometricSuiteData> {
+export const getApiBaseUrl = (): string => {
+  if (typeof window === 'undefined') return 'http://localhost:8000';
+  if (import.meta.env.VITE_API_URL !== undefined && import.meta.env.VITE_API_URL !== '') {
+    return import.meta.env.VITE_API_URL;
+  }
+  // If running locally, connect to FastAPI on port 8000
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:8000';
+  }
+  // In production (Cloud Run / reverse proxy), use relative path
+  return '';
+};
+
+export async function fetchEconometricSuite(symbol: string = 'NTPCGREEN', signal?: AbortSignal): Promise<ComprehensiveEconometricSuiteData> {
   const isHCCB = symbol.toUpperCase().includes('HCCB') || symbol.toUpperCase().includes('COCA');
+  const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`http://localhost:8000/api/pre-ipo/econometrics/${encodeURIComponent(symbol)}`);
+    const res = await fetch(`${baseUrl}/api/pre-ipo/econometrics/${encodeURIComponent(symbol)}`, { signal });
     if (!res.ok) throw new Error('API Offline');
     const data = await res.json();
     return data;
@@ -1460,10 +1475,11 @@ export async function fetchEconometricSuite(symbol: string = 'NTPCGREEN'): Promi
   }
 }
 
-export async function fetchEconometricInterpretations(symbol: string = 'NTPCGREEN'): Promise<Record<string, AnalyticalInterpretation>> {
+export async function fetchEconometricInterpretations(symbol: string = 'NTPCGREEN', signal?: AbortSignal): Promise<Record<string, AnalyticalInterpretation>> {
   const isHCCB = symbol.toUpperCase().includes('HCCB') || symbol.toUpperCase().includes('COCA');
+  const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`http://localhost:8000/api/pre-ipo/interpretations/${encodeURIComponent(symbol)}`);
+    const res = await fetch(`${baseUrl}/api/pre-ipo/interpretations/${encodeURIComponent(symbol)}`, { signal });
     if (!res.ok) throw new Error('API Offline');
     const data = await res.json();
     return data.interpretations || getMockInterpretations(isHCCB);
@@ -1531,14 +1547,15 @@ function getFallbackForSymbol(symbol: string) {
 }
 
 // API Service Functions
-export async function fetchLiveMarketData(symbol: string = 'NTPCGREEN') {
+export async function fetchLiveMarketData(symbol: string = 'NTPCGREEN', signal?: AbortSignal) {
+  const baseUrl = getApiBaseUrl();
   try {
-    const res = await fetch(`http://localhost:8000/api/pre-ipo/market-status?symbol=${encodeURIComponent(symbol)}`);
+    const res = await fetch(`${baseUrl}/api/pre-ipo/market-status?symbol=${encodeURIComponent(symbol)}`, { signal });
     if (!res.ok) throw new Error('Backend offline');
     const data = await res.json();
     if (data?.offer) {
       if (!data.offer.pricingState) {
-        if (data.offer.isPriceUndisclosed || !data.offer.priceBandMax) {
+        if (data.offer.isPriceUndisclosed || data.offer.priceBandMax === null || data.offer.priceBandMax === undefined) {
           data.offer.pricingState = {
             status: 'DRHP_UNPRICED',
             isContained: Boolean(data.offer.isContained)
@@ -1565,9 +1582,9 @@ export async function fetchLiveMarketData(symbol: string = 'NTPCGREEN') {
       if (!data.offer.provenanceLedger || data.offer.provenanceLedger.length < 84) {
         data.offer.provenanceLedger = getCanonical84ProvenanceFallback(isHCCB);
         data.offer.provenanceSummary = {
-          foundCount: data.offer.provenanceLedger.filter((r: any) => r.status === 'FOUND').length,
-          notFoundCount: data.offer.provenanceLedger.filter((r: any) => r.status === 'NOT_FOUND').length,
-          reconfirmCount: data.offer.provenanceLedger.filter((r: any) => r.status === 'NEEDS_RECONFIRMATION').length,
+          foundCount: data.offer.provenanceLedger.filter((r: ProvenanceField<unknown>) => r.status === 'FOUND').length,
+          notFoundCount: data.offer.provenanceLedger.filter((r: ProvenanceField<unknown>) => r.status === 'NOT_FOUND').length,
+          reconfirmCount: data.offer.provenanceLedger.filter((r: ProvenanceField<unknown>) => r.status === 'NEEDS_RECONFIRMATION').length,
           totalCount: 84
         };
       }

@@ -1,5 +1,50 @@
 # ProfSurProject — Session Log
 
+## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Addressed all findings from comprehensive codebase audit: eliminated implicit state machines, type escape hatches, effect cascades, and capability boundary bypasses.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Effect Cascades & Race Conditions Eliminated (`frontend/src/App.tsx`, `UnitEconomicsVault.tsx`):**
+     - Wired `AbortController` and monotonic freshness guards in `App.tsx`'s `loadData` effect, discarding out-of-order stale network promises.
+     - Removed duplicate `loadData` invocation in `handleIngestSuccess`, allowing single canonical trigger from `selectedSymbol`.
+     - Added unmount cancellation guard in `UnitEconomicsVault.tsx` and preferred direct binding to `offer.interpretations`.
+     - Safely managed timeout timers in `App.tsx` to eliminate unmounted timer warnings.
+  2. **Type Escape Hatches Cleaned Up (`EconometricLabVault.tsx`, `dataService.ts`, `StakeholderLensVault.tsx`, `EvidenceInterpretationPanel.tsx`):**
+     - Replaced `tab.id as any` with typed `ECONOMETRIC_TABS as const` and `EconometricTabId`.
+     - Replaced `(r: any)` filter cast in `dataService.ts` with strongly typed `ProvenanceField<unknown>`.
+     - Eliminated 6x `as PersonaKey` casts in `StakeholderLensVault.tsx` with strongly typed array declaration.
+     - Added compile-time exhaustive switch checks with `_exhaustive: never` in `EvidenceInterpretationPanel.tsx`.
+  3. **Implicit State Machines Refactored (`UnlistedArbitrageVault.tsx`, `ICBoardDeckVault.tsx`):**
+     - Refactored coupled dual-boolean tax override (`isTaxRegimeOverridden` + `overriddenTaxRegime`) into discriminated union `TaxRegimeSelection ({ mode: 'AUTO' } | { mode: 'MANUAL'; regime })`.
+     - Refactored `downloadingPptx` / `downloadingPdf` into `exportingStatus ('IDLE' | 'DOWNLOADING_PPTX' | 'DOWNLOADING_PDF')`.
+  4. **Single Source of Truth, Zero-Truthiness & Cloud Run Production Fixes (`dataService.ts`, `api/server.py`):**
+     - Replaced hardcoded `http://localhost:8000` with resilient `getApiBaseUrl()`, allowing relative `/api` paths on Cloud Run while preserving local port 8000 dev connectivity.
+     - Fixed Rule E.3 zero-truthiness bug in `dataService.ts`: `data.offer.priceBandMax === null || data.offer.priceBandMax === undefined` (preventing valid 0 from forcing DRHP unpriced).
+     - Fixed capability gate bypass in `api/server.py` by reading `is_contained` dynamically from prospectus dossier metadata.
+     - Corrected UI navigation numbering drift: Vault 12 in `ICBoardDeckVault.tsx` and Vault 11 in `StakeholderLensVault.tsx`.
+     - Removed 1-line dead orphan script `scripts/patch_unit_economics.py`.
+
+## MILESTONE — Active Pre-IPO Deal Dossier Dropdown & Multi-Stage Production Deployment (2026-11-18 07:45 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Replaced 2x2 pipeline button grid with institutional Active Pre-IPO Deal Dossier dropdown matching Screen 2 (closed trigger) and Screen 3 (wide floating menu with full statutory filing labels and Ingest shortcut).
+  2. Fixed Nginx SPA browser caching trap by setting `Cache-Control: "no-store, no-cache, max-age=0"` on `/index.html` in `frontend/nginx.conf`.
+  3. Upgraded `frontend/Dockerfile` to deterministic multi-stage build (`node:20-alpine` builder -> `nginx:alpine`).
+  4. Streamlined `.dockerignore` and `.gcloudignore` to exclude `node_modules/` and local artifacts (< 2 MB upload).
+  5. Built and deployed live Cloud Run revision `pre-ipo-terminal-00007-cfn` on `tempproject-462219` (100% traffic) with physical visual verification on disk (`verified_cloud_dropdown_closed.png`, `verified_cloud_dropdown_open.png`).
+  6. Verified zero impact on core ProfSur platform (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`).
+
+## MILESTONE — Pre-IPO Terminal Spin-off, 4-Pillar Synthesis & End-of-Day Hand-Off (2026-11-18 02:15 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Pushed to `master` at commit `0746ee28`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Implemented context-specific 4-Pillar Decision Intelligence across all 12 Pre-IPO Terminal vaults (Sector Context, Lifecycle Precedents, IC Directives, Risk Radar with visual gauges, progress bars, and citations).
+  2. Packaged the Pre-IPO Terminal as a standalone spin-off container (`frontend/Dockerfile`, `frontend/nginx.conf`) to guarantee zero interference with the core ProfSur Streamlit platform (`http://localhost:8501/`).
+  3. Authored the Master Executive Briefing Memo & 12-Vault HCCB Walkthrough for Prof. Sur Kumar in `pre_ipo_terminal_executive_brief_and_walkthrough.md`.
+  4. Created the canonical master hand-off document `HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md` detailing lessons learnt, mistakes to avoid (CI/CD pipeline coupling, shell profile hangs, premature link sharing, zero-truthiness preservation), and reusable automations to build.
+
 ## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -867,6 +912,51 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log
 
+## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Addressed all findings from comprehensive codebase audit: eliminated implicit state machines, type escape hatches, effect cascades, and capability boundary bypasses.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Effect Cascades & Race Conditions Eliminated (`frontend/src/App.tsx`, `UnitEconomicsVault.tsx`):**
+     - Wired `AbortController` and monotonic freshness guards in `App.tsx`'s `loadData` effect, discarding out-of-order stale network promises.
+     - Removed duplicate `loadData` invocation in `handleIngestSuccess`, allowing single canonical trigger from `selectedSymbol`.
+     - Added unmount cancellation guard in `UnitEconomicsVault.tsx` and preferred direct binding to `offer.interpretations`.
+     - Safely managed timeout timers in `App.tsx` to eliminate unmounted timer warnings.
+  2. **Type Escape Hatches Cleaned Up (`EconometricLabVault.tsx`, `dataService.ts`, `StakeholderLensVault.tsx`, `EvidenceInterpretationPanel.tsx`):**
+     - Replaced `tab.id as any` with typed `ECONOMETRIC_TABS as const` and `EconometricTabId`.
+     - Replaced `(r: any)` filter cast in `dataService.ts` with strongly typed `ProvenanceField<unknown>`.
+     - Eliminated 6x `as PersonaKey` casts in `StakeholderLensVault.tsx` with strongly typed array declaration.
+     - Added compile-time exhaustive switch checks with `_exhaustive: never` in `EvidenceInterpretationPanel.tsx`.
+  3. **Implicit State Machines Refactored (`UnlistedArbitrageVault.tsx`, `ICBoardDeckVault.tsx`):**
+     - Refactored coupled dual-boolean tax override (`isTaxRegimeOverridden` + `overriddenTaxRegime`) into discriminated union `TaxRegimeSelection ({ mode: 'AUTO' } | { mode: 'MANUAL'; regime })`.
+     - Refactored `downloadingPptx` / `downloadingPdf` into `exportingStatus ('IDLE' | 'DOWNLOADING_PPTX' | 'DOWNLOADING_PDF')`.
+  4. **Single Source of Truth, Zero-Truthiness & Cloud Run Production Fixes (`dataService.ts`, `api/server.py`):**
+     - Replaced hardcoded `http://localhost:8000` with resilient `getApiBaseUrl()`, allowing relative `/api` paths on Cloud Run while preserving local port 8000 dev connectivity.
+     - Fixed Rule E.3 zero-truthiness bug in `dataService.ts`: `data.offer.priceBandMax === null || data.offer.priceBandMax === undefined` (preventing valid 0 from forcing DRHP unpriced).
+     - Fixed capability gate bypass in `api/server.py` by reading `is_contained` dynamically from prospectus dossier metadata.
+     - Corrected UI navigation numbering drift: Vault 12 in `ICBoardDeckVault.tsx` and Vault 11 in `StakeholderLensVault.tsx`.
+     - Removed 1-line dead orphan script `scripts/patch_unit_economics.py`.
+
+## MILESTONE — Active Pre-IPO Deal Dossier Dropdown & Multi-Stage Production Deployment (2026-11-18 07:45 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Replaced 2x2 pipeline button grid with institutional Active Pre-IPO Deal Dossier dropdown matching Screen 2 (closed trigger) and Screen 3 (wide floating menu with full statutory filing labels and Ingest shortcut).
+  2. Fixed Nginx SPA browser caching trap by setting `Cache-Control: "no-store, no-cache, max-age=0"` on `/index.html` in `frontend/nginx.conf`.
+  3. Upgraded `frontend/Dockerfile` to deterministic multi-stage build (`node:20-alpine` builder -> `nginx:alpine`).
+  4. Streamlined `.dockerignore` and `.gcloudignore` to exclude `node_modules/` and local artifacts (< 2 MB upload).
+  5. Built and deployed live Cloud Run revision `pre-ipo-terminal-00007-cfn` on `tempproject-462219` (100% traffic) with physical visual verification on disk (`verified_cloud_dropdown_closed.png`, `verified_cloud_dropdown_open.png`).
+  6. Verified zero impact on core ProfSur platform (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`).
+
+## MILESTONE — Pre-IPO Terminal Spin-off, 4-Pillar Synthesis & End-of-Day Hand-Off (2026-11-18 02:15 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Pushed to `master` at commit `0746ee28`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Implemented context-specific 4-Pillar Decision Intelligence across all 12 Pre-IPO Terminal vaults (Sector Context, Lifecycle Precedents, IC Directives, Risk Radar with visual gauges, progress bars, and citations).
+  2. Packaged the Pre-IPO Terminal as a standalone spin-off container (`frontend/Dockerfile`, `frontend/nginx.conf`) to guarantee zero interference with the core ProfSur Streamlit platform (`http://localhost:8501/`).
+  3. Authored the Master Executive Briefing Memo & 12-Vault HCCB Walkthrough for Prof. Sur Kumar in `pre_ipo_terminal_executive_brief_and_walkthrough.md`.
+  4. Created the canonical master hand-off document `HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md` detailing lessons learnt, mistakes to avoid (CI/CD pipeline coupling, shell profile hangs, premature link sharing, zero-truthiness preservation), and reusable automations to build.
+
 ## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -1037,6 +1127,51 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log
 
+## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Addressed all findings from comprehensive codebase audit: eliminated implicit state machines, type escape hatches, effect cascades, and capability boundary bypasses.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Effect Cascades & Race Conditions Eliminated (`frontend/src/App.tsx`, `UnitEconomicsVault.tsx`):**
+     - Wired `AbortController` and monotonic freshness guards in `App.tsx`'s `loadData` effect, discarding out-of-order stale network promises.
+     - Removed duplicate `loadData` invocation in `handleIngestSuccess`, allowing single canonical trigger from `selectedSymbol`.
+     - Added unmount cancellation guard in `UnitEconomicsVault.tsx` and preferred direct binding to `offer.interpretations`.
+     - Safely managed timeout timers in `App.tsx` to eliminate unmounted timer warnings.
+  2. **Type Escape Hatches Cleaned Up (`EconometricLabVault.tsx`, `dataService.ts`, `StakeholderLensVault.tsx`, `EvidenceInterpretationPanel.tsx`):**
+     - Replaced `tab.id as any` with typed `ECONOMETRIC_TABS as const` and `EconometricTabId`.
+     - Replaced `(r: any)` filter cast in `dataService.ts` with strongly typed `ProvenanceField<unknown>`.
+     - Eliminated 6x `as PersonaKey` casts in `StakeholderLensVault.tsx` with strongly typed array declaration.
+     - Added compile-time exhaustive switch checks with `_exhaustive: never` in `EvidenceInterpretationPanel.tsx`.
+  3. **Implicit State Machines Refactored (`UnlistedArbitrageVault.tsx`, `ICBoardDeckVault.tsx`):**
+     - Refactored coupled dual-boolean tax override (`isTaxRegimeOverridden` + `overriddenTaxRegime`) into discriminated union `TaxRegimeSelection ({ mode: 'AUTO' } | { mode: 'MANUAL'; regime })`.
+     - Refactored `downloadingPptx` / `downloadingPdf` into `exportingStatus ('IDLE' | 'DOWNLOADING_PPTX' | 'DOWNLOADING_PDF')`.
+  4. **Single Source of Truth, Zero-Truthiness & Cloud Run Production Fixes (`dataService.ts`, `api/server.py`):**
+     - Replaced hardcoded `http://localhost:8000` with resilient `getApiBaseUrl()`, allowing relative `/api` paths on Cloud Run while preserving local port 8000 dev connectivity.
+     - Fixed Rule E.3 zero-truthiness bug in `dataService.ts`: `data.offer.priceBandMax === null || data.offer.priceBandMax === undefined` (preventing valid 0 from forcing DRHP unpriced).
+     - Fixed capability gate bypass in `api/server.py` by reading `is_contained` dynamically from prospectus dossier metadata.
+     - Corrected UI navigation numbering drift: Vault 12 in `ICBoardDeckVault.tsx` and Vault 11 in `StakeholderLensVault.tsx`.
+     - Removed 1-line dead orphan script `scripts/patch_unit_economics.py`.
+
+## MILESTONE — Active Pre-IPO Deal Dossier Dropdown & Multi-Stage Production Deployment (2026-11-18 07:45 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Replaced 2x2 pipeline button grid with institutional Active Pre-IPO Deal Dossier dropdown matching Screen 2 (closed trigger) and Screen 3 (wide floating menu with full statutory filing labels and Ingest shortcut).
+  2. Fixed Nginx SPA browser caching trap by setting `Cache-Control: "no-store, no-cache, max-age=0"` on `/index.html` in `frontend/nginx.conf`.
+  3. Upgraded `frontend/Dockerfile` to deterministic multi-stage build (`node:20-alpine` builder -> `nginx:alpine`).
+  4. Streamlined `.dockerignore` and `.gcloudignore` to exclude `node_modules/` and local artifacts (< 2 MB upload).
+  5. Built and deployed live Cloud Run revision `pre-ipo-terminal-00007-cfn` on `tempproject-462219` (100% traffic) with physical visual verification on disk (`verified_cloud_dropdown_closed.png`, `verified_cloud_dropdown_open.png`).
+  6. Verified zero impact on core ProfSur platform (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`).
+
+## MILESTONE — Pre-IPO Terminal Spin-off, 4-Pillar Synthesis & End-of-Day Hand-Off (2026-11-18 02:15 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Pushed to `master` at commit `0746ee28`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Implemented context-specific 4-Pillar Decision Intelligence across all 12 Pre-IPO Terminal vaults (Sector Context, Lifecycle Precedents, IC Directives, Risk Radar with visual gauges, progress bars, and citations).
+  2. Packaged the Pre-IPO Terminal as a standalone spin-off container (`frontend/Dockerfile`, `frontend/nginx.conf`) to guarantee zero interference with the core ProfSur Streamlit platform (`http://localhost:8501/`).
+  3. Authored the Master Executive Briefing Memo & 12-Vault HCCB Walkthrough for Prof. Sur Kumar in `pre_ipo_terminal_executive_brief_and_walkthrough.md`.
+  4. Created the canonical master hand-off document `HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md` detailing lessons learnt, mistakes to avoid (CI/CD pipeline coupling, shell profile hangs, premature link sharing, zero-truthiness preservation), and reusable automations to build.
+
 ## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -1195,6 +1330,51 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log
 
+## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Addressed all findings from comprehensive codebase audit: eliminated implicit state machines, type escape hatches, effect cascades, and capability boundary bypasses.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Effect Cascades & Race Conditions Eliminated (`frontend/src/App.tsx`, `UnitEconomicsVault.tsx`):**
+     - Wired `AbortController` and monotonic freshness guards in `App.tsx`'s `loadData` effect, discarding out-of-order stale network promises.
+     - Removed duplicate `loadData` invocation in `handleIngestSuccess`, allowing single canonical trigger from `selectedSymbol`.
+     - Added unmount cancellation guard in `UnitEconomicsVault.tsx` and preferred direct binding to `offer.interpretations`.
+     - Safely managed timeout timers in `App.tsx` to eliminate unmounted timer warnings.
+  2. **Type Escape Hatches Cleaned Up (`EconometricLabVault.tsx`, `dataService.ts`, `StakeholderLensVault.tsx`, `EvidenceInterpretationPanel.tsx`):**
+     - Replaced `tab.id as any` with typed `ECONOMETRIC_TABS as const` and `EconometricTabId`.
+     - Replaced `(r: any)` filter cast in `dataService.ts` with strongly typed `ProvenanceField<unknown>`.
+     - Eliminated 6x `as PersonaKey` casts in `StakeholderLensVault.tsx` with strongly typed array declaration.
+     - Added compile-time exhaustive switch checks with `_exhaustive: never` in `EvidenceInterpretationPanel.tsx`.
+  3. **Implicit State Machines Refactored (`UnlistedArbitrageVault.tsx`, `ICBoardDeckVault.tsx`):**
+     - Refactored coupled dual-boolean tax override (`isTaxRegimeOverridden` + `overriddenTaxRegime`) into discriminated union `TaxRegimeSelection ({ mode: 'AUTO' } | { mode: 'MANUAL'; regime })`.
+     - Refactored `downloadingPptx` / `downloadingPdf` into `exportingStatus ('IDLE' | 'DOWNLOADING_PPTX' | 'DOWNLOADING_PDF')`.
+  4. **Single Source of Truth, Zero-Truthiness & Cloud Run Production Fixes (`dataService.ts`, `api/server.py`):**
+     - Replaced hardcoded `http://localhost:8000` with resilient `getApiBaseUrl()`, allowing relative `/api` paths on Cloud Run while preserving local port 8000 dev connectivity.
+     - Fixed Rule E.3 zero-truthiness bug in `dataService.ts`: `data.offer.priceBandMax === null || data.offer.priceBandMax === undefined` (preventing valid 0 from forcing DRHP unpriced).
+     - Fixed capability gate bypass in `api/server.py` by reading `is_contained` dynamically from prospectus dossier metadata.
+     - Corrected UI navigation numbering drift: Vault 12 in `ICBoardDeckVault.tsx` and Vault 11 in `StakeholderLensVault.tsx`.
+     - Removed 1-line dead orphan script `scripts/patch_unit_economics.py`.
+
+## MILESTONE — Active Pre-IPO Deal Dossier Dropdown & Multi-Stage Production Deployment (2026-11-18 07:45 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Replaced 2x2 pipeline button grid with institutional Active Pre-IPO Deal Dossier dropdown matching Screen 2 (closed trigger) and Screen 3 (wide floating menu with full statutory filing labels and Ingest shortcut).
+  2. Fixed Nginx SPA browser caching trap by setting `Cache-Control: "no-store, no-cache, max-age=0"` on `/index.html` in `frontend/nginx.conf`.
+  3. Upgraded `frontend/Dockerfile` to deterministic multi-stage build (`node:20-alpine` builder -> `nginx:alpine`).
+  4. Streamlined `.dockerignore` and `.gcloudignore` to exclude `node_modules/` and local artifacts (< 2 MB upload).
+  5. Built and deployed live Cloud Run revision `pre-ipo-terminal-00007-cfn` on `tempproject-462219` (100% traffic) with physical visual verification on disk (`verified_cloud_dropdown_closed.png`, `verified_cloud_dropdown_open.png`).
+  6. Verified zero impact on core ProfSur platform (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`).
+
+## MILESTONE — Pre-IPO Terminal Spin-off, 4-Pillar Synthesis & End-of-Day Hand-Off (2026-11-18 02:15 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Pushed to `master` at commit `0746ee28`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Implemented context-specific 4-Pillar Decision Intelligence across all 12 Pre-IPO Terminal vaults (Sector Context, Lifecycle Precedents, IC Directives, Risk Radar with visual gauges, progress bars, and citations).
+  2. Packaged the Pre-IPO Terminal as a standalone spin-off container (`frontend/Dockerfile`, `frontend/nginx.conf`) to guarantee zero interference with the core ProfSur Streamlit platform (`http://localhost:8501/`).
+  3. Authored the Master Executive Briefing Memo & 12-Vault HCCB Walkthrough for Prof. Sur Kumar in `pre_ipo_terminal_executive_brief_and_walkthrough.md`.
+  4. Created the canonical master hand-off document `HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md` detailing lessons learnt, mistakes to avoid (CI/CD pipeline coupling, shell profile hangs, premature link sharing, zero-truthiness preservation), and reusable automations to build.
+
 ## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -1347,6 +1527,51 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 ---
 
 # ProfSurProject — Session Log
+
+## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Addressed all findings from comprehensive codebase audit: eliminated implicit state machines, type escape hatches, effect cascades, and capability boundary bypasses.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Effect Cascades & Race Conditions Eliminated (`frontend/src/App.tsx`, `UnitEconomicsVault.tsx`):**
+     - Wired `AbortController` and monotonic freshness guards in `App.tsx`'s `loadData` effect, discarding out-of-order stale network promises.
+     - Removed duplicate `loadData` invocation in `handleIngestSuccess`, allowing single canonical trigger from `selectedSymbol`.
+     - Added unmount cancellation guard in `UnitEconomicsVault.tsx` and preferred direct binding to `offer.interpretations`.
+     - Safely managed timeout timers in `App.tsx` to eliminate unmounted timer warnings.
+  2. **Type Escape Hatches Cleaned Up (`EconometricLabVault.tsx`, `dataService.ts`, `StakeholderLensVault.tsx`, `EvidenceInterpretationPanel.tsx`):**
+     - Replaced `tab.id as any` with typed `ECONOMETRIC_TABS as const` and `EconometricTabId`.
+     - Replaced `(r: any)` filter cast in `dataService.ts` with strongly typed `ProvenanceField<unknown>`.
+     - Eliminated 6x `as PersonaKey` casts in `StakeholderLensVault.tsx` with strongly typed array declaration.
+     - Added compile-time exhaustive switch checks with `_exhaustive: never` in `EvidenceInterpretationPanel.tsx`.
+  3. **Implicit State Machines Refactored (`UnlistedArbitrageVault.tsx`, `ICBoardDeckVault.tsx`):**
+     - Refactored coupled dual-boolean tax override (`isTaxRegimeOverridden` + `overriddenTaxRegime`) into discriminated union `TaxRegimeSelection ({ mode: 'AUTO' } | { mode: 'MANUAL'; regime })`.
+     - Refactored `downloadingPptx` / `downloadingPdf` into `exportingStatus ('IDLE' | 'DOWNLOADING_PPTX' | 'DOWNLOADING_PDF')`.
+  4. **Single Source of Truth, Zero-Truthiness & Cloud Run Production Fixes (`dataService.ts`, `api/server.py`):**
+     - Replaced hardcoded `http://localhost:8000` with resilient `getApiBaseUrl()`, allowing relative `/api` paths on Cloud Run while preserving local port 8000 dev connectivity.
+     - Fixed Rule E.3 zero-truthiness bug in `dataService.ts`: `data.offer.priceBandMax === null || data.offer.priceBandMax === undefined` (preventing valid 0 from forcing DRHP unpriced).
+     - Fixed capability gate bypass in `api/server.py` by reading `is_contained` dynamically from prospectus dossier metadata.
+     - Corrected UI navigation numbering drift: Vault 12 in `ICBoardDeckVault.tsx` and Vault 11 in `StakeholderLensVault.tsx`.
+     - Removed 1-line dead orphan script `scripts/patch_unit_economics.py`.
+
+## MILESTONE — Active Pre-IPO Deal Dossier Dropdown & Multi-Stage Production Deployment (2026-11-18 07:45 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Replaced 2x2 pipeline button grid with institutional Active Pre-IPO Deal Dossier dropdown matching Screen 2 (closed trigger) and Screen 3 (wide floating menu with full statutory filing labels and Ingest shortcut).
+  2. Fixed Nginx SPA browser caching trap by setting `Cache-Control: "no-store, no-cache, max-age=0"` on `/index.html` in `frontend/nginx.conf`.
+  3. Upgraded `frontend/Dockerfile` to deterministic multi-stage build (`node:20-alpine` builder -> `nginx:alpine`).
+  4. Streamlined `.dockerignore` and `.gcloudignore` to exclude `node_modules/` and local artifacts (< 2 MB upload).
+  5. Built and deployed live Cloud Run revision `pre-ipo-terminal-00007-cfn` on `tempproject-462219` (100% traffic) with physical visual verification on disk (`verified_cloud_dropdown_closed.png`, `verified_cloud_dropdown_open.png`).
+  6. Verified zero impact on core ProfSur platform (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`).
+
+## MILESTONE — Pre-IPO Terminal Spin-off, 4-Pillar Synthesis & End-of-Day Hand-Off (2026-11-18 02:15 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Pushed to `master` at commit `0746ee28`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Implemented context-specific 4-Pillar Decision Intelligence across all 12 Pre-IPO Terminal vaults (Sector Context, Lifecycle Precedents, IC Directives, Risk Radar with visual gauges, progress bars, and citations).
+  2. Packaged the Pre-IPO Terminal as a standalone spin-off container (`frontend/Dockerfile`, `frontend/nginx.conf`) to guarantee zero interference with the core ProfSur Streamlit platform (`http://localhost:8501/`).
+  3. Authored the Master Executive Briefing Memo & 12-Vault HCCB Walkthrough for Prof. Sur Kumar in `pre_ipo_terminal_executive_brief_and_walkthrough.md`.
+  4. Created the canonical master hand-off document `HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md` detailing lessons learnt, mistakes to avoid (CI/CD pipeline coupling, shell profile hangs, premature link sharing, zero-truthiness preservation), and reusable automations to build.
 
 ## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
 
@@ -1511,6 +1736,51 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 ---
 
 # ProfSurProject — Session Log
+
+## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Addressed all findings from comprehensive codebase audit: eliminated implicit state machines, type escape hatches, effect cascades, and capability boundary bypasses.
+- **Core Deliverables & Invariants Enforced:**
+  1. **Effect Cascades & Race Conditions Eliminated (`frontend/src/App.tsx`, `UnitEconomicsVault.tsx`):**
+     - Wired `AbortController` and monotonic freshness guards in `App.tsx`'s `loadData` effect, discarding out-of-order stale network promises.
+     - Removed duplicate `loadData` invocation in `handleIngestSuccess`, allowing single canonical trigger from `selectedSymbol`.
+     - Added unmount cancellation guard in `UnitEconomicsVault.tsx` and preferred direct binding to `offer.interpretations`.
+     - Safely managed timeout timers in `App.tsx` to eliminate unmounted timer warnings.
+  2. **Type Escape Hatches Cleaned Up (`EconometricLabVault.tsx`, `dataService.ts`, `StakeholderLensVault.tsx`, `EvidenceInterpretationPanel.tsx`):**
+     - Replaced `tab.id as any` with typed `ECONOMETRIC_TABS as const` and `EconometricTabId`.
+     - Replaced `(r: any)` filter cast in `dataService.ts` with strongly typed `ProvenanceField<unknown>`.
+     - Eliminated 6x `as PersonaKey` casts in `StakeholderLensVault.tsx` with strongly typed array declaration.
+     - Added compile-time exhaustive switch checks with `_exhaustive: never` in `EvidenceInterpretationPanel.tsx`.
+  3. **Implicit State Machines Refactored (`UnlistedArbitrageVault.tsx`, `ICBoardDeckVault.tsx`):**
+     - Refactored coupled dual-boolean tax override (`isTaxRegimeOverridden` + `overriddenTaxRegime`) into discriminated union `TaxRegimeSelection ({ mode: 'AUTO' } | { mode: 'MANUAL'; regime })`.
+     - Refactored `downloadingPptx` / `downloadingPdf` into `exportingStatus ('IDLE' | 'DOWNLOADING_PPTX' | 'DOWNLOADING_PDF')`.
+  4. **Single Source of Truth, Zero-Truthiness & Cloud Run Production Fixes (`dataService.ts`, `api/server.py`):**
+     - Replaced hardcoded `http://localhost:8000` with resilient `getApiBaseUrl()`, allowing relative `/api` paths on Cloud Run while preserving local port 8000 dev connectivity.
+     - Fixed Rule E.3 zero-truthiness bug in `dataService.ts`: `data.offer.priceBandMax === null || data.offer.priceBandMax === undefined` (preventing valid 0 from forcing DRHP unpriced).
+     - Fixed capability gate bypass in `api/server.py` by reading `is_contained` dynamically from prospectus dossier metadata.
+     - Corrected UI navigation numbering drift: Vault 12 in `ICBoardDeckVault.tsx` and Vault 11 in `StakeholderLensVault.tsx`.
+     - Removed 1-line dead orphan script `scripts/patch_unit_economics.py`.
+
+## MILESTONE — Active Pre-IPO Deal Dossier Dropdown & Multi-Stage Production Deployment (2026-11-18 07:45 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Replaced 2x2 pipeline button grid with institutional Active Pre-IPO Deal Dossier dropdown matching Screen 2 (closed trigger) and Screen 3 (wide floating menu with full statutory filing labels and Ingest shortcut).
+  2. Fixed Nginx SPA browser caching trap by setting `Cache-Control: "no-store, no-cache, max-age=0"` on `/index.html` in `frontend/nginx.conf`.
+  3. Upgraded `frontend/Dockerfile` to deterministic multi-stage build (`node:20-alpine` builder -> `nginx:alpine`).
+  4. Streamlined `.dockerignore` and `.gcloudignore` to exclude `node_modules/` and local artifacts (< 2 MB upload).
+  5. Built and deployed live Cloud Run revision `pre-ipo-terminal-00007-cfn` on `tempproject-462219` (100% traffic) with physical visual verification on disk (`verified_cloud_dropdown_closed.png`, `verified_cloud_dropdown_open.png`).
+  6. Verified zero impact on core ProfSur platform (`https://lifecycle-leverage-qhzom2yadq-ue.a.run.app`).
+
+## MILESTONE — Pre-IPO Terminal Spin-off, 4-Pillar Synthesis & End-of-Day Hand-Off (2026-11-18 02:15 IST)
+
+- **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Pushed to `master` at commit `0746ee28`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:**
+  1. Implemented context-specific 4-Pillar Decision Intelligence across all 12 Pre-IPO Terminal vaults (Sector Context, Lifecycle Precedents, IC Directives, Risk Radar with visual gauges, progress bars, and citations).
+  2. Packaged the Pre-IPO Terminal as a standalone spin-off container (`frontend/Dockerfile`, `frontend/nginx.conf`) to guarantee zero interference with the core ProfSur Streamlit platform (`http://localhost:8501/`).
+  3. Authored the Master Executive Briefing Memo & 12-Vault HCCB Walkthrough for Prof. Sur Kumar in `pre_ipo_terminal_executive_brief_and_walkthrough.md`.
+  4. Created the canonical master hand-off document `HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md` detailing lessons learnt, mistakes to avoid (CI/CD pipeline coupling, shell profile hangs, premature link sharing, zero-truthiness preservation), and reusable automations to build.
 
 ## MILESTONE — Standardized Decision Intelligence & Interpretation Framework Complete (2026-11-17 20:00 IST)
 

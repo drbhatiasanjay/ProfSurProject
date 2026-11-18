@@ -26,6 +26,19 @@ import {
   FileText
 } from 'lucide-react';
 
+export const ECONOMETRIC_TABS = [
+  { id: 'beneish', label: '1. Beneish M-Score', icon: ShieldCheck },
+  { id: 'dickinson', label: '2. Dickinson Lifecycle', icon: Activity },
+  { id: 'huber', label: '3. Huber Robust Comps', icon: Scale },
+  { id: 'stub', label: '4. Stub Seasonality Break', icon: TrendingUp },
+  { id: 'indas116', label: '5. Ind AS 116 Lease Leverage', icon: Layers },
+  { id: 'altman', label: '6. Altman Z\'\'-Score', icon: BarChart3 },
+  { id: 'lockin', label: '7. Lock-In & Tax Drag', icon: Lock },
+  { id: 'stress_grid', label: '8. 2D Stress Matrix', icon: Sliders }
+] as const;
+
+export type EconometricTabId = typeof ECONOMETRIC_TABS[number]['id'];
+
 interface EconometricLabVaultProps {
   offer: StatutoryOfferDetails;
 }
@@ -35,9 +48,7 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
   const [suiteData, setSuiteData] = useState<ComprehensiveEconometricSuiteData>(() =>
     getMockEconometricSuite(isHCCB)
   );
-  const [activeTab, setActiveTab] = useState<
-    'beneish' | 'dickinson' | 'huber' | 'stub' | 'indas116' | 'altman' | 'lockin' | 'stress_grid'
-  >('beneish');
+  const [activeTab, setActiveTab] = useState<EconometricTabId>('beneish');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // 2D Stress Grid State (Volume Shock vs Cost Shock)
@@ -227,22 +238,13 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
 
         {/* Top Model Navigation Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pt-4 scrollbar-none">
-          {[
-            { id: 'beneish', label: '1. Beneish M-Score', icon: ShieldCheck },
-            { id: 'dickinson', label: '2. Dickinson Lifecycle', icon: Activity },
-            { id: 'huber', label: '3. Huber Robust Comps', icon: Scale },
-            { id: 'stub', label: '4. Stub Seasonality Break', icon: TrendingUp },
-            { id: 'indas116', label: '5. Ind AS 116 Lease Leverage', icon: Layers },
-            { id: 'altman', label: '6. Altman Z\'\'-Score', icon: BarChart3 },
-            { id: 'lockin', label: '7. Lock-In & Tax Drag', icon: Lock },
-            { id: 'stress_grid', label: '8. 2D Stress Matrix', icon: Sliders }
-          ].map(tab => {
+          {ECONOMETRIC_TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-mono font-semibold transition-all whitespace-nowrap cursor-pointer ${
                   isActive
                     ? 'bg-cyan-950/80 border border-cyan-500 text-cyan-200 shadow-sm'

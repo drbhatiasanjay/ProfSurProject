@@ -11,14 +11,13 @@ interface ICBoardDeckVaultProps {
 export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => {
   const isHCCB = offer.symbol === 'HCCB' || offer.companyName.includes('Coca-Cola');
 
-  const [downloadingPptx, setDownloadingPptx] = useState<boolean>(false);
-  const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
+  const [exportingStatus, setExportingStatus] = useState<'IDLE' | 'DOWNLOADING_PPTX' | 'DOWNLOADING_PDF'>('IDLE');
   const [lastExported, setLastExported] = useState<string | null>(null);
 
   const handleDownloadPptx = () => {
-    setDownloadingPptx(true);
+    setExportingStatus('DOWNLOADING_PPTX');
     setTimeout(() => {
-      setDownloadingPptx(false);
+      setExportingStatus('IDLE');
       setLastExported('16:9 Vector Board Deck (.pptx)');
       // Generate synthetic download link
       const blob = new Blob([`Institutional Board Deck - ${offer.companyName}`], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
@@ -32,9 +31,9 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
   };
 
   const handleDownloadPdf = () => {
-    setDownloadingPdf(true);
+    setExportingStatus('DOWNLOADING_PDF');
     setTimeout(() => {
-      setDownloadingPdf(false);
+      setExportingStatus('IDLE');
       setLastExported('SEBI RA Compliance Research Memo (.pdf)');
       const blob = new Blob([`SEBI RA Research Memo - ${offer.companyName}`], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
@@ -75,7 +74,7 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
             <div className="flex items-center gap-2.5">
               <Presentation className="w-5 h-5 text-cyan-400" />
               <h2 className="text-base font-bold text-slate-100 font-mono tracking-wide">
-                VAULT 10: INVESTMENT COMMITTEE STANCE &amp; BOARD DECK EXPORT
+                VAULT 12: INVESTMENT COMMITTEE STANCE &amp; BOARD DECK EXPORT
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-1 font-mono">
@@ -108,20 +107,20 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
           <div className="flex items-center gap-3">
             <button
               onClick={handleDownloadPptx}
-              disabled={downloadingPptx}
+              disabled={exportingStatus !== 'IDLE'}
               className="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-mono font-semibold flex items-center gap-2 cursor-pointer shadow-md transition-all"
             >
               <Presentation className="w-4 h-4" />
-              <span>{downloadingPptx ? 'Generating 16:9 Deck...' : 'Export 16:9 Board Deck (.pptx)'}</span>
+              <span>{exportingStatus === 'DOWNLOADING_PPTX' ? 'Generating 16:9 Deck...' : 'Export 16:9 Board Deck (.pptx)'}</span>
             </button>
 
             <button
               onClick={handleDownloadPdf}
-              disabled={downloadingPdf}
+              disabled={exportingStatus !== 'IDLE'}
               className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-semibold flex items-center gap-2 cursor-pointer shadow-md transition-all"
             >
               <FileText className="w-4 h-4" />
-              <span>{downloadingPdf ? 'Compiling SEBI Memo...' : 'Export SEBI RA Research Memo (.pdf)'}</span>
+              <span>{exportingStatus === 'DOWNLOADING_PDF' ? 'Compiling SEBI Memo...' : 'Export SEBI RA Research Memo (.pdf)'}</span>
             </button>
           </div>
 
@@ -176,7 +175,7 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
       {offer.interpretations?.ic_stance_mandate && (
         <EvidenceInterpretationPanel
           interpretation={offer.interpretations.ic_stance_mandate}
-          title="Vault 10: Investment Committee Binding Action Mandate"
+          title="Vault 12: Investment Committee Binding Action Mandate"
         />
       )}
 

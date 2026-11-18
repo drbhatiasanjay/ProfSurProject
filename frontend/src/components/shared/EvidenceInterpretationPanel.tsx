@@ -73,13 +73,20 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
           </span>
         );
       case 'NEUTRAL_MONITOR':
-      default:
         return (
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
             ⚪ NEUTRAL MONITOR
           </span>
         );
+      default: {
+        const _exhaustive: never = p;
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/30">
+            {String(_exhaustive)}
+          </span>
+        );
+      }
     }
   };
 
@@ -92,8 +99,11 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
       case 'BLOCKING_RISK':
         return 'border-l-red-500';
       case 'NEUTRAL_MONITOR':
-      default:
         return 'border-l-amber-500';
+      default: {
+        const _exhaustive: never = p;
+        return 'border-l-slate-500';
+      }
     }
   };
 
@@ -106,8 +116,11 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
       case 'BLOCKING_RISK':
         return 'bg-red-950/50 border-red-500/40 text-red-200';
       case 'NEUTRAL_MONITOR':
-      default:
         return 'bg-amber-950/30 border-amber-500/30 text-amber-200';
+      default: {
+        const _exhaustive: never = p;
+        return 'bg-slate-950/30 border-slate-500/30 text-slate-200';
+      }
     }
   };
 
