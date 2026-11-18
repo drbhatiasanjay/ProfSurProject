@@ -1244,6 +1244,58 @@ def get_prospectus_pdf_page(page_number: int, symbol: str = "HCCH"):
     except Exception as e:
         return {"error": str(e), "pageNumber": page_number, "totalPages": 513}
 
+# =====================================================================
+# Milestone 13: Section-Hierarchical KG & Deep Verbatim Facts Engine
+# =====================================================================
+
+@app.get("/api/pre-ipo/kg/sections")
+def get_pre_ipo_sections():
+    """
+    Returns the 8 SEBI ICDR statutory sections summary with aggregate fact counts,
+    entity densities, and total quantified financial exposures.
+    """
+    from models.pre_ipo_verbatim_facts import get_section_summary_metrics
+    return {
+        "totalSections": 8,
+        "sections": get_section_summary_metrics()
+    }
+
+@app.get("/api/pre-ipo/kg/sections/{section_id}/drilldown")
+def get_pre_ipo_section_drilldown(section_id: str):
+    """
+    Returns deep drill-down data for a statutory section:
+    Metadata, verbatim qualitative facts, and scoped @xyflow/react canvas sub-graph.
+    """
+    from models.pre_ipo_verbatim_facts import get_section_drilldown
+    return get_section_drilldown(section_id)
+
+@app.get("/api/pre-ipo/kg/verbatim-facts")
+def search_pre_ipo_verbatim_facts(search: Optional[str] = None, section_id: Optional[str] = None):
+    """
+    Returns verbatim qualitative disclosures from the 513-page DRHP with W3C PROV-O coordinates.
+    Supports optional case-insensitive text search and section filtering.
+    """
+    from models.pre_ipo_verbatim_facts import get_all_verbatim_facts
+    all_facts = get_all_verbatim_facts()
+    
+    if section_id:
+        all_facts = [f for f in all_facts if f.get("statutory_section_id") == section_id]
+        
+    if search:
+        q = search.lower().strip()
+        all_facts = [
+            f for f in all_facts
+            if q in f.get("verbatim_quote", "").lower()
+            or q in f.get("entity_name", "").lower()
+            or q in f.get("statutory_topic", "").lower()
+            or q in f.get("plain_english_takeaway", "").lower()
+        ]
+        
+    return {
+        "total": len(all_facts),
+        "facts": all_facts
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api.server:app", host="0.0.0.0", port=8000, reload=True)

@@ -90,3 +90,26 @@
   - `scratch/kg_studio_cypher_bank.png` (captured)
   - `task_plan.md` (updated)
   - `progress.md` (updated)
+
+## Session 2026-11-19: Milestone 13 - SEBI Statutory Section Hierarchy, Verbatim Disclosures Repository & Bi-Level Interactive Drilldown
+- **Objective:** Fulfill the user's requirement to organize the DRHP Knowledge Graph into authentic SEBI ICDR Schedule VI sections, extract deep granular verbatim qualitative disclosures beyond the 84 numerical attributes, and provide a Bi-Level UX (Level 1 Summary Overview $\leftrightarrow$ Level 2 Subgraph Drill-Down) linked directly to the In-App PDF Bounding Box Viewer Drawer.
+- **Completed:**
+  - Designed & implemented `models/pre_ipo_section_taxonomy.py` defining all 8 canonical SEBI ICDR Schedule VI sections and 24 statutory sub-chapters with legal citations.
+  - Implemented `models/pre_ipo_verbatim_facts.py` mapping 19+ verbatim statutory disclosures across physical pages (p.18 to p.495), including CESTAT ₹4,455.47 Cr indirect tax litigation (p.379), S.138 1,466 cheque dishonour disputes (p.385), concentrate exclusivity dependency (p.74), groundwater NOC exposure (p.89), and Parent royalty fee terms (p.489).
+  - Built scoped `@xyflow/react` node/edge subgraph drilldown generator (`get_section_drilldown`) for interactive canvas navigation.
+  - Added REST API endpoints to `api/server.py`:
+    - `GET /api/pre-ipo/kg/sections`: Aggregated statutory sections with financial exposure sums and severity counts.
+    - `GET /api/pre-ipo/kg/sections/{section_id}/drilldown`: Scoped ReactFlow canvas nodes/edges and verbatim facts ledger.
+    - `GET /api/pre-ipo/kg/verbatim-facts`: Searchable verbatim fact index with physical citations.
+  - Frontend Bi-Level UX implementation:
+    - `frontend/src/components/vaults/kg/StatutorySectionSummaryGrid.tsx`: Level 1 Summary Grid with 8 section cards, exposure totals (₹42,024.82 Cr across prospectus), and 1-click drilldown action.
+    - `frontend/src/components/vaults/kg/StatutorySectionDrilldownView.tsx`: Level 2 Split-screen view with verbatim facts ledger on left, scoped ReactFlow visual canvas on right, and 1-click citation jumps into `PdfBoundingBoxDrawer`.
+    - Updated `KnowledgeGraphStudioVault.tsx` with Tri-Mode Switcher: `8 SEBI Sections (Verbatim Facts)`, `Global Macro Graph`, `Expert Quant Studio`.
+  - Quality & Verification:
+    - Caught and fixed infinite re-render loop in `StatutorySectionDrilldownView.tsx` via `useRef`.
+    - Executed Playwright automated E2E evidence capture with 0 console errors:
+      - `scratch/kg_section_summary_grid.png` (Level 1 Summary Grid)
+      - `scratch/kg_section_drilldown_litigation.png` (Level 2 Scoped Drilldown into Section 6)
+      - `scratch/kg_section_drilldown_pdf_drawer.png` (In-App PDF Drawer on p. 379 with quote highlight)
+    - Full test suite passed: 16/16 KG tests passed, 53/53 smoke tests passed. TypeScript compilation: 0 errors.
+

@@ -86,3 +86,76 @@
 9. **SARD Valuation Fair Multiple Haircut:**
    $$\text{Warranted Multiple} = \text{Peer Multiple} \cdot \left(1 - \frac{\text{Territory Disc} + \text{Channel Disc}}{100}\right)$$
    *Constituent Attributes:* `peer_ev_ebitda_multiple`, `top_territory_revenue_share_pct`, `distributor_cheque_bounce_cases_count`.
+
+---
+
+## Milestone 13: Statutory Section Hierarchy & Deep Verbatim Fact Architecture
+
+### 1. SEBI ICDR Statutory Section Taxonomy (8 Canonical Sections / 24 Sub-Chapters)
+The Red Herring Prospectus is statutory and organized into standardized SEBI ICDR Schedule VI chapters:
+- **Section I: General Information & Risk Factors**
+  - Definitions & Abbreviations
+  - Summary of the Offer & Summary Financial Information
+  - General Information (BRLMs, Syndicate Members, Statutory Auditors, Legal Counsels)
+- **Section II: Risk Factors (Forensic Vulnerabilities)**
+  - Internal Risk Factors (Litigation, Material Agreements, Customer Concentration, Supply Disruption)
+  - External & Macro Risk Factors (Tax regime, Currency risk, Inflation, RBI interest rate cycle)
+  - Risks Relating to Equity Shares & Objects of the Offer
+- **Section III: Introduction, Capital Structure & Objects**
+  - Summary of Issue (Issue Size, OFS vs Fresh, Selling Shareholders)
+  - Capital Structure (Authorized, Issued, Subscribed, Promoter Pre/Post-Shareholding, Lock-in Schedules)
+  - Objects of the Offer (Use of Proceeds, Capex Breakdown, GCP 25% Allocation, Financing Timeline)
+- **Section IV: About the Issuer Company & Corporate Governance**
+  - Industry Overview (Market Size, Bottling Franchise, Sector Growth)
+  - Business Overview (Manufacturing footprint, Plants, Distribution reach, Exclusivity territories)
+  - History & Corporate Structure (Acquisitions, Mergers, HoldCo Restructuring)
+  - Management & KMP (Board of Directors, Managing Director, CFO, Cross-Directorships, Compensation)
+  - Promoters & Promoter Group (Singapore HoldCo, Global Parent, Sister Entities, Share Pledge)
+- **Section V: Financial Information & Accounting Indebtedness**
+  - Restated Financial Statements (Balance Sheet, Statement of Profit & Loss, Cash Flow Statements)
+  - Other Financial Information & Ind AS 116 Capitalized Operating Leases
+  - Financial Indebtedness & Borrowing Schedules (Secured/Unsecured Loans, Interest Rates, Maturity Wall)
+  - Management Discussion and Analysis of Financial Condition (MD&A, Working Capital, Stub Seasonality)
+- **Section VI: Legal, Tax & Other Statutory Disclosures**
+  - Outstanding Litigation & Material Developments (Direct Tax, Indirect Tax/CESTAT, S.138 Cheque Dishonour, CPCB environmental notices)
+  - Government & Other Approvals (FSSAI licensing, Groundwater extraction NOCs, Factory licenses)
+- **Section VII: Offering Details & Basis for Issue Price**
+  - Terms of the Issue (Minimum Bid Lot, QIB / NII / Retail Quotas, Pricing Band)
+  - Basis for Issue Price (Quantitative Factors, EPS, RoNW, NAV, Peer P/E & EV/EBITDA Comparison)
+- **Section VIII: Material Contracts & Documents for Inspection**
+  - Summary of Key Agreements (Concentrates Supply Agreement, Trademark Sublicense, Loan Agreements)
+  - Material Documents for Inspection (Charter documents, Material contracts, Material legal opinions)
+
+### 2. Verbatim Fact Entity Model (Beyond 84 Numerical Attributes)
+A `VerbatimFact` represents an authentic statutory fact extracted from the 513-page DRHP with W3C PROV-O provenance:
+- `factId`: Unique canonical ID (e.g. `FACT_SEC06_LIT_01`)
+- `statutorySection`: Parent Section ID (`SECTION_VI_LEGAL`)
+- `subChapter`: Specific chapter (`Outstanding Litigation`)
+- `category`: Entity domain (`LITIGATION` | `DIRECTOR_CONFLICT` | `RPT_CONTRACT` | `LEASE_COMMITMENT` | `CAPEX_OBJECT`)
+- `entityId`: Associated entity node ID (`CASE_CESTAT_INDIRECT_TAX`)
+- `verbatimQuote`: Word-for-word text from the DRHP
+- `physicalPage`: Exact page in 513-page PDF (e.g. `Page 379`)
+- `boundingBox`: `[y0, x0, y1, x1]` relative coordinate box for amber highlight
+- `statutorySeverity`: `CRITICAL_RISK` | `HIGH_ALERT` | `WARNING` | `INFORMATIONAL`
+- `quantImpactCr`: Quantified financial exposure in ₹ Cr (if applicable, e.g. `4455.47`)
+- `contagionRisk`: Does this fact penetrate to public shareholders or HoldCo? (`TRUE` | `FALSE`)
+
+### 3. Bi-Level UX Design Architecture
+- **Level 1 (Summary Executive View):** 
+  - 8 Statutory Section Cards displaying total mapped facts, entity density, aggregate risk badges, and high-level cross-section contagion flows.
+  - Interactive radar of financial exposure across sections.
+- **Level 2 (Granular Drill-Down View):**
+  - Expanding any section renders its scoped sub-graph canvas in ReactFlow.
+  - Side-by-side Verbatim Fact Inspector with direct 1-click launch of the In-App PDF Bounding Box Viewer Drawer.
+  - Category filters: Filter by Directors, Contracts, Litigation, Capex, Financials.
+
+### 4. Verification Evidence & Red-Team Learnings
+- **Evidence Screenshots Captured:**
+  - `scratch/kg_section_summary_grid.png`: Displays all 8 SEBI ICDR Schedule VI sections, 19 verbatim disclosures, and ₹42,024.82 Cr aggregate quantified exposure.
+  - `scratch/kg_section_drilldown_litigation.png`: Section 6 drill-down displaying ₹4,668.1 Cr exposure, CESTAT ₹4,455.47 Cr case, 1,466 cheque bounce disputes, and CPCB environmental notice with scoped ReactFlow canvas.
+  - `scratch/kg_section_drilldown_pdf_drawer.png`: In-App PDF Drawer opened to physical page 379 with amber quote bounding box highlighting the CESTAT dispute verbatim text against authentic 513-page HCCH DRHP.
+- **Architectural Bug Remediated (Infinite Re-render Prevention):**
+  - Callback hook `handleSelectNode` had `[data]` as a dependency while being included in `useEffect` that mutated `data`. This created an infinite re-render loop that detached DOM elements during Playwright execution. Resolved by migrating state references to `useRef(data)` and decoupling `useEffect` dependencies.
+- **Port 5173 & 5174 Dual Synchronization:**
+  - Both ports connect seamlessly to `http://localhost:8000/api/pre-ipo/kg/...` with zero CORS violations.
+

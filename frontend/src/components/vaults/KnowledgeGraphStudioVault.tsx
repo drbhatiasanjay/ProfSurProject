@@ -46,11 +46,14 @@ import {
   RefreshCw,
   Eye,
   Maximize2,
-  Binary
+  Binary,
+  BookOpen
 } from 'lucide-react';
 import { PdfBoundingBoxDrawer } from './kg/PdfBoundingBoxDrawer';
 import { FormulaLineageModal } from './kg/FormulaLineageModal';
 import { CypherBankInspector } from './kg/CypherBankInspector';
+import { StatutorySectionSummaryGrid } from './kg/StatutorySectionSummaryGrid';
+import { StatutorySectionDrilldownView } from './kg/StatutorySectionDrilldownView';
 
 // =====================================================================
 // Custom Custom Node Component for FIBO Financial Entities
@@ -165,8 +168,9 @@ interface KnowledgeGraphStudioVaultProps {
 export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps> = ({ offer }) => {
   const symbol = offer.symbol || 'HCCH';
   
-  // Dual-Persona Switcher: 'novice' | 'quant'
-  const [personaMode, setPersonaMode] = useState<'novice' | 'quant'>('novice');
+  // Tri-Mode Switcher: 'sections' (SEBI Sections Hierarchy & Verbatim Facts) | 'macro' (Global Macro Graph) | 'quant' (Expert Quant Studio)
+  const [personaMode, setPersonaMode] = useState<'sections' | 'macro' | 'quant'>('sections');
+  const [activeDrilldownSectionId, setActiveDrilldownSectionId] = useState<string | null>(null);
 
   // React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -408,15 +412,29 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
           {/* Mode Switcher Pill */}
           <div className="flex items-center bg-slate-950/80 p-1 rounded-xl border border-slate-800">
             <button
-              onClick={() => setPersonaMode('novice')}
+              onClick={() => {
+                setPersonaMode('sections');
+                setActiveDrilldownSectionId(null);
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                personaMode === 'novice'
+                personaMode === 'sections'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" />
+              8 SEBI Sections (Verbatim Facts)
+            </button>
+            <button
+              onClick={() => setPersonaMode('macro')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                personaMode === 'macro'
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Novice Discovery
+              Global Macro Graph
             </button>
             <button
               onClick={() => setPersonaMode('quant')}
@@ -433,8 +451,26 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
         </div>
       </div>
 
-      {/* Mode A: Novice Guided Discovery Canvas */}
-      {personaMode === 'novice' && (
+      {/* View 1: 8 Statutory SEBI Sections & Verbatim Facts (Summary & Drill-Down) */}
+      {personaMode === 'sections' && (
+        <div className="space-y-6">
+          {!activeDrilldownSectionId ? (
+            <StatutorySectionSummaryGrid
+              onSelectSection={(secId) => setActiveDrilldownSectionId(secId)}
+              onOpenPdfPage={handleOpenPdfDrawer}
+            />
+          ) : (
+            <StatutorySectionDrilldownView
+              sectionId={activeDrilldownSectionId}
+              onBackToOverview={() => setActiveDrilldownSectionId(null)}
+              onOpenPdfPage={handleOpenPdfDrawer}
+            />
+          )}
+        </div>
+      )}
+
+      {/* View 2: Global Macro Guided Discovery Canvas */}
+      {personaMode === 'macro' && (
         <div className="space-y-6">
           {/* 5-Second Plain-English Verdict HUD Strip */}
           {queryResult && queryResult.verdict && (

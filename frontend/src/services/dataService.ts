@@ -2150,3 +2150,111 @@ export async function fetchPdfPage(pageNumber: number, symbol: string = 'HCCH'):
     };
   }
 }
+
+// =====================================================================
+// Milestone 13: Section-Hierarchical KG & Deep Verbatim Facts Services
+// =====================================================================
+
+export interface StatutorySectionSummary {
+  sectionId: string;
+  sectionNumber: number;
+  title: string;
+  sebiSchedule: string;
+  description: string;
+  totalFacts: number;
+  entityCount: number;
+  totalFinancialExposureCr: number;
+  severities: {
+    CRITICAL_RISK: number;
+    HIGH_ALERT: number;
+    WARNING: number;
+    INFORMATIONAL: number;
+  };
+  keyEntities: string[];
+}
+
+export interface SectionsResponse {
+  totalSections: number;
+  sections: StatutorySectionSummary[];
+}
+
+export interface VerbatimFactItem {
+  fact_id: string;
+  statutory_section_id: string;
+  sub_chapter_id: string;
+  entity_id: string;
+  entity_name: string;
+  entity_type: string;
+  statutory_topic: string;
+  verbatim_quote: string;
+  physical_page: number;
+  bounding_box: number[];
+  statutory_severity: string;
+  quant_impact_cr: number | null;
+  contagion_to_holdco: boolean;
+  plain_english_takeaway: string;
+}
+
+export interface SectionDrilldownResponse {
+  sectionId: string;
+  sectionNumber: number;
+  title: string;
+  sebiSchedule: string;
+  description: string;
+  facts: VerbatimFactItem[];
+  canvas: {
+    nodes: any[];
+    edges: any[];
+  };
+}
+
+export async function fetchStatutorySections(): Promise<SectionsResponse> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/sections`);
+    if (!res.ok) throw new Error('Failed to fetch statutory sections');
+    return await res.json();
+  } catch {
+    return {
+      totalSections: 8,
+      sections: []
+    };
+  }
+}
+
+export async function fetchSectionDrilldown(sectionId: string): Promise<SectionDrilldownResponse> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/sections/${encodeURIComponent(sectionId)}/drilldown`);
+    if (!res.ok) throw new Error('Failed to fetch section drilldown');
+    return await res.json();
+  } catch {
+    return {
+      sectionId,
+      sectionNumber: 6,
+      title: "Outstanding Litigation & Material Claims",
+      sebiSchedule: "SEBI ICDR Schedule VI, Part A, Item X",
+      description: "Fallback offline section drilldown data.",
+      facts: [],
+      canvas: { nodes: [], edges: [] }
+    };
+  }
+}
+
+export async function searchVerbatimFacts(
+  search?: string,
+  sectionId?: string
+): Promise<{ total: number; facts: VerbatimFactItem[] }> {
+  const baseUrl = getApiBaseUrl();
+  const params = new URLSearchParams();
+  if (search) params.append('search', search);
+  if (sectionId) params.append('section_id', sectionId);
+
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/verbatim-facts?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to search verbatim facts');
+    return await res.json();
+  } catch {
+    return { total: 0, facts: [] };
+  }
+}
