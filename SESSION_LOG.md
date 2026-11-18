@@ -2310,3 +2310,23 @@ Authenticated browser checks passed for drbhatia, profsurkumar and skumar: intak
   - Page 27 (Pre-IPO DRHP Intelligence): Verified Hero Header for `Hindustan Coca-Cola Holdings Limited`, unpriced offering banner (`997,461,456 Shares (100% OFS · ₹[●] Undisclosed)`), and zero literal zeros. Saved artifact: `verified_gcp_live_hccb_hero_fix.png` (184 KB).
   - Tab 2 (Provenance Ledger): Verified full provenance audit trail and opened Deep-Dive Raw Citation Inspector. Saved artifact: `verified_gcp_live_hccb_provenance_ledger.png` (213 KB).
 - **Status:** Production deployment verified live, authenticated, and 100% green.
+
+## 2026-11-19 03:10 IST — Milestone 13: SEBI Statutory Section Hierarchy, Verbatim Disclosures Repository & Bi-Level Interactive Drilldown
+- **Core Engineering Deliverables:**
+  1. Built canonical SEBI ICDR Schedule VI taxonomy (`models/pre_ipo_section_taxonomy.py`) with 8 statutory sections and 24 sub-chapters.
+  2. Ingested 19 verbatim qualitative disclosures from 513-page HCCH DRHP (`models/pre_ipo_verbatim_facts.py`) aggregating ₹42,024.82 Cr in quantified risk exposure with physical page coordinates (p.18 to p.495).
+  3. Added backend endpoints in `api/server.py` (`/api/pre-ipo/kg/sections`, `/drilldown`, `/verbatim-facts`, `/shacl-audit`).
+  4. Implemented Bi-Level frontend interface (`frontend/src/components/vaults/kg/`):
+     - `StatutorySectionSummaryGrid.tsx` (Level 1 Summary Grid with 8 section cards and KPI chips).
+     - `StatutorySectionDrilldownView.tsx` (Level 2 Split-screen view with scoped ReactFlow canvas and verbatim facts ledger).
+     - Integrated with `PdfBoundingBoxDrawer.tsx` for 1-click citation jumps into authentic PDF.
+  5. Remediated infinite re-render bug in React component via `useRef`.
+  6. Verified dual-port operation on `http://localhost:5173/` and `http://localhost:5174/`.
+- **Verification Evidence:**
+  - Playwright visual artifacts: `scratch/kg_section_summary_grid.png`, `scratch/kg_section_drilldown_litigation.png`, `scratch/kg_section_drilldown_pdf_drawer.png`.
+  - Pytest suites: 16/16 passed in 6.26s.
+  - Project smoke suite: 53/53 passed in 15.09s.
+  - TypeScript compilation: 0 errors.
+  - Remote commit: `0bad18e9` on `feature/pre-ipo-fibo-knowledge-graph`.
+- **Handoff Documentation:** [`HANDOFF_MILESTONE13_PRE_IPO_KG.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/HANDOFF_MILESTONE13_PRE_IPO_KG.md).
+

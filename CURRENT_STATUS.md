@@ -1,15 +1,18 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 19 November 2026 00:15 IST (Milestone 12 — In-Depth Cypher Query Bank, 84-Attribute Formula Lineage & In-App PDF Drawer Verified & Operational)  
+**Last Updated:** 19 November 2026 03:10 IST (Milestone 13 — SEBI Statutory Section Hierarchy, Verbatim Disclosures Repository & Bi-Level Interactive Drilldown Verified & Operational)  
 **Active Baseline Branch:** `feature/pre-ipo-fibo-knowledge-graph`  
-**Release Tag:** `v3.5.3-pre-ipo-fibo-cypher-bank-pdf-drawer-verified`  
+**Latest Commit:** `0bad18e9`  
+**Release Tag:** `v3.5.4-sebi-section-verbatim-facts-verified`  
 **Governing Documents:**
+- Handoff Document: [`HANDOFF_MILESTONE13_PRE_IPO_KG.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/HANDOFF_MILESTONE13_PRE_IPO_KG.md)
 - PRD: [`docs/PRD_FIBO_PRE_IPO_KNOWLEDGE_GRAPH.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/PRD_FIBO_PRE_IPO_KNOWLEDGE_GRAPH.md)
 - MANUS Task Plan: [`task_plan.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/task_plan.md)
 - Findings & Lineage: [`findings.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/findings.md)
 - Progress Log: [`progress.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/progress.md)
 - Dedicated Dependencies: [`requirements-preipo-kg.txt`](file:///c:/Users/hemas/Downloads/ProfSurProject/requirements-preipo-kg.txt)  
 **React Terminal URL (Local):** `http://localhost:5173/` (Vite v8.3.8 + React 19 + TypeScript + Tailwind v4 + `@xyflow/react` — ACTIVE DAEMON)  
+**React Terminal URL (Yash224):** `http://localhost:5174/` (Active & Verified)  
 **Cloud Run Production Terminal:** `https://pre-ipo-terminal-779655496440.us-east1.run.app` (Revision `pre-ipo-terminal-00007-cfn` — ACTIVE & SERVING)  
 **FastAPI Bridge URL:** `http://localhost:8000/` (Uvicorn 0.32+ / SEBI RA 2014 Compliance Engine — ACTIVE DAEMON)  
 **Production Streamlit URL:** `http://localhost:8501/` (Streamlit Core Platform — Isolated & Untouched)  
@@ -17,7 +20,7 @@
 **Cloud Run Target Service:** `pre-ipo-terminal` (port 8080)  
 **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
 **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
-**Verification Report:** [`pre_ipo_kg_verification_report.md`](file:///C:/Users/hemas/.gemini/antigravity/brain/4f716300-5b82-4463-8c40-2afc503bc17b/pre_ipo_kg_verification_report.md)  
+**Verification Report:** [`pre_ipo_kg_milestone13_verification_report.md`](file:///C:/Users/hemas/.gemini/antigravity/brain/4f716300-5b82-4463-8c40-2afc503bc17b/pre_ipo_kg_milestone13_verification_report.md)  
 
 ---
 
