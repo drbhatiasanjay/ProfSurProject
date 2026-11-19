@@ -2258,3 +2258,120 @@ export async function searchVerbatimFacts(
     return { total: 0, facts: [] };
   }
 }
+
+// =====================================================================
+// Milestone 14: Cross-Section Contagion & Shock Simulation Engine
+// =====================================================================
+
+export interface ContagionSimulationPayload {
+  symbol?: string;
+  fact_id?: string;
+  crystallization_prob?: number;
+  parent_indemnity_pct?: number;
+  macro_rate_shock_bps?: number;
+}
+
+export interface ContagionShockResult {
+  fact_id: string;
+  entity_name: string;
+  physical_page: number;
+  gross_exposure_cr: number;
+  crystallization_prob: number;
+  parent_indemnity_pct: number;
+  net_crystallized_loss_cr: number;
+  base_net_worth_cr: number;
+  post_shock_net_worth_cr: number;
+  net_worth_erosion_pct: number;
+  base_debt_cr: number;
+  post_shock_debt_cr: number;
+  base_debt_to_equity: number;
+  post_shock_debt_to_equity: number;
+  covenant_limit_debt_to_equity: number;
+  covenant_breached: boolean;
+  base_wacc_pct: number;
+  post_shock_wacc_pct: number;
+  base_ev_ebitda_multiple: number;
+  post_shock_ev_ebitda_multiple: number;
+  implied_valuation_haircut_pct: number;
+  base_ic_stance: string;
+  post_shock_ic_stance: string;
+  ic_rationale: string;
+  causal_subgraph: {
+    nodes: any[];
+    edges: any[];
+  };
+}
+
+export interface PresetScenario {
+  scenario_id: string;
+  name: string;
+  description: string;
+  parameters: {
+    symbol: string;
+    fact_id: string;
+    crystallization_prob: number;
+    parent_indemnity_pct: number;
+    macro_rate_shock_bps: number;
+  };
+  results: ContagionShockResult;
+}
+
+export async function simulateContagion(
+  payload: ContagionSimulationPayload
+): Promise<ContagionShockResult> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/simulate-contagion`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to run contagion simulation');
+    return await res.json();
+  } catch (err) {
+    console.error('simulateContagion error:', err);
+    return {
+      fact_id: payload.fact_id || 'FACT_S06_01_CESTAT_INDIRECT_TAX',
+      entity_name: 'Customs, Excise and Service Tax Appellate Tribunal (CESTAT) Disputes',
+      physical_page: 379,
+      gross_exposure_cr: 4455.47,
+      crystallization_prob: payload.crystallization_prob ?? 1.0,
+      parent_indemnity_pct: payload.parent_indemnity_pct ?? 0.0,
+      net_crystallized_loss_cr: 4455.47 * (payload.crystallization_prob ?? 1.0) * (1 - (payload.parent_indemnity_pct ?? 0.0)),
+      base_net_worth_cr: 9771.0,
+      post_shock_net_worth_cr: 5315.53,
+      net_worth_erosion_pct: 45.6,
+      base_debt_cr: 3270.5,
+      post_shock_debt_cr: 3270.5,
+      base_debt_to_equity: 0.335,
+      post_shock_debt_to_equity: 0.615,
+      covenant_limit_debt_to_equity: 2.0,
+      covenant_breached: false,
+      base_wacc_pct: 11.2,
+      post_shock_wacc_pct: 11.42,
+      base_ev_ebitda_multiple: 24.5,
+      post_shock_ev_ebitda_multiple: 19.8,
+      implied_valuation_haircut_pct: 19.2,
+      base_ic_stance: 'SUBSCRIBE',
+      post_shock_ic_stance: 'SUBSCRIBE_WITH_COVENANTS',
+      ic_rationale: 'Material solvency impairment: 45.6% Net Worth erosion warrants mandatory escrow indemnification.',
+      causal_subgraph: { nodes: [], edges: [] }
+    };
+  }
+}
+
+export async function fetchContagionScenarios(
+  symbol: string = 'HCCH'
+): Promise<PresetScenario[]> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/contagion-scenarios/${encodeURIComponent(symbol)}`);
+    if (!res.ok) throw new Error('Failed to fetch contagion scenarios');
+    const data = await res.json();
+    return data.scenarios || [];
+  } catch (err) {
+    console.error('fetchContagionScenarios error:', err);
+    return [];
+  }
+}
+

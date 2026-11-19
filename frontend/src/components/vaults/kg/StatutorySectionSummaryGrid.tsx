@@ -11,12 +11,14 @@ import {
   ExternalLink,
   ShieldCheck,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Zap
 } from 'lucide-react';
 import {
   fetchStatutorySections,
   StatutorySectionSummary
 } from '../../../services/dataService';
+import { ContagionShockModal } from './ContagionShockModal';
 
 interface StatutorySectionSummaryGridProps {
   onSelectSection: (sectionId: string) => void;
@@ -30,6 +32,7 @@ export const StatutorySectionSummaryGrid: React.FC<StatutorySectionSummaryGridPr
   const [sections, setSections] = useState<StatutorySectionSummary[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchFilter, setSearchFilter] = useState<string>('');
+  const [isContagionOpen, setIsContagionOpen] = useState<boolean>(false);
 
   useEffect(() => {
     setIsLoading(true);
@@ -113,8 +116,14 @@ export const StatutorySectionSummaryGrid: React.FC<StatutorySectionSummaryGridPr
             className="w-full bg-transparent text-xs text-slate-200 placeholder-slate-500 focus:outline-none font-medium"
           />
         </div>
-        <div className="text-[11px] text-slate-400 font-mono shrink-0">
-          Click any card to drill down into its scoped statutory sub-graph
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsContagionOpen(true)}
+            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-950/80 to-amber-950/80 hover:from-rose-900 hover:to-amber-900 border border-rose-500/50 hover:border-rose-400 text-rose-200 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+          >
+            <Zap className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+            <span>Simulate Cross-Section Contagion</span>
+          </button>
         </div>
       </div>
 
@@ -198,6 +207,15 @@ export const StatutorySectionSummaryGrid: React.FC<StatutorySectionSummaryGridPr
           })}
         </div>
       )}
+
+      {/* Contagion Shock Workbench Modal */}
+      <ContagionShockModal
+        isOpen={isContagionOpen}
+        onClose={() => setIsContagionOpen(false)}
+        initialFactId="FACT_S06_01_CESTAT_INDIRECT_TAX"
+        initialEntityName="Customs, Excise and Service Tax Appellate Tribunal (CESTAT) Disputes"
+        initialGrossExposure={4455.47}
+      />
     </div>
   );
 };

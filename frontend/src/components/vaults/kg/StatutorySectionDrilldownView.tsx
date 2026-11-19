@@ -27,13 +27,15 @@ import {
   RefreshCw,
   Eye,
   BookOpen,
-  Filter
+  Filter,
+  Zap
 } from 'lucide-react';
 import {
   fetchSectionDrilldown,
   SectionDrilldownResponse,
   VerbatimFactItem
 } from '../../../services/dataService';
+import { ContagionShockModal } from './ContagionShockModal';
 
 // Custom Custom Node Component for Scoped Subgraph Entities
 const DrilldownCardNode: React.FC<any> = ({ data }) => {
@@ -127,6 +129,19 @@ export const StatutorySectionDrilldownView: React.FC<StatutorySectionDrilldownVi
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
+  // Contagion Shock Workbench State
+  const [isContagionOpen, setIsContagionOpen] = useState<boolean>(false);
+  const [contagionFactId, setContagionFactId] = useState<string>('FACT_S06_01_CESTAT_INDIRECT_TAX');
+  const [contagionEntityName, setContagionEntityName] = useState<string>('Customs, Excise and Service Tax Appellate Tribunal (CESTAT) Disputes');
+  const [contagionExposure, setContagionExposure] = useState<number>(4455.47);
+
+  const handleOpenContagion = (factId: string, entityName: string, exposure: number | null) => {
+    setContagionFactId(factId);
+    setContagionEntityName(entityName);
+    setContagionExposure(exposure ?? 4455.47);
+    setIsContagionOpen(true);
+  };
+
   const dataRef = React.useRef<SectionDrilldownResponse | null>(null);
 
   const handleSelectNode = useCallback((nodeId: string) => {
@@ -209,7 +224,17 @@ export const StatutorySectionDrilldownView: React.FC<StatutorySectionDrilldownVi
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[11px] text-slate-400">Drill-Down Canvas Scoped to Section Chapters</span>
+          <button
+            onClick={() => handleOpenContagion(
+              data.facts.find(f => f.quant_impact_cr !== null)?.fact_id || 'FACT_S06_01_CESTAT_INDIRECT_TAX',
+              data.facts.find(f => f.quant_impact_cr !== null)?.entity_name || data.title,
+              data.facts.find(f => f.quant_impact_cr !== null)?.quant_impact_cr || 4455.47
+            )}
+            className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-950/80 to-amber-950/80 hover:from-rose-900 hover:to-amber-900 border border-rose-500/50 hover:border-rose-400 text-rose-200 text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+          >
+            <Zap className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+            <span>Simulate Contagion & Shock</span>
+          </button>
         </div>
       </div>
 
@@ -298,6 +323,20 @@ export const StatutorySectionDrilldownView: React.FC<StatutorySectionDrilldownVi
                     {fact.contagion_to_holdco ? '⚠ Contagion Risk: HIGH' : '✓ Quarantined'}
                   </span>
                 </div>
+
+                {/* 1-Click Contagion Shock Trigger */}
+                {fact.quant_impact_cr !== null && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenContagion(fact.fact_id, fact.entity_name, fact.quant_impact_cr);
+                    }}
+                    className="w-full mt-2 py-1.5 px-3 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/60 hover:border-rose-500 text-rose-300 text-[10px] font-mono font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                  >
+                    <Zap className="w-3 h-3 text-rose-400" />
+                    <span>Simulate Cross-Section Contagion & Solvency Shock</span>
+                  </button>
+                )}
               </div>
             );
           })}
@@ -338,6 +377,15 @@ export const StatutorySectionDrilldownView: React.FC<StatutorySectionDrilldownVi
           </div>
         </div>
       </div>
+
+      {/* Contagion Shock Workbench Modal */}
+      <ContagionShockModal
+        isOpen={isContagionOpen}
+        onClose={() => setIsContagionOpen(false)}
+        initialFactId={contagionFactId}
+        initialEntityName={contagionEntityName}
+        initialGrossExposure={contagionExposure}
+      />
     </div>
   );
 };

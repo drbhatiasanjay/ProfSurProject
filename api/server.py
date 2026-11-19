@@ -1296,6 +1296,47 @@ def search_pre_ipo_verbatim_facts(search: Optional[str] = None, section_id: Opti
         "facts": all_facts
     }
 
+# =====================================================================
+# Milestone 14: Cross-Section Contagion & Shock Simulation Engine
+# =====================================================================
+
+class ContagionSimulationPayload(BaseModel):
+    symbol: str = "HCCH"
+    fact_id: str = "FACT_S06_01_CESTAT_INDIRECT_TAX"
+    crystallization_prob: float = 1.0
+    parent_indemnity_pct: float = 0.0
+    macro_rate_shock_bps: float = 0.0
+
+@app.post("/api/pre-ipo/kg/simulate-contagion")
+def simulate_pre_ipo_contagion(payload: ContagionSimulationPayload):
+    """
+    Executes cross-section financial contagion simulation from qualitative DRHP facts.
+    Returns post-shock net worth, debt/equity leverage, WACC, multiple haircut, and causal sub-graph.
+    """
+    from models.pre_ipo_contagion_engine import ContagionShockSimulator, ContagionShockRequest
+    sim = ContagionShockSimulator()
+    req = ContagionShockRequest(
+        symbol=payload.symbol,
+        fact_id=payload.fact_id,
+        crystallization_prob=payload.crystallization_prob,
+        parent_indemnity_pct=payload.parent_indemnity_pct,
+        macro_rate_shock_bps=payload.macro_rate_shock_bps
+    )
+    result = sim.simulate(req)
+    return result.to_dict()
+
+@app.get("/api/pre-ipo/kg/contagion-scenarios/{symbol}")
+def get_pre_ipo_contagion_scenarios(symbol: str = "HCCH"):
+    """
+    Returns 5 pre-calibrated institutional stress scenarios for cross-section contagion analysis.
+    """
+    from models.pre_ipo_contagion_engine import ContagionShockSimulator
+    sim = ContagionShockSimulator()
+    return {
+        "symbol": symbol.upper(),
+        "scenarios": sim.get_preset_scenarios(symbol)
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api.server:app", host="0.0.0.0", port=8000, reload=True)
