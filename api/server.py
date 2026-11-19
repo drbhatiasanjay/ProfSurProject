@@ -1466,6 +1466,40 @@ def get_sebi_compliance_audit_manifest(symbol: str = "HCCH"):
     exporter = PreIPOInstitutionalExporter(symbol)
     return exporter.generate_sebi_audit_manifest()
 
+# =====================================================================
+# Milestone 18: Automated 12-Slide PowerPoint IC Board Deck & SEBI Investment Memo PDF
+# =====================================================================
+
+@app.get("/api/pre-ipo/kg/export/board-deck-pptx")
+def export_board_deck_pptx(symbol: str = "HCCH"):
+    """
+    Returns an institutional 12-slide 16:9 widescreen PowerPoint IC presentation (.pptx).
+    """
+    from fastapi.responses import Response
+    from models.pre_ipo_board_deck_compiler import PreIPOBoardDeckCompiler
+    compiler = PreIPOBoardDeckCompiler(symbol)
+    buf = compiler.compile_deck()
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        headers={"Content-Disposition": f'attachment; filename="{symbol}_IC_Board_Deck.pptx"'}
+    )
+
+@app.get("/api/pre-ipo/kg/export/investment-memo-pdf")
+def export_investment_memo_pdf(symbol: str = "HCCH"):
+    """
+    Returns a multi-page publication-grade SEBI RA 2014 regulatory research memo (.pdf).
+    """
+    from fastapi.responses import Response
+    from models.pre_ipo_memo_compiler import PreIPOMemoCompiler
+    compiler = PreIPOMemoCompiler(symbol)
+    buf = compiler.compile_pdf()
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{symbol}_Regulatory_Research_Memo.pdf"'}
+    )
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api.server:app", host="0.0.0.0", port=8000, reload=True)

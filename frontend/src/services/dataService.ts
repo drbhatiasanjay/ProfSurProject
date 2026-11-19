@@ -2674,3 +2674,25 @@ export async function downloadKGExport(
   document.body.removeChild(link);
 }
 
+export async function downloadBoardDeckPPTX(symbol: string = 'HCCH'): Promise<void> {
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}/api/pre-ipo/kg/export/board-deck-pptx?symbol=${encodeURIComponent(symbol)}`;
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${symbol}_IC_Board_Deck.pptx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+export async function downloadInvestmentMemoPDF(symbol: string = 'HCCH'): Promise<void> {
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}/api/pre-ipo/kg/export/investment-memo-pdf?symbol=${encodeURIComponent(symbol)}`;
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${symbol}_Regulatory_Research_Memo.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
