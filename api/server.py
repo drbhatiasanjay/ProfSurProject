@@ -1500,6 +1500,56 @@ def export_investment_memo_pdf(symbol: str = "HCCH"):
         headers={"Content-Disposition": f'attachment; filename="{symbol}_Regulatory_Research_Memo.pdf"'}
     )
 
+# =====================================================================
+# Milestone 19: Bi-Temporal Knowledge Graph & Multi-DRHP Filing Comparison Diff
+# =====================================================================
+
+@app.get("/api/pre-ipo/kg/temporal/versions")
+def get_temporal_filing_versions(symbol: str = "HCCH"):
+    """
+    Returns available prospectus milestones (DRHP, Addendum, RHP) with metadata and SHA-256 hashes.
+    """
+    from models.pre_ipo_temporal_diff_engine import PreIPOTemporalDiffEngine
+    engine = PreIPOTemporalDiffEngine(symbol)
+    return engine.get_available_versions()
+
+@app.get("/api/pre-ipo/kg/temporal/diff")
+def get_temporal_graph_diff(
+    symbol: str = "HCCH",
+    base_version: str = "DRHP",
+    target_version: str = "RHP"
+):
+    """
+    Returns the complete bi-temporal mutation set, chapter drift scores, and valuation delta.
+    Fails closed with HTTP 404 if filing version is invalid (Rule E.2).
+    """
+    from fastapi import HTTPException
+    from models.pre_ipo_temporal_schema import FilingNotFoundError
+    from models.pre_ipo_temporal_diff_engine import PreIPOTemporalDiffEngine
+    engine = PreIPOTemporalDiffEngine(symbol)
+    try:
+        res = engine.compute_temporal_diff(base_version, target_version)
+        return res.to_dict()
+    except FilingNotFoundError as err:
+        raise HTTPException(status_code=404, detail=str(err))
+
+@app.get("/api/pre-ipo/kg/temporal/verbatim-redline")
+def get_verbatim_redline_snippet(
+    mutation_id: str,
+    symbol: str = "HCCH"
+):
+    """
+    Returns side-by-side bounding boxes and verbatim excerpts for split-screen reader.
+    """
+    from fastapi import HTTPException
+    from models.pre_ipo_temporal_diff_engine import PreIPOTemporalDiffEngine
+    engine = PreIPOTemporalDiffEngine(symbol)
+    res = engine.compute_temporal_diff("DRHP", "RHP")
+    mut = next((m for m in res.mutations if m.mutation_id == mutation_id), None)
+    if mut is None:
+        raise HTTPException(status_code=404, detail=f"Mutation '{mutation_id}' not found.")
+    return mut.to_dict()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api.server:app", host="0.0.0.0", port=8000, reload=True)

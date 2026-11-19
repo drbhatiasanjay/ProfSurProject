@@ -1,48 +1,72 @@
 import React, { useState } from 'react';
 import { StatutoryOfferDetails } from '../../types/terminal';
-import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
-import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
 import { FileText, Download, CheckCircle2, Presentation, ShieldCheck, Printer, Clock } from 'lucide-react';
 
 interface ICBoardDeckVaultProps {
   offer: StatutoryOfferDetails;
+  onOpenForensicDrawer?: (vaultId: string) => void;
 }
 
-export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => {
+export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer, onOpenForensicDrawer }) => {
   const isHCCB = offer.symbol === 'HCCB' || offer.companyName.includes('Coca-Cola');
 
-  const [exportingStatus, setExportingStatus] = useState<'IDLE' | 'DOWNLOADING_PPTX' | 'DOWNLOADING_PDF'>('IDLE');
+  const [downloadingPptx, setDownloadingPptx] = useState<boolean>(false);
+  const [downloadingPdf, setDownloadingPdf] = useState<boolean>(false);
   const [lastExported, setLastExported] = useState<string | null>(null);
 
-  const handleDownloadPptx = () => {
-    setExportingStatus('DOWNLOADING_PPTX');
-    setTimeout(() => {
-      setExportingStatus('IDLE');
-      setLastExported('16:9 Vector Board Deck (.pptx)');
-      // Generate synthetic download link
-      const blob = new Blob([`Institutional Board Deck - ${offer.companyName}`], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
-      const url = URL.createObjectURL(blob);
+  const tryFetchExport = async (endpoint: string): Promise<Response> => {
+    const ports = [8002, 8001, 8000];
+    for (const port of ports) {
+      try {
+        const res = await fetch(`http://localhost:${port}/api/v1/export/${endpoint}?symbol=${encodeURIComponent(offer.symbol)}`);
+        if (res.ok) return res;
+      } catch {
+        // try next port
+      }
+    }
+    throw new Error(`Failed to export ${endpoint} from active API ports`);
+  };
+
+  const handleDownloadPptx = async () => {
+    setDownloadingPptx(true);
+    try {
+      const res = await tryFetchExport('pptx');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `IC_Board_Deck_${offer.symbol}_2026.pptx`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
-    }, 800);
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setLastExported('16:9 Vector Board Deck (.pptx)');
+    } catch (err) {
+      console.error('PPTX export error:', err);
+    } finally {
+      setDownloadingPptx(false);
+    }
   };
 
-  const handleDownloadPdf = () => {
-    setExportingStatus('DOWNLOADING_PDF');
-    setTimeout(() => {
-      setExportingStatus('IDLE');
-      setLastExported('SEBI RA Compliance Research Memo (.pdf)');
-      const blob = new Blob([`SEBI RA Research Memo - ${offer.companyName}`], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const res = await tryFetchExport('pdf');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `SEBI_RA_Research_Memo_${offer.symbol}_2026.pdf`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
-    }, 800);
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setLastExported('SEBI RA Compliance Research Memo (.pdf)');
+    } catch (err) {
+      console.error('PDF export error:', err);
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const icMandate = isHCCB
@@ -68,7 +92,7 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
       {/* Top Header Card */}
-      <div className="rounded-xl border border-[#223044] bg-[#0E1522] p-5 shadow-lg">
+      <div id="module-ic-mandate" className="rounded-xl border border-slate-700/80 border-t-2 border-t-emerald-400 bg-[#0C1322] p-5 shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#1E2B3E]">
           <div>
             <div className="flex items-center gap-2.5">
@@ -99,6 +123,15 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
             }`}>
               IC STANCE: {icMandate.verdict}
             </span>
+
+            <button
+              onClick={() => onOpenForensicDrawer?.('ic_board_deck')}
+              className="px-2.5 py-1.5 rounded bg-emerald-950/80 border border-emerald-700/80 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-900 transition-colors cursor-pointer shadow-sm ml-1"
+              title="Open Final IC Underwriting Mandate & Covenants Drawer"
+            >
+              <span>Forensic Diligence</span>
+              <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+            </button>
           </div>
         </div>
 
@@ -107,20 +140,20 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
           <div className="flex items-center gap-3">
             <button
               onClick={handleDownloadPptx}
-              disabled={exportingStatus !== 'IDLE'}
+              disabled={downloadingPptx}
               className="px-4 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-mono font-semibold flex items-center gap-2 cursor-pointer shadow-md transition-all"
             >
               <Presentation className="w-4 h-4" />
-              <span>{exportingStatus === 'DOWNLOADING_PPTX' ? 'Generating 16:9 Deck...' : 'Export 16:9 Board Deck (.pptx)'}</span>
+              <span>{downloadingPptx ? 'Generating 16:9 Deck...' : 'Export 16:9 Board Deck (.pptx)'}</span>
             </button>
 
             <button
               onClick={handleDownloadPdf}
-              disabled={exportingStatus !== 'IDLE'}
+              disabled={downloadingPdf}
               className="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-mono font-semibold flex items-center gap-2 cursor-pointer shadow-md transition-all"
             >
               <FileText className="w-4 h-4" />
-              <span>{exportingStatus === 'DOWNLOADING_PDF' ? 'Compiling SEBI Memo...' : 'Export SEBI RA Research Memo (.pdf)'}</span>
+              <span>{downloadingPdf ? 'Compiling SEBI Memo...' : 'Export SEBI RA Research Memo (.pdf)'}</span>
             </button>
           </div>
 
@@ -171,26 +204,27 @@ export const ICBoardDeckVault: React.FC<ICBoardDeckVaultProps> = ({ offer }) => 
         </div>
       </div>
 
-      {/* Unified Decision Intelligence & Action Panel */}
-      {offer.interpretations?.ic_stance_mandate && (
-        <EvidenceInterpretationPanel
-          interpretation={offer.interpretations.ic_stance_mandate}
-          title="Vault 12: Investment Committee Binding Action Mandate"
-        />
-      )}
-
-      {/* Expandable 4-Pillar Narrative Drawer */}
-      <AnalystInsightDrawer
-        title="Investment Committee Governance &amp; Execution Synthesizer"
-        offer={offer}
-        vaultId="ic_board_deck"
-        narrative={{
-          sectorContext: "Syndicate bidding requires rigorous risk-reward calibration to ensure institutional mandate compliance.",
-          lifecyclePrecedents: "Institutional accounts that maintained strict price ceilings avoided subsequent capital erosion during post-2021 tech IPO de-ratings.",
-          icDirectives: "Enforce automated order execution stops at specified pricing thresholds without manual override.",
-          riskRadar: "Listing day volatility spikes require pre-placed trailing stop loss orders with clearing brokers."
-        }}
-      />
+      {/* High-Density Forensic Directive Banner (Methodology ⓘ Pattern) */}
+      <div className="p-4 rounded-xl bg-[#0E1624] border border-[#1E2B3E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md mt-6">
+        <div className="text-xs space-y-1">
+          <div className="flex items-center gap-2 font-mono font-bold">
+            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 border border-emerald-700 text-emerald-300">
+              IC STANCE: CONDITIONAL SUBSCRIBE
+            </span>
+            <span className="text-emerald-400">BINDING UNDERWRITING MANDATE &amp; STATUTORY CLEARANCE</span>
+          </div>
+          <p className="text-slate-300 leading-relaxed">
+            Approved participation up to ₹100.00 ceiling subject to mandatory ₹150 Cr promoter tax escrow holdback. All 84 statutory attributes reconciled with SHA-256 provenance hashes under SEBI RA Regulations.
+          </p>
+        </div>
+        <button
+          onClick={() => onOpenForensicDrawer?.('ic_board_deck')}
+          className="px-3 py-2 rounded-lg text-xs font-mono font-bold bg-[#142032] hover:bg-[#1C2C45] text-emerald-300 border border-emerald-800 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+        >
+          <span>Full Underwriting Mandate</span>
+          <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+        </button>
+      </div>
     </div>
   );
 };

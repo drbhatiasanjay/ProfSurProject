@@ -53,7 +53,12 @@ _auth.ensure_auth_tables()
 _auth.bootstrap_legacy_users(_legacy_creds)
 
 
-def _complete_login(user):
+def _complete_login(user, token=None):
+    if not token and user.get("id"):
+        token = _auth.create_session(user["id"])
+    if token:
+        st.session_state["auth_token"] = token
+        st.query_params["auth_token"] = token
     st.session_state["authentication_status"] = True
     st.session_state["auth_user"] = user
     st.session_state["username"] = user["username"]
@@ -343,6 +348,185 @@ def _login():
         return
 
 
+def _render_workspace_gateway(user_display_name, role_display):
+    st.markdown(
+        """
+        <style>
+        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], section.main {
+            background: #060b13 !important;
+            background-image: 
+                radial-gradient(at 50% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 55%),
+                radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.10) 0px, transparent 50%),
+                radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%) !important;
+            color: #f1f5f9 !important;
+            min-height: 100vh !important;
+        }
+        [data-testid="stSidebar"], [data-testid="collapsedControl"], [data-testid="stSidebarNav"], header[data-testid="stHeader"] {
+            display: none !important;
+        }
+        html body .stApp div[data-testid="stMainBlockContainer"],
+        html body .stApp div[data-testid="block-container"],
+        html body .stApp .main .block-container,
+        [data-testid="stMainBlockContainer"] {
+            max-width: 980px !important;
+            width: 95% !important;
+            margin: 40px auto !important;
+            padding: 36px 40px !important;
+            background: #0d1527 !important;
+            border: 1px solid rgba(56, 189, 248, 0.22) !important;
+            border-radius: 20px !important;
+            box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.9), 0 0 40px rgba(56, 189, 248, 0.08) !important;
+        }
+        .gateway-card {
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.2s ease;
+        }
+        .gateway-card:hover {
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+        }
+        .gateway-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            width: fit-content;
+        }
+        .gateway-feature-list {
+            margin: 14px 0 20px 0;
+            padding-left: 0;
+            list-style: none;
+            font-size: 0.86rem;
+            color: #94a3b8;
+            line-height: 1.65;
+        }
+        .gateway-feature-list li {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .gateway-feature-list li span.dot {
+            color: #38bdf8;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        f"""
+        <div style="text-align: center; margin-bottom: 28px;">
+            <div style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 20px; color: #38bdf8; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px;">
+                PROFSUR FINANCIAL INTELLIGENCE PLATFORM
+            </div>
+            <h1 style="font-family: 'Plus Jakarta Sans', sans-serif; font-size: 2rem; font-weight: 800; color: #f8fafc; margin: 0 0 8px 0;">
+                Select Operational Workspace
+            </h1>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin: 0; max-width: 620px; margin-left: auto; margin-right: auto;">
+                Welcome, <strong style="color: #f1f5f9;">{user_display_name}</strong> ({role_display}). Choose your workspace below. You can return here anytime via the <strong>⊞ Workspaces</strong> button in the top bar.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    col1, col2 = st.columns(2, gap="large")
+
+    with col1:
+        st.markdown(
+            """
+            <div class="gateway-card">
+                <span class="gateway-badge" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);">
+                    OPTION A &middot; PUBLIC UNIVERSE
+                </span>
+                <h3 style="color: #f8fafc; font-size: 1.25rem; font-weight: 700; margin: 0 0 8px 0;">
+                    CMIE Public Universe (8,600+ Firms)
+                </h3>
+                <p style="color: #cbd5e1; font-size: 0.88rem; margin: 0 0 12px 0;">
+                    Longitudinal panel analytics across 8,600+ listed Indian enterprises (2001–2025).
+                </p>
+                <ul class="gateway-feature-list">
+                    <li><span class="dot">&bull;</span> Panel Econometrics & Stata Studio (XTREG, Fixed/Random Effects, IV)</li>
+                    <li><span class="dot">&bull;</span> Dickinson Life-Cycle Stage Classification & Transitions</li>
+                    <li><span class="dot">&bull;</span> Capital Structure, Leverage & Covenant Headroom Defense</li>
+                    <li><span class="dot">&bull;</span> Machine Learning Forecasters & Cluster Benchmarks</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        if st.button("Launch CMIE Public Universe →", key="btn_launch_cmie", type="primary", use_container_width=True):
+            st.session_state["workspace_choice"] = "cmie"
+            st.session_state.pop("btn_launch_cmie", None)
+            st.rerun()
+
+    with col2:
+        st.markdown(
+            """
+            <div class="gateway-card">
+                <span class="gateway-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
+                    OPTION B &middot; PRE-IPO COCKPIT
+                </span>
+                <h3 style="color: #f8fafc; font-size: 1.25rem; font-weight: 700; margin: 0 0 8px 0;">
+                    Pre-IPO Terminal & FIBO Knowledge Graph
+                </h3>
+                <p style="color: #cbd5e1; font-size: 0.88rem; margin: 0 0 12px 0;">
+                    Standalone quantitative diligence & Knowledge Graph platform evaluating prospective DRHP & RHP filings (Port 5174).
+                </p>
+                <ul class="gateway-feature-list">
+                    <li><span class="dot">&bull;</span> FIBO Knowledge Graph: 8 SEBI Sections, Verbatim Facts & Subgraph Drilldown</li>
+                    <li><span class="dot">&bull;</span> 12+ Specialized Quant Vaults (Valuation Football Field, EV Waterfall)</li>
+                    <li><span class="dot">&bull;</span> 2D Stress Sensitivity Heatmaps & Margin Breakeven</li>
+                    <li><span class="dot">&bull;</span> Active Dossier Ingestion (HCCB, NTPC Green, Swiggy, Waaree)</li>
+                </ul>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        _is_cloud = bool(os.environ.get("K_SERVICE") or os.environ.get("K_REVISION") or os.environ.get("GAE_SERVICE"))
+        _pre_ipo_target_url = os.environ.get(
+            "PRE_IPO_TERMINAL_URL",
+            "https://pre-ipo-terminal-5174-779655496440.us-east1.run.app" if _is_cloud else "http://localhost:5174/"
+        )
+        _pre_ipo_btn_label = (
+            "Launch Pre-IPO Terminal (Cloud Run) ↗"
+            if _is_cloud
+            else "Launch Pre-IPO Terminal (localhost:5174) ↗"
+        )
+        st.link_button(
+            _pre_ipo_btn_label,
+            _pre_ipo_target_url,
+            type="secondary",
+            use_container_width=True,
+            help="Opens the standalone Pre-IPO terminal in a new browser tab",
+        )
+
+    st.markdown(
+        f"""
+        <div style="text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.82rem; color: #64748b;">
+            Logged in as <strong style="color: #94a3b8;">{user_display_name}</strong> ({role_display}) &middot; 
+            <a href="?logout=1" style="color: #f43f5e; text-decoration: none; margin-left: 8px;">Sign Out</a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 # Demo recording bypass — PROFSUR_DEMO_SKIP_AUTH=1 auto-authenticates for local offline video production ONLY.
 # Security Invariant (P1-03): Strictly rejected if running on Cloud Run or any production environment.
 if os.environ.get("PROFSUR_DEMO_SKIP_AUTH") == "1":
@@ -366,9 +550,29 @@ if os.environ.get("PROFSUR_DEMO_SKIP_AUTH") == "1":
             "role": "admin",
         }
 
+_token_param = st.query_params.get("auth_token") or st.session_state.get("auth_token")
+
 if st.query_params.get("logout") == "1":
+    if _token_param:
+        _auth.revoke_session(_token_param)
     st.session_state.clear()
     st.query_params.clear()
+    st.rerun()
+
+if not st.session_state.get("authentication_status") and _token_param:
+    _restored_user = _auth.get_session_user(_token_param)
+    if _restored_user:
+        _complete_login(_restored_user, token=_token_param)
+
+if st.query_params.get("switch_workspace") == "1":
+    st.session_state.pop("workspace_choice", None)
+    st.session_state.pop("btn_launch_cmie", None)
+    try:
+        del st.query_params["switch_workspace"]
+    except Exception:
+        pass
+    if _token_param:
+        st.query_params["auth_token"] = _token_param
     st.rerun()
 
 if not st.session_state.get("authentication_status"):
@@ -402,6 +606,14 @@ if _role == "viewer" and "guest_display_name" not in st.session_state:
                 st.session_state["guest_display_name"] = _dname.strip()
                 st.rerun()
         st.stop()
+
+# ── Workspace Selection Gateway (Option A: CMIE vs. Option B: Pre-IPO Terminal) ──
+_display_name_header = st.session_state.get("guest_display_name") or st.session_state["user"].get("name") or _username
+_role_display_header = _role.title()
+
+if st.session_state.get("workspace_choice") != "cmie":
+    _render_workspace_gateway(_display_name_header, _role_display_header)
+    st.stop()
 # ─────────────────────────────────────────────────────────────────────────────
 
 import db
@@ -457,6 +669,11 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.session_state["workspace_mode"] = "pre_ipo" if "Pre-IPO" in _ws_mode_label else "public"
+
+    if st.button("⊞ Switch Workspace Gateway", key="btn_sidebar_gateway", use_container_width=True, help="Return to the 2-Card Workspace Gateway"):
+        st.session_state.pop("workspace_choice", None)
+        st.session_state.pop("btn_launch_cmie", None)
+        st.rerun()
 
     st.markdown("### Global Filters")
 
@@ -683,6 +900,8 @@ _theme_btn_bg = "rgba(255, 255, 255, 0.08)" if _theme == "dark" else "rgba(15, 2
 _theme_btn_border = "rgba(255, 255, 255, 0.16)" if _theme == "dark" else "rgba(15, 23, 42, 0.15)"
 _theme_btn_color = "#F8FAFC" if _theme == "dark" else "#0F172A"
 _theme_btn_hover = "rgba(255, 255, 255, 0.16)" if _theme == "dark" else "rgba(15, 23, 42, 0.12)" 
+_tok = st.session_state.get('auth_token', '')
+_auth_token_param = f"&auth_token={_tok}" if _tok else ""
 
 st.markdown(f"""
 <div id="lc-navbar" style="
@@ -715,8 +934,35 @@ st.markdown(f"""
     <span style="white-space:nowrap; color:{_header_sub};"><strong>{_display_name}</strong> &middot; <span style="text-transform:capitalize;">{_role_display}</span></span>
     <span style="margin-left:auto; color:{_header_sub}; font-size:13px; font-family:'JetBrains Mono', monospace; white-space:nowrap;">{_now_str}</span>
     <a
+        id="navbar-workspace-btn"
+        href="/?switch_workspace=1{_auth_token_param}"
+        target="_self"
+        title="Switch between CMIE and Pre-IPO Workspaces"
+        style="
+            background: {'rgba(99, 102, 241, 0.12)' if _theme == 'dark' else 'rgba(79, 70, 229, 0.08)'};
+            color: {'#a5b4fc' if _theme == 'dark' else '#4f46e5'};
+            border: 1px solid {'rgba(99, 102, 241, 0.3)' if _theme == 'dark' else 'rgba(79, 70, 229, 0.25)'};
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 8px;
+            padding: 0 12px;
+            height: 34px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            box-sizing: border-box;
+        "
+    >
+        <span style="font-size: 14px;">⊞</span>
+        <span>Workspaces</span>
+    </a>
+    <a
         id="navbar-theme-toggle-btn"
-        href="?theme={_target_theme}"
+        href="?theme={_target_theme}{_auth_token_param}"
         title="Switch to {_theme_btn_label}"
         style="
             background: {_theme_btn_bg};
@@ -743,7 +989,7 @@ st.markdown(f"""
     <a
         id="navbar-signout-btn"
         role="button"
-        href="?logout=1"
+        href="?logout=1{_auth_token_param}"
         style="
             background: {_signout_bg};
             color: {_signout_color};

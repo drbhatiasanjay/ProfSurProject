@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import {
   Layers,
   Activity,
@@ -15,8 +15,12 @@ import {
   ChevronDown,
   Scale,
   Factory,
-  Plus,
-  Network
+  Compass,
+  Network,
+  Target,
+  FileSpreadsheet,
+  Building2,
+  BookOpen
 } from 'lucide-react';
 import { VaultId } from '../types/terminal';
 
@@ -31,29 +35,6 @@ interface SidebarNavProps {
   onOpenIngestModal: () => void;
 }
 
-const DOSSIER_OPTIONS = [
-  {
-    symbol: 'NTPCGREEN',
-    shortName: 'NTPC Green Energy Ltd.',
-    fullLabel: 'NTPC Green Energy Ltd. (RHP Nov 2024 · ₹10,000 Cr Fresh · Utilities)',
-  },
-  {
-    symbol: 'HCCB',
-    shortName: 'Hindustan Coca-Cola Holdings Ltd.',
-    fullLabel: 'Hindustan Coca-Cola Holdings Ltd. (DRHP 2024 · ₹9,975 Cr OFS · FMCG Giant)',
-  },
-  {
-    symbol: 'SWIGGY',
-    shortName: 'Swiggy Ltd.',
-    fullLabel: 'Swiggy Ltd. (DRHP 2024 · ₹4,499 Cr Fresh · Hyperlocal Logistics)',
-  },
-  {
-    symbol: 'WAAREE',
-    shortName: 'Waaree Energies Ltd.',
-    fullLabel: 'Waaree Energies Ltd. (RHP 2024 · ₹4,321 Cr · Solar PV)',
-  },
-];
-
 export const SidebarNav: React.FC<SidebarNavProps> = ({
   activeView,
   onViewChange,
@@ -61,225 +42,237 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
   onSymbolChange,
   onOpenIngestModal
 }) => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const currentDeal = DOSSIER_OPTIONS.find(d => d.symbol === selectedSymbol) || DOSSIER_OPTIONS[0];
-
   const navSections = [
     {
-      title: 'I: DEAL & VALUATION',
+      title: 'EXECUTIVE TRUTH TABLE',
+      items: [
+        {
+          id: 'diligence_master' as TerminalView,
+          label: '00. Diligence Master & Verdict',
+          sublabel: '38+ Tests, Truth Table & Hyper-Index',
+          icon: ShieldCheck,
+        },
+      ],
+    },
+    {
+      title: 'SECTION 0: DOSSIER FOUNDATIONS & DRHP REALITY',
+      items: [
+        {
+          id: 'corporate_foundations' as TerminalView,
+          label: '0. Foundations & DRHP Reality',
+          sublabel: 'Profile, Segments, Industry & SWOT',
+          icon: Building2,
+        },
+      ],
+    },
+    {
+      title: 'SECTION I: DEAL & VALUATION DISCOVERY',
       items: [
         {
           id: 'market_demand' as TerminalView,
-          number: '1',
-          label: 'Market Demand & Book',
+          label: '1. Market Demand & Book',
           sublabel: 'Live bidding, AQI & ML',
           icon: Activity,
         },
         {
           id: 'peer_comps' as TerminalView,
-          number: '2',
-          label: 'Live Peer Comps',
-          sublabel: 'WACA step-up & Mueller ROCE',
+          label: '2. Peer, Sector & Competitor Studio',
+          sublabel: 'Peer Comps, Sector Dynamics, Competitors & Post-IPO',
           icon: Layers,
         },
         {
           id: 'huber_studio' as TerminalView,
-          number: '3',
-          label: 'Huber Econometric Studio',
+          label: '3. Huber Econometric Studio',
           sublabel: 'Bias Index & Quantile Cones',
           icon: Calculator,
         },
       ],
     },
     {
-      title: 'II: FORENSIC EVIDENCE',
+      title: 'SECTION II: EVIDENCE & ECONOMETRICS',
       items: [
         {
           id: 'provenance_ledger' as TerminalView,
-          number: '4',
-          label: 'Provenance Evidence Ledger',
+          label: '4. Provenance Evidence Ledger',
           sublabel: '84-Attr BBox & 5-Gate Accounting',
           icon: FileText,
         },
         {
           id: 'stress_workpapers' as TerminalView,
-          number: '5',
-          label: 'Econometric & Forensic Lab',
+          label: '5. Econometric & Forensic Lab',
           sublabel: '7 Institutional Econometric Models',
           icon: Sliders,
         },
         {
           id: 'red_flag_scanner' as TerminalView,
-          number: '6',
-          label: '6-Rule Red-Flag Scanner',
+          label: '6. 6-Rule Red-Flag Scanner',
           sublabel: 'Governance & Beneish M-Score',
           icon: AlertOctagon,
-        },
-        {
-          id: 'knowledge_graph' as TerminalView,
-          number: 'KG',
-          label: 'FIBO Knowledge Graph',
-          sublabel: 'Multi-Hop Contagion & Dual Studio',
-          icon: Network,
         },
       ],
     },
     {
-      title: 'III: DILIGENCE & SCALE',
+      title: 'SECTION III: FORENSIC & SCALE DILIGENCE',
       items: [
         {
           id: 'contingent_litigation' as TerminalView,
-          number: '7',
-          label: 'Contingent Litigation Radar',
+          label: '7. Contingent Litigation Radar',
           sublabel: 'SEBI LODR 2% & Ind AS 37',
           icon: Scale,
         },
         {
           id: 'unit_economics' as TerminalView,
-          number: '8',
-          label: 'Unit Economics & Scale',
-          sublabel: '75-85% Sweet Spot & Bottling Moat',
+          label: '8. Unit Economics & Scale',
+          sublabel: '75-85% Sweet Spot & Outlet Moat',
           icon: Factory,
         },
         {
           id: 'unlisted_arbitrage' as TerminalView,
-          number: '9',
-          label: 'Unlisted Post-Tax Arbitrage',
+          label: '9. Unlisted Post-Tax Arbitrage',
           sublabel: 'Sec 56(2)(x) & Breakeven Solver',
           icon: Coins,
         },
       ],
     },
     {
-      title: 'IV: IC MANDATE & DECK',
+      title: 'SECTION IV: GOVERNANCE & IC MANDATE',
       items: [
         {
           id: 'investor_qa' as TerminalView,
-          number: '10',
-          label: 'Institutional Q&A',
+          label: '10. Institutional Q&A',
           sublabel: '14 Questions & Churn Shock',
           icon: HelpCircle,
         },
         {
           id: 'stakeholder_lens' as TerminalView,
-          number: '11',
-          label: '6-Persona Stakeholder Lens',
+          label: '11. 6-Persona Stakeholder Lens',
           sublabel: 'CFO, Lender, QIB, Retail, RA',
           icon: Users,
         },
         {
           id: 'ic_board_deck' as TerminalView,
-          number: '12',
-          label: 'IC Stance & Board Deck',
+          label: '12. IC Stance & Board Deck',
           sublabel: 'Mandate & 1-Click PPTX/PDF',
           icon: Presentation,
+        },
+      ],
+    },
+    {
+      title: 'SECTION V: STRATEGY & SCORECARD SUITE',
+      items: [
+        {
+          id: 'strategy_studio' as TerminalView,
+          label: 'M1. Consulting Strategy',
+          sublabel: 'McKinsey Power Curve & BCG 2x2',
+          icon: Compass,
+        },
+        {
+          id: 'strategy_map_dag' as TerminalView,
+          label: 'M2. 6-Dim Strategy Map DAG',
+          sublabel: 'Causal Value Tree & SHAP Weights',
+          icon: Network,
+        },
+        {
+          id: 'cross_vault_matrix' as TerminalView,
+          label: 'M3. Cross-Vault BSC Matrix',
+          sublabel: 'Unified 6 Pillars & Risk Veto',
+          icon: Target,
+        },
+        {
+          id: 'excel_model_studio' as TerminalView,
+          label: 'M4. Formula Excel Model',
+          sublabel: 'Openpyxl Live Audit & Export',
+          icon: FileSpreadsheet,
+        },
+      ],
+    },
+    {
+      title: 'SECTION VI: KNOWLEDGE GRAPH & ONTOLOGY',
+      items: [
+        {
+          id: 'knowledge_graph' as TerminalView,
+          label: 'FIBO Knowledge Graph',
+          sublabel: 'Dual Studio, Cypher Bank & Lineage',
+          icon: Network,
         },
       ],
     },
   ];
 
   return (
-    <aside className="w-full lg:w-72 h-full bg-[#090D12] border-r border-[#223044] flex flex-col shrink-0 z-30 overflow-visible select-none">
+    <aside className="w-full lg:w-72 h-full bg-[#090D12] border-r border-[#223044] flex flex-col shrink-0 z-20 overflow-hidden">
       {/* Brand Header */}
-      <div className="px-3 py-2.5 border-b border-[#223044] flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-white font-mono text-xs shadow-md shadow-cyan-950">
-            PS
+      <div className="p-4 border-b border-[#223044] flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center font-bold text-white font-mono text-sm shadow-md shadow-cyan-950">
+            IQ
           </div>
           <div>
-            <div className="font-bold text-xs tracking-wider text-slate-100 font-mono leading-none">PROFSUR</div>
-            <div className="text-[9px] text-slate-500 font-mono mt-0.5">QUANTITATIVE VALUATION</div>
+            <div className="font-bold text-sm tracking-wide text-slate-100 font-mono">PRE-IPO IQ</div>
+            <div className="text-[10px] text-slate-500 font-mono">QUANTITATIVE DILIGENCE TERMINAL</div>
           </div>
         </div>
-        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/70 border border-emerald-800 text-emerald-400 font-bold">
+        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-400 font-bold">
           v3.5.0
         </span>
       </div>
 
-      {/* Active Pre-IPO Deal Dossier Dropdown (Matches Screen 2 & Screen 3) */}
-      <div className="px-2.5 py-2 border-b border-[#223044] shrink-0 bg-[#0c121b] relative z-40" ref={dropdownRef}>
-        <div className="flex items-center justify-between mb-1.5 px-0.5">
-          <span className="text-[10px] font-mono font-semibold text-slate-400 tracking-wider">
+      {/* Active Pre-IPO Deal Dossier Dropdown Selector */}
+      <div className="p-3 border-b border-[#223044]">
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="text-[11px] font-mono text-slate-400 block tracking-wide">
             Active Pre-IPO Deal Dossier
-          </span>
+          </label>
           <button
+            type="button"
             onClick={onOpenIngestModal}
-            className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5 transition-colors cursor-pointer"
-            title="Ingest new DRHP/RHP PDF"
+            className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 font-bold flex items-center gap-1 cursor-pointer transition-colors"
+            title="Ingest new DRHP/RHP filing"
           >
-            <Plus className="w-3 h-3" />
-            <span>Ingest</span>
+            + Ingest
           </button>
         </div>
-
-        {/* Dropdown Input / Trigger (Screen 2) */}
-        <button
-          type="button"
-          onClick={() => setIsDropdownOpen(prev => !prev)}
-          className="w-full bg-[#101620] hover:bg-[#131c2a] border border-[#223044] hover:border-slate-600 rounded px-2.5 py-1.5 flex items-center justify-between transition-colors text-left cursor-pointer group"
-        >
-          <span className="font-mono text-xs text-slate-100 font-medium truncate pr-1">
-            {currentDeal.shortName}
-          </span>
-          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-slate-200 transition-transform duration-150 shrink-0 ${isDropdownOpen ? 'rotate-180 text-cyan-400' : ''}`} />
-        </button>
-
-        {/* Dropdown Options Popup (Screen 3 - Floating 390px wide over main canvas) */}
-        {isDropdownOpen && (
-          <div className="absolute left-2.5 w-[390px] max-w-[90vw] top-[calc(100%-2px)] z-50 bg-[#0d1522] border border-cyan-800/90 rounded-md shadow-2xl py-1 text-xs font-mono backdrop-blur-md">
-            {DOSSIER_OPTIONS.map((deal) => {
-              const isSelected = selectedSymbol === deal.symbol;
-              return (
-                <button
-                  key={deal.symbol}
-                  type="button"
-                  onClick={() => {
-                    onSymbolChange(deal.symbol);
-                    setIsDropdownOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-2 transition-colors cursor-pointer text-[11px] truncate leading-tight block ${
-                    isSelected
-                      ? 'bg-cyan-950/90 text-cyan-300 font-semibold border-l-2 border-cyan-400'
-                      : 'text-slate-300 hover:bg-[#162030] hover:text-white'
-                  }`}
-                >
-                  {deal.fullLabel}
-                </button>
-              );
-            })}
-            <div className="border-t border-[#223044] mt-1 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDropdownOpen(false);
-                  onOpenIngestModal();
-                }}
-                className="w-full text-left px-3 py-2 text-cyan-400 hover:text-cyan-300 hover:bg-[#162030] transition-colors cursor-pointer flex items-center gap-1 font-semibold text-[11px] block"
-              >
-                <span>+ Ingest New DRHP / RHP PDF Document...</span>
-              </button>
-            </div>
+        <div className="relative">
+          <select
+            value={selectedSymbol}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === '__INGEST__') {
+                onOpenIngestModal();
+                e.target.value = selectedSymbol;
+              } else {
+                onSymbolChange(val);
+              }
+            }}
+            className="w-full appearance-none bg-[#101620] border border-[#223044] hover:border-cyan-500/70 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 rounded-lg px-3 py-2.5 pr-8 text-xs font-mono text-slate-100 transition-colors cursor-pointer shadow-inner"
+          >
+            <option value="NTPCGREEN" className="bg-[#101620] text-slate-100 py-1.5">
+              NTPC Green Energy Ltd. (RHP Nov 2024 · ₹10,000 Cr Fresh · Utilities)
+            </option>
+            <option value="HCCB" className="bg-[#101620] text-slate-100 py-1.5">
+              Hindustan Coca-Cola Holdings Ltd. (DRHP 2024 · ₹9,975 Cr OFS · FMCG Giant)
+            </option>
+            <option value="SWIGGY" className="bg-[#101620] text-slate-100 py-1.5">
+              Swiggy Ltd. (DRHP 2024 · ₹4,499 Cr Fresh · Hyperlocal Logistics)
+            </option>
+            <option value="WAAREE" className="bg-[#101620] text-slate-100 py-1.5">
+              Waaree Energies Ltd. (RHP 2024 · ₹4,321 Cr · Solar PV)
+            </option>
+            <option value="__INGEST__" className="bg-[#151D2A] text-cyan-400 font-bold py-1.5">
+              + Ingest New DRHP / RHP PDF Document...
+            </option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+            <ChevronDown className="w-4 h-4 text-slate-400" />
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Navigation Workspace Menu (All 12 Specialized Vaults in 4 High-Density Sections) */}
-      <nav className="p-2 space-y-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-[#223044] scrollbar-track-transparent hover:scrollbar-thumb-cyan-500/50">
+      {/* Navigation Workspace Menu (12 Specialized Vaults in 4 Sections) */}
+      <nav className="p-3 space-y-4 flex-1 overflow-y-auto">
         {navSections.map((section, sIdx) => (
-          <div key={sIdx} className="space-y-0.5">
-            <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider px-1.5 py-0.5 block font-bold">
+          <div key={sIdx} className="space-y-1">
+            <span className="text-[9px] font-mono text-slate-500 uppercase tracking-wider px-2 block font-semibold">
               {section.title}
             </span>
             {section.items.map((item) => {
@@ -289,34 +282,19 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
               return (
                 <button
                   key={item.id}
+                  data-testid={`nav-${item.id}`}
                   onClick={() => onViewChange(item.id)}
-                  title={`${item.number}. ${item.label} — ${item.sublabel}`}
-                  className={`w-full text-left px-2 py-1 rounded-md transition-all flex items-center gap-2 cursor-pointer group ${
-                    isActive
-                      ? 'bg-gradient-to-r from-cyan-950/90 to-[#0A101C] border-l-2 border-cyan-400 text-slate-100 font-semibold shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-[#101620]'
-                  }`}
-                >
-                  <Icon
-                    className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-                      isActive ? 'text-cyan-400' : 'text-slate-500 group-hover:text-slate-400'
+                  className={`w-full text-left p-2 rounded-lg transition-all flex items-center gap-2 cursor-pointer ${isActive
+                    ? 'bg-gradient-to-r from-cyan-950/70 to-[#0A101C] border-l-2 border-cyan-400 text-slate-100 font-semibold shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-[#101620]'
                     }`}
-                  />
-                  <div className="flex-1 min-w-0 flex items-center justify-between">
-                    <span className="text-xs font-medium font-sans truncate">
-                      <span className={`font-mono mr-1.5 ${isActive ? 'text-cyan-400 font-bold' : 'text-slate-500'}`}>
-                        {item.number}.
-                      </span>
-                      {item.label}
-                    </span>
+                >
+                  <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-cyan-400' : 'text-slate-500'}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium font-sans truncate">{item.label}</div>
+                    <div className="text-[10px] text-slate-500 font-mono truncate">{item.sublabel}</div>
                   </div>
-                  {isActive ? (
-                    <ChevronRight className="w-3 h-3 text-cyan-400 shrink-0" />
-                  ) : (
-                    <span className="text-[9px] font-mono text-slate-600 group-hover:text-slate-400 shrink-0 hidden xl:inline">
-                      v{item.number}
-                    </span>
-                  )}
+                  {isActive && <ChevronRight className="w-3 h-3 text-cyan-400 shrink-0" />}
                 </button>
               );
             })}
@@ -325,12 +303,9 @@ export const SidebarNav: React.FC<SidebarNavProps> = ({
       </nav>
 
       {/* Footer Info */}
-      <div className="px-3 py-1.5 border-t border-[#223044] text-[10px] text-slate-500 font-mono flex items-center justify-between shrink-0 bg-[#090D12]">
-        <span className="tracking-tight">NSE PRIMARY ADAPTER</span>
-        <span className="text-emerald-400 font-bold flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          ONLINE
-        </span>
+      <div className="p-3 border-t border-[#223044] text-[10px] text-slate-500 font-mono flex items-center justify-between">
+        <span>NSE PRIMARY ADAPTER</span>
+        <span className="text-emerald-400 font-bold">ONLINE</span>
       </div>
     </aside>
   );

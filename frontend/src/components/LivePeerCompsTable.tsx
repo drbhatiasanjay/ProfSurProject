@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { LivePeerComp } from '../types/terminal';
-import { Layers, ArrowUpDown, ExternalLink, Sparkles } from 'lucide-react';
+import { Layers, ArrowUpDown, ExternalLink, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface LivePeerCompsTableProps {
   peers: LivePeerComp[];
 }
 
 export const LivePeerCompsTable: React.FC<LivePeerCompsTableProps> = ({ peers }) => {
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [sortBy, setSortBy] = useState<keyof LivePeerComp>('marketCapCr');
   const [sortAsc, setSortAsc] = useState<boolean>(false);
   const [filterType, setFilterType] = useState<'all' | 'drhp' | 'algorithmic'>('all');
@@ -36,47 +37,71 @@ export const LivePeerCompsTable: React.FC<LivePeerCompsTableProps> = ({ peers })
   };
 
   return (
-    <div className="rounded-lg border border-[#223044] bg-[#101620] p-5 shadow-sm">
+    <div id="module-live-comps" className="rounded-xl border border-slate-700/80 border-t-2 border-t-cyan-500 bg-[#0C1322] p-5 shadow-xl transition-all">
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#1D2838]">
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-cyan-400" />
-          <h2 className="text-sm font-semibold tracking-wider text-slate-100 uppercase font-mono">
-            NSE Live Peer Comps & Multi-Dimensional Valuation
-          </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-cyan-950/80 border border-cyan-800/60 text-cyan-400">
+            <Layers className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
+                MODULE 01
+              </span>
+              <h2 className="text-sm font-semibold tracking-wider text-slate-100 uppercase font-mono">
+                NSE Live Peer Comps &amp; Multi-Dimensional Valuation
+              </h2>
+            </div>
+            <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+              Cross-sectional peer multiples, SARD-weighted fundamental step-ups, and Mueller ROCE mean-reversion
+            </p>
+          </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 bg-[#090D12] p-1 rounded border border-[#1E293B] text-xs font-mono">
+        <div className="flex items-center gap-3">
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5 bg-[#090D12] p-1 rounded-lg border border-slate-800 text-xs font-mono">
+            <button
+              onClick={() => setFilterType('all')}
+              className={`px-2.5 py-0.5 rounded transition-colors cursor-pointer ${
+                filterType === 'all' ? 'bg-[#1E293B] text-slate-100 font-semibold' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              ALL PEERS ({peers.length})
+            </button>
+            <button
+              onClick={() => setFilterType('drhp')}
+              className={`px-2.5 py-0.5 rounded transition-colors cursor-pointer ${
+                filterType === 'drhp' ? 'bg-cyan-950/80 text-cyan-300 font-semibold border border-cyan-800' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              DRHP DECLARED
+            </button>
+            <button
+              onClick={() => setFilterType('algorithmic')}
+              className={`px-2.5 py-0.5 rounded transition-colors cursor-pointer ${
+                filterType === 'algorithmic' ? 'bg-indigo-950/80 text-indigo-300 font-semibold border border-indigo-800' : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              ALGO DISCOVERED
+            </button>
+          </div>
+
+          {/* In-Card Collapse Toggle */}
           <button
-            onClick={() => setFilterType('all')}
-            className={`px-2.5 py-0.5 rounded transition-colors ${
-              filterType === 'all' ? 'bg-[#1E293B] text-slate-100 font-semibold' : 'text-slate-400 hover:text-slate-200'
-            }`}
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-slate-500 text-slate-400 hover:text-slate-200 text-xs font-mono transition-all cursor-pointer shadow-sm"
+            title={isCollapsed ? 'Expand Comps Table' : 'Collapse Comps Table'}
           >
-            ALL PEERS ({peers.length})
-          </button>
-          <button
-            onClick={() => setFilterType('drhp')}
-            className={`px-2.5 py-0.5 rounded transition-colors ${
-              filterType === 'drhp' ? 'bg-cyan-950/80 text-cyan-300 font-semibold border border-cyan-800' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            DRHP DECLARED
-          </button>
-          <button
-            onClick={() => setFilterType('algorithmic')}
-            className={`px-2.5 py-0.5 rounded transition-colors ${
-              filterType === 'algorithmic' ? 'bg-indigo-950/80 text-indigo-300 font-semibold border border-indigo-800' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            ALGO DISCOVERED
+            <span>{isCollapsed ? 'Expand' : 'Collapse'}</span>
+            {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
 
-      {/* High-Density Tabular Comps Matrix */}
-      <div className="overflow-x-auto mt-3">
+      {!isCollapsed && (
+        <div className="overflow-x-auto mt-3">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-[#1E293B] text-[11px] font-mono text-slate-400 bg-[#0C111A]">
@@ -254,6 +279,7 @@ export const LivePeerCompsTable: React.FC<LivePeerCompsTableProps> = ({ peers })
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 };

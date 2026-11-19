@@ -1,3 +1,14 @@
+export type Brand<K, T> = K & { readonly __brand: T };
+export type DealSymbol = Brand<string, 'DealSymbol'>;
+export type AttributeId = Brand<string, 'AttributeId'>;
+export type INRCrores = Brand<number, 'INRCrores'>;
+
+export type AsyncState<T> =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'success'; data: T }
+  | { status: 'error'; error: string };
+
 export interface MarketIndex {
   symbol: string;
   name: string;
@@ -158,6 +169,8 @@ export interface SEBIComplianceRecord {
 // ==========================================
 
 export type VaultId =
+  | 'diligence_master'        // Screen 00: Institutional Diligence Master & Truth Table (38+ Tests)
+  | 'corporate_foundations'   // Section 0: Dossier Foundations & DRHP Reality (Profile, Segments, Industry & SWOT)
   | 'market_demand'           // Vault 1: Live Book Bidding + Dual-Head ML + SHAP + AQI 0-100
   | 'peer_comps'              // Vault 2: 9-Col Peer Comps + WACA Step-Up + Mueller Persistence
   | 'huber_studio'            // Vault 3: Huber Outlier Regression + Bias Index + Quantiles
@@ -167,11 +180,16 @@ export type VaultId =
   | 'investor_qa'             // Vault 6: 14 Questions + Customer Concentration Shock
   | 'stakeholder_lens'        // Vault 7: 6-Persona Switcher (CFO, Lender, Equity, Retail, etc.)
   | 'red_flag_scanner'        // Vault 8: 6-Rule Automated Radar (FLAG-01 to 06) + Beneish M-Score
+  | 'knowledge_graph'         // KG: FIBO Knowledge Graph Studio (Dual Studio Canvas + Cypher Bank)
   | 'contingent_litigation'   // Vault 9: Contingent Liabilities & Legal Radar (SEBI LODR 2% + Ind AS 37)
   | 'unit_economics'          // Vault 10: Unit Economics & Operational Scale Studio (75-85% Sweet Spot)
   | 'unlisted_arbitrage'      // Vault 11: Sec 56(2)(x) FMV Tax + 6M Carry Cost Breakeven Price
   | 'ic_board_deck'           // Vault 12: Prescriptive Mandate + 1-Click PPTX / PDF Memo
-  | 'knowledge_graph';        // Vault 13: Scoped FIBO RHP Knowledge Graph & Dual-Persona Studio
+  | 'strategy_studio'         // M1: Consulting Strategy & Industry Structure (McKinsey Power Curve & BCG 2x2)
+  | 'strategy_map_dag'        // M2: 6-Dimension Empirical Strategy Map DAG
+  | 'cross_vault_matrix'      // M3: Institutional Cross-Vault BSC Matrix
+  | 'excel_model_studio'      // M4: Formula Excel Model & Scenario Studio
+  | 'methodology_almanac';    // Educational Methodology Almanac & Financial Engineering Knowledge Base
 
 export interface TriStateLedgerCounters {
   verified: number;
@@ -304,65 +322,65 @@ export interface ProvenanceSummary {
 
 export type ProvenanceField<T> =
   | {
-      status: 'FOUND';
-      fieldName: string;
-      value: T;
-      confidenceScore: number; // Non-optional on FOUND
-      bboxCoordinates: [number, number, number, number]; // Non-optional on FOUND
-      bbox?: [number, number, number, number];
-      pdfPageNumber?: number;
-      printedPageLabel?: string;
-      chapterName?: string;
-      verbatimSnippet?: string;
-      sourceQuote?: string;
-      sourceDocument?: string;
-      attributeId?: string;
-      section?: CanonicalSection | string;
-      expectedUnit?: ExpectedUnit | string;
-      statutoryReference?: string;
-      requiredForGate?: boolean;
-      reconfirmationReason?: never;
-    }
+    status: 'FOUND';
+    fieldName: string;
+    value: T;
+    confidenceScore: number; // Non-optional on FOUND
+    bboxCoordinates: [number, number, number, number]; // Non-optional on FOUND
+    bbox?: [number, number, number, number];
+    pdfPageNumber?: number;
+    printedPageLabel?: string;
+    chapterName?: string;
+    verbatimSnippet?: string;
+    sourceQuote?: string;
+    sourceDocument?: string;
+    attributeId?: string;
+    section?: CanonicalSection | string;
+    expectedUnit?: ExpectedUnit | string;
+    statutoryReference?: string;
+    requiredForGate?: boolean;
+    reconfirmationReason?: never;
+  }
   | {
-      status: 'NOT_FOUND';
-      fieldName: string;
-      value: T | null;
-      confidenceScore?: number;
-      bboxCoordinates?: [number, number, number, number];
-      bbox?: [number, number, number, number];
-      pdfPageNumber?: number;
-      printedPageLabel?: string;
-      chapterName?: string;
-      verbatimSnippet?: string;
-      sourceQuote?: string;
-      sourceDocument?: string;
-      attributeId?: string;
-      section?: CanonicalSection | string;
-      expectedUnit?: ExpectedUnit | string;
-      statutoryReference?: string;
-      requiredForGate?: boolean;
-      reconfirmationReason?: string;
-    }
+    status: 'NOT_FOUND';
+    fieldName: string;
+    value: T | null;
+    confidenceScore?: number;
+    bboxCoordinates?: [number, number, number, number];
+    bbox?: [number, number, number, number];
+    pdfPageNumber?: number;
+    printedPageLabel?: string;
+    chapterName?: string;
+    verbatimSnippet?: string;
+    sourceQuote?: string;
+    sourceDocument?: string;
+    attributeId?: string;
+    section?: CanonicalSection | string;
+    expectedUnit?: ExpectedUnit | string;
+    statutoryReference?: string;
+    requiredForGate?: boolean;
+    reconfirmationReason?: string;
+  }
   | {
-      status: 'NEEDS_RECONFIRMATION';
-      fieldName: string;
-      value: T | null;
-      confidenceScore?: number;
-      bboxCoordinates?: [number, number, number, number];
-      bbox?: [number, number, number, number];
-      pdfPageNumber?: number;
-      printedPageLabel?: string;
-      chapterName?: string;
-      verbatimSnippet?: string;
-      sourceQuote?: string;
-      sourceDocument?: string;
-      attributeId?: string;
-      section?: CanonicalSection | string;
-      expectedUnit?: ExpectedUnit | string;
-      statutoryReference?: string;
-      requiredForGate?: boolean;
-      reconfirmationReason: string; // Non-optional on NEEDS_RECONFIRMATION
-    };
+    status: 'NEEDS_RECONFIRMATION';
+    fieldName: string;
+    value: T | null;
+    confidenceScore?: number;
+    bboxCoordinates?: [number, number, number, number];
+    bbox?: [number, number, number, number];
+    pdfPageNumber?: number;
+    printedPageLabel?: string;
+    chapterName?: string;
+    verbatimSnippet?: string;
+    sourceQuote?: string;
+    sourceDocument?: string;
+    attributeId?: string;
+    section?: CanonicalSection | string;
+    expectedUnit?: ExpectedUnit | string;
+    statutoryReference?: string;
+    requiredForGate?: boolean;
+    reconfirmationReason: string; // Non-optional on NEEDS_RECONFIRMATION
+  };
 
 export interface PillarEvidenceCitation {
   citationSource: string; // e.g. "DRHP Ch. V (Restated Financials), p. 280" or "Dickinson, V. (2011), The Accounting Review"
@@ -430,13 +448,18 @@ export interface EconometricInterpretation {
 export type Polarity = 'POSITIVE_CONTRIBUTOR' | 'NEGATIVE_CONTRIBUTOR' | 'NEUTRAL_MONITOR' | 'BLOCKING_RISK';
 
 export interface LiteratureEvidenceCitation {
-  citationId: string;
-  shortTag: string;
-  formalCitation: string;
-  statutoryOrPaperQuote: string;
-  verifiedCutoff: string;
-  governingBodyOrJournal: string;
-  downstreamModule: string;
+  citationId?: string;
+  shortTag?: string;
+  formalCitation?: string;
+  statutoryOrPaperQuote?: string;
+  verifiedCutoff?: string;
+  governingBodyOrJournal?: string;
+  downstreamModule?: string;
+  title?: string;
+  authors?: string;
+  year?: number | string;
+  citation?: string;
+  coreFinding?: string;
 }
 
 export interface CitedInput {
@@ -450,23 +473,42 @@ export interface CitedInput {
 }
 
 export interface EvidenceBasis {
-  formulaOrMethod: string;
-  citedInputs: CitedInput[];
+  formulaOrMethod?: string;
+  formulaContext?: {
+    formulaName?: string;
+    latexFormula?: string;
+    standardThresholds?: string;
+    underwritingApplication?: string;
+  };
+  citedInputs?: CitedInput[];
+  primaryDRHPCitations?: Array<{
+    disclosure: string;
+    pageNumber: number;
+    reconciliationStatus?: string;
+  }>;
   governingLiterature?: LiteratureEvidenceCitation;
-  computedVariables?: Record<string, any>;
+  computedVariables?: Record<string, any> | any[];
   methodologyConcept?: string;
   preIpoRationale?: string;
   benchmarkCutoffs?: string;
 }
 
 export interface AnalyticalInterpretation {
-  metricId: string;
+  metricId?: string;
   polarity: Polarity;
   headline: string;
   whatItMeans: string;
   evidenceBasis: EvidenceBasis;
-  callToAction: string;
-  missingDataAndBlindSpots: string[];
+  callToAction: string | {
+    verdict?: string;
+    icDirective?: string;
+    allocationConstraint?: string;
+    monitoringTrigger?: string;
+  };
+  missingDataAndBlindSpots: string[] | {
+    blindSpots?: string[];
+    supplementaryDiligence?: string[];
+  };
 }
 
 export interface BeneishMScoreData {
@@ -616,3 +658,186 @@ export interface ComprehensiveEconometricSuiteData {
   };
   interpretations?: Record<string, AnalyticalInterpretation>;
 }
+
+// ==========================================
+// SECTION 0: FOUNDATIONS & DRHP CONTRACTS
+// ==========================================
+
+export interface SegmentContributionItem {
+  segmentName: string;
+  revenueCr: number;
+  revenuePct: number;
+  growthYoYPct?: number;
+  operationalDescription: string;
+  forensicImpactTag: string;
+  status: 'CORE_CASH_COW' | 'DEFENSIVE_STAPLE' | 'HIGH_GROWTH_DRIVER' | 'DRAG';
+}
+
+export interface GeographicSplitItem {
+  regionName: string;
+  revenuePct: number;
+  description: string;
+  riskFactorNote?: string;
+}
+
+export interface SwotQuadrantItem {
+  title: string;
+  metricOrEvidence: string;
+  statutoryCitation: string;
+  icTakeaway: string;
+  severity: 'ACCRETIVE' | 'MONITOR' | 'CRITICAL';
+}
+
+export interface IssuerFoundationsData {
+  symbol: string;
+  companyName: string;
+  cin: string;
+  incorporationYear: number;
+  corporateHq: string;
+  legalStructure: string;
+  listedExchanges: string[];
+  brlmBankers: string[];
+  statutoryAuditor: string;
+  filingCutoffDate: string;
+  economicEngineSummary: string;
+  revenueModelSummary: string;
+  promoterPedigree: string;
+  segments: SegmentContributionItem[];
+  geographicSplit: GeographicSplitItem[];
+  domesticVsExportPct: { domestic: number; export: number };
+  tamSamSummary: {
+    tamInrCr: number;
+    samInrCr: number;
+    tamCagr5YrPct: number;
+    perCapitaIndiaVsGlobal: string;
+    regulatoryTailwind: string;
+  };
+  competitiveDynamics: {
+    cr4ConcentrationPct: number;
+    marketPosition: string;
+    pricingPowerTier: 'HIGH_PRICING_POWER' | 'MODERATE' | 'PRICE_TAKER';
+    postIpoPeerImpact: string;
+    warChestPriceWarRisk: string;
+  };
+  swot: {
+    strengths: SwotQuadrantItem[];
+    weaknesses: SwotQuadrantItem[];
+    opportunities: SwotQuadrantItem[];
+    threats: SwotQuadrantItem[];
+  };
+  basisForPrice: {
+    preIssueEps: number;
+    ronwPct: number;
+    navPerShare: number;
+    peerMedianPe: number;
+    issuerAskingPe: number;
+    wacaPromoter18Months: number;
+    wacaSecondaryShareholders: number;
+    issuePriceBand: string;
+  };
+}
+
+// ==========================================
+// METHODOLOGY ALMANAC & PEDAGOGY CONTRACTS
+// ==========================================
+
+export interface MethodologyAlmanacItem {
+  id: string;
+  name: string;
+  shortTag: string;
+  domain: 'VALUATION' | 'TRAJECTORY' | 'FORENSICS' | 'STRATEGY' | 'MACRO';
+  plainEnglishSummary: string;
+  whyWeUseItPreIpo: string;
+  academicCitation: {
+    author: string;
+    year: number;
+    paperOrBook: string;
+    governingStandard: string;
+  };
+  latexFormula: string;
+  formulaVariables: Array<{ symbol: string; name: string; description: string }>;
+  workedExample: {
+    companyContext: string;
+    inputValues: Record<string, string | number>;
+    stepByStepMath: string[];
+    resultInterpretation: string;
+  };
+  thresholdBands: Array<{
+    label: string;
+    cutoff: string;
+    status: 'SAFE' | 'MONITOR' | 'CRITICAL';
+    color: string;
+  }>;
+  interactiveSandbox?: {
+    sliderLabel: string;
+    paramName: string;
+    min: number;
+    max: number;
+    step: number;
+    defaultValue: number;
+    unit: string;
+    calculateOutput: (val: number) => { outputMetric: string; outputValue: string; status: string };
+  };
+  statutoryDrhpChapter: string;
+  icDirective: string;
+}
+
+// ==========================================
+// MILESTONE 19: BI-TEMPORAL KNOWLEDGE GRAPH CONTRACTS
+// ==========================================
+
+export type MutationType =
+  | 'BRACKET_RESOLVED'
+  | 'ENTITY_ADDED'
+  | 'SEVERED_RELATION'
+  | 'MUTATED_PROPERTY'
+  | 'QUALIFIER_WATERED_DOWN';
+
+export type TemporalFilingVersion = 'DRHP' | 'ADDENDUM' | 'RHP';
+
+export interface TemporalBoundingBox {
+  page_number: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  verbatim_text: string;
+}
+
+export interface TemporalGraphMutation {
+  mutation_id: string;
+  subject_entity: string;
+  predicate: string;
+  change_type: MutationType;
+  sebi_chapter: string;
+  drhp_value: string | null;
+  rhp_value: string;
+  drhp_bbox: TemporalBoundingBox | null;
+  rhp_bbox: TemporalBoundingBox;
+  obfuscation_severity: number;
+  valuation_impact_inr: number;
+  wacc_spread_shift_bps: number;
+  w3c_prov_citation: string;
+  summary_explanation: string;
+}
+
+export interface TemporalGraphDiffResult {
+  symbol: string;
+  base_version: string;
+  target_version: string;
+  base_date: string;
+  target_date: string;
+  total_mutations: number;
+  mutations: TemporalGraphMutation[];
+  chapter_drift_scores: Record<string, number>;
+  net_valuation_impact_inr: number;
+  net_wacc_spread_shift_bps: number;
+  overall_obfuscation_index: number;
+}
+
+export type TemporalMutationState =
+  | { status: 'IDLE' }
+  | { status: 'LOADING'; baseVersion: TemporalFilingVersion; targetVersion: TemporalFilingVersion }
+  | { status: 'LOADED'; diff: TemporalGraphDiffResult }
+  | { status: 'ERROR'; error: string };
+

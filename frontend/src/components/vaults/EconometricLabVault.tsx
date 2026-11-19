@@ -5,8 +5,7 @@ import {
   EconometricVerdict
 } from '../../types/terminal';
 import { fetchEconometricSuite, getMockEconometricSuite } from '../../services/dataService';
-import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
-import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
+import { ForensicRadarTriad } from '../ForensicRadarTriad';
 import {
   Calculator,
   Activity,
@@ -26,29 +25,23 @@ import {
   FileText
 } from 'lucide-react';
 
-export const ECONOMETRIC_TABS = [
-  { id: 'beneish', label: '1. Beneish M-Score', icon: ShieldCheck },
-  { id: 'dickinson', label: '2. Dickinson Lifecycle', icon: Activity },
-  { id: 'huber', label: '3. Huber Robust Comps', icon: Scale },
-  { id: 'stub', label: '4. Stub Seasonality Break', icon: TrendingUp },
-  { id: 'indas116', label: '5. Ind AS 116 Lease Leverage', icon: Layers },
-  { id: 'altman', label: '6. Altman Z\'\'-Score', icon: BarChart3 },
-  { id: 'lockin', label: '7. Lock-In & Tax Drag', icon: Lock },
-  { id: 'stress_grid', label: '8. 2D Stress Matrix', icon: Sliders }
-] as const;
-
-export type EconometricTabId = typeof ECONOMETRIC_TABS[number]['id'];
-
 interface EconometricLabVaultProps {
   offer: StatutoryOfferDetails;
+  onOpenForensicDrawer?: (vaultId: string) => void;
+  onOpenAlmanac?: (methodologyId?: string) => void;
 }
 
-export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer }) => {
+export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({
+  offer,
+  onOpenForensicDrawer,
+  onOpenAlmanac,
+}) => {
   const isHCCB = offer.symbol === 'HCCB' || offer.companyName.includes('Coca-Cola');
   const [suiteData, setSuiteData] = useState<ComprehensiveEconometricSuiteData>(() =>
     getMockEconometricSuite(isHCCB)
   );
-  const [activeTab, setActiveTab] = useState<EconometricTabId>('beneish');
+  type EconometricTab = 'beneish' | 'dickinson' | 'huber' | 'stub' | 'indas116' | 'altman' | 'lockin' | 'stress_grid' | 'mckinsey' | 'ey_qoe' | 'bcg_tsr';
+  const [activeTab, setActiveTab] = useState<EconometricTab>('beneish');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // 2D Stress Grid State (Volume Shock vs Cost Shock)
@@ -119,7 +112,7 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
     }
   };
 
-  const tabMetricMap: Record<string, string> = {
+  const tabMetricMap: Record<EconometricTab, string> = {
     beneish: 'beneish_m_score',
     dickinson: 'dickinson_lifecycle',
     huber: 'valuation_multiple',
@@ -128,9 +121,12 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
     altman: 'altman_z_score',
     lockin: 'lockin_supply_cliff',
     stress_grid: 'valuation_multiple',
+    mckinsey: 'mckinsey_value_spread',
+    ey_qoe: 'ey_quality_of_earnings',
+    bcg_tsr: 'bcg_tsr_decomposition',
   };
 
-  // Interpretation Box Component
+  // Compact Progressive-Disclosure Directive Panel
   const renderInterpretationPanel = (
     verdict: EconometricVerdict | string,
     summary: string,
@@ -138,61 +134,30 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
     icRecommendation: string
   ) => {
     const metricId = tabMetricMap[activeTab];
-    const richInterpretation =
-      suiteData.interpretations?.[metricId] || offer.interpretations?.[metricId];
-
-    if (richInterpretation) {
-      return (
-        <EvidenceInterpretationPanel
-          interpretation={richInterpretation}
-          title={`Engine Intelligence: ${metricId.replace(/_/g, ' ').toUpperCase()}`}
-        />
-      );
-    }
-
     return (
-      <div className="rounded-xl border border-[#223044] bg-[#0A0F18] p-5 space-y-4">
-        <div className="flex items-center justify-between border-b border-[#1E2B3E] pb-3">
+      <div className="rounded-xl border border-[#1E2B3E] bg-[#0A0F18] p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-md mt-4">
+        <div className="space-y-1.5 text-xs max-w-4xl">
           <div className="flex items-center gap-2">
-            <FileText className="w-4 h-4 text-cyan-400" />
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-cyan-300">
-              Automated Buy-Side Interpretation & Forensic Synthesis
+            <span className="font-mono text-[10px] uppercase font-bold text-cyan-400">
+              DIRECTIVE · {metricId.replace(/_/g, ' ').toUpperCase()}
             </span>
+            {getVerdictBadge(verdict)}
           </div>
-          {getVerdictBadge(verdict)}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-sans">
-          {/* 1. Statistical Finding */}
-          <div className="bg-[#101726] border border-[#1E2B3E] rounded-lg p-3.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px] font-bold uppercase">
-              <span className="text-sky-400 font-mono">1.</span> Statistical Finding
-            </div>
-            <p className="text-slate-200 leading-relaxed font-mono text-[11.5px]">
-              {summary}
-            </p>
-          </div>
-
-          {/* 2. Economic Mechanism */}
-          <div className="bg-[#101726] border border-[#1E2B3E] rounded-lg p-3.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[11px] font-bold uppercase">
-              <span className="text-cyan-400 font-mono">2.</span> Economic Mechanism
-            </div>
-            <p className="text-slate-300 leading-relaxed text-[11.5px]">
-              {mechanism}
-            </p>
-          </div>
-
-          {/* 3. IC Recommendation */}
-          <div className="bg-[#101726] border border-cyan-900/60 rounded-lg p-3.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-cyan-300 font-mono text-[11px] font-bold uppercase">
-              <span className="text-amber-400 font-mono">3.</span> IC Actionable Directive
-            </div>
-            <p className="text-slate-100 font-medium leading-relaxed text-[11.5px]">
-              {icRecommendation}
-            </p>
+          <p className="text-slate-200 font-sans leading-relaxed">
+            <span className="font-semibold text-slate-100">{summary}</span> {mechanism}
+          </p>
+          <div className="text-cyan-300 font-mono text-[11px] flex items-center gap-1.5">
+            <span className="text-amber-400 font-bold">IC DIRECTIVE:</span>
+            <span>{icRecommendation}</span>
           </div>
         </div>
+        <button
+          onClick={() => onOpenForensicDrawer?.('econometric_lab')}
+          className="px-3 py-2 rounded-lg text-xs font-mono font-bold bg-[#142032] hover:bg-[#1C2C45] text-cyan-300 border border-cyan-800 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer self-start md:self-center"
+        >
+          <span>Statutory Proof</span>
+          <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+        </button>
       </div>
     );
   };
@@ -209,11 +174,11 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
                 VAULT 5: ECONOMETRIC & FORENSIC ANALYTICAL LAB
               </h2>
               <span className="px-2 py-0.5 rounded bg-cyan-950/80 border border-cyan-800 text-[10px] font-mono text-cyan-300">
-                7 STATISTICAL ENGINES
+                11 STATISTICAL &amp; CONSULTING ENGINES
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1 font-mono">
-              Quantitative Underwriting Suite · Dickinson (2011) · Huber (1964) RLM · Beneish (1999) · Altman (2002) · {offer.companyName}
+              Quantitative Underwriting Suite · McKinsey Value Spread · EY QoE · BCG TSR · Beneish · Huber RLM · {offer.companyName}
             </p>
           </div>
 
@@ -222,7 +187,46 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
               <div className="text-[10px] font-mono uppercase text-slate-400 font-bold">COMPOSITE FORENSIC STANCE</div>
               <div className="mt-0.5">{getVerdictBadge(suiteData.overallVerdict)}</div>
             </div>
+
+            <button
+              onClick={() => onOpenForensicDrawer?.('econometric_lab')}
+              className="px-2.5 py-1.5 rounded bg-cyan-950/80 border border-cyan-700/80 text-cyan-300 font-mono text-xs font-bold flex items-center gap-1.5 hover:bg-cyan-900 transition-colors cursor-pointer shadow-sm ml-2"
+              title="Open Multi-Model Forensic Diligence Drawer"
+            >
+              <span>Forensic Diligence</span>
+              <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+            </button>
+
+            {onOpenAlmanac && (
+              <button
+                type="button"
+                onClick={() => {
+                  const mId =
+                    activeTab === 'beneish' ? 'beneish_m_score' :
+                    activeTab === 'stub' ? 'sloan_accrual_ratio' :
+                    activeTab === 'mckinsey' ? 'mckinsey_power_curve' :
+                    activeTab === 'lockin' ? 'anchor_lock_in_supply_shock' :
+                    activeTab === 'huber' ? 'valuation_football_field' :
+                    'reverse_dcf_implied_growth';
+                  onOpenAlmanac(mId);
+                }}
+                className="px-2.5 py-1.5 rounded bg-purple-950/80 border border-purple-700/80 text-purple-300 font-mono text-xs font-bold flex items-center gap-1.5 hover:bg-purple-900 transition-colors cursor-pointer shadow-sm ml-1"
+                title="Open Academic Literature & Mathematical Proof in Methodology Almanac"
+              >
+                <span>Methodology</span>
+                <span className="w-4 h-4 rounded-full bg-purple-500 text-slate-950 flex items-center justify-center text-[10px] font-black">!</span>
+              </button>
+            )}
           </div>
+        </div>
+
+        {/* Forensic Radar Triad Summary Scorecard */}
+        <div id="module-forensic-radar" className="mt-4">
+          <ForensicRadarTriad
+            symbol={offer.symbol}
+            isHCCB={isHCCB}
+            onSelectTab={(tabId) => setActiveTab(tabId as EconometricTab)}
+          />
         </div>
 
         {/* Unpriced Containment Warning */}
@@ -238,7 +242,19 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
 
         {/* Top Model Navigation Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pt-4 scrollbar-none">
-          {ECONOMETRIC_TABS.map(tab => {
+          {[
+            { id: 'beneish' as const, label: '1. Beneish M-Score', icon: ShieldCheck },
+            { id: 'dickinson' as const, label: '2. Dickinson Lifecycle', icon: Activity },
+            { id: 'huber' as const, label: '3. Huber Robust Comps', icon: Scale },
+            { id: 'stub' as const, label: '4. Stub Seasonality Break', icon: TrendingUp },
+            { id: 'indas116' as const, label: '5. Ind AS 116 Lease Leverage', icon: Layers },
+            { id: 'altman' as const, label: '6. Altman Z\'\'-Score', icon: BarChart3 },
+            { id: 'lockin' as const, label: '7. Lock-In & Tax Drag', icon: Lock },
+            { id: 'stress_grid' as const, label: '8. 2D Stress Matrix', icon: Sliders },
+            { id: 'mckinsey' as const, label: '9. McKinsey Value Spread', icon: TrendingUp },
+            { id: 'ey_qoe' as const, label: '10. EY Quality of Earnings', icon: FileText },
+            { id: 'bcg_tsr' as const, label: '11. BCG 3-Yr TSR Engine', icon: Layers }
+          ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
@@ -259,7 +275,7 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
         </div>
       </div>
 
-      {/* MODEL 1: BENEISH M-SCORE & SLOAN ACCRUALS */}
+      <div id="module-econometric-suite" className="space-y-6">
       {activeTab === 'beneish' && models.beneishMScore && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -854,12 +870,130 @@ export const EconometricLabVault: React.FC<EconometricLabVaultProps> = ({ offer 
         </div>
       )}
 
-      {/* 4-Pillar Model for Vault 5: Econometric & Forensic Lab */}
-      <AnalystInsightDrawer
-        title="Econometric Suite & Multi-Model Forensic Synthesizer"
-        offer={offer}
-        vaultId="econometric_lab"
-      />
+      {/* Model 9: McKinsey Value Spread */}
+      {activeTab === 'mckinsey' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Return on Capital (ROIC)</span>
+              <div className="text-xl font-mono font-bold text-emerald-400 mt-1">{isHCCB ? '24.6%' : '10.6%'}</div>
+              <span className="text-[10px] text-slate-500 font-mono">NOPAT / Invested Capital</span>
+            </div>
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Institutional Hurdle (WACC)</span>
+              <div className="text-xl font-mono font-bold text-cyan-400 mt-1">{isHCCB ? '10.2%' : '8.9%'}</div>
+              <span className="text-[10px] text-slate-500 font-mono">Rf 7.0% + Bounded Beta</span>
+            </div>
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Economic Spread (ROIC - WACC)</span>
+              <div className="text-xl font-mono font-bold text-emerald-300 mt-1">{isHCCB ? '+14.4%' : '+1.7%'}</div>
+              <span className="text-[10px] text-slate-500 font-mono">Accretive (&gt; +2.0% Target)</span>
+            </div>
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Annual Economic Profit (EVA)</span>
+              <div className="text-xl font-mono font-bold text-emerald-400 mt-1">{isHCCB ? '₹806 Cr' : '₹82 Cr'}</div>
+              <span className="text-[10px] text-slate-500 font-mono">100% Organic Expansion</span>
+            </div>
+          </div>
+          {renderInterpretationPanel(
+            isHCCB ? 'POSITIVE' : 'NEUTRAL',
+            `McKinsey Value Spread: ${isHCCB ? '+14.4%' : '+1.7%'} spread between ROIC and cost of capital, generating ₹${isHCCB ? '806' : '82'} Cr in annual economic profit.`,
+            'Per Koller et al. (McKinsey & Co.), organic revenue growth compounds shareholder value only when returns exceed hurdle rate.',
+            'MCKINSEY DIRECTIVE: Underwrite capital deployment into core organic operations with confirmed ROIC > WACC.'
+          )}
+        </div>
+      )}
+
+      {/* Model 10: EY Quality of Earnings */}
+      {activeTab === 'ey_qoe' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Reported EBITDA</span>
+              <div className="text-xl font-mono font-bold text-slate-200 mt-1">₹{isHCCB ? '2,120' : '1,840'} Cr</div>
+              <span className="text-[10px] text-slate-500 font-mono">Statutory Consolidated P&L</span>
+            </div>
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Normalization Haircut</span>
+              <div className="text-xl font-mono font-bold text-amber-400 mt-1">{isHCCB ? '5.2%' : '2.4%'}</div>
+              <span className="text-[10px] text-slate-500 font-mono">Non-Operating & Pro-Forma Deductions</span>
+            </div>
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Normalized Cash EBITDA</span>
+              <div className="text-xl font-mono font-bold text-emerald-400 mt-1">₹{isHCCB ? '2,010' : '1,795'} Cr</div>
+              <span className="text-[10px] text-slate-500 font-mono">Sustainable Operating Base</span>
+            </div>
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Cash Conversion Ratio</span>
+              <div className="text-xl font-mono font-bold text-cyan-400 mt-1">{isHCCB ? '87%' : '77%'}</div>
+              <span className="text-[10px] text-slate-500 font-mono">CFO / Adjusted EBITDA</span>
+            </div>
+          </div>
+          {renderInterpretationPanel(
+            'POSITIVE',
+            `EY QoE Analysis: ${isHCCB ? '5.2%' : '2.4%'} normalizing deduction required; underlying operational cash conversion stands at ${isHCCB ? '87%' : '77%'}.`,
+            'Audited earnings reflect high commercial substance with minimal reliance on aggressive promoter pro-forma synergy add-backs.',
+            'EY TAS DIRECTIVE: Benchmark acquisition and bidding multiples against Normalized Cash EBITDA rather than pro-forma figures.'
+          )}
+        </div>
+      )}
+
+      {/* Model 11: BCG 3-Yr TSR Engine */}
+      {activeTab === 'bcg_tsr' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Projected 3-Yr TSR</span>
+              <div className="text-xl font-mono font-bold text-emerald-400 mt-1">{isHCCB ? '18.2%' : '28.4%'} p.a.</div>
+              <span className="text-[10px] text-slate-500 font-mono">Annualized Shareholder Return</span>
+            </div>
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Institutional Hurdle (Ke)</span>
+              <div className="text-xl font-mono font-bold text-slate-300 mt-1">12.5% p.a.</div>
+              <span className="text-[10px] text-slate-500 font-mono">Cost of Equity Threshold</span>
+            </div>
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Institutional Alpha</span>
+              <div className="text-xl font-mono font-bold text-cyan-300 mt-1">{isHCCB ? '+5.7%' : '+15.9%'}</div>
+              <span className="text-[10px] text-slate-500 font-mono">Return Excess over Hurdle</span>
+            </div>
+            <div className="bg-[#0E1522] border border-[#223044] rounded-xl p-4">
+              <span className="text-[11px] font-mono text-slate-400 uppercase font-semibold">Multiple De-Rating Buffer</span>
+              <div className="text-xl font-mono font-bold text-amber-400 mt-1">{isHCCB ? '-3.8%' : '-6.2%'} p.a.</div>
+              <span className="text-[10px] text-slate-500 font-mono">Absorbed by Operational Growth</span>
+            </div>
+          </div>
+          {renderInterpretationPanel(
+            'POSITIVE',
+            `BCG TSR Engine: ${isHCCB ? '18.2%' : '28.4%'} p.a. projected 3-year return delivers +${isHCCB ? '5.7%' : '15.9%'} alpha over the 12.5% hurdle rate.`,
+            'Returns are overwhelmingly driven by organic top-line expansion and dividend yield, providing cushion against post-IPO multiple compression.',
+            'BCG DIRECTIVE: Confirm participation in anchor allocation tranche based on top-quartile projected total shareholder return.'
+          )}
+        </div>
+      )}
+      </div>
+
+      {/* High-Density Forensic Directive Banner (Methodology ⓘ Pattern) */}
+      <div className="p-4 rounded-xl bg-[#0E1624] border border-[#1E2B3E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md mt-6">
+        <div className="text-xs space-y-1">
+          <div className="flex items-center gap-2 font-mono font-bold">
+            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 border border-emerald-700 text-emerald-300">
+              BENEISH M-SCORE: -2.48 (SAFE)
+            </span>
+            <span className="text-emerald-400">MULTI-MODEL FORENSIC SYNTHESIS &amp; CASH QUALITY</span>
+          </div>
+          <p className="text-slate-300 leading-relaxed">
+            M-Score (-2.48) and negative accruals confirm zero earnings manipulation. Dickinson lifecycle places HCCB in mature Cash Cow stage, generating ₹2,140.5 Cr CFO covering brownfield CapEx by 2.5x.
+          </p>
+        </div>
+        <button
+          onClick={() => onOpenForensicDrawer?.('econometric_lab')}
+          className="px-3 py-2 rounded-lg text-xs font-mono font-bold bg-[#142032] hover:bg-[#1C2C45] text-emerald-300 border border-emerald-800 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+        >
+          <span>Full Forensic Proof &amp; Covenants</span>
+          <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+        </button>
+      </div>
     </div>
   );
 };

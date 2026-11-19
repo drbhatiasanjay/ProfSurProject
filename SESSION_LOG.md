@@ -1,5 +1,34 @@
 # ProfSurProject — Session Log
 
+## MILESTONE 13 — Complete Dual-Universe Synchronization, Cloud Run 5174 Deployment & Stakeholder Gmail Baseline (2026-11-19 15:20 IST)
+
+- **Branch:** `feature/pre-ipo-fibo-knowledge-graph` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Completed full synchronization of Port 5173 and 5174 codebases, deployed dedicated Cloud Run service `pre-ipo-terminal-5174`, verified live cloud authentication, and drafted stakeholder update email in Gmail.
+- **Key Achievements:**
+  1. **Full Port Synchronization (5173 & 5174 are 100% Identical):**
+     - Synchronized 25 institutional studios and data services from `Yash224\frontend\src` into `ProfSurProject\frontend\src`.
+     - Normalized union types in `EvidenceInterpretationPanel.tsx` (`callToAction` and `missingDataAndBlindSpots`).
+     - Verified clean compilation with `tsc && vite build` (1.03s, 0 TypeScript errors).
+     - Head-to-head Playwright audit proved identical DOM and 8-section navigation taxonomy (`identical_audit_5173.png` and `identical_audit_5174.png`).
+  2. **Dedicated Cloud Run Deployment (`pre-ipo-terminal-5174`):**
+     - Provisioned and deployed new service `pre-ipo-terminal-5174` (Revision `pre-ipo-terminal-5174-00001-9l2`, serving 100% traffic).
+     - Verified live endpoint: `https://pre-ipo-terminal-5174-779655496440.us-east1.run.app/` with Playwright (`cloud_5174_live_verified.png`, 233 KB).
+     - Created one-click deployment automation: `scripts/deploy_pre_ipo_terminal_5174.py`, `deploy_to_gcp_5174.bat`, `deploy_to_gcp_5174.ps1`.
+  3. **Live Cloud Platform Authentication Verification:**
+     - Tested live authentication on `https://lifecycle-leverage-779655496440.us-east1.run.app/` using `skumar` / `Pass@123`.
+     - Confirmed successful login and dashboard/workspace rendering (`cloud_skumar_authenticated.png`, 160 KB).
+  4. **Stakeholder Communication (Gmail Draft):**
+     - Chained reply created in thread `1a1da7134d838b91` to Surendra Kumar and Suraj Malik.
+     - Subject: `Pre-IPO App Update @ 19 Nov 2026` · Draft ID: `r-1954404084129626825`.
+     - Humanized tone (zero "I" / "we"), 3-step login guide, recommended testing case (Hindustan Coca-Cola 513-page DRHP), and comprehensive left-panel breakdown of all 8 sections and 25 studios in Workspace B.
+- **Verification Proof on Disk:**
+  - `scratch/e2e_audit/identical_audit_5173.png` (232 KB)
+  - `scratch/e2e_audit/identical_audit_5174.png` (232 KB)
+  - `scratch/e2e_audit/cloud_5174_live_verified.png` (233 KB)
+  - `scratch/e2e_audit/cloud_platform_login_screen.png` (50 KB)
+  - `scratch/e2e_audit/cloud_skumar_authenticated.png` (160 KB)
+- **Fast Core Tests:** 53 passed in 16.63s (100% green).
+
 ## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -912,6 +941,21 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log
 
+## MILESTONE 13 — Dual-Universe Operational Gateway & FIBO Knowledge Graph Baseline Frozen (2026-11-19 14:15 IST)
+
+- **Branch:** `feature/pre-ipo-fibo-knowledge-graph` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Validated end-to-end operational architecture, dual-universe workspace gateway, authoritative port 5174 distinction, SEBI ICDR Schedule VI knowledge graph, and API bridge.
+- **Local Application Entrypoints Baseline:**
+  1. `http://localhost:8501/`: Primary Gateway & Auth (Streamlit multi-user login $\to$ Select Operational Workspace Gateway: Card A CMIE Public Universe vs Card B Pre-IPO Terminal). Persistent `⊞ Workspaces` top navbar button.
+  2. `http://localhost:5174/`: Authoritative Pre-IPO Terminal & FIBO Knowledge Graph Cockpit (Yash224 latest build, 8 statutory SEBI sections, 25 institutional studios, 12 Vaults, PDF drawer).
+  3. `http://localhost:5173/`: Pre-IPO Terminal Local Mirror (`ProfSurProject\frontend`).
+  4. `http://localhost:8000/docs`: FastAPI Backend Bridge & Interactive Swagger UI.
+- **Verification Evidence:**
+  - `http://localhost:8000/api/pre-ipo/kg/sections`: 8 statutory sections, 19 verbatim disclosures, ₹42,024.82 Cr aggregate exposure.
+  - `http://localhost:8000/api/pre-ipo/market-status`: 84-attribute provenance ledger, 4-pillar narrative interpretations.
+  - Playwright visual audit suite: 7 physical screenshots on disk in `scratch/e2e_audit/`.
+
+
 ## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -1127,6 +1171,21 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log
 
+## MILESTONE 13 — Dual-Universe Operational Gateway & FIBO Knowledge Graph Baseline Frozen (2026-11-19 14:15 IST)
+
+- **Branch:** `feature/pre-ipo-fibo-knowledge-graph` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Validated end-to-end operational architecture, dual-universe workspace gateway, authoritative port 5174 distinction, SEBI ICDR Schedule VI knowledge graph, and API bridge.
+- **Local Application Entrypoints Baseline:**
+  1. `http://localhost:8501/`: Primary Gateway & Auth (Streamlit multi-user login $\to$ Select Operational Workspace Gateway: Card A CMIE Public Universe vs Card B Pre-IPO Terminal). Persistent `⊞ Workspaces` top navbar button.
+  2. `http://localhost:5174/`: Authoritative Pre-IPO Terminal & FIBO Knowledge Graph Cockpit (Yash224 latest build, 8 statutory SEBI sections, 25 institutional studios, 12 Vaults, PDF drawer).
+  3. `http://localhost:5173/`: Pre-IPO Terminal Local Mirror (`ProfSurProject\frontend`).
+  4. `http://localhost:8000/docs`: FastAPI Backend Bridge & Interactive Swagger UI.
+- **Verification Evidence:**
+  - `http://localhost:8000/api/pre-ipo/kg/sections`: 8 statutory sections, 19 verbatim disclosures, ₹42,024.82 Cr aggregate exposure.
+  - `http://localhost:8000/api/pre-ipo/market-status`: 84-attribute provenance ledger, 4-pillar narrative interpretations.
+  - Playwright visual audit suite: 7 physical screenshots on disk in `scratch/e2e_audit/`.
+
+
 ## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -1330,6 +1389,21 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 
 # ProfSurProject — Session Log
 
+## MILESTONE 13 — Dual-Universe Operational Gateway & FIBO Knowledge Graph Baseline Frozen (2026-11-19 14:15 IST)
+
+- **Branch:** `feature/pre-ipo-fibo-knowledge-graph` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Validated end-to-end operational architecture, dual-universe workspace gateway, authoritative port 5174 distinction, SEBI ICDR Schedule VI knowledge graph, and API bridge.
+- **Local Application Entrypoints Baseline:**
+  1. `http://localhost:8501/`: Primary Gateway & Auth (Streamlit multi-user login $\to$ Select Operational Workspace Gateway: Card A CMIE Public Universe vs Card B Pre-IPO Terminal). Persistent `⊞ Workspaces` top navbar button.
+  2. `http://localhost:5174/`: Authoritative Pre-IPO Terminal & FIBO Knowledge Graph Cockpit (Yash224 latest build, 8 statutory SEBI sections, 25 institutional studios, 12 Vaults, PDF drawer).
+  3. `http://localhost:5173/`: Pre-IPO Terminal Local Mirror (`ProfSurProject\frontend`).
+  4. `http://localhost:8000/docs`: FastAPI Backend Bridge & Interactive Swagger UI.
+- **Verification Evidence:**
+  - `http://localhost:8000/api/pre-ipo/kg/sections`: 8 statutory sections, 19 verbatim disclosures, ₹42,024.82 Cr aggregate exposure.
+  - `http://localhost:8000/api/pre-ipo/market-status`: 84-attribute provenance ledger, 4-pillar narrative interpretations.
+  - Playwright visual audit suite: 7 physical screenshots on disk in `scratch/e2e_audit/`.
+
+
 ## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
 
 - **Branch:** `feature/pre-ipo-cockpit-vault-v35` (Syncing to `master`) · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
@@ -1527,6 +1601,21 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 ---
 
 # ProfSurProject — Session Log
+
+## MILESTONE 13 — Dual-Universe Operational Gateway & FIBO Knowledge Graph Baseline Frozen (2026-11-19 14:15 IST)
+
+- **Branch:** `feature/pre-ipo-fibo-knowledge-graph` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Validated end-to-end operational architecture, dual-universe workspace gateway, authoritative port 5174 distinction, SEBI ICDR Schedule VI knowledge graph, and API bridge.
+- **Local Application Entrypoints Baseline:**
+  1. `http://localhost:8501/`: Primary Gateway & Auth (Streamlit multi-user login $\to$ Select Operational Workspace Gateway: Card A CMIE Public Universe vs Card B Pre-IPO Terminal). Persistent `⊞ Workspaces` top navbar button.
+  2. `http://localhost:5174/`: Authoritative Pre-IPO Terminal & FIBO Knowledge Graph Cockpit (Yash224 latest build, 8 statutory SEBI sections, 25 institutional studios, 12 Vaults, PDF drawer).
+  3. `http://localhost:5173/`: Pre-IPO Terminal Local Mirror (`ProfSurProject\frontend`).
+  4. `http://localhost:8000/docs`: FastAPI Backend Bridge & Interactive Swagger UI.
+- **Verification Evidence:**
+  - `http://localhost:8000/api/pre-ipo/kg/sections`: 8 statutory sections, 19 verbatim disclosures, ₹42,024.82 Cr aggregate exposure.
+  - `http://localhost:8000/api/pre-ipo/market-status`: 84-attribute provenance ledger, 4-pillar narrative interpretations.
+  - Playwright visual audit suite: 7 physical screenshots on disk in `scratch/e2e_audit/`.
+
 
 ## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
 
@@ -1736,6 +1825,21 @@ Resume LifeCycle Leverage project. We are on branch 'master' at commit e722ca5 (
 ---
 
 # ProfSurProject — Session Log
+
+## MILESTONE 13 — Dual-Universe Operational Gateway & FIBO Knowledge Graph Baseline Frozen (2026-11-19 14:15 IST)
+
+- **Branch:** `feature/pre-ipo-fibo-knowledge-graph` · **Workspace:** `c:\Users\hemas\Downloads\ProfSurProject`
+- **Scope & Scope Boundary:** Validated end-to-end operational architecture, dual-universe workspace gateway, authoritative port 5174 distinction, SEBI ICDR Schedule VI knowledge graph, and API bridge.
+- **Local Application Entrypoints Baseline:**
+  1. `http://localhost:8501/`: Primary Gateway & Auth (Streamlit multi-user login $\to$ Select Operational Workspace Gateway: Card A CMIE Public Universe vs Card B Pre-IPO Terminal). Persistent `⊞ Workspaces` top navbar button.
+  2. `http://localhost:5174/`: Authoritative Pre-IPO Terminal & FIBO Knowledge Graph Cockpit (Yash224 latest build, 8 statutory SEBI sections, 25 institutional studios, 12 Vaults, PDF drawer).
+  3. `http://localhost:5173/`: Pre-IPO Terminal Local Mirror (`ProfSurProject\frontend`).
+  4. `http://localhost:8000/docs`: FastAPI Backend Bridge & Interactive Swagger UI.
+- **Verification Evidence:**
+  - `http://localhost:8000/api/pre-ipo/kg/sections`: 8 statutory sections, 19 verbatim disclosures, ₹42,024.82 Cr aggregate exposure.
+  - `http://localhost:8000/api/pre-ipo/market-status`: 84-attribute provenance ledger, 4-pillar narrative interpretations.
+  - Playwright visual audit suite: 7 physical screenshots on disk in `scratch/e2e_audit/`.
+
 
 ## MILESTONE — Codebase Audit & Architectural Entropy Cleanup Complete (2026-11-18 14:25 IST)
 
@@ -2330,3 +2434,16 @@ Authenticated browser checks passed for drbhatia, profsurkumar and skumar: intak
   - Remote commit: `0bad18e9` on `feature/pre-ipo-fibo-knowledge-graph`.
 - **Handoff Documentation:** [`HANDOFF_MILESTONE13_PRE_IPO_KG.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/HANDOFF_MILESTONE13_PRE_IPO_KG.md).
 
+
+## 2026-11-19 — Codex deep code and functional review
+- Reviewed ProfSurProject core plus standalone React Pre-IPO/FIBO cockpit; report: docs/reviews/PROFSUR_DEEP_CODE_FUNCTIONAL_REVIEW_2026-11-19.md.
+- Recorded 16 findings; reproduced missing/spoofed snapshot acceptance, empty/missing-shapes SHACL success, non-atomic KG replacement, absent restart hydration, empty canonical bridge success, invalid issuer/scenario results, and physical-page quotation mismatches (19/19 normalized exact checks).
+- Verification: core selection 78 passed; targeted Pre-IPO/KG/contracts 50 passed; final project_ops smoke 53 passed; TypeScript noEmit passed. Counts overlap.
+- Live standalone KG and PDF drawer screenshots saved and visually checked. Browser CORS errors coexist with positive audit labels. Supplied admin login rejected; no four-profile authenticated acceptance claim.
+- Production source preserved. Added review/probe artifacts and installed missing local review dependencies. HEAD changed externally from 86b3c6f1 to 17ab39fd during review; DB already dirty and hash changed during session, so no immutable-release certification.
+- Yash224 sibling source review pending workspace-boundary verification from user.
+
+## 2026-11-19 — Bounded Codex export review loop
+- Executed readiness, adversarial export review, one red/green repair, and post-fix probes. Report: docs/reviews/CODEX_EXPORT_REVIEW_LOOP_2026-11-19.md; reusable workflow: docs/CODEX_EXPORT_REVIEW_LOOP.md.
+- Repaired unavailable-persistence fail-open behavior in models/pre_ipo_capability_gate.py. Red: 6 failed/1 passed; green and focused regressions: 30 passed in 2.59s with disposable DB and approved execution escalation for Windows pytest temp ACL failures.
+- Five other confirmed bypass/identity findings remain open; no global security clearance or authenticated browser claim. Production database SHA-256 stayed 31BF487868D8D9A74E2D21086A522E2FF46A340B8FF42AC28351C699D70DD5B1 (already different from historical reference). No push/deploy.

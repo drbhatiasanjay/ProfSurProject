@@ -72,11 +72,11 @@ export const CompactCockpitHUD: React.FC<CompactCockpitHUDProps> = ({
   return (
     <div className="sticky top-0 z-30 bg-[#090D12]/95 backdrop-blur-md border-b border-[#1E2B3E] shadow-md transition-all shrink-0">
       {/* 46px Compact Telemetry HUD Ribbon */}
-      <div className="px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
-        {/* Left Section: Issuer, Route, Price, Dickinson */}
-        <div className="flex items-center gap-2 flex-wrap">
+      <div className="px-3 py-1.5 flex items-center justify-between gap-2 text-xs font-mono flex-wrap">
+        {/* Unified Flow: Identity, Deal Integrity, Quarantined & Micro-Towers */}
+        <div className="flex items-center gap-2 flex-wrap flex-1 min-w-0">
           {/* Symbol Pill */}
-          <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700 text-cyan-300 font-bold">
+          <span className="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-700 text-cyan-300 font-bold shrink-0">
             {offer?.symbol || 'NTPCGREEN'}
           </span>
 
@@ -139,13 +139,10 @@ export const CompactCockpitHUD: React.FC<CompactCockpitHUDProps> = ({
               <span>QUARANTINED</span>
             </button>
           )}
-        </div>
 
-        {/* Right Section: 3 Micro-Towers Telemetry, Tri-State Ledger & Expand Toggle */}
-        <div className="flex items-center gap-2.5">
-          {/* Micro-Tower 1 Telemetry */}
+          {/* Micro-Tower 1 Telemetry (Now flows right after Quarantined) */}
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold hidden lg:inline border ${
+            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
               freshPct === 100
                 ? 'bg-emerald-950/60 border-emerald-800 text-emerald-400'
                 : 'bg-amber-950/60 border-amber-800 text-amber-400'
@@ -156,7 +153,7 @@ export const CompactCockpitHUD: React.FC<CompactCockpitHUDProps> = ({
 
           {/* Micro-Tower 2 Telemetry */}
           <span
-            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold hidden lg:inline border ${
+            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
               isUnpriced
                 ? 'bg-blue-950/60 border-blue-800 text-blue-300'
                 : 'bg-rose-950/60 border-rose-800 text-rose-300'
@@ -166,11 +163,11 @@ export const CompactCockpitHUD: React.FC<CompactCockpitHUDProps> = ({
           </span>
 
           {/* Micro-Tower 3 Telemetry */}
-          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold hidden xl:inline border bg-amber-950/60 border-amber-800 text-amber-300">
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold border bg-amber-950/60 border-amber-800 text-amber-300">
             T3: 180D Cliff
           </span>
 
-          <span className="text-slate-600 hidden lg:inline">|</span>
+          <span className="text-slate-600 hidden sm:inline">|</span>
 
           {/* Tri-State Ledger Counter Mini-Pill */}
           <div className="flex items-center gap-1 text-[10px] font-semibold">
@@ -184,10 +181,10 @@ export const CompactCockpitHUD: React.FC<CompactCockpitHUDProps> = ({
               🟠 {offer?.provenanceSummary?.reconfirmCount ?? (isContained ? 4 : 0)}
             </span>
           </div>
+        </div>
 
-          <span className="text-slate-600">|</span>
-
-          {/* Expand / Collapse Button */}
+        {/* Right Section: Pinned Expand/Collapse Button */}
+        <div className="flex items-center shrink-0 ml-auto">
           <button
             onClick={onToggleExpand}
             className={`px-2.5 py-1 rounded text-xs font-mono font-semibold flex items-center gap-1.5 cursor-pointer transition-all shadow-sm ${

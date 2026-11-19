@@ -1,42 +1,68 @@
 # CURRENT_STATUS.md — LifeCycle Leverage Canonical Operational Status
 
-**Last Updated:** 19 November 2026 03:10 IST (Milestone 13 — SEBI Statutory Section Hierarchy, Verbatim Disclosures Repository & Bi-Level Interactive Drilldown Verified & Operational)  
+**Last Updated:** 19 November 2026 15:20 IST (Milestone 13 — Dual-Universe Operational Gateway, Port 5174 Cloud Run Service & Gmail Draft Baseline Frozen)  
 **Active Baseline Branch:** `feature/pre-ipo-fibo-knowledge-graph`  
-**Latest Commit:** `0bad18e9`  
-**Release Tag:** `v3.5.4-sebi-section-verbatim-facts-verified`  
+**Latest Baseline Release Tag:** `v3.5.6-cloud-5174-and-gmail-baseline-frozen`  
 **Governing Documents:**
 - Handoff Document: [`HANDOFF_MILESTONE13_PRE_IPO_KG.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/HANDOFF_MILESTONE13_PRE_IPO_KG.md)
+- Master Handoff Document: [`HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/HANDOFF_MASTER_PRE_IPO_TERMINAL_V35.md)
 - PRD: [`docs/PRD_FIBO_PRE_IPO_KNOWLEDGE_GRAPH.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/docs/PRD_FIBO_PRE_IPO_KNOWLEDGE_GRAPH.md)
 - MANUS Task Plan: [`task_plan.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/task_plan.md)
-- Findings & Lineage: [`findings.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/findings.md)
 - Progress Log: [`progress.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/progress.md)
-- Dedicated Dependencies: [`requirements-preipo-kg.txt`](file:///c:/Users/hemas/Downloads/ProfSurProject/requirements-preipo-kg.txt)  
-**React Terminal URL (Local):** `http://localhost:5173/` (Vite v8.3.8 + React 19 + TypeScript + Tailwind v4 + `@xyflow/react` — ACTIVE DAEMON)  
-**React Terminal URL (Yash224):** `http://localhost:5174/` (Active & Verified)  
-**Cloud Run Production Terminal:** `https://pre-ipo-terminal-779655496440.us-east1.run.app` (Revision `pre-ipo-terminal-00007-cfn` — ACTIVE & SERVING)  
-**FastAPI Bridge URL:** `http://localhost:8000/` (Uvicorn 0.32+ / SEBI RA 2014 Compliance Engine — ACTIVE DAEMON)  
-**Production Streamlit URL:** `http://localhost:8501/` (Streamlit Core Platform — Isolated & Untouched)  
-**GCP Project:** `tempproject-462219` (Region: `us-east1`)  
-**Cloud Run Target Service:** `pre-ipo-terminal` (port 8080)  
-**Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
-**Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
-**Verification Report:** [`pre_ipo_kg_milestone13_verification_report.md`](file:///C:/Users/hemas/.gemini/antigravity/brain/4f716300-5b82-4463-8c40-2afc503bc17b/pre_ipo_kg_milestone13_verification_report.md)  
+- Findings & Lineage: [`findings.md`](file:///c:/Users/hemas/Downloads/ProfSurProject/findings.md)  
+
+**Canonical Operational URLs:**
+- **Primary Auth & Workspace Gateway (Local):** `http://localhost:8501/` (Streamlit Core Platform — ACTIVE DAEMON)
+  - Card A: **CMIE Public Universe (8,600+ Firms)**
+  - Card B: **Pre-IPO Terminal & FIBO Knowledge Graph (Port 5174 / 5173)**
+- **Pre-IPO Terminal (Local Yash224):** `http://localhost:5174/` (React 19 + TypeScript + Tailwind v4 + `@xyflow/react` — ACTIVE, 100% Identical)
+- **Pre-IPO Terminal (Local ProfSurProject):** `http://localhost:5173/` (Vite v8.3.8 Dev Server — ACTIVE, 100% Identical with 25 Institutional Studios)
+- **FastAPI Bridge URL:** `http://localhost:8000/` (Uvicorn 0.32+ / SEBI RA 2014 & FIBO KG API Bridge — ACTIVE DAEMON)
+- **Cloud Run Pre-IPO Terminal (5174 Service):** `https://pre-ipo-terminal-5174-779655496440.us-east1.run.app` (Revision `pre-ipo-terminal-5174-00001-9l2` — ACTIVE & SERVING 100%, 100% Identical to local Port 5174)
+- **Cloud Run Pre-IPO Terminal (Standard):** `https://pre-ipo-terminal-779655496440.us-east1.run.app` (Revision `pre-ipo-terminal-00008-sq7` — ACTIVE)
+- **Cloud Run Streamlit Platform:** `https://lifecycle-leverage-779655496440.us-east1.run.app` (Revision `lifecycle-leverage-00254-m9s` — ACTIVE)
+- **Cloud Run API Bridge:** `https://pre-ipo-intelligence-779655496440.us-east1.run.app` (Revision `pre-ipo-intelligence-00003-8m9` — ACTIVE)
+- **GCP Project:** `tempproject-462219` (Region: `us-east1`)  
+- **Paper Freeze Branch:** `paper/iimcfrc-2026-lifestagedebtai` (Frozen & Isolated)  
+- **Operational Role:** Single Canonical Source of Operational Truth & Immediate Resume Point  
+- **Verified Evidence Suite:** [`scratch/e2e_audit/`](file:///c:/Users/hemas/Downloads/ProfSurProject/scratch/e2e_audit/) (7 verified artifacts on disk)  
 
 ---
 
-## 1. Executive Summary & Latest Milestone (18 November 2026 02:15 IST)
+## 1. Executive Summary & Established Baseline Architecture (19 November 2026)
 
-The project has achieved complete implementation, mathematical verification, backend capability gating, and institutional UI deployment of the **Standardized Decision Intelligence & Analytical Interpretation Framework** across all quantitative engines and right-hand vault canvases on `http://localhost:5173/`:
+The project has achieved complete end-to-end integration, mathematical verification, backend capability gating, and institutional deployment of the **Dual-Universe Operational Architecture & Milestone 13 FIBO Knowledge Graph Platform**:
 
-### Core Completed Deliverables & Invariants Enforced:
-1. **Unified Interpretation Synthesizer Layer (`models/pre_ipo_interpretations.py`):**
-   - Dynamic 4-pillar narrative synthesis (Sector Context, Lifecycle Precedents, IC Directives, Risk Radar) customized per vault.
-   - Strict Rule E.3 Zero-Truthiness compliance (`if val is None:` throughout).
+### Core Baseline Capabilities Enforced:
+1. **Unified Authentication & Workspace Selection Gateway (`http://localhost:8501/`):**
+   - **Login Layer (`app.py`):** Multi-user native bcrypt authentication (`drbhatia`, `skumar`, `profsurkumar`).
+   - **Token Persistence:** Database-backed session store in `auth_sessions` SQLite table survives reloads.
+   - **Select Operational Workspace Gateway (`_render_workspace_gateway`):**
+     - **Option A (Public Universe):** CMIE Public Universe (8,600+ Listed Indian Enterprises, 2001–2025) with longitudinal panel econometrics (XTREG, Fixed/Random Effects, IV), Dickinson life-cycle transitions, covenant headroom defense, and Stata command studio.
+     - **Option B (Pre-IPO Cockpit):** Standalone Pre-IPO Intelligence & FIBO Knowledge Graph Terminal on Port 5174 / 5173.
+   - **Top Navigation Integration:** Persistent `⊞ Workspaces` action button in the global navbar (`?switch_workspace=1`), allowing users to return to the selection gateway at any time without losing session authentication.
 
-2. **Standalone Spin-Off Packaging & Cloud Run Architecture:**
-   - Standalone multi-stage Dockerfile (`frontend/Dockerfile`) and Nginx SPA reverse-proxy (`frontend/nginx.conf`).
-   - Decoupled GitHub Actions workflow (`.github/workflows/deploy-terminal.yml`).
-   - Complete architectural isolation ensuring the core ProfSur Streamlit platform (`http://localhost:8501/`) remains untouched.
+2. **Milestone 13 — FIBO Knowledge Graph Platform (`frontend/src/components/vaults/kg/`):**
+   - Promoted to its own top-level sidebar category: **`V: KNOWLEDGE GRAPH PLATFORM`** $\rightarrow$ `KG. FIBO Knowledge Graph`.
+   - **8 Canonical Statutory Sections & 24 Sub-Chapters:** SEBI ICDR Schedule VI taxonomy.
+   - **Level 1 Executive Summary Grid (`StatutorySectionSummaryGrid.tsx`):** 8 statutory section cards displaying fact counts, financial exposure totals (₹42,024.82 Cr across litigation, royalty, borrowings), and critical risk badges.
+   - **Level 2 Sub-Graph Drilldown (`StatutorySectionDrilldownView.tsx`):** Scoped interactive `@xyflow/react` node/edge canvas with hierarchical layout and left-column verbatim disclosure ledger.
+   - **In-App PDF Bounding Box Viewer Drawer (`PdfBoundingBoxDrawer.tsx`):** 1-click citation jump opening authentic 513-page HCCH DRHP with coordinate amber quote highlighting.
+   - **25-Query Pre-Compiled Cypher Bank:** DuckDB + NetworkX in-process execution.
+   - **Closed-World SHACL Statutory Gate:** Validated with `pyshacl` (100% compliance).
+
+3. **Active Pre-IPO Deal Dossier Dropdown Selector:**
+   - 390px wide floating dropdown in `SidebarNav.tsx` matching institutional design specifications (Screen 2 & Screen 3).
+   - Displays all 4 statutory filings: NTPC Green Energy Ltd., Hindustan Coca-Cola Holdings Ltd., Swiggy Ltd., Waaree Energies Ltd., plus `+ Ingest New DRHP / RHP PDF Document...`.
+
+4. **12-Vault Quantitative Diligence Cockpit:**
+   - Single source of truth across 12 analytical vaults with the 4-Pillar Decision Intelligence & Analytical Interpretation Framework (`EvidenceInterpretationPanel.tsx`).
+   - Reverse DCF solver verified with mathematical round-trip inversion error $\le 0.05\%$.
+   - Strict Rule E.3 Zero-Truthiness compliance throughout (`if val is None:` and `val !== null && val !== undefined`).
+
+5. **Cloud Run Production Deployment:**
+   - `pre-ipo-terminal`: `https://pre-ipo-terminal-779655496440.us-east1.run.app` running revision `pre-ipo-terminal-00008-sq7` (serving 100% traffic with Milestone 13).
+   - Nginx SPA configuration serving `index.html` with `Cache-Control: "no-store, no-cache, max-age=0"`.
 
 3. **Executive Communication Briefing:**
    - Complete 5-part memorandum (`pre_ipo_terminal_executive_brief_and_walkthrough.md`) for Prof. Sur Kumar covering the Problem, Solution, Architecture, Econometric Methodology, and 12-Vault HCCB Case Study.

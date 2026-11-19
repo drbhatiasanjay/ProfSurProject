@@ -46,6 +46,8 @@ docs/
 *.png
 *.jpg
 *.bak*
+*.duckdb*
+data/kg/*.duckdb*
 NUL
 
 # Secrets must NEVER be uploaded to Cloud Build or baked into images

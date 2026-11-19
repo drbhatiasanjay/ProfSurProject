@@ -1,14 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { StatutoryOfferDetails } from '../../types/terminal';
-import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
-import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
 import { Coins, Calculator, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight, Percent } from 'lucide-react';
 
 interface UnlistedArbitrageVaultProps {
   offer: StatutoryOfferDetails;
+  onOpenForensicDrawer?: (vaultId: string) => void;
 }
 
-export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ offer }) => {
+export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ offer, onOpenForensicDrawer }) => {
   const isHCCB = offer.symbol === 'HCCB' || offer.companyName.includes('Coca-Cola');
 
   // Ground truth Rule 11UA statutory Fair Market Value
@@ -23,18 +22,12 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
   const [holdingPeriodMonths, setHoldingPeriodMonths] = useState<number>(6);
   const [annualCarryCostPct, setAnnualCarryCostPct] = useState<number>(10.0);
   const [targetMarginOfSafetyPct, setTargetMarginOfSafetyPct] = useState<number>(15.0);
-  
-  // Discriminated union for tax selection state machine
-  type TaxRegimeSelection =
-    | { mode: 'AUTO' }
-    | { mode: 'MANUAL'; regime: 'STCG' | 'LTCG' };
-
-  const [taxSelection, setTaxSelection] = useState<TaxRegimeSelection>({ mode: 'AUTO' });
+  const [isTaxRegimeOverridden, setIsTaxRegimeOverridden] = useState<boolean>(false);
+  const [overriddenTaxRegime, setOverriddenTaxRegime] = useState<'STCG' | 'LTCG'>('STCG');
 
   // Single source of truth: deterministically derive tax regime unless explicitly overridden
   const autoDerivedTaxRegime: 'STCG' | 'LTCG' = holdingPeriodMonths >= ltcgThresholdMonths ? 'LTCG' : 'STCG';
-  const isTaxRegimeOverridden = taxSelection.mode === 'MANUAL';
-  const taxRegime: 'STCG' | 'LTCG' = taxSelection.mode === 'MANUAL' ? taxSelection.regime : autoDerivedTaxRegime;
+  const taxRegime: 'STCG' | 'LTCG' = isTaxRegimeOverridden ? overriddenTaxRegime : autoDerivedTaxRegime;
 
   // Mathematical solver with strict Rule E.3 zero-truthiness
   const model = useMemo(() => {
@@ -102,7 +95,7 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
       {/* Top Banner */}
-      <div className="rounded-xl border border-[#223044] bg-[#0E1522] p-5 shadow-lg">
+      <div id="module-unlisted-bridge" className="rounded-xl border border-slate-700/80 border-t-2 border-t-cyan-500 bg-[#0C1322] p-5 shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#1E2B3E]">
           <div>
             <div className="flex items-center gap-2.5">
@@ -116,7 +109,7 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
             </p>
           </div>
 
-          {/* Mathematical Inversion Audit Pill (Rule E.4) */}
+          {/* Mathematical Inversion Audit Pill & Forensic Drawer Trigger */}
           <div className="flex items-center gap-2">
             <span className={`px-3 py-1.5 rounded-lg border font-mono text-xs font-bold flex items-center gap-1.5 ${
               model.isRoundTripInverted
@@ -126,6 +119,15 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
               INVERSION RESIDUAL: {model.roundTripTolerancePct.toFixed(4)}% (&le; 0.05% OK)
             </span>
+
+            <button
+              onClick={() => onOpenForensicDrawer?.('unlisted_arbitrage')}
+              className="px-2.5 py-1.5 rounded bg-amber-950/80 border border-amber-700/80 text-amber-300 font-mono text-xs font-bold flex items-center gap-1.5 hover:bg-amber-900 transition-colors cursor-pointer shadow-sm ml-1"
+              title="Open Unlisted Arbitrage & Tax Drag Diligence Drawer"
+            >
+              <span>Forensic Diligence</span>
+              <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+            </button>
           </div>
         </div>
 
@@ -251,10 +253,9 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
                   checked={isTaxRegimeOverridden}
                   onChange={(e) => {
                     const checked = e.target.checked;
+                    setIsTaxRegimeOverridden(checked);
                     if (checked) {
-                      setTaxSelection({ mode: 'MANUAL', regime: autoDerivedTaxRegime });
-                    } else {
-                      setTaxSelection({ mode: 'AUTO' });
+                      setOverriddenTaxRegime(autoDerivedTaxRegime);
                     }
                   }}
                   className="rounded border-[#223044] bg-[#101620] text-cyan-500 focus:ring-0 focus:ring-offset-0 w-3.5 h-3.5 accent-cyan-500 cursor-pointer"
@@ -267,7 +268,7 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
               <button
                 type="button"
                 disabled={!isTaxRegimeOverridden}
-                onClick={() => setTaxSelection({ mode: 'MANUAL', regime: 'STCG' })}
+                onClick={() => isTaxRegimeOverridden && setOverriddenTaxRegime('STCG')}
                 className={`p-2.5 rounded-lg border text-xs font-mono transition-colors text-left ${
                   taxRegime === 'STCG'
                     ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200 font-bold shadow-[0_0_10px_rgba(6,182,212,0.15)]'
@@ -289,7 +290,7 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
               <button
                 type="button"
                 disabled={!isTaxRegimeOverridden}
-                onClick={() => setTaxSelection({ mode: 'MANUAL', regime: 'LTCG' })}
+                onClick={() => isTaxRegimeOverridden && setOverriddenTaxRegime('LTCG')}
                 className={`p-2.5 rounded-lg border text-xs font-mono transition-colors text-left ${
                   taxRegime === 'LTCG'
                     ? 'bg-cyan-950/70 border-cyan-500 text-cyan-200 font-bold shadow-[0_0_10px_rgba(6,182,212,0.15)]'
@@ -336,7 +337,7 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
         </div>
 
         {/* Right: Forensic Waterfall & Section 56 Notice */}
-        <div className="lg:col-span-7 rounded-xl border border-[#223044] bg-[#0E1522] p-5 space-y-4">
+        <div id="module-unlisted-tax" className="lg:col-span-7 rounded-xl border border-slate-700/80 border-t-2 border-t-amber-400 bg-[#0C1322] p-5 shadow-xl space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-[#1E2B3E]">
             <span className="text-xs font-mono font-bold text-slate-200 uppercase tracking-wider">
               Statutory Cost Waterfall & Section 56(2)(x) Exposure
@@ -399,26 +400,27 @@ export const UnlistedArbitrageVault: React.FC<UnlistedArbitrageVaultProps> = ({ 
         </div>
       </div>
 
-      {/* Unified Decision Intelligence & Action Panel */}
-      {offer.interpretations?.lockin_supply_cliff && (
-        <EvidenceInterpretationPanel
-          interpretation={offer.interpretations.lockin_supply_cliff}
-          title="Vault 2 / 9: Lock-In Cliff & Section 56(2)(x) Tax Drag Intelligence"
-        />
-      )}
-
-      {/* Expandable 4-Pillar Narrative Drawer */}
-      <AnalystInsightDrawer
-        title="Unlisted Arbitrage & Tax Friction Synthesizer"
-        offer={offer}
-        vaultId="unlisted_arbitrage"
-        narrative={{
-          sectorContext: "Pre-IPO unlisted secondary trading in India frequently trades at 15-30% premium to prospective RHP price bands due to limited retail float availability, exposing late entrants to negative listing arbitrage.",
-          lifecyclePrecedents: "Swiggy unlisted shares traded at ₹480-510 prior to RHP filing before the official price band was set at ₹371-390, inflicting a 23% immediate pre-listing mark-to-market haircut on grey market purchasers.",
-          icDirectives: "Cap maximum unlisted entry price at 0.85x of lowest DCF fair value estimate. Never purchase unlisted shares without audited Rule 11UA valuation certificates to prevent Section 56 tax assessments.",
-          riskRadar: "Section 56(2)(x) creates immediate cash tax liability upon share transfer before any listing liquidity is achieved. 6-month pre-IPO lock-in delays realization."
-        }}
-      />
+      {/* High-Density Forensic Directive Banner (Methodology ⓘ Pattern) */}
+      <div className="p-4 rounded-xl bg-[#0E1624] border border-[#1E2B3E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md mt-6">
+        <div className="text-xs space-y-1">
+          <div className="flex items-center gap-2 font-mono font-bold">
+            <span className="px-2 py-0.5 rounded text-[10px] bg-amber-950 border border-amber-700 text-amber-300">
+              UNLISTED: ₹115.00 (+35.3% vs FMV)
+            </span>
+            <span className="text-amber-400">SECTION 56(2)(x) TAX DRAG &amp; 6-MONTH LOCK-IN BRIDGE</span>
+          </div>
+          <p className="text-slate-300 leading-relaxed">
+            Unlisted price ₹115 exceeds Rule 11UA FMV (₹85), providing Section 56 safe harbor. However, holding carry (10%) and 20% STCG tax require a ₹121.25 post-tax listing exit. Underwriters recommend public book subscription.
+          </p>
+        </div>
+        <button
+          onClick={() => onOpenForensicDrawer?.('unlisted_arbitrage')}
+          className="px-3 py-2 rounded-lg text-xs font-mono font-bold bg-[#142032] hover:bg-[#1C2C45] text-amber-300 border border-amber-800 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+        >
+          <span>Full Arbitrage &amp; Tax Proof</span>
+          <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+        </button>
+      </div>
     </div>
   );
 };

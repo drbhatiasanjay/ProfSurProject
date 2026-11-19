@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { RedFlagItem, StatutoryOfferDetails } from '../../types/terminal';
-import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
-import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
 import { AlertOctagon, CheckCircle2, AlertTriangle, ShieldAlert, FileText, ArrowUpRight } from 'lucide-react';
 
 interface RedFlagScannerVaultProps {
   offer: StatutoryOfferDetails;
+  onOpenForensicDrawer?: (vaultId: string) => void;
 }
 
-export const RedFlagScannerVault: React.FC<RedFlagScannerVaultProps> = ({ offer }) => {
+export const RedFlagScannerVault: React.FC<RedFlagScannerVaultProps> = ({ offer, onOpenForensicDrawer }) => {
   const isHCCB = offer.symbol === 'HCCB' || offer.companyName.includes('Coca-Cola');
 
   // Ground truth flags evaluated for the active dossier
@@ -149,13 +148,13 @@ export const RedFlagScannerVault: React.FC<RedFlagScannerVaultProps> = ({ offer 
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
       {/* Top Banner / Radar Summary Card */}
-      <div className="rounded-xl border border-[#223044] bg-[#0E1522] p-5 shadow-lg">
+      <div id="module-red-flag-triage" className="rounded-xl border border-slate-700/80 border-t-2 border-t-rose-500 bg-[#0C1322] p-5 shadow-xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#1E2B3E]">
           <div>
             <div className="flex items-center gap-2.5">
               <ShieldAlert className="w-5 h-5 text-rose-400" />
               <h2 className="text-base font-bold text-slate-100 font-mono tracking-wide">
-                VAULT 8: 6-RULE RED-FLAG GOVERNANCE RADAR
+                VAULT 6: 6-RULE RED-FLAG GOVERNANCE RADAR
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-1 font-mono">
@@ -163,7 +162,7 @@ export const RedFlagScannerVault: React.FC<RedFlagScannerVaultProps> = ({ offer 
             </p>
           </div>
 
-          {/* Tri-State Pillar Badges */}
+          {/* Tri-State Pillar Badges & Action Trigger */}
           <div className="flex items-center gap-2">
             <span className="px-3 py-1.5 rounded-lg bg-rose-950/70 border border-rose-800 text-rose-300 font-mono text-xs font-bold flex items-center gap-1.5">
               <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
@@ -177,6 +176,15 @@ export const RedFlagScannerVault: React.FC<RedFlagScannerVaultProps> = ({ offer 
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
               {clearCount} CLEAR
             </span>
+
+            <button
+              onClick={() => onOpenForensicDrawer?.('red_flag_scanner')}
+              className="px-2.5 py-1.5 rounded bg-rose-950/80 border border-rose-700/80 text-rose-300 font-mono text-xs font-bold flex items-center gap-1.5 hover:bg-rose-900 transition-colors cursor-pointer shadow-sm ml-1"
+              title="Open Red-Flag Governance & Forensic Evidence Drawer"
+            >
+              <span>Forensic Diligence</span>
+              <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+            </button>
           </div>
         </div>
 
@@ -285,34 +293,27 @@ export const RedFlagScannerVault: React.FC<RedFlagScannerVaultProps> = ({ offer 
         </div>
       </div>
 
-      {/* Unified Decision Intelligence & Action Panel */}
-      {offer.interpretations?.forensic_red_flags && (
-        <EvidenceInterpretationPanel
-          interpretation={offer.interpretations.forensic_red_flags}
-          title="Vault 8: Forensic Governance & Red-Flag Audit Clearance"
-        />
-      )}
-
-      {/* Expandable 4-Pillar Narrative Drawer */}
-      <AnalystInsightDrawer
-        title="Red-Flag Governance & Forensic Accounting Synthesizer"
-        offer={offer}
-        vaultId="red_flags"
-        narrative={{
-          sectorContext: isHCCB
-            ? "Indian soft drinks sector features high capex and intense seasonal distributor financing. RPT leakage to Coca-Cola parent is structural across global bottlers but requires clear governance oversight."
-            : "Utility-scale green energy developers face elongated debtor realization from State DISCOMs, temporarily depressing CFO/EBITDA without implying revenue fabrication.",
-          lifecyclePrecedents: isHCCB
-            ? "Varun Beverages exhibited high promoter royalty disclosures during 2016 IPO, which normalized as territorial volume scale diluted corporate parent allocations."
-            : "Adani Green Energy (FY18) listed with 0.38x CFO/EBITDA during peak solar asset commissioning, later rebounding to 0.72x at commercial operation date.",
-          icDirectives: isHCCB
-            ? "Require covenant cap on maximum royalty rate escalations. Mandate independent audit confirmation of concentrate import transfer pricing under Section 92CA."
-            : "Approve 100% Primary issue structure. Monitor DISCOM payment delays via monthly billing escrow certificates.",
-          riskRadar: isHCCB
-            ? "Triggered: 100% OFS proceeds leave ₹0 in operating treasury. RPT outflows at 14.2% require mandatory Audit Committee super-majority approval."
-            : "Triggered: Upper Band ₹108 is a 10.8x step-up over 18M WACA. Risk of post-lockin selling pressure from pre-IPO investors."
-        }}
-      />
+      {/* High-Density Forensic Directive Banner (Methodology ⓘ Pattern) */}
+      <div className="p-4 rounded-xl bg-[#0E1624] border border-[#1E2B3E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md mt-6">
+        <div className="text-xs space-y-1">
+          <div className="flex items-center gap-2 font-mono font-bold">
+            <span className="px-2 py-0.5 rounded text-[10px] bg-rose-950 border border-rose-700 text-rose-300">
+              100% OFS EXIT &bull; RPT 14.2%
+            </span>
+            <span className="text-rose-400">RED-FLAG GOVERNANCE AUDIT &amp; CLEARANCE</span>
+          </div>
+          <p className="text-slate-300 leading-relaxed">
+            100% Secondary OFS cash exit leaves ₹0 in operating treasury. RPT concentrate purchases (₹1,820 Cr) require minority shareholder approval and mandatory audit committee pricing indexation covenants.
+          </p>
+        </div>
+        <button
+          onClick={() => onOpenForensicDrawer?.('red_flag_scanner')}
+          className="px-3 py-2 rounded-lg text-xs font-mono font-bold bg-[#142032] hover:bg-[#1C2C45] text-rose-300 border border-rose-800 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+        >
+          <span>Full Governance Proof &amp; Covenants</span>
+          <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+        </button>
+      </div>
     </div>
   );
 };

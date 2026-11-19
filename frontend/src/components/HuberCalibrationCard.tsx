@@ -1,33 +1,76 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HuberCalibrationResults } from '../types/terminal';
-import { Calculator, AlertTriangle, ShieldAlert, CheckCircle2, Binary } from 'lucide-react';
+import { Calculator, AlertTriangle, ShieldAlert, CheckCircle2, Binary, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface HuberCalibrationCardProps {
   calibration: HuberCalibrationResults;
+  onOpenAlmanac?: (methodologyId?: string) => void;
 }
 
-export const HuberCalibrationCard: React.FC<HuberCalibrationCardProps> = ({ calibration }) => {
+export const HuberCalibrationCard: React.FC<HuberCalibrationCardProps> = ({ calibration, onOpenAlmanac }) => {
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+
   return (
-    <div className="rounded-lg border border-[#223044] bg-[#101620] p-5 shadow-sm space-y-4">
+    <div
+      id="module-huber-calibration"
+      className="rounded-xl border border-slate-700/80 border-t-2 border-t-purple-500 bg-[#0C1322] p-5 shadow-xl transition-all space-y-4"
+    >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#1D2838]">
-        <div className="flex items-center gap-2">
-          <Calculator className="w-4 h-4 text-rose-400" />
-          <h2 className="text-sm font-semibold tracking-wider text-slate-100 uppercase font-mono">
-            Huber Robust M-Estimator & DRHP Peer Selection Bias
-          </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-purple-950/80 border border-purple-800/60 text-purple-400">
+            <Calculator className="w-4 h-4" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-purple-950 text-purple-300 border border-purple-800">
+                MODULE 01
+              </span>
+              <h2 className="text-sm font-semibold tracking-wider text-slate-100 uppercase font-mono">
+                Huber Robust M-Estimator &amp; DRHP Peer Selection Bias
+              </h2>
+            </div>
+            <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+              Bounded-influence regression mitigating cherry-picked peer multiple bias
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-xs font-mono">
-          <span className="text-slate-500">NORM:</span>
-          <span className="text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800">
-            HuberT(t = 1.345)
-          </span>
-          <span className="text-slate-500 ml-2">ROBUST R²:</span>
-          <span className="text-slate-200">{calibration.rSquaredRobust.toFixed(3)}</span>
+
+        <div className="flex items-center gap-3">
+          {onOpenAlmanac && (
+            <button
+              onClick={() => onOpenAlmanac('huber_robust_regression')}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-purple-950/80 border border-purple-700 hover:bg-purple-900 text-xs text-purple-300 font-mono font-bold transition-colors cursor-pointer shadow-sm"
+              title="View Huber M-Estimator Equation & Methodology"
+            >
+              <Calculator className="w-3.5 h-3.5 text-purple-400" />
+              <span>METHODOLOGY ⓘ</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <span className="text-slate-500">NORM:</span>
+            <span className="text-cyan-300 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800">
+              HuberT(t = 1.345)
+            </span>
+            <span className="text-slate-500 ml-2">ROBUST R²:</span>
+            <span className="text-slate-200">{calibration.rSquaredRobust.toFixed(3)}</span>
+          </div>
+
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-slate-500 text-slate-400 hover:text-slate-200 text-xs font-mono transition-all cursor-pointer shadow-sm"
+            title={isCollapsed ? 'Expand Huber Cones' : 'Collapse Huber Cones'}
+          >
+            <span>{isCollapsed ? 'Expand' : 'Collapse'}</span>
+            {isCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+          </button>
         </div>
       </div>
 
-      {/* KPI Core Comparison Tiles */}
+      {!isCollapsed && (
+        <>
+          {/* KPI Core Comparison Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {/* Tile 1: Declared Peer Median */}
         <div className="p-3 rounded bg-[#090D12] border border-[#1E293B]">
@@ -142,6 +185,8 @@ export const HuberCalibrationCard: React.FC<HuberCalibrationCardProps> = ({ cali
           </p>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

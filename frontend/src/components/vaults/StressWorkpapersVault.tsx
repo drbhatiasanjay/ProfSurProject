@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { StatutoryOfferDetails } from '../../types/terminal';
-import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
 import { Layers, Activity, AlertTriangle, ShieldCheck, ArrowDownRight } from 'lucide-react';
 
 interface StressWorkpapersVaultProps {
@@ -155,18 +154,22 @@ export const StressWorkpapersVault: React.FC<StressWorkpapersVaultProps> = ({ of
         </div>
       </div>
 
-      {/* Expandable 4-Pillar Narrative Drawer */}
-      <AnalystInsightDrawer
-        title="2D Stress Resilience & Balance Sheet Buffer Synthesizer"
-        offer={offer}
-        vaultId="stress_workpapers"
-        narrative={{
-          sectorContext: "Commodity spikes in PET resin and aluminium cans represent the primary gross margin risk for Indian bottlers. Contractual pass-through mechanisms mitigate shocks with a 1-quarter lag.",
-          lifecyclePrecedents: "During the 2022 crude rally, Varun Beverages absorbed a 240 bps PET packaging cost shock while holding market share through territory scale and energy efficiency.",
-          icDirectives: "Stress-test debt covenants under a severe 20% input cost inflation scenario. Require minimum 2.0x ICR coverage under all simulated bivariate states.",
-          riskRadar: "Severe stress cell (-10% volume, +20% raw material) compresses operating EBITDA to single digits, challenging dividend payouts."
-        }}
-      />
+      {/* High-density Directive Banner */}
+      <div className="rounded-lg border border-cyan-900/50 bg-[#070e17] p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-950/80 text-cyan-300 border border-cyan-800">
+              STRESS BUFFER: +210 BPS
+            </span>
+            <span className="text-xs font-mono font-bold text-slate-200">
+              2D STRESS RESILIENCE &amp; BALANCE SHEET BUFFER
+            </span>
+          </div>
+          <p className="text-xs text-slate-400 font-mono leading-relaxed">
+            Commodity pass-through mechanisms mitigate shocks with a 1-quarter lag. Debt covenants withstand severe 20% input cost inflation with minimum 2.0x ICR coverage.
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

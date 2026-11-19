@@ -8,7 +8,9 @@ import {
   SEBIComplianceRecord,
   ComprehensiveEconometricSuiteData,
   AnalyticalInterpretation,
-  ProvenanceField
+  ProvenanceField,
+  TemporalGraphMutation,
+  TemporalGraphDiffResult
 } from '../types/terminal';
 import { getCanonical84ProvenanceFallback } from './canonicalProvenance';
 
@@ -2695,4 +2697,56 @@ export async function downloadInvestmentMemoPDF(symbol: string = 'HCCH'): Promis
   link.click();
   document.body.removeChild(link);
 }
+
+// ==========================================
+// MILESTONE 19: BI-TEMPORAL KNOWLEDGE GRAPH API SERVICES
+// ==========================================
+
+export async function fetchTemporalVersions(symbol: string = 'HCCH'): Promise<any[]> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/temporal/versions?symbol=${encodeURIComponent(symbol)}`);
+    if (!res.ok) throw new Error('Failed to fetch temporal filing versions');
+    return await res.json();
+  } catch (err) {
+    console.error('fetchTemporalVersions error:', err);
+    return [];
+  }
+}
+
+export async function fetchTemporalDiff(
+  symbol: string = 'HCCH',
+  baseVersion: string = 'DRHP',
+  targetVersion: string = 'RHP'
+): Promise<TemporalGraphDiffResult | null> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(
+      `${baseUrl}/api/pre-ipo/kg/temporal/diff?symbol=${encodeURIComponent(symbol)}&base_version=${encodeURIComponent(baseVersion)}&target_version=${encodeURIComponent(targetVersion)}`
+    );
+    if (!res.ok) throw new Error(`Temporal diff failed: HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('fetchTemporalDiff error:', err);
+    return null;
+  }
+}
+
+export async function fetchVerbatimRedlineSnippet(
+  mutationId: string,
+  symbol: string = 'HCCH'
+): Promise<TemporalGraphMutation | null> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(
+      `${baseUrl}/api/pre-ipo/kg/temporal/verbatim-redline?mutation_id=${encodeURIComponent(mutationId)}&symbol=${encodeURIComponent(symbol)}`
+    );
+    if (!res.ok) throw new Error(`Verbatim snippet failed: HTTP ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    console.error('fetchVerbatimRedlineSnippet error:', err);
+    return null;
+  }
+}
+
 

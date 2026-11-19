@@ -267,8 +267,15 @@ def assert_export_allowed(
                 from db import get_connection
                 db_conn = get_connection()
                 close_after = True
-            except Exception:
-                db_conn = None
+            except Exception as exc:
+                raise ExportBlockedError(
+                    "Export blocked: persistence is unavailable; snapshot verification is required."
+                ) from exc
+
+        if db_conn is None:
+            raise ExportBlockedError(
+                "Export blocked: persistence is unavailable; snapshot verification is required."
+            )
 
         if db_conn is not None:
             try:
@@ -324,6 +331,12 @@ def assert_export_allowed(
                     raise ExportBlockedError(
                         f"Export blocked: provided snapshot hash '{snapshot_hash}' does not match persisted hash '{persisted_hash}'."
                     )
+            except ExportBlockedError:
+                raise
+            except Exception as exc:
+                raise ExportBlockedError(
+                    "Export blocked: persistence verification failed; snapshot could not be verified."
+                ) from exc
             finally:
                 if close_after and db_conn:
                     db_conn.close()

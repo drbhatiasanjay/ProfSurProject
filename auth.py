@@ -128,6 +128,13 @@ def ensure_auth_tables_on_conn(conn: sqlite3.Connection) -> None:
             created_at INTEGER NOT NULL
         );
         CREATE INDEX IF NOT EXISTS idx_auth_challenges_user ON auth_challenges(user_id, purpose, created_at DESC);
+        CREATE TABLE IF NOT EXISTS auth_sessions (
+            token TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES auth_users(id) ON DELETE CASCADE,
+            expires_at INTEGER NOT NULL,
+            created_at INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_auth_sessions_token ON auth_sessions(token, expires_at);
         """
     )
     cur = conn.execute("PRAGMA table_info(auth_users)")
@@ -488,6 +495,62 @@ def authenticate(identifier: str, password: str):
         )
         conn.commit()
         return {"id": user["id"], "username": user["username"], "email": user["email"], "role": user["role"]}
+    finally:
+        conn.close()
+
+
+SESSION_TTL_SECONDS = 24 * 60 * 60  # 24 hours
+
+
+def create_session(user_id: str) -> str:
+    token = secrets.token_urlsafe(32)
+    now = int(time())
+    expires_at = now + SESSION_TTL_SECONDS
+    conn = db.get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO auth_sessions (token, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)",
+            (token, user_id, expires_at, now),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return token
+
+
+def get_session_user(token: str):
+    if not token or len(token) < 20:
+        return None
+    now = int(time())
+    conn = db.get_connection()
+    try:
+        conn.row_factory = sqlite3.Row
+        sess = conn.execute(
+            "SELECT s.token, s.expires_at, u.id, u.username, u.email, u.role, u.status "
+            "FROM auth_sessions s "
+            "JOIN auth_users u ON s.user_id = u.id "
+            "WHERE s.token = ? AND s.expires_at > ? AND u.status = 'active'",
+            (token, now),
+        ).fetchone()
+        if not sess:
+            return None
+        return {
+            "id": sess["id"],
+            "username": sess["username"],
+            "email": sess["email"],
+            "role": sess["role"],
+        }
+    finally:
+        conn.close()
+
+
+def revoke_session(token: str) -> None:
+    if not token:
+        return
+    conn = db.get_connection()
+    try:
+        conn.execute("DELETE FROM auth_sessions WHERE token = ?", (token,))
+        conn.commit()
     finally:
         conn.close()
 

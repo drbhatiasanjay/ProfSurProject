@@ -106,29 +106,95 @@ All 3 visual artifacts were captured live against `http://localhost:5173/` and v
 
 ---
 
-## 6. Active Daemons & Port Configuration
+## 6. Local End-to-End Application Entrypoints & Port Baseline
 
-| Port | Service | Process / Task | URL |
-| :---: | :--- | :--- | :--- |
-| **8000** | FastAPI Pre-IPO Server | Task-2241 (Daemon) | `http://localhost:8000/` |
-| **5173** | React Terminal (ProfSurProject) | Vite v8.3.8 | `http://localhost:5173/` |
-| **5174** | React Terminal (Yash224) | Vite v8.3.8 | `http://localhost:5174/` |
-| **8501** | Streamlit Core Analytics | Production Engine | `http://localhost:8501/` |
+| Service / Layer | Local URL | Status | Description & Purpose |
+| :--- | :--- | :---: | :--- |
+| **1. Primary Gateway & Auth (Streamlit)** | `http://localhost:8501/` | **ACTIVE (HTTP 200)** | **Start here.** Core login screen (`drbhatia` / `DemoUser123!`) $\to$ Select Operational Workspace Gateway (Card A: CMIE Public Universe vs. Card B: Pre-IPO Terminal). Persistent `⊞ Workspaces` top navbar button. |
+| **2. Authoritative Pre-IPO Terminal (Port 5174)** | `http://localhost:5174/` | **ACTIVE (HTTP 200)** | **Authoritative React 19 Cockpit** (`Yash224` build) with complete 8-Section Institutional Navigation, FIBO Knowledge Graph Platform, 25 institutional studios, 12 Vaults, and PDF drawer. |
+| **3. Pre-IPO Terminal (Port 5173)** | `http://localhost:5173/` | **ACTIVE (HTTP 200)** | **100% Identical Synchronized Cockpit** (`ProfSurProject\frontend` build). Fully synchronized with all 25 institutional studios, 8-Section hierarchy, and FIBO Knowledge Graph. |
+| **4. FastAPI Backend Bridge & Swagger** | `http://localhost:8000/docs` | **ACTIVE (HTTP 200)** | Interactive Swagger UI for SEBI RA 2014 quantitative valuation APIs, 84-attribute schema, and Knowledge Graph endpoints. |
+| **5. Dedicated Cloud Run Service (5174)** | `https://pre-ipo-terminal-5174-779655496440.us-east1.run.app` | **ACTIVE (HTTP 200)** | Dedicated Cloud Run deployment of Port 5174 (Revision `00001-9l2`, serving 100% traffic). Verified live with Playwright on disk (`scratch/e2e_audit/cloud_5174_live_verified.png`). |
+
+> [!NOTE]
+> **Full Port Synchronization (5173 & 5174 are now 100% IDENTICAL):**
+> Both `http://localhost:5173/` and `http://localhost:5174/` now compile and serve the exact same authoritative institutional codebase. All 25 institutional studios (`ConsultingStrategyStudio`, `CorporateFoundationsStudio`, `DiligenceMasterVerdictStudio`, `CrossVaultBSCMatrix`, `ExcelModelAuditStudio`, `EmpiricalStrategyMapDAG`, `ContagionShockModal`, `EVToEquityWaterfall`, etc.) and the 8-Section Navigation taxonomy are identical across both ports, backed by visual verification evidence (`scratch/e2e_audit/identical_audit_5173.png` and `identical_audit_5174.png`).
 
 ---
 
-## 7. Next Session Resume Instructions
+## 7. End-to-End Testing Walkthrough (Step-by-Step)
 
-When resuming:
-1. **Start Server Daemons (if restarted):**
+### Step 1: Login & Workspace Selection (`http://localhost:8501/`)
+1. Open `http://localhost:8501/` in your browser.
+2. Sign in using any configured test account:
+   - **Username:** `drbhatia` (Admin) · **Password:** `DemoUser123!`
+   - *(Alternative accounts: `skumar` / `DemoUser123!` or `profsurkumar` / `DemoUser123!`)*
+3. Once authenticated, you will land on the **Select Operational Workspace** screen:
+   - **Card A (CMIE Public Universe):** Click **`Launch CMIE Public Universe →`** to enter the longitudinal panel econometric dashboard across 8,600+ listed firms (2001–2025).
+   - **Card B (Pre-IPO Terminal & FIBO Knowledge Graph):** Click **`Launch Pre-IPO Terminal (localhost:5174) ↗`** to open the quantitative terminal in a new tab.
+   - *(Note: You can switch back to the Workspace Gateway anytime by clicking `⊞ Workspaces` in the top navigation bar).*
+
+### Step 2: Pre-IPO Terminal & Milestone 13 Knowledge Graph Verification (`http://localhost:5174/`)
+1. On `http://localhost:5174/`:
+2. **Active Deal Dossier Dropdown:** Click the company name in the top left (*NTPC Green Energy Ltd.* / *Hindustan Coca-Cola Holdings Ltd.*) to test the 390px floating selector displaying all 4 statutory filings and the `+ Ingest` shortcut.
+3. **FIBO Knowledge Graph Studio:** In the left sidebar, navigate to:
+   - **`V: KNOWLEDGE GRAPH PLATFORM`** $\to$ Click **`KG. FIBO Knowledge Graph`**.
+4. **Level 1 Summary Grid:** Inspect the 8 SEBI ICDR Schedule VI statutory cards, displaying fact counts and quantified exposure totals (**₹42,024.82 Cr** across litigation, royalty, and borrowings).
+5. **Level 2 Subgraph Drilldown:** Click **`Explore Sub-Graph`** on **Section VI (Legal, Tax & Other Statutory Disclosures)** to test the split-screen view:
+   - **Left side:** Verbatim disclosure cards (CESTAT dispute ₹4,455.47 Cr, 1,466 cheque bounce cases).
+   - **Right side:** Scoped interactive `@xyflow/react` node canvas.
+6. **In-App PDF Bounding Box Viewer Drawer:** Click the page pill (e.g. `p.379`) on any verbatim card to open the slide-over drawer showing the authentic 513-page DRHP with amber quote highlighting.
+
+### Step 3: Backend API Verification (`http://localhost:8000/`)
+1. Open `http://localhost:8000/api/pre-ipo/kg/sections` to view live aggregated statutory section metrics (8 sections, 19 facts, ₹42,024.82 Cr exposure).
+2. Open `http://localhost:8000/api/pre-ipo/market-status` to inspect the live 84-attribute provenance ledger and 4-pillar narrative interpretations feed.
+3. Open `http://localhost:8000/docs` to test endpoints interactively via Swagger UI.
+
+---
+
+## 8. Stakeholder Communication & Gmail Draft Baseline
+
+- **Thread ID:** `1a1da7134d838b91` (Chained reply to `1a1ee66dbc4e4a6f`)
+- **Recipients:** `Surendra Kumar <profskumar@gmail.com>`, `Suraj Malik <suraj@legacygrowth.com>`
+- **Subject:** `Pre-IPO App Update @ 19 Nov 2026`
+- **Saved Draft ID:** `r-1954404084129626825` (Verified in Gmail via `gmail readonly get-draft r-1954404084129626825`)
+- **Authentication Verified for Stakeholders:**
+  - **Platform URL:** `https://lifecycle-leverage-779655496440.us-east1.run.app/`
+  - **Username:** `skumar` · **Password:** `Pass@123`
+  - **Visual Proof:** [`scratch/e2e_audit/cloud_skumar_authenticated.png`](file:///c:/Users/hemas/Downloads/ProfSurProject/scratch/e2e_audit/cloud_skumar_authenticated.png) (160 KB)
+- **Draft Highlights:**
+  1. Humanized tone (zero "I" / "we"), encouraging active testing and feedback.
+  2. Single login entrypoint leading to the **Operational Workspace Gateway** (Card A: CMIE vs. Card B: Pre-IPO).
+  3. **Hindustan Coca-Cola Holdings (513-Page DRHP)** highlighted as the primary showcase example (CESTAT excise dispute ₹4,455.47 Cr, 14.9% materiality breach, parent royalty drag, unlisted valuation arbitrage).
+  4. Complete left-panel breakdown of all 8 sections and 25 studios in Workspace B.
+
+---
+
+## 9. Next Session Resume Instructions & Invariants
+
+When resuming this session:
+1. **Server Daemons (Autonomous Management):**
+   - Streamlit Gateway: `http://localhost:8501/` (Daemon)
+   - Pre-IPO Terminal: `http://localhost:5174/` (Authoritative) and `http://localhost:5173/` (100% Identical)
+   - FastAPI Backend Bridge: `http://localhost:8000/` (Daemon)
+   - Start with:
+     ```bash
+     py -3.12 -m streamlit run app.py --server.port 8501 --server.headless true
+     python -m uvicorn api.server:app --port 8000 --host 127.0.0.1
+     npm --prefix frontend run dev
+     ```
+2. **Authoritative Port & Codebase Invariant:**
+   - Both `frontend/` (Port 5173) and `c:\Users\hemas\Downloads\Yash224\frontend` (Port 5174) are **100% synchronized** with all 25 institutional studios and the FIBO Knowledge Graph.
+   - When deploying to GCP Cloud Run, use the one-click script:
+     ```bash
+     python scripts/deploy_pre_ipo_terminal_5174.py
+     ```
+     or run `deploy_to_gcp_5174.bat` / `deploy_to_gcp_5174.ps1`.
+3. **Core Fast Test Suite:**
    ```bash
-   python -m uvicorn api.server:app --port 8000 --host 127.0.0.1
-   cd frontend && npm run dev
+   py -3.12 scripts/project_ops.py test --fast
    ```
-2. **Accessing the Knowledge Graph:**
-   - Open `http://localhost:5173/` or `http://localhost:5174/`.
-   - In the sidebar, click **`KG. FIBO Knowledge Graph`**.
-   - Browse the 8 SEBI sections or drill down into any section.
-3. **Upcoming Priorities:**
-   - Reshuffle Knowledge Graph Part to dedicated full-page view per user's directive.
-   - Ingest additional dossiers (Swiggy, NTPC Green, Waaree Energies) into the 8-section taxonomy.
+   *(53/53 passed in 16.63s).*
+4. **Academic Isolation Invariant:**
+   - Keep `paper/iimcfrc-2026-lifestagedebtai` completely untouched and frozen.
+

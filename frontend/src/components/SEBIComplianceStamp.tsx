@@ -16,7 +16,7 @@ export const SEBIComplianceStamp: React.FC<SEBIComplianceStampProps> = ({ compli
   };
 
   return (
-    <div className="rounded-lg border border-[#223044] bg-[#0C111A] p-5 shadow-sm space-y-4">
+    <div id="module-sebi-stamp" className="rounded-xl border border-slate-700/80 border-t-2 border-t-cyan-500 bg-[#0C1322] p-5 shadow-xl space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#1E293B]">
         <div className="flex items-center gap-2">

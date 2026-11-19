@@ -48,6 +48,18 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
     missingDataAndBlindSpots,
   } = interpretation;
 
+  // Resilient normalization for union types
+  const callToActionText = typeof callToAction === 'string'
+    ? callToAction
+    : (callToAction?.icDirective || callToAction?.verdict || callToAction?.allocationConstraint || 'No IC directive specified.');
+
+  const blindSpotsList: string[] = Array.isArray(missingDataAndBlindSpots)
+    ? missingDataAndBlindSpots
+    : [
+        ...(missingDataAndBlindSpots?.blindSpots || []),
+        ...(missingDataAndBlindSpots?.supplementaryDiligence || [])
+      ];
+
   // Semantic visual mapping for Polarity
   const getPolarityBadge = (p: Polarity) => {
     switch (p) {
@@ -192,7 +204,7 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
             </span>
           </div>
           <div className="text-xs sm:text-sm font-medium leading-snug pl-6 font-sans">
-            {callToAction}
+            {callToActionText}
           </div>
         </div>
 
@@ -205,11 +217,10 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
             <button
               type="button"
               onClick={() => setActiveShelfTab('method')}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeShelfTab === 'method'
-                  ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeShelfTab === 'method'
+                ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               <Calculator className="w-3.5 h-3.5 shrink-0" />
               <span>[ 📐 Method & Context ]</span>
@@ -217,11 +228,10 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
             <button
               type="button"
               onClick={() => setActiveShelfTab('drhp')}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeShelfTab === 'drhp'
-                  ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeShelfTab === 'drhp'
+                ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               <FileText className="w-3.5 h-3.5 shrink-0" />
               <span>[ 📑 Primary DRHP Evidence ]</span>
@@ -229,11 +239,10 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
             <button
               type="button"
               onClick={() => setActiveShelfTab('literature')}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                activeShelfTab === 'literature'
-                  ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${activeShelfTab === 'literature'
+                ? 'bg-cyan-950/90 text-cyan-300 border border-cyan-800/80 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+                }`}
             >
               <BookOpen className="w-3.5 h-3.5 shrink-0" />
               <span>[ 📚 Literature Standard ]</span>
@@ -409,7 +418,7 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
         {/* ─────────────────────────────────────────────────────────────
             COLLAPSIBLE MISSING DATA & SECTOR BLIND SPOTS
             ───────────────────────────────────────────────────────────── */}
-        {missingDataAndBlindSpots && missingDataAndBlindSpots.length > 0 && (
+        {blindSpotsList && blindSpotsList.length > 0 && (
           <div className="border border-slate-800/80 rounded-lg overflow-hidden">
             <button
               type="button"
@@ -418,18 +427,17 @@ export const EvidenceInterpretationPanel: React.FC<EvidenceInterpretationPanelPr
             >
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>Missing Data & Sector Blind Spots ({missingDataAndBlindSpots.length})</span>
+                <span>Missing Data & Sector Blind Spots ({blindSpotsList.length})</span>
               </div>
               <ChevronDown
-                className={`w-4 h-4 text-slate-400 transform transition-transform ${
-                  isBlindSpotsExpanded ? 'rotate-180' : ''
-                }`}
+                className={`w-4 h-4 text-slate-400 transform transition-transform ${isBlindSpotsExpanded ? 'rotate-180' : ''
+                  }`}
               />
             </button>
 
             {isBlindSpotsExpanded && (
               <div className="p-3 bg-slate-950/40 space-y-1.5 border-t border-slate-800/60">
-                {missingDataAndBlindSpots.map((spot: string, sIdx: number) => (
+                {blindSpotsList.map((spot: string, sIdx: number) => (
                   <div key={sIdx} className="flex items-start gap-2 text-xs text-slate-400 leading-snug">
                     <span className="text-amber-500 font-bold mt-0.5">•</span>
                     <span>{spot}</span>

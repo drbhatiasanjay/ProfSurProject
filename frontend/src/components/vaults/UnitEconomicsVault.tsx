@@ -1,40 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { StatutoryOfferDetails, AnalyticalInterpretation } from '../../types/terminal';
-import { EvidenceInterpretationPanel } from '../shared/EvidenceInterpretationPanel';
-import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
 import { Factory, TrendingUp, Truck, ShieldCheck, ExternalLink, Zap } from 'lucide-react';
 import { fetchPreIpoInterpretations } from '../../services/dataService';
 
 interface UnitEconomicsVaultProps {
   offer: StatutoryOfferDetails;
   onCitationClick?: (pageNumber: number, attributeId?: string) => void;
+  onOpenForensicDrawer?: (vaultId: string) => void;
 }
 
 export const UnitEconomicsVault: React.FC<UnitEconomicsVaultProps> = ({
   offer,
   onCitationClick,
+  onOpenForensicDrawer,
 }) => {
   const isHCCB = offer.symbol === 'HCCB' || offer.companyName.includes('Coca-Cola');
-  const [interpretations, setInterpretations] = useState<Record<string, AnalyticalInterpretation> | null>(() => offer.interpretations || null);
+  const [interpretations, setInterpretations] = useState<Record<string, AnalyticalInterpretation> | null>(null);
 
   useEffect(() => {
-    let isMounted = true;
-    if (offer.interpretations && Object.keys(offer.interpretations).length > 0) {
-      setInterpretations(offer.interpretations);
-      return;
-    }
     fetchPreIpoInterpretations(offer.symbol)
-      .then((data: Record<string, AnalyticalInterpretation>) => {
-        if (isMounted) setInterpretations(data);
-      })
-      .catch((err: unknown) => {
-        if (isMounted) console.error('Failed to load interpretations in UnitEconomicsVault:', err);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [offer.symbol, offer.interpretations]);
+      .then((data: Record<string, AnalyticalInterpretation>) => setInterpretations(data))
+      .catch((err: unknown) => console.error('Failed to load interpretations in UnitEconomicsVault:', err));
+  }, [offer.symbol]);
 
   // Operational metrics
   const installedCapacityCasesM = isHCCB ? 1450.0 : 420.0;
@@ -81,20 +68,31 @@ export const UnitEconomicsVault: React.FC<UnitEconomicsVaultProps> = ({
           </p>
         </div>
 
-        {/* Operating Sweet-Spot Badge */}
-        <div className="flex items-center gap-2 bg-[#121B2A] border border-emerald-800/60 px-3.5 py-2 rounded-lg">
-          <div className="text-right font-mono">
-            <div className="text-[10px] text-slate-500 uppercase">Capacity Efficiency</div>
-            <div className="text-xs font-bold text-emerald-400">
-              {utilizationPct.toFixed(1)}% (OPTIMAL SWEET SPOT)
+        {/* Operating Sweet-Spot Badge & Forensic Drawer Button */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-[#121B2A] border border-emerald-800/60 px-3.5 py-2 rounded-lg">
+            <div className="text-right font-mono">
+              <div className="text-[10px] text-slate-500 uppercase">Capacity Efficiency</div>
+              <div className="text-xs font-bold text-emerald-400">
+                {utilizationPct.toFixed(1)}% (OPTIMAL SWEET SPOT)
+              </div>
             </div>
+            <Zap className="w-5 h-5 text-emerald-400 shrink-0" />
           </div>
-          <Zap className="w-5 h-5 text-emerald-400 shrink-0" />
+
+          <button
+            onClick={() => onOpenForensicDrawer?.('unit_economics')}
+            className="px-2.5 py-2 rounded bg-emerald-950/80 border border-emerald-700/80 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-900 transition-colors cursor-pointer shadow-sm"
+            title="Open Unit Economics & Distribution Moat Diligence Drawer"
+          >
+            <span>Forensic Diligence</span>
+            <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+          </button>
         </div>
       </div>
 
       {/* 4 KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div id="module-unit-scale" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-[#0D131F] border border-[#223044] rounded-xl p-4">
           <div className="text-[11px] font-mono text-slate-400 uppercase tracking-wider mb-1">
             Installed Bottling Capacity
@@ -148,12 +146,11 @@ export const UnitEconomicsVault: React.FC<UnitEconomicsVaultProps> = ({
         </div>
       </div>
 
-      {/* Main Dual-Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (7 cols): Waterfall & Plant Footprint */}
-        <div className="lg:col-span-7 space-y-5">
-          {/* Unit Cost Structure Waterfall */}
-          <div className="bg-[#0D131F] border border-[#223044] rounded-xl p-5">
+      {/* Main 2-Column Operational Scale Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Unit Cost Structure Waterfall */}
+        <div id="module-unit-cost" className="bg-[#0C1322] border border-slate-700/80 border-t-2 border-t-indigo-500 rounded-xl p-5 shadow-xl flex flex-col justify-between">
+          <div>
             <h3 className="text-sm font-bold text-slate-200 font-mono mb-1">
               REVENUE WATERFALL & UNIT COST BREAKDOWN
             </h3>
@@ -192,9 +189,11 @@ export const UnitEconomicsVault: React.FC<UnitEconomicsVaultProps> = ({
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Plant Throughput Footprint */}
-          <div className="bg-[#0D131F] border border-[#223044] rounded-xl p-5">
+        {/* Plant Throughput Footprint */}
+        <div className="bg-[#0D131F] border border-[#223044] rounded-xl p-5 flex flex-col justify-between">
+          <div>
             <h3 className="text-sm font-bold text-slate-200 font-mono mb-1">
               REGIONAL BOTTLING THROUGHPUT FOOTPRINT
             </h3>
@@ -231,32 +230,29 @@ export const UnitEconomicsVault: React.FC<UnitEconomicsVaultProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Right Column (5 cols): Evidence Interpretation Panel */}
-        <div className="lg:col-span-5">
-          <EvidenceInterpretationPanel
-            interpretation={unitInterp}
-            title="Operational Scale Decision Intelligence"
-            onCitationClick={onCitationClick}
-          />
-        </div>
       </div>
 
-      {/* Narrative Drawer */}
-      <AnalystInsightDrawer
-        title="Institutional Scale Diligence & Distribution Moat"
-        offer={offer}
-        vaultId="unit_economics"
-        onCitationClick={onCitationClick}
-        narrative={{
-          sectorContext:
-            'The Indian packaged beverage sector requires extreme logistics density. Cold-chain distribution and route-to-market direct outlet coverage create an impenetrable barrier to entry against regional competitors.',
-          lifecyclePrecedents:
-            'Mature beverage giants maintaining 75%-85% plant utilization maximize return on invested capital (ROIC) while leaving sufficient flex capacity for the 45% summer peak volume spike without dilutive capital expenditures.',
-          riskRadar:
-            'Interim stub gross margin expansion (+120 bps) is verified against audited concentrate procurement pricing agreements with The Coca-Cola Company, eliminating predatory transfer pricing risks.',
-        }}
-      />
+      {/* High-Density Forensic Directive Banner (Methodology ⓘ Pattern) */}
+      <div className="p-4 rounded-xl bg-[#0E1624] border border-[#1E2B3E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md mt-6">
+        <div className="text-xs space-y-1">
+          <div className="flex items-center gap-2 font-mono font-bold">
+            <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950 border border-emerald-700 text-emerald-300">
+              78.5% CAPACITY SWEET SPOT
+            </span>
+            <span className="text-emerald-400">OPERATIONAL SCALE &amp; DIRECT DISTRIBUTION MOAT</span>
+          </div>
+          <p className="text-slate-300 leading-relaxed">
+            16 owned bottling factories operating at 78.5% utilization provide 311.8M cases of surge capacity for peak summer demand. 2.5M retail touchpoints and 780,000 cold-chain visicoolers create an insurmountable moat.
+          </p>
+        </div>
+        <button
+          onClick={() => onOpenForensicDrawer?.('unit_economics')}
+          className="px-3 py-2 rounded-lg text-xs font-mono font-bold bg-[#142032] hover:bg-[#1C2C45] text-emerald-300 border border-emerald-800 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+        >
+          <span>Full Operational Scale Proof</span>
+          <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+        </button>
+      </div>
     </div>
   );
 };

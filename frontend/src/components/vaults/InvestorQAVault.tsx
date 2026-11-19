@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { StatutoryOfferDetails } from '../../types/terminal';
-import { AnalystInsightDrawer } from '../AnalystInsightDrawer';
 import { HelpCircle, ChevronRight, ChevronDown, Users, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 interface InvestorQAVaultProps {
   offer: StatutoryOfferDetails;
+  onOpenForensicDrawer?: (vaultId: string) => void;
 }
 
-export const InvestorQAVault: React.FC<InvestorQAVaultProps> = ({ offer }) => {
+export const InvestorQAVault: React.FC<InvestorQAVaultProps> = ({ offer, onOpenForensicDrawer }) => {
   const isHCCB = offer.symbol === 'HCCB' || offer.companyName.includes('Coca-Cola');
 
   // Customer Concentration Shock Data (Gate 4.3)
@@ -84,14 +84,19 @@ export const InvestorQAVault: React.FC<InvestorQAVaultProps> = ({ offer }) => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans">
       {/* Top Header Card */}
-      <div className="rounded-xl border border-[#223044] bg-[#0E1522] p-5 shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[#1E2B3E]">
+      <div id="module-qa-concentration" className="rounded-xl border border-slate-700/80 border-t-2 border-t-cyan-500 bg-[#0C1322] p-5 shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div>
             <div className="flex items-center gap-2.5">
               <HelpCircle className="w-5 h-5 text-amber-400" />
-              <h2 className="text-base font-bold text-slate-100 font-mono tracking-wide">
-                VAULT 6: 14 INSTITUTIONAL INVESTOR Q&amp;A &amp; CONCENTRATION SHOCK
-              </h2>
+              <div className="flex items-center gap-2">
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
+                  MODULE 01
+                </span>
+                <h2 className="text-base font-bold text-slate-100 font-mono tracking-wide">
+                  VAULT 10: 14 INSTITUTIONAL INVESTOR Q&amp;A &amp; CONCENTRATION SHOCK
+                </h2>
+              </div>
             </div>
             <p className="text-xs text-slate-400 mt-1 font-mono">
               Adversarial Syndicate Defense &amp; Customer Churn Sensitivity · {offer.companyName}
@@ -102,6 +107,15 @@ export const InvestorQAVault: React.FC<InvestorQAVaultProps> = ({ offer }) => {
             <span className="px-3 py-1.5 rounded-lg bg-amber-950/70 border border-amber-800 text-amber-300 font-mono text-xs font-bold">
               TOP-10 CONCENTRATION: {concentrationData.top10Pct}%
             </span>
+
+            <button
+              onClick={() => onOpenForensicDrawer?.('investor_qa')}
+              className="px-2.5 py-1.5 rounded bg-amber-950/80 border border-amber-700/80 text-amber-300 font-mono text-xs font-bold flex items-center gap-1.5 hover:bg-amber-900 transition-colors cursor-pointer shadow-sm ml-1"
+              title="Open Investor Q&A & Stress Diligence Drawer"
+            >
+              <span>Forensic Diligence</span>
+              <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+            </button>
           </div>
         </div>
 
@@ -133,9 +147,18 @@ export const InvestorQAVault: React.FC<InvestorQAVaultProps> = ({ offer }) => {
         </div>
       </div>
 
+      <div className="flex items-center gap-2 pt-2">
+        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-950/80 text-indigo-300 border border-indigo-800">
+          MODULE 02
+        </span>
+        <span className="text-xs font-mono font-bold text-slate-200">
+          14 INSTITUTIONAL SYNDICATE QUESTIONS &amp; ANSWERS
+        </span>
+      </div>
+
       {/* 14 Question Accordion List */}
-      <div className="rounded-xl border border-[#223044] bg-[#0E1522] overflow-hidden shadow-lg">
-        <div className="px-5 py-3.5 border-b border-[#1E2B3E] flex items-center justify-between bg-[#121B29]">
+      <div id="module-qa-questions" className="rounded-xl border border-slate-700/80 border-t-2 border-t-indigo-500 bg-[#0C1322] overflow-hidden shadow-xl">
+        <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-[#121B29]">
           <span className="text-xs font-mono font-bold text-slate-200 uppercase tracking-wider">
             Key Institutional Syndicate Questions (Q01 - PX04)
           </span>
@@ -184,18 +207,27 @@ export const InvestorQAVault: React.FC<InvestorQAVaultProps> = ({ offer }) => {
         </div>
       </div>
 
-      {/* Expandable 4-Pillar Narrative Drawer */}
-      <AnalystInsightDrawer
-        title="Investor Q&amp;A &amp; Commercial Diligence Synthesizer"
-        offer={offer}
-        vaultId="investor_qa"
-        narrative={{
-          sectorContext: "Institutional roadshows in India focus overwhelmingly on customer churn defensibility and promoter alignment.",
-          lifecyclePrecedents: "During Swiggy's IPO, institutional Q&A centered on quick-commerce dark store unit economics (Instamart vs. Zepto/Blinkit).",
-          icDirectives: "Require signed management representation letters addressing all 14 questions before participating in pre-IPO anchor placement.",
-          riskRadar: "Top customer concentration over 50% exposes earnings to immediate contract renegotiation risk at contract renewal cycles."
-        }}
-      />
+      {/* High-Density Forensic Directive Banner (Methodology ⓘ Pattern) */}
+      <div className="p-4 rounded-xl bg-[#0E1624] border border-[#1E2B3E] flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md mt-6">
+        <div className="text-xs space-y-1">
+          <div className="flex items-center gap-2 font-mono font-bold">
+            <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-950 border border-cyan-700 text-cyan-300">
+              14 INSTITUTIONAL Q&amp;A CLEARANCE
+            </span>
+            <span className="text-cyan-400">CUSTOMER CHURN RESILIENCE &amp; UNDERWRITING STRESS DEFENSE</span>
+          </div>
+          <p className="text-slate-300 leading-relaxed">
+            40% customer defection stress test clears with resilient 12.8x interest coverage. Master bottler contract restricts syrup price escalation to CPI + 100 bps, protecting operating cash conversion.
+          </p>
+        </div>
+        <button
+          onClick={() => onOpenForensicDrawer?.('investor_qa')}
+          className="px-3 py-2 rounded-lg text-xs font-mono font-bold bg-[#142032] hover:bg-[#1C2C45] text-cyan-300 border border-cyan-800 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+        >
+          <span>Full Interrogatory Proof</span>
+          <span className="w-4 h-4 rounded-full bg-cyan-500 text-slate-950 flex items-center justify-center text-[10px] font-black">ⓘ</span>
+        </button>
+      </div>
     </div>
   );
 };
