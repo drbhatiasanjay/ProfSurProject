@@ -76,7 +76,7 @@ export const CMIEMacroWorkbench: React.FC<CMIEMacroWorkbenchProps> = ({
 
       <div className="p-6 space-y-6">
         {/* Section 1: Peer Multiples Grid */}
-        {cmieData && (
+        {cmieData && Array.isArray(cmieData.peers) && cmieData.peers.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-2">
@@ -84,57 +84,69 @@ export const CMIEMacroWorkbench: React.FC<CMIEMacroWorkbenchProps> = ({
                 <span>CMIE Prowess Peer Multiples Comparison</span>
               </h4>
               <span className="text-[11px] text-slate-400 font-mono">
-                Target Ask: <strong className="text-emerald-400">24.5x EV/EBITDA</strong> (Implied P/E 41.2x)
+                Target Ask: <strong className="text-emerald-400">{cmieData.issuer?.target_ipo_multiple ?? '24.5'}x EV/EBITDA</strong> (Implied P/E {cmieData.issuer?.implied_pe ?? '41.2'}x)
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {cmieData.peers.map((peer) => (
-                <div
-                  key={peer.peer_id}
-                  className="p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-slate-200">{peer.company_name}</div>
-                      <span className="text-[10px] font-mono text-indigo-400">NSE: {peer.ticker_nse}</span>
-                    </div>
-                    <span className="text-sm font-extrabold text-white font-mono bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
-                      {peer.ev_ebitda_multiple}x
-                    </span>
-                  </div>
+              {cmieData.peers.map((peer: any, idx: number) => {
+                const companyName = peer.company_name || peer.name || `Peer ${idx + 1}`;
+                const ticker = peer.ticker_nse || peer.symbol || 'NSE';
+                const multiple = peer.ev_ebitda_multiple ?? peer.evEbitda ?? peer.pe_multiple ?? peer.pe ?? 'N/A';
+                const roce = peer.roce_pct !== undefined ? `${peer.roce_pct}%` : (peer.similarity ? `Sim: ${(peer.similarity * 100).toFixed(0)}%` : 'N/A');
+                const grossMargin = peer.gross_margin_pct !== undefined ? `${peer.gross_margin_pct}%` : 'N/A';
+                const ebitdaMargin = peer.ebitda_margin_pct !== undefined ? `${peer.ebitda_margin_pct}%` : 'N/A';
+                const franchise = peer.franchise_exclusivity_years ? `${peer.franchise_exclusivity_years} yrs` : 'N/A';
+                const verdict = peer.valuation_verdict || peer.verdict || 'Peer multiple indexed from CMIE Prowess database.';
 
-                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                    <div className="p-1.5 rounded bg-slate-900 border border-slate-800/80">
-                      <span className="text-slate-400 block text-[9px] uppercase">ROCE</span>
-                      <strong className="text-emerald-400">{peer.roce_pct}%</strong>
+                return (
+                  <div
+                    key={peer.peer_id || peer.symbol || idx}
+                    className="p-4 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-xs font-bold text-slate-200">{companyName}</div>
+                        <span className="text-[10px] font-mono text-indigo-400">NSE: {ticker}</span>
+                      </div>
+                      <span className="text-sm font-extrabold text-white font-mono bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                        {typeof multiple === 'number' ? `${multiple}x` : multiple}
+                      </span>
                     </div>
-                    <div className="p-1.5 rounded bg-slate-900 border border-slate-800/80">
-                      <span className="text-slate-400 block text-[9px] uppercase">Gross Margin</span>
-                      <strong className="text-slate-200">{peer.gross_margin_pct}%</strong>
-                    </div>
-                    <div className="p-1.5 rounded bg-slate-900 border border-slate-800/80">
-                      <span className="text-slate-400 block text-[9px] uppercase">EBITDA Margin</span>
-                      <strong className="text-slate-200">{peer.ebitda_margin_pct}%</strong>
-                    </div>
-                    <div className="p-1.5 rounded bg-slate-900 border border-slate-800/80">
-                      <span className="text-slate-400 block text-[9px] uppercase">Franchise Tenor</span>
-                      <strong className="text-amber-400">{peer.franchise_exclusivity_years || 'N/A'} yrs</strong>
-                    </div>
-                  </div>
 
-                  <p className="text-[11px] text-slate-400 leading-tight">
-                    {peer.valuation_verdict}
-                  </p>
-                </div>
-              ))}
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                      <div className="p-1.5 rounded bg-slate-900 border border-slate-800/80">
+                        <span className="text-slate-400 block text-[9px] uppercase">ROCE</span>
+                        <strong className="text-emerald-400">{roce}</strong>
+                      </div>
+                      <div className="p-1.5 rounded bg-slate-900 border border-slate-800/80">
+                        <span className="text-slate-400 block text-[9px] uppercase">Gross Margin</span>
+                        <strong className="text-slate-200">{grossMargin}</strong>
+                      </div>
+                      <div className="p-1.5 rounded bg-slate-900 border border-slate-800/80">
+                        <span className="text-slate-400 block text-[9px] uppercase">EBITDA Margin</span>
+                        <strong className="text-slate-200">{ebitdaMargin}</strong>
+                      </div>
+                      <div className="p-1.5 rounded bg-slate-900 border border-slate-800/80">
+                        <span className="text-slate-400 block text-[9px] uppercase">Franchise Tenor</span>
+                        <strong className="text-amber-400">{franchise}</strong>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-slate-400 leading-tight">
+                      {verdict}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Relative Valuation Spread Callout */}
             <div className="p-3.5 rounded-xl bg-indigo-950/30 border border-indigo-900/50 flex items-start space-x-3">
               <span className="text-base">💡</span>
               <p className="text-xs text-indigo-200 leading-relaxed font-sans">
-                {cmieData.relative_spread.analytical_verdict}
+                {cmieData.relative_spread?.analytical_verdict ??
+                  "HCCB's ask multiple benchmarked against peer universe. Normalized discount reflects franchise tenure, asset age, and working capital cycle."}
               </p>
             </div>
           </div>
