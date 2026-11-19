@@ -70,9 +70,12 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:5174",
         "http://127.0.0.1:5174",
+        "http://localhost:5175",
+        "http://127.0.0.1:5175",
         "http://localhost:8501",
         "http://127.0.0.1:8501",
-        "https://pre-ipo-terminal-779655496440.us-east1.run.app"
+        "https://pre-ipo-terminal-779655496440.us-east1.run.app",
+        "https://pre-ipo-terminal-5174-779655496440.us-east1.run.app",
     ],
     allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:[0-9]+)?",
     allow_credentials=True,
@@ -95,6 +98,493 @@ def health_check():
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "service": "ProfSur Quantitative Terminal API"
     }
+
+# ── Authentication & Session REST API ──────────────────────────────────────────
+import auth as _auth
+_auth.ensure_auth_tables()
+
+from pydantic import BaseModel
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class LogoutRequest(BaseModel):
+    token: str
+
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+    phone: str = "+910000000000"
+
+@app.post("/api/auth/login")
+def api_auth_login(payload: LoginRequest):
+    """
+    Authenticates user credentials against SQLite auth_users using native cost-12 bcrypt.
+    Issues a cryptographically secure 24-hour session token into auth_sessions.
+    """
+    user = _auth.authenticate(payload.username, payload.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password, or account is locked.")
+    
+    token = _auth.create_session(user["id"])
+    return {
+        "success": True,
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "name": user.get("username", "").title() if not user.get("name") else user["name"],
+            "email": user["email"],
+            "role": user["role"],
+        }
+    }
+
+@app.get("/api/auth/session")
+def api_auth_session(token: str = Query(..., description="Cryptographically secure session token")):
+    """
+    Validates active session token and returns current authenticated user profile.
+    """
+    user = _auth.get_session_user(token)
+    if not user:
+        return {"authenticated": False, "user": None}
+    
+    return {
+        "authenticated": True,
+        "user": {
+            "id": user["id"],
+            "username": user["username"],
+            "name": user.get("username", "").title() if not user.get("name") else user["name"],
+            "email": user["email"],
+            "role": user["role"],
+        }
+    }
+
+@app.post("/api/auth/logout")
+def api_auth_logout(payload: LogoutRequest):
+    """
+    Revokes the active session token from auth_sessions.
+    """
+    _auth.revoke_session(payload.token)
+    return {"success": True, "message": "Session revoked successfully."}
+
+@app.post("/api/auth/register")
+def api_auth_register(payload: RegisterRequest):
+    """
+    Enrolls a new pending user into auth_users.
+    """
+    try:
+        res = _auth.enroll_user(payload.username, payload.email, payload.phone)
+        return {"success": True, "user": res}
+    except _auth.AuthValidationError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# ── CMIE Public Universe Core Econometric Data Endpoints ───────────────────────
+import db as _db
+import pandas as pd
+
+@app.get("/api/cmie/panels")
+def get_cmie_panels():
+    """
+    Returns available CMIE dataset panel configurations and firm counts.
+    """
+    return {
+        "panels": [
+            {"id": "bf2001_25_sept26", "label": "bf2001-25_Sept26 (8,677 Firms)", "year_min": 2001, "year_max": 2025, "total_firms": 8677},
+            {"id": "run3", "label": "(2001-25)_April26", "year_min": 2001, "year_max": 2025, "total_firms": 8677},
+            {"id": "latest", "label": "Latest (2001–present)", "year_min": 2001, "year_max": 2025, "total_firms": 8677},
+            {"id": "thesis", "label": "Thesis (2001–2024)", "year_min": 2001, "year_max": 2024, "total_firms": 8410},
+            {"id": "us_av_2024", "label": "US S&P Sample", "year_min": 2001, "year_max": 2024, "total_firms": 500},
+        ]
+    }
+
+@app.get("/api/cmie/dashboard-charts")
+def get_cmie_dashboard_charts(
+    panel: str = Query("bf2001_25_sept26", description="Active panel identifier"),
+    year_min: int = Query(2001, description="Minimum fiscal year"),
+    year_max: int = Query(2025, description="Maximum fiscal year"),
+):
+    """
+    Returns authentic empirical aggregations from capital_structure.db:
+    1. Overall Yearly Mean & Median Leverage time series (exact orientation)
+    2. Dickinson Life-Cycle Stage breakdown
+    3. Book Leverage Distribution frequency histogram
+    4. Macroeconomic event overlays (2008 GFC, 2016 IBC, 2020 COVID)
+    """
+    ft = _db.filters_to_tuple({
+        "panel_mode": panel,
+        "year_range": (year_min, year_max),
+        "industry_groups": [],
+        "company_codes": [],
+        "life_stages": [],
+        "ownerships": []
+    })
+    
+    try:
+        df = _db.get_active_financials(ft)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")
+
+    if df.empty:
+        return {"empty": True}
+
+    # 1. Yearly Mean & Median Leverage (Exact orientation: Year on X, Leverage % on Y)
+    yearly = df.groupby("year")["leverage"].agg(["mean", "median", "count"]).reset_index()
+    yearly_data = []
+    for _, row in yearly.iterrows():
+        yearly_data.append({
+            "year": int(row["year"]),
+            "mean_leverage": round(float(row["mean"]), 2),
+            "median_leverage": round(float(row["median"]), 2),
+            "n_firms": int(row["count"]),
+        })
+
+    # 2. Dickinson Life-Cycle Stage Breakdown
+    stage_counts = df["life_stage"].value_counts()
+    total_obs = len(df)
+    stage_colors = {
+        "Maturity": "#10B981",
+        "Growth": "#06B6D4",
+        "Shakeout": "#F59E0B",
+        "Shakeout1": "#F59E0B",
+        "Shakeout2": "#F59E0B",
+        "Shakeout3": "#F59E0B",
+        "Startup": "#6366F1",
+        "Introduction": "#6366F1",
+        "Decline": "#F43F5E",
+        "Decay": "#F43F5E",
+    }
+    
+    # Aggregate into canonical 5 Dickinson stages
+    canonical_map = {
+        "Maturity": "Mature Stage (+, -, -)",
+        "Growth": "Growth Stage (+, -, +)",
+        "Shakeout1": "Shake-out Stage",
+        "Shakeout2": "Shake-out Stage",
+        "Shakeout3": "Shake-out Stage",
+        "Startup": "Introduction Stage (-, -, +)",
+        "Decline": "Decline Stage (-, +, +/-)",
+        "Decay": "Decline Stage (-, +, +/-)",
+    }
+    
+    aggregated_stages = {}
+    for stage, count in stage_counts.items():
+        c_name = canonical_map.get(stage, stage)
+        aggregated_stages[c_name] = aggregated_stages.get(c_name, 0) + int(count)
+
+    life_stages = []
+    for s_name, count in sorted(aggregated_stages.items(), key=lambda x: -x[1]):
+        color = "#10B981" if "Mature" in s_name else "#06B6D4" if "Growth" in s_name else "#F59E0B" if "Shake" in s_name else "#6366F1" if "Intro" in s_name else "#F43F5E"
+        life_stages.append({
+            "stage": s_name,
+            "count": count,
+            "pct": round((count / total_obs) * 100, 1),
+            "color": color
+        })
+
+    # 3. Leverage Distribution Histogram Bins
+    bins = [0, 10, 20, 30, 40, 50, 60, 70, 100]
+    labels = ["0–10%", "10–20%", "20–30%", "30–40%", "40–50%", "50–60%", "60–70%", "70%+"]
+    hist_series = df["leverage"].dropna()
+    cut_res = pd.cut(hist_series, bins=bins, labels=labels, right=False)
+    hist_counts = cut_res.value_counts().sort_index()
+
+    leverage_histogram = []
+    for b_label, count in hist_counts.items():
+        leverage_histogram.append({
+            "bin": str(b_label),
+            "count": int(count),
+            "pct": round((int(count) / total_obs) * 100, 1)
+        })
+
+    # 4. Macro KPIs
+    return {
+        "kpis": {
+            "total_firms": 8677,
+            "active_sample_firms": int(df["company_code"].nunique()),
+            "total_observations": total_obs,
+            "mean_leverage": round(float(df["leverage"].mean()), 1),
+            "median_leverage": round(float(df["leverage"].median()), 1),
+            "std_leverage": round(float(df["leverage"].std()), 1),
+            "avg_profitability": round(float(df["profitability"].mean()), 1),
+            "avg_tangibility": round(float(df["tangibility"].mean()), 1),
+            "dominant_stage": "Mature Stage (+, -, -)",
+            "dominant_stage_pct": round(float((aggregated_stages.get("Mature Stage (+, -, -)", 0) / total_obs) * 100), 1),
+        },
+        "overall_yearly": yearly_data,
+        "life_stages": life_stages,
+        "leverage_histogram": leverage_histogram,
+        "event_bands": [
+            {"year": 2008, "name": "Global Financial Crisis (GFC)"},
+            {"year": 2016, "name": "IBC & Demonetisation"},
+            {"year": 2020, "name": "COVID-19 Shock"}
+        ]
+    }
+
+from typing import Optional
+
+@app.get("/api/cmie/companies")
+def get_cmie_companies():
+    """
+    Returns the list of all covered companies in the active panel.
+    """
+    try:
+        cos = _db.get_companies()
+        return {
+            "total": len(cos),
+            "companies": cos.to_dict(orient="records")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to query companies: {str(e)}")
+
+@app.get("/api/cmie/data-explorer")
+def get_cmie_data_explorer(
+    panel: str = Query("bf2001_25_sept26", description="Active panel identifier"),
+    year_min: int = Query(2001, description="Minimum fiscal year"),
+    year_max: int = Query(2025, description="Maximum fiscal year"),
+    company_name: Optional[str] = Query(None, description="Filter by company name"),
+    min_leverage: Optional[float] = Query(None, description="Minimum leverage %"),
+    max_leverage: Optional[float] = Query(None, description="Maximum leverage %"),
+    search: Optional[str] = Query(None, description="Text search filter"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(50, ge=10, le=500, description="Page size"),
+    sort_by: str = Query("year", description="Sort column"),
+    sort_order: str = Query("desc", description="Sort direction: asc or desc"),
+):
+    """
+    Paginated, searchable, filterable Data Explorer table endpoint over the CMIE panel.
+    """
+    ft = _db.filters_to_tuple({
+        "panel_mode": panel,
+        "year_range": (year_min, year_max),
+        "industry_groups": [],
+        "company_codes": [],
+        "life_stages": [],
+        "ownerships": []
+    })
+
+    try:
+        df = _db.get_full_data_explorer(ft)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")
+
+    if df.empty:
+        return {"total_rows": 0, "page": page, "page_size": page_size, "total_pages": 0, "summary": {}, "rows": []}
+
+    # Filters
+    if company_name and company_name != "All Companies":
+        df = df[df["company_name"] == company_name]
+
+    if min_leverage is not None and max_leverage is not None:
+        df = df[((df["leverage"] >= min_leverage) & (df["leverage"] <= max_leverage)) | df["leverage"].isna()]
+
+    if search:
+        s_lower = search.lower()
+        mask = (
+            df["company_name"].astype(str).str.lower().str.contains(s_lower, na=False) |
+            df["nse_symbol"].astype(str).str.lower().str.contains(s_lower, na=False) |
+            df["industry_group"].astype(str).str.lower().str.contains(s_lower, na=False)
+        )
+        df = df[mask]
+
+    total_rows = len(df)
+    total_pages = max(1, (total_rows + page_size - 1) // page_size)
+
+    # Summary metrics
+    lev_col = df["leverage"].dropna() if "leverage" in df.columns else pd.Series(dtype=float)
+    summary = {
+        "count": total_rows,
+        "mean_leverage": round(float(lev_col.mean()), 2) if not lev_col.empty else 0.0,
+        "median_leverage": round(float(lev_col.median()), 2) if not lev_col.empty else 0.0,
+        "std_leverage": round(float(lev_col.std()), 2) if not lev_col.empty else 0.0,
+        "nulls_leverage": int(df["leverage"].isna().sum()) if "leverage" in df.columns else 0,
+        "mean_profitability": round(float(df["profitability"].dropna().mean()), 2) if "profitability" in df.columns and not df["profitability"].dropna().empty else 0.0,
+        "mean_tangibility": round(float(df["tangibility"].dropna().mean()), 2) if "tangibility" in df.columns and not df["tangibility"].dropna().empty else 0.0,
+    }
+
+    # Sort
+    if sort_by in df.columns:
+        ascending = (sort_order.lower() == "asc")
+        df = df.sort_values(by=sort_by, ascending=ascending)
+
+    # Slice page
+    start_idx = (page - 1) * page_size
+    end_idx = start_idx + page_size
+    sliced = df.iloc[start_idx:end_idx].copy()
+
+    # Fill NaN cleanly for JSON serialization
+    rows = []
+    for _, r in sliced.iterrows():
+        rows.append({
+            "company_name": str(r.get("company_name", "")),
+            "nse_symbol": str(r.get("nse_symbol", "")),
+            "industry_group": str(r.get("industry_group", "")),
+            "year": int(r["year"]) if pd.notna(r.get("year")) else None,
+            "life_stage": str(r.get("life_stage", "")),
+            "leverage": round(float(r["leverage"]), 2) if pd.notna(r.get("leverage")) else None,
+            "profitability": round(float(r["profitability"]), 2) if pd.notna(r.get("profitability")) else None,
+            "tangibility": round(float(r["tangibility"]), 2) if pd.notna(r.get("tangibility")) else None,
+            "firm_size": round(float(r["firm_size"]), 1) if pd.notna(r.get("firm_size")) else None,
+            "borrowings": round(float(r["borrowings"]), 1) if pd.notna(r.get("borrowings")) else None,
+            "tax": round(float(r["tax"]), 2) if pd.notna(r.get("tax")) else None,
+            "dividend": round(float(r["dividend"]), 2) if pd.notna(r.get("dividend")) else None,
+            "cash_holdings": round(float(r["cash_holdings"]), 1) if pd.notna(r.get("cash_holdings")) else None,
+        })
+
+    return {
+        "total_rows": total_rows,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "summary": summary,
+        "rows": rows,
+    }
+
+@app.get("/api/cmie/peer-benchmarks")
+def get_cmie_peer_benchmarks(
+    company_code: int = Query(..., description="Target company code e.g. 248093 for Tata Motors"),
+    panel: str = Query("bf2001_25_sept26", description="Active panel identifier"),
+    year_min: int = Query(2001, description="Minimum fiscal year"),
+    year_max: int = Query(2025, description="Maximum fiscal year"),
+):
+    """
+    Returns company longitudinal trends vs industry averages, life-stage boxplots, and radar multi-determinant profile.
+    """
+    ft = _db.filters_to_tuple({
+        "panel_mode": panel,
+        "year_range": (year_min, year_max),
+        "industry_groups": [],
+        "company_codes": [],
+        "life_stages": [],
+        "ownerships": []
+    })
+
+    try:
+        companies_df = _db.get_companies()
+        matched = companies_df[companies_df["company_code"] == company_code]
+        if matched.empty:
+            raise HTTPException(status_code=404, detail="Company code not found in directory.")
+        company_row = matched.iloc[0]
+        company_name = str(company_row["company_name"])
+        industry = str(company_row["industry_group"])
+        nse_symbol = str(company_row.get("nse_symbol", ""))
+
+        full_df = _db.get_active_financials(ft)
+        company_df = _db.get_company_detail(company_code)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")
+
+    if company_df.empty:
+        raise HTTPException(status_code=404, detail="No historical financials found for this company.")
+
+    dominant_stage = company_df["life_stage"].mode().iloc[0] if not company_df["life_stage"].mode().empty else "N/A"
+
+    # Filter industry peers
+    industry_df = full_df[full_df["industry_group"] == industry]
+
+    # 1. Company yearly series
+    c_yearly = company_df.sort_values("year")
+    company_series = []
+    for _, r in c_yearly.iterrows():
+        company_series.append({
+            "year": int(r["year"]),
+            "leverage": round(float(r["leverage"]), 2) if pd.notna(r.get("leverage")) else None,
+            "profitability": round(float(r["profitability"]), 2) if pd.notna(r.get("profitability")) else None,
+            "tangibility": round(float(r["tangibility"]), 2) if pd.notna(r.get("tangibility")) else None,
+            "life_stage": str(r.get("life_stage", "")),
+        })
+
+    # 2. Industry yearly series
+    ind_yearly = industry_df.groupby("year").agg({
+        "leverage": "mean",
+        "profitability": "mean",
+        "tangibility": "mean",
+        "company_code": "nunique"
+    }).reset_index()
+    industry_series = []
+    for _, r in ind_yearly.iterrows():
+        industry_series.append({
+            "year": int(r["year"]),
+            "industry_leverage": round(float(r["leverage"]), 2) if pd.notna(r.get("leverage")) else None,
+            "industry_profitability": round(float(r["profitability"]), 2) if pd.notna(r.get("profitability")) else None,
+            "industry_tangibility": round(float(r["tangibility"]), 2) if pd.notna(r.get("tangibility")) else None,
+            "n_peers": int(r["company_code"]),
+        })
+
+    # 3. Life stage box plots data (min, q1, median, q3, max, comp_avg)
+    stage_box_data = []
+    canonical_stages = ["Mature", "Growth", "Shake-out", "Intro", "Decline"]
+    for stg in canonical_stages:
+        stg_df = full_df[full_df["life_stage"].str.contains(stg, case=False, na=False)]
+        stg_lev = stg_df["leverage"].dropna()
+        if not stg_lev.empty:
+            q1 = float(stg_lev.quantile(0.25))
+            med = float(stg_lev.median())
+            q3 = float(stg_lev.quantile(0.75))
+            iqr = q3 - q1
+            stage_box_data.append({
+                "stage": stg,
+                "count": len(stg_lev),
+                "min": round(max(0.0, float(stg_lev.min())), 1),
+                "q1": round(q1, 1),
+                "median": round(med, 1),
+                "q3": round(q3, 1),
+                "max": round(min(100.0, float(stg_lev.max())), 1),
+                "mean": round(float(stg_lev.mean()), 1),
+            })
+
+    # 4. Multi-determinant radar profile (0–100 normalized)
+    radar_metrics = ["profitability", "tangibility", "tax", "firm_size", "tax_shield", "cash_holdings"]
+    radar_labels = ["Profitability", "Tangibility", "Tax Rate", "Firm Size", "Tax Shield", "Cash Holdings"]
+    radar_data = []
+
+    for key, label in zip(radar_metrics, radar_labels):
+        full_col = full_df[key].dropna() if key in full_df.columns else pd.Series(dtype=float)
+        comp_val = company_df[key].dropna().mean() if key in company_df.columns and not company_df[key].dropna().empty else 0.0
+        ind_val = industry_df[key].dropna().mean() if key in industry_df.columns and not industry_df[key].dropna().empty else 0.0
+
+        if not full_col.empty and full_col.max() > full_col.min():
+            c_norm = round(float((comp_val - full_col.min()) / (full_col.max() - full_col.min()) * 100), 1)
+            i_norm = round(float((ind_val - full_col.min()) / (full_col.max() - full_col.min()) * 100), 1)
+        else:
+            c_norm = 50.0
+            i_norm = 50.0
+
+        radar_data.append({
+            "metric": label,
+            "company_raw": round(float(comp_val), 2),
+            "industry_raw": round(float(ind_val), 2),
+            "company_normalized": max(5.0, min(100.0, c_norm)),
+            "industry_normalized": max(5.0, min(100.0, i_norm)),
+        })
+
+    return {
+        "company_info": {
+            "company_code": company_code,
+            "company_name": company_name,
+            "nse_symbol": nse_symbol,
+            "industry_group": industry,
+            "dominant_stage": dominant_stage,
+            "avg_leverage": round(float(company_df["leverage"].dropna().mean()), 2) if not company_df["leverage"].dropna().empty else 0.0,
+            "avg_profitability": round(float(company_df["profitability"].dropna().mean()), 2) if not company_df["profitability"].dropna().empty else 0.0,
+            "avg_tangibility": round(float(company_df["tangibility"].dropna().mean()), 2) if not company_df["tangibility"].dropna().empty else 0.0,
+            "current_borrowings": round(float(company_df.sort_values("year").iloc[-1].get("borrowings", 0)), 1),
+            "n_years": len(company_series),
+        },
+        "company_series": company_series,
+        "industry_series": industry_series,
+        "stage_box_data": stage_box_data,
+        "radar_data": radar_data,
+        "event_bands": [
+            {"year": 2008, "name": "Global Financial Crisis (GFC)"},
+            {"year": 2016, "name": "IBC & Demonetisation"},
+            {"year": 2020, "name": "COVID-19 Shock"}
+        ]
+    }
+
+
 
 @app.get("/api/pre-ipo/schema")
 def get_canonical_schema():
