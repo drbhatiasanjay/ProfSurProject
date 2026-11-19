@@ -15,13 +15,16 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import {
-  StatutoryOfferDetails
+  StatutoryOfferDetails,
+  TemporalFilingVersion,
+  TemporalGraphDiffResult
 } from '../../types/terminal';
 import {
   fetchPreIPOKGCanvas,
   queryPreIPOKG,
   fetchPreIPOSHACLAudit,
   fetchPreIPOValuationSimulator,
+  fetchTemporalDiff,
   KGCanvasResponse,
   KGQueryResult,
   KGSHACLAuditReport,
@@ -47,7 +50,9 @@ import {
   Eye,
   Maximize2,
   Binary,
-  BookOpen
+  BookOpen,
+  Clock,
+  GitCompare
 } from 'lucide-react';
 import { PdfBoundingBoxDrawer } from './kg/PdfBoundingBoxDrawer';
 import { FormulaLineageModal } from './kg/FormulaLineageModal';
@@ -58,6 +63,9 @@ import { KnowledgeGraphCopilotBar } from './kg/KnowledgeGraphCopilotBar';
 import { ContagionShockModal } from './kg/ContagionShockModal';
 import { CMIEMacroWorkbench } from './kg/CMIEMacroWorkbench';
 import { InstitutionalExportModal } from './kg/InstitutionalExportModal';
+import { TemporalFilingScrubber } from './kg/TemporalFilingScrubber';
+import { BiTemporalGraphMutationCanvas } from './kg/BiTemporalGraphMutationCanvas';
+import { SemanticDriftRadar } from './kg/SemanticDriftRadar';
 
 // =====================================================================
 // Custom Custom Node Component for FIBO Financial Entities
@@ -172,9 +180,15 @@ interface KnowledgeGraphStudioVaultProps {
 export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps> = ({ offer }) => {
   const symbol = offer.symbol || 'HCCH';
   
-  // Tri-Mode Switcher: 'sections' (SEBI Sections Hierarchy & Verbatim Facts) | 'macro' (Global Macro Graph) | 'quant' (Expert Quant Studio)
-  const [personaMode, setPersonaMode] = useState<'sections' | 'macro' | 'quant'>('sections');
+  // Multi-Mode Switcher: 'sections' (SEBI Sections Hierarchy & Verbatim Facts) | 'macro' (Global Macro Graph) | 'quant' (Expert Quant Studio) | 'temporal' (Bi-Temporal Filing Diff)
+  const [personaMode, setPersonaMode] = useState<'sections' | 'macro' | 'quant' | 'temporal'>('sections');
   const [activeDrilldownSectionId, setActiveDrilldownSectionId] = useState<string | null>(null);
+
+  // Bi-Temporal Filing Diff State (Milestone 19)
+  const [temporalBaseVersion, setTemporalBaseVersion] = useState<TemporalFilingVersion>('DRHP');
+  const [temporalTargetVersion, setTemporalTargetVersion] = useState<TemporalFilingVersion>('RHP');
+  const [temporalDiffResult, setTemporalDiffResult] = useState<TemporalGraphDiffResult | null>(null);
+  const [isTemporalLoading, setIsTemporalLoading] = useState<boolean>(false);
 
   // React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
@@ -304,6 +318,24 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
     // Execute default recipe (Tier 1)
     executeRecipe(1, 'Where does the IPO proceeds go?');
   }, [symbol]);
+
+  // Load Bi-Temporal Diff on Demand
+  useEffect(() => {
+    let isMounted = true;
+    const loadTemporal = async () => {
+      setIsTemporalLoading(true);
+      try {
+        const res = await fetchTemporalDiff(symbol, temporalBaseVersion, temporalTargetVersion);
+        if (isMounted) setTemporalDiffResult(res);
+      } finally {
+        if (isMounted) setIsTemporalLoading(false);
+      }
+    };
+    loadTemporal();
+    return () => {
+      isMounted = false;
+    };
+  }, [symbol, temporalBaseVersion, temporalTargetVersion]);
 
   // Run query recipe
   const executeRecipe = async (tier: number, queryText: string) => {
@@ -452,6 +484,17 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
             >
               <Sliders className="w-3.5 h-3.5" />
               Expert Quant Studio
+            </button>
+            <button
+              onClick={() => setPersonaMode('temporal')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                personaMode === 'temporal'
+                  ? 'bg-cyan-600 text-white shadow-md shadow-cyan-500/20'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Multi-DRHP Filing Diff
             </button>
           </div>
         </div>
@@ -987,6 +1030,30 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* View 4: Bi-Temporal Multi-DRHP Filing Diff (Time-Travel Scrubber & Obfuscation Mutations) */}
+      {personaMode === 'temporal' && (
+        <div className="space-y-6">
+          <TemporalFilingScrubber
+            baseVersion={temporalBaseVersion}
+            targetVersion={temporalTargetVersion}
+            onSelectVersions={(base, target) => {
+              setTemporalBaseVersion(base);
+              setTemporalTargetVersion(target);
+            }}
+            isLoading={isTemporalLoading}
+          />
+          {temporalDiffResult && (
+            <>
+              <SemanticDriftRadar
+                chapterDriftScores={temporalDiffResult.chapter_drift_scores}
+                overallObfuscationIndex={temporalDiffResult.overall_obfuscation_index}
+              />
+              <BiTemporalGraphMutationCanvas diffResult={temporalDiffResult} />
+            </>
+          )}
         </div>
       )}
 
