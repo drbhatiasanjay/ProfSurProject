@@ -1337,6 +1337,135 @@ def get_pre_ipo_contagion_scenarios(symbol: str = "HCCH"):
         "scenarios": sim.get_preset_scenarios(symbol)
     }
 
+# =====================================================================
+# Milestone 15: GraphRAG & Natural Language Cypher Query Copilot
+# =====================================================================
+
+class GraphRAGQueryPayload(BaseModel):
+    query: str
+    symbol: str = "HCCH"
+
+@app.post("/api/pre-ipo/kg/copilot/query")
+def execute_graphrag_query(payload: GraphRAGQueryPayload):
+    """
+    Routes natural language queries to deterministic Cypher queries and verbatim facts.
+    """
+    from dataclasses import asdict
+    from models.pre_ipo_graphrag_router import PreIPOGraphRAGRouter
+    router = PreIPOGraphRAGRouter()
+    res = router.route_query(payload.query, payload.symbol)
+    return asdict(res)
+
+@app.get("/api/pre-ipo/kg/copilot/suggested-prompts")
+def get_graphrag_suggested_prompts(symbol: str = "HCCH"):
+    """
+    Returns dual-head suggested prompt catalog (Novice and Advanced).
+    """
+    from models.pre_ipo_graphrag_router import PreIPOGraphRAGRouter
+    router = PreIPOGraphRAGRouter()
+    return router.get_suggested_prompts(symbol)
+
+# =====================================================================
+# Milestone 16: CMIE ProwessIQ Peer Intelligence & Macro Transmission
+# =====================================================================
+
+class MacroShockPayload(BaseModel):
+    brent_crude_shift_usd: float = 0.0
+    rbi_repo_shift_bps: float = 0.0
+
+@app.get("/api/pre-ipo/kg/cmie-peers")
+def get_cmie_peers_comparison():
+    """
+    Returns CMIE Prowess peer data, relative valuation multiples, and ROCE differentials.
+    """
+    from models.pre_ipo_cmie_macro_engine import CMIEMacroEngine
+    engine = CMIEMacroEngine()
+    return engine.get_peer_comparison()
+
+@app.post("/api/pre-ipo/kg/simulate-macro-shock")
+def simulate_macro_factor_shock(payload: MacroShockPayload):
+    """
+    Simulates crude pass-through to PET packaging, gross margin compression, and repo hike.
+    """
+    from dataclasses import asdict
+    from models.pre_ipo_cmie_macro_engine import CMIEMacroEngine
+    engine = CMIEMacroEngine()
+    res = engine.simulate_macro_shock(payload.brent_crude_shift_usd, payload.rbi_repo_shift_bps)
+    return asdict(res)
+
+# =====================================================================
+# Milestone 17: Post-IPO Lifecycle Simulator & Institutional Export
+# =====================================================================
+
+class AnchorCliffPayload(BaseModel):
+    fpi_momentum_share_pct: float = 40.0
+    dii_long_only_share_pct: float = 60.0
+
+class ListingDiscoveryPayload(BaseModel):
+    gmp_inr: float = 22.0
+    qib_multiple: float = 6.04
+    retail_multiple: float = 1.14
+
+@app.post("/api/pre-ipo/kg/post-ipo/anchor-cliff")
+def simulate_anchor_lockin_cliff(payload: AnchorCliffPayload):
+    """
+    Simulates float expansion and supply pressure at T+30 and T+90 anchor expiry.
+    """
+    from dataclasses import asdict
+    from models.pre_ipo_post_ipo_simulator import PostIPOSimulator
+    sim = PostIPOSimulator()
+    res = sim.simulate_anchor_cliff(payload.fpi_momentum_share_pct, payload.dii_long_only_share_pct)
+    return asdict(res)
+
+@app.post("/api/pre-ipo/kg/post-ipo/listing-discovery")
+def simulate_listing_day_price_discovery(payload: ListingDiscoveryPayload):
+    """
+    Simulates listing day price discovery, listing gain, and Day 1 retail flip velocity.
+    """
+    from dataclasses import asdict
+    from models.pre_ipo_post_ipo_simulator import PostIPOSimulator
+    sim = PostIPOSimulator()
+    res = sim.simulate_listing_discovery(payload.gmp_inr, payload.qib_multiple, payload.retail_multiple)
+    return asdict(res)
+
+@app.get("/api/pre-ipo/kg/export/w3c-turtle")
+def export_w3c_turtle(symbol: str = "HCCH"):
+    """
+    Returns machine-readable W3C RDF Turtle (.ttl) with FIBO ontology annotations.
+    """
+    from fastapi.responses import PlainTextResponse
+    from models.pre_ipo_institutional_exporter import PreIPOInstitutionalExporter
+    exporter = PreIPOInstitutionalExporter(symbol)
+    return PlainTextResponse(exporter.export_w3c_rdf_turtle(), media_type="text/turtle")
+
+@app.get("/api/pre-ipo/kg/export/neo4j-cypher")
+def export_neo4j_cypher(symbol: str = "HCCH"):
+    """
+    Returns ready-to-run Neo4j Cypher ingestion batch script (.cyp).
+    """
+    from fastapi.responses import PlainTextResponse
+    from models.pre_ipo_institutional_exporter import PreIPOInstitutionalExporter
+    exporter = PreIPOInstitutionalExporter(symbol)
+    return PlainTextResponse(exporter.export_neo4j_cypher_script(), media_type="application/x-cypher")
+
+@app.get("/api/pre-ipo/kg/export/fibo-jsonld")
+def export_fibo_jsonld(symbol: str = "HCCH"):
+    """
+    Returns linked-data JSON-LD payload.
+    """
+    from models.pre_ipo_institutional_exporter import PreIPOInstitutionalExporter
+    exporter = PreIPOInstitutionalExporter(symbol)
+    return exporter.export_fibo_json_ld()
+
+@app.get("/api/pre-ipo/kg/export/sebi-audit-manifest")
+def get_sebi_compliance_audit_manifest(symbol: str = "HCCH"):
+    """
+    Returns cryptographic SHA-256 SEBI ICDR Schedule VI compliance audit certificate.
+    """
+    from models.pre_ipo_institutional_exporter import PreIPOInstitutionalExporter
+    exporter = PreIPOInstitutionalExporter(symbol)
+    return exporter.generate_sebi_audit_manifest()
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("api.server:app", host="0.0.0.0", port=8000, reload=True)

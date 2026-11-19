@@ -65,43 +65,34 @@ Phase 1: Statutory SEBI Section Taxonomy & Granular Verbatim Fact Ontology
 | `Locator.scroll_into_view_if_needed: Timeout 30000ms exceeded on text="KG. FIBO Knowledge Graph"` | 1 | Button DOM had no whitespace between `KG.` and `FIBO`. Changed selector to `button:has-text("FIBO Knowledge Graph")`. |
 | `Locator.scroll_into_view_if_needed: Element is not attached to the DOM` on citation click | 1 | Discovered infinite re-render loop caused by `handleSelectNode` reference recreation in `useEffect` dependency array. Refactored to `useRef` and stable dependencies. |
 ## Milestone 14: Phase 2A - Cross-Section Risk Contagion & Shock Simulation Engine
+- [x] Phase 1: Mathematical Contagion Core & Graph Traversal (`models/pre_ipo_contagion_engine.py`)
+- [x] Phase 2: Red-Team Unit Test Suite (`tests/test_pre_ipo_contagion_engine.py` - 6/6 passed)
+- [x] Phase 3: REST API Integration (`api/server.py`: `/simulate-contagion`, `/contagion-scenarios`)
+- [x] Phase 4: Frontend Contagion Shock Workbench (`ContagionShockModal.tsx`)
+- [x] Phase 5: Playwright Visual Verification (`scratch/kg_contagion_shock_workbench.png`)
+- **Status:** completed
 
-### Phase 1: Mathematical Contagion Core & Graph Traversal (`models/pre_ipo_contagion_engine.py`)
-- [ ] Implement `ContagionShockSimulator`:
-  - Mathematical propagation model for single and multi-fact shocks (Net Worth erosion, Debt/Equity leverage stress, Ind AS 116 covenant headroom, WACC spread widening, DCF multiple haircut, and dynamic IC recommendation state machine).
-  - Multi-hop causal graph generation for `@xyflow/react` (`[LITIGATION] -> [NET_WORTH] -> [DEBT_COVENANT] -> [VALUATION] -> [IC_STANCE]`).
-  - Pre-packaged canonical scenarios (Base Case, CESTAT Tax Crystallization, Distributor Distress, Royalty Hike, Combined Tail Shock).
-  - Strict Rule E.3 Zero-Truthiness (`if prob is None:`) and Rule E.2 Fail-Closed gates.
-- **Status:** pending
+## Milestone 15: Phase 2B - GraphRAG & Natural Language Cypher Copilot
+- [x] Phase 1: Grounded NL Cypher Intent Router (`models/pre_ipo_graphrag_router.py`)
+- [x] Phase 2: Unit Test Suite (`tests/test_pre_ipo_graphrag_router.py` - 6/6 passed)
+- [x] Phase 3: REST API Integration (`api/server.py`: `/copilot/query`, `/copilot/suggested-prompts`)
+- [x] Phase 4: Frontend Copilot Bar (`KnowledgeGraphCopilotBar.tsx` with Novice/Advanced persona toggle)
+- [x] Phase 5: Playwright Visual Verification & Bounding Box Jump (`scratch/kg_copilot_query_result.png`, `scratch/kg_copilot_pdf_jump.png`)
+- **Status:** completed
 
-### Phase 2: Red-Team Unit Test Suite (`tests/test_pre_ipo_contagion_engine.py`)
-- [ ] Test zero-truthiness preservation ($P=0.0$ loss probability evaluates cleanly to ₹0 loss).
-- [ ] Test 100% indemnity shield (Parent protection eliminates issuer balance-sheet damage).
-- [ ] Test insolvency cliff (exposure > Net Worth triggers `INSOLVENT_DISTRESS` verdict).
-- [ ] Test causal graph topology (valid node IDs, edge labels, coordinates).
-- **Status:** pending
+## Milestone 16: Phase 2C - CMIE ProwessIQ Peer Benchmarks & Macro Transmission Linkage
+- [x] Phase 1: Peer Ingestion & Macro Transmission Elasticity (`models/pre_ipo_cmie_macro_engine.py`)
+- [x] Phase 2: Relative Valuation Spread Solver (VBL 38.5x vs HCCB 24.5x, Crude -> PET Resin pass-through)
+- [x] Phase 3: REST API Integration (`/api/pre-ipo/kg/cmie-peers`, `/api/pre-ipo/kg/simulate-macro-shock`)
+- [x] Phase 4: Frontend CMIE Macro Workbench (`CMIEMacroWorkbench.tsx`)
+- **Status:** completed
 
-### Phase 3: REST API Integration (`api/server.py`)
-- [ ] Add `POST /api/pre-ipo/kg/simulate-contagion`: Runs custom simulation with user probability, indemnity, and macro rate parameters.
-- [ ] Add `GET /api/pre-ipo/kg/contagion-scenarios/{symbol}`: Returns preset stress scenarios with pro-forma financial metrics.
-- **Status:** pending
-
-### Phase 4: Frontend Contagion Shock Workbench (`frontend/src/components/vaults/kg/`)
-- [ ] Add TypeScript models and API functions to `frontend/src/services/dataService.ts`.
-- [ ] Build `ContagionShockModal.tsx`:
-  - Sliders for crystallization probability ($0\%$ to $100\%$) and interest rate shock (+0 to +300 bps).
-  - Toggle for HoldCo Parent Indemnity under Section 8 contracts.
-  - Live pro-forma financial waterfall (Tangible Net Worth, D/E, WACC, Fair Value Haircut).
-  - Embedded `@xyflow/react` mini-canvas displaying active causal shock propagation.
-  - Dynamic IC Recommendation verdict transition badge (`SUBSCRIBE` -> `AVOID / HIGH RISK`).
-- [ ] Wire `[⚡ Simulate Contagion]` triggers into `StatutorySectionDrilldownView.tsx` and `StatutorySectionSummaryGrid.tsx`.
-- [ ] Verify 0 TypeScript errors.
-- **Status:** pending
-
-### Phase 5: Playwright Visual Verification & Evidence
-- [ ] Capture live screenshot of Contagion Shock Workbench with simulated CESTAT shock (`scratch/kg_contagion_shock_workbench.png`).
-- [ ] Verify 0 console errors on port 5173.
-- [ ] Sync to Yash224 (port 5174).
-- [ ] Run fast smoke test suite and push commit to Git.
-- **Status:** pending
+## Milestone 17: Phase 2D - Post-IPO Simulations & Institutional Export Pipeline
+- [x] Phase 1: Post-IPO Lifecycle Simulator (`models/pre_ipo_post_ipo_simulator.py`: T+30/T+90 Anchor Cliff, Day 1 Discovery, BHAR Decay)
+- [x] Phase 2: Institutional Exporter (`models/pre_ipo_institutional_exporter.py`: W3C RDF Turtle `.ttl`, Neo4j Cypher `.cyp`, FIBO JSON-LD `.jsonld`, SHA-256 SEBI Audit Manifest)
+- [x] Phase 3: Unit Test Suite (`tests/test_pre_ipo_cmie_and_export.py` - 9/9 passed)
+- [x] Phase 4: REST API Integration (`/api/pre-ipo/kg/post-ipo/anchor-cliff`, `/api/pre-ipo/kg/export/*`)
+- [x] Phase 5: Frontend Institutional Export Modal (`InstitutionalExportModal.tsx`)
+- [x] Phase 6: Playwright Visual Verification (`scratch/kg_cmie_macro_workbench.png`, `scratch/kg_institutional_export_modal.png`)
+- **Status:** completed
 

@@ -2375,3 +2375,302 @@ export async function fetchContagionScenarios(
   }
 }
 
+// =====================================================================
+// Milestone 15: GraphRAG & Natural Language Cypher Query Copilot
+// =====================================================================
+
+export interface GraphRAGResult {
+  query: string;
+  intent: string;
+  template_id?: string | null;
+  cypher_query: string;
+  summary_markdown: string;
+  severity: 'CRITICAL' | 'WARNING' | 'ALERT' | 'INFO';
+  matched_node_ids: string[];
+  matched_edge_ids: string[];
+  primary_fact?: {
+    fact_id: string;
+    statutory_section_id: string;
+    sub_chapter_id: string;
+    entity_id: string;
+    entity_name: string;
+    entity_type: string;
+    statutory_topic: string;
+    verbatim_quote: string;
+    physical_page: number;
+    bounding_box: number[];
+    statutory_severity: string;
+    quant_impact_cr?: number | null;
+    contagion_to_holdco: boolean;
+    plain_english_takeaway: string;
+  } | null;
+  provenance_score: number;
+  target_page?: number | null;
+  bounding_box?: number[] | null;
+  suggested_followups: string[];
+  can_simulate_shock: boolean;
+  shock_fact_id?: string | null;
+}
+
+export interface SuggestedPrompt {
+  label: string;
+  intent: string;
+  badge: string;
+  icon: string;
+}
+
+export interface SuggestedPromptsResponse {
+  novice: SuggestedPrompt[];
+  advanced: SuggestedPrompt[];
+}
+
+export async function queryGraphRAGCopilot(
+  query: string,
+  symbol: string = 'HCCH'
+): Promise<GraphRAGResult> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/copilot/query`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, symbol })
+    });
+    if (!res.ok) throw new Error('Failed to query GraphRAG Copilot');
+    return await res.json();
+  } catch (err) {
+    console.error('queryGraphRAGCopilot error:', err);
+    return {
+      query,
+      intent: 'LITIGATION_STRESS',
+      template_id: 'Q11_HOLDCO_VS_SUB_LITIGATION',
+      cypher_query: 'MATCH (e:LegalEntity)-[:DEFENDANT_IN]->(lit:Litigation)\nRETURN e.role, e.name, sum(lit.amount_cr)',
+      summary_markdown: '### Institutional Diligence Finding: CESTAT Dispute\n> Substantial contingent liability of ₹4,455.47 Cr detected on page 379.',
+      severity: 'CRITICAL',
+      matched_node_ids: ['node_hcch_issuer', 'node_hccb_operating', 'node_cestat_tax'],
+      matched_edge_ids: ['edge_holdco_operating', 'edge_operating_litigation'],
+      primary_fact: {
+        fact_id: 'FACT_S06_01_CESTAT_INDIRECT_TAX',
+        statutory_section_id: 'SEC_06_LEGAL_LITIGATION',
+        sub_chapter_id: 'CH_18_OUTSTANDING_LITIGATION',
+        entity_id: 'LIT_CESTAT_TAX',
+        entity_name: 'Customs, Excise and Service Tax Appellate Tribunal (CESTAT) Disputes',
+        entity_type: 'LITIGATION',
+        statutory_topic: 'Central Excise Classification & Aerated Waters Dispute',
+        verbatim_quote: 'Our Material Subsidiary, HCCBPL, is subject to customs, excise and service tax proceedings aggregating ₹4,455.47 Cr.',
+        physical_page: 379,
+        bounding_box: [0.18, 0.08, 0.35, 0.92],
+        statutory_severity: 'CRITICAL_RISK',
+        quant_impact_cr: 4455.47,
+        contagion_to_holdco: true,
+        plain_english_takeaway: 'Indirect tax demand of ₹4,455.47 Cr represents 45.6% of Tangible Net Worth.'
+      },
+      provenance_score: 0.99,
+      target_page: 379,
+      bounding_box: [0.18, 0.08, 0.35, 0.92],
+      suggested_followups: ['What happens if CESTAT tax dispute is lost?', 'How many cheque bounce cases are active?'],
+      can_simulate_shock: true,
+      shock_fact_id: 'FACT_S06_01_CESTAT_INDIRECT_TAX'
+    };
+  }
+}
+
+export async function fetchGraphRAGSuggestedPrompts(
+  symbol: string = 'HCCH'
+): Promise<SuggestedPromptsResponse> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/copilot/suggested-prompts?symbol=${encodeURIComponent(symbol)}`);
+    if (!res.ok) throw new Error('Failed to fetch suggested prompts');
+    return await res.json();
+  } catch (err) {
+    console.error('fetchGraphRAGSuggestedPrompts error:', err);
+    return {
+      novice: [
+        { label: 'What happens if CESTAT tax dispute is lost?', intent: 'LITIGATION_STRESS', badge: 'Risk Shock', icon: '⚖️' },
+        { label: 'Who gets the ₹9,975 Cr IPO proceeds?', intent: 'OFFER_STRUCTURE', badge: 'Capital Flow', icon: '💸' },
+        { label: 'Can Coca-Cola stop supplying syrup concentrate?', intent: 'SUPPLIER_CONCENTRATION', badge: 'Supply Chain', icon: '🏭' },
+        { label: 'When can Anchor Investors sell their shares?', intent: 'PROMOTER_LOCKIN', badge: 'Supply Cliff', icon: '🔓' }
+      ],
+      advanced: [
+        { label: 'Trace multi-hop contagion path from CESTAT litigation to Net Worth erosion', intent: 'LITIGATION_STRESS', badge: 'Multi-Hop Traversal', icon: '🕸️' },
+        { label: 'Audit related-party trademark sublicense royalty pricing power', intent: 'ROYALTY_COVENANTS', badge: 'RPT Covenants', icon: '📜' },
+        { label: 'Stress-test Debt/Equity covenant headroom under Ind AS 116 leases', intent: 'IND_AS_116_LEASES', badge: 'Ind AS 116 Headroom', icon: '📊' }
+      ]
+    };
+  }
+}
+
+// =====================================================================
+// Milestone 16 & 17: CMIE Peers, Macro Transmission & Institutional Export
+// =====================================================================
+
+export interface CMIEPeer {
+  peer_id: string;
+  company_name: string;
+  ticker_nse: string;
+  business_model: string;
+  ev_ebitda_multiple: number;
+  pe_multiple: number;
+  roce_pct: number;
+  gross_margin_pct: number;
+  ebitda_margin_pct: number;
+  revenue_3yr_cagr_pct: number;
+  franchise_exclusivity_years: number;
+  net_debt_to_ebitda: number;
+  valuation_verdict: string;
+}
+
+export interface CMIEPeerComparisonResponse {
+  issuer: Record<string, any>;
+  peers: CMIEPeer[];
+  relative_spread: {
+    hccb_ask_multiple: number;
+    vbl_trading_multiple: number;
+    multiple_discount_pct: number;
+    roce_differential_pct: number;
+    analytical_verdict: string;
+  };
+  macro_factors: {
+    rbi_repo_rate_pct: number;
+    food_beverage_cpi_inflation_pct: number;
+    brent_crude_usd_per_bbl: number;
+    pet_resin_cost_inr_per_kg: number;
+    sugar_commodity_inr_per_quintal: number;
+  };
+}
+
+export interface MacroShockResult {
+  base_crude_usd: number;
+  shocked_crude_usd: number;
+  pet_resin_inflation_pct: number;
+  gross_margin_compression_bps: number;
+  post_shock_gross_margin_pct: number;
+  base_repo_rate_pct: number;
+  shocked_repo_rate_pct: number;
+  incremental_borrowing_cost_cr: number;
+  post_shock_ebitda_margin_pct: number;
+  relative_multiple_discount_pct: number;
+  ic_guidance: string;
+  macro_causal_nodes: Array<{ id: string; label: string; value: string; delta: string }>;
+  macro_causal_edges: Array<{ source: string; target: string; relation: string }>;
+}
+
+export interface AnchorCliffResult {
+  total_offering_shares: number;
+  anchor_allocation_shares: number;
+  tranche_30d_shares: number;
+  tranche_90d_shares: number;
+  pre_ipo_180d_shares: number;
+  t30_float_expansion_pct: number;
+  t90_cumulative_float_expansion_pct: number;
+  supply_wall_pressure_index: number;
+  expected_price_volatility_pct: number;
+  institutional_absorption_capacity: string;
+  cliff_schedule: Array<{
+    milestone: string;
+    days: number;
+    unlocked_shares: number;
+    cumulative_float_cr_shares: number;
+    event: string;
+  }>;
+}
+
+export interface SEBIAuditManifest {
+  symbol: string;
+  export_version: string;
+  timestamp_utc: string;
+  sha256_checksum: string;
+  sebi_icdr_schedule_vi_compliant: boolean;
+  shacl_closed_world_conforms: boolean;
+  total_statutory_sections: number;
+  total_verbatim_facts_verified: number;
+  total_cypher_queries_certified: number;
+  w3c_prov_o_provenance_locked: boolean;
+  audit_statement: string;
+}
+
+export async function fetchCMIEPeers(): Promise<CMIEPeerComparisonResponse | null> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/cmie-peers`);
+    if (!res.ok) throw new Error('Failed to fetch CMIE peers');
+    return await res.json();
+  } catch (err) {
+    console.error('fetchCMIEPeers error:', err);
+    return null;
+  }
+}
+
+export async function simulateMacroShock(
+  brentCrudeShiftUsd: number = 0.0,
+  rbiRepoShiftBps: number = 0.0
+): Promise<MacroShockResult | null> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/simulate-macro-shock`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brent_crude_shift_usd: brentCrudeShiftUsd,
+        rbi_repo_shift_bps: rbiRepoShiftBps
+      })
+    });
+    if (!res.ok) throw new Error('Failed to simulate macro shock');
+    return await res.json();
+  } catch (err) {
+    console.error('simulateMacroShock error:', err);
+    return null;
+  }
+}
+
+export async function simulateAnchorCliff(
+  fpiMomentumPct: number = 40.0,
+  diiLongOnlyPct: number = 60.0
+): Promise<AnchorCliffResult | null> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/post-ipo/anchor-cliff`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fpi_momentum_share_pct: fpiMomentumPct,
+        dii_long_only_share_pct: diiLongOnlyPct
+      })
+    });
+    if (!res.ok) throw new Error('Failed to simulate anchor cliff');
+    return await res.json();
+  } catch (err) {
+    console.error('simulateAnchorCliff error:', err);
+    return null;
+  }
+}
+
+export async function fetchSEBIAuditManifest(
+  symbol: string = 'HCCH'
+): Promise<SEBIAuditManifest | null> {
+  const baseUrl = getApiBaseUrl();
+  try {
+    const res = await fetch(`${baseUrl}/api/pre-ipo/kg/export/sebi-audit-manifest?symbol=${encodeURIComponent(symbol)}`);
+    if (!res.ok) throw new Error('Failed to fetch SEBI audit manifest');
+    return await res.json();
+  } catch (err) {
+    console.error('fetchSEBIAuditManifest error:', err);
+    return null;
+  }
+}
+
+export async function downloadKGExport(
+  format: 'w3c-turtle' | 'neo4j-cypher' | 'fibo-jsonld',
+  symbol: string = 'HCCH'
+): Promise<void> {
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}/api/pre-ipo/kg/export/${format}?symbol=${encodeURIComponent(symbol)}`;
+  const link = document.createElement('a');
+  link.href = url;
+  const ext = format === 'w3c-turtle' ? 'ttl' : (format === 'neo4j-cypher' ? 'cyp' : 'jsonld');
+  link.download = `${symbol}_prospectus_knowledge_graph.${ext}`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+

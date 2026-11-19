@@ -54,6 +54,10 @@ import { FormulaLineageModal } from './kg/FormulaLineageModal';
 import { CypherBankInspector } from './kg/CypherBankInspector';
 import { StatutorySectionSummaryGrid } from './kg/StatutorySectionSummaryGrid';
 import { StatutorySectionDrilldownView } from './kg/StatutorySectionDrilldownView';
+import { KnowledgeGraphCopilotBar } from './kg/KnowledgeGraphCopilotBar';
+import { ContagionShockModal } from './kg/ContagionShockModal';
+import { CMIEMacroWorkbench } from './kg/CMIEMacroWorkbench';
+import { InstitutionalExportModal } from './kg/InstitutionalExportModal';
 
 // =====================================================================
 // Custom Custom Node Component for FIBO Financial Entities
@@ -202,6 +206,8 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
 
   // Formula Lineage DAG Modal State
   const [isFormulaModalOpen, setIsFormulaModalOpen] = useState<boolean>(false);
+  const [shockModalFactId, setShockModalFactId] = useState<string | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
 
   const handleOpenPdfDrawer = useCallback((page: number, quote: string, clause?: string) => {
     setPdfDrawerPage(page);
@@ -454,11 +460,29 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
       {/* View 1: 8 Statutory SEBI Sections & Verbatim Facts (Summary & Drill-Down) */}
       {personaMode === 'sections' && (
         <div className="space-y-6">
+          <KnowledgeGraphCopilotBar
+            symbol={symbol}
+            onInspectCitation={(page, _bbox, fact) => {
+              handleOpenPdfDrawer(page, fact?.verbatim_quote || '', fact?.statutory_topic);
+            }}
+            onHighlightPath={(nodeIds, edgeIds) => {
+              handleHighlightSubgraph(nodeIds, edgeIds);
+            }}
+            onTriggerShock={(factId) => {
+              setShockModalFactId(factId);
+            }}
+          />
           {!activeDrilldownSectionId ? (
-            <StatutorySectionSummaryGrid
-              onSelectSection={(secId) => setActiveDrilldownSectionId(secId)}
-              onOpenPdfPage={handleOpenPdfDrawer}
-            />
+            <>
+              <StatutorySectionSummaryGrid
+                onSelectSection={(secId) => setActiveDrilldownSectionId(secId)}
+                onOpenPdfPage={handleOpenPdfDrawer}
+              />
+              <CMIEMacroWorkbench
+                symbol={symbol}
+                onOpenExportModal={() => setIsExportModalOpen(true)}
+              />
+            </>
           ) : (
             <StatutorySectionDrilldownView
               sectionId={activeDrilldownSectionId}
@@ -981,6 +1005,22 @@ export const KnowledgeGraphStudioVault: React.FC<KnowledgeGraphStudioVaultProps>
         isOpen={isFormulaModalOpen}
         onClose={() => setIsFormulaModalOpen(false)}
         onSelectCitation={handleOpenPdfDrawer}
+      />
+
+      {/* Cross-Section Risk Contagion & Solvency Shock Modal */}
+      {shockModalFactId && (
+        <ContagionShockModal
+          isOpen={!!shockModalFactId}
+          onClose={() => setShockModalFactId(null)}
+          initialFactId={shockModalFactId}
+        />
+      )}
+
+      {/* Institutional Knowledge Graph Exporter Modal */}
+      <InstitutionalExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        symbol={symbol}
       />
     </div>
   );
