@@ -699,6 +699,53 @@ def get_cmie_peer_benchmarks(
         raise HTTPException(status_code=500, detail=f"Peer benchmarks calculation error: {str(e)}")
 
 
+class ScenarioSimRequest(BaseModel):
+    panel: str = "bf2001_25_sept26"
+    prof_val: float = 10.0
+    tang_val: float = 30.0
+    tax_val: float = 20.0
+    size_val: float = 7.0
+    ts_val: float = 5.0
+    dvnd_val: float = 2.0
+    company_code: Optional[int] = None
+
+@app.get("/api/cmie/scenarios/baseline")
+def get_cmie_scenarios_baseline(
+    panel: str = Query("bf2001_25_sept26", description="Active panel identifier"),
+):
+    """
+    Returns baseline OLS regression coefficients, sample means, and company lists.
+    """
+    from api.scenario_service import get_scenario_baseline
+    try:
+        norm_panel = _normalize_panel(panel)
+        return get_scenario_baseline(panel=norm_panel)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Scenario baseline error: {str(e)}")
+
+@app.post("/api/cmie/scenarios/simulate")
+def post_cmie_scenarios_simulate(payload: ScenarioSimRequest):
+    """
+    Computes predicted leverage, factor contributions, waterfall, forest plot, factor bars,
+    radar sensitivity, and company comparison metrics based on user slider parameters.
+    """
+    from api.scenario_service import simulate_scenario
+    try:
+        norm_panel = _normalize_panel(payload.panel)
+        return simulate_scenario(
+            panel=norm_panel,
+            prof_val=payload.prof_val,
+            tang_val=payload.tang_val,
+            tax_val=payload.tax_val,
+            size_val=payload.size_val,
+            ts_val=payload.ts_val,
+            dvnd_val=payload.dvnd_val,
+            company_code=payload.company_code,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Scenario simulation error: {str(e)}")
+
+
 
 @app.get("/api/pre-ipo/schema")
 def get_canonical_schema():

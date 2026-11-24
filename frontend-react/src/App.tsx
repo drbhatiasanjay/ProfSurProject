@@ -10,6 +10,7 @@ import { SectorPeerBenchmarks } from './components/studios/SectorPeerBenchmarks'
 import { LifeStageDynamics } from './components/studios/LifeStageDynamics';
 import { StageTransitions } from './components/studios/StageTransitions';
 import { PanelEconometricsStudio } from './components/studios/PanelEconometricsStudio';
+import { ScenarioStudio } from './components/studios/ScenarioStudio';
 import {
   TrendingUp,
   Shield,
@@ -239,6 +240,14 @@ export default function App() {
               yearMin={yearMin}
               yearMax={yearMax}
               theme={theme}
+            />
+          )}
+
+          {activeStudio === 'scenarios' && (
+            <ScenarioStudio
+              activePanel={activePanel}
+              yearMin={yearMin}
+              yearMax={yearMax}
             />
           )}
 
