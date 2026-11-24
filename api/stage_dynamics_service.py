@@ -124,6 +124,7 @@ def get_stage_dynamics_payload(
         val = sticky_map.get(s, 0.0)
         stickiness_list.append({
             "stage": s,
+            "stickiness": round(float(val), 1),
             "stickiness_pct": round(float(val), 1),
             "color": STAGE_COLORS.get(s, "#94A3B8")
         })
@@ -390,8 +391,8 @@ def get_stage_dynamics_payload(
         "interpretation": {
             "title": "Results Interpretation & Call to Action",
             "insights": [
-                f"**Most absorbing stage**: {sorted(stickiness_list, key=lambda x: x['stickiness'], reverse=True)[0]['stage']} exhibits highest persistence ({sorted(stickiness_list, key=lambda x: x['stickiness'], reverse=True)[0]['stickiness']:.0f}% stickiness).",
-                f"**Most volatile stage**: {sorted(stickiness_list, key=lambda x: x['stickiness'])[0]['stage']} exhibits rapid exit attrition ({sorted(stickiness_list, key=lambda x: x['stickiness'])[0]['stickiness']:.0f}% stickiness).",
+                f"**Most absorbing stage**: {sorted(stickiness_list, key=lambda x: x.get('stickiness_pct', 0), reverse=True)[0]['stage']} exhibits highest persistence ({sorted(stickiness_list, key=lambda x: x.get('stickiness_pct', 0), reverse=True)[0]['stickiness_pct']:.0f}% stickiness).",
+                f"**Most volatile stage**: {sorted(stickiness_list, key=lambda x: x.get('stickiness_pct', 0))[0]['stage']} exhibits rapid exit attrition ({sorted(stickiness_list, key=lambda x: x.get('stickiness_pct', 0))[0]['stickiness_pct']:.0f}% stickiness).",
                 "**Macro Event Sensitivity**: During crisis regimes (GFC, COVID), transition rates accelerate by 15–28%, shifting firms into higher risk Dickinson regimes.",
                 "**Capital Structure Drift**: Deteriorated post-COVID cohorts experienced leverage expansion alongside profitability compression."
             ] if stickiness_list else [],
