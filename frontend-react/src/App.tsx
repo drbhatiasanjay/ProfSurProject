@@ -7,6 +7,9 @@ import { CollapsibleSidebar } from './components/layout/CollapsibleSidebar';
 import { ExecutiveHealthDashboard } from './components/studios/ExecutiveHealthDashboard';
 import { EnterpriseDataExplorer } from './components/studios/EnterpriseDataExplorer';
 import { SectorPeerBenchmarks } from './components/studios/SectorPeerBenchmarks';
+import { LifeStageDynamics } from './components/studios/LifeStageDynamics';
+import { StageTransitions } from './components/studios/StageTransitions';
+import { PanelEconometricsStudio } from './components/studios/PanelEconometricsStudio';
 import {
   TrendingUp,
   Shield,
@@ -194,6 +197,7 @@ export default function App() {
               activePanel={activePanel}
               yearMin={yearMin}
               yearMax={yearMax}
+              theme={theme}
             />
           )}
 
@@ -210,6 +214,31 @@ export default function App() {
               activePanel={activePanel}
               yearMin={yearMin}
               yearMax={yearMax}
+            />
+          )}
+
+          {activeStudio === 'life_stage_dynamics' && (
+            <LifeStageDynamics
+              activePanel={activePanel}
+              yearMin={yearMin}
+              yearMax={yearMax}
+            />
+          )}
+
+          {activeStudio === 'transitions' && (
+            <StageTransitions
+              activePanel={activePanel}
+              yearMin={yearMin}
+              yearMax={yearMax}
+            />
+          )}
+
+          {activeStudio === 'econometrics' && (
+            <PanelEconometricsStudio
+              activePanel={activePanel}
+              yearMin={yearMin}
+              yearMax={yearMax}
+              theme={theme}
             />
           )}
 
@@ -259,7 +288,10 @@ export default function App() {
           {activeStudio !== 'dashboard' &&
             activeStudio !== 'overview' &&
             activeStudio !== 'data_explorer' &&
-            activeStudio !== 'benchmarks' && (
+            activeStudio !== 'benchmarks' &&
+            activeStudio !== 'life_stage_dynamics' &&
+            activeStudio !== 'transitions' &&
+            activeStudio !== 'econometrics' && (
             <div className="bg-[#0d1527] border border-white/10 rounded-2xl p-8 shadow-xl text-center">
               <BookOpen className="w-10 h-10 text-cyan-400 mx-auto mb-3" />
               <h3 className="text-xl font-bold text-white mb-1 capitalize">
