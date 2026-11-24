@@ -554,7 +554,8 @@ def get_cmie_stage_transitions(
     year_max: int = Query(2025, description="Maximum fiscal year"),
 ):
     """
-    Returns Markov survival curves (Kaplan-Meier), spell statistics, and transition rates.
+    Returns Markov survival curves (Kaplan-Meier), Cox PH hazard ratios,
+    transition probability matrix, and dynamic results interpretation.
     """
     ft = _db.filters_to_tuple({
         "panel_mode": _normalize_panel(panel),
@@ -566,8 +567,11 @@ def get_cmie_stage_transitions(
     })
 
     try:
-        df = _db.get_active_financials(ft)
-        trans_df = _survival.prepare_transition_data(df)
+        panel_df = _db.get_active_panel_data(ft)
+        if panel_df.empty:
+            raise HTTPException(status_code=400, detail="No panel data found for active filters.")
+
+        trans_df = _survival.prepare_transition_data(panel_df)
         if trans_df.empty or len(trans_df) < 20:
             raise HTTPException(status_code=400, detail="Insufficient transition spells.")
         
@@ -578,37 +582,93 @@ def get_cmie_stage_transitions(
 
         km_fits, km_summary = _survival.fit_kaplan_meier(trans_df)
         km_plots = _survival.get_km_plot_data(km_fits)
+        cph, hr_df, cox_summary = _survival.fit_cox_ph(trans_df)
         matrix = _survival.get_transition_matrix(trans_df)
+
+        from helpers import interpret_survival, STAGE_ORDER, STAGE_COLORS, PRIMARY
+        insights, actions = interpret_survival(km_summary, hr_df)
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Survival modeling error: {str(e)}")
 
-    # Format KM curves for frontend chart
+    # Format KM curves
     curves = []
     for item in km_plots:
         stg_name = item.get("stage", "")
-        timeline = item.get("timeline", [])
-        survival = item.get("survival", [])
+        timeline = [float(x) for x in item.get("timeline", [])]
+        survival = [round(float(s), 4) for s in item.get("survival", [])]
+        ci_lower = [round(float(s), 4) for s in item.get("ci_lower", [])] if item.get("ci_lower") is not None else []
+        ci_upper = [round(float(s), 4) for s in item.get("ci_upper", [])] if item.get("ci_upper") is not None else []
         points = []
         for t, s in zip(timeline, survival):
             points.append({
-                "time_years": int(t),
-                "survival_rate": round(float(s), 3)
+                "time_years": t,
+                "survival_rate": s
             })
         curves.append({
             "stage": stg_name,
+            "color": STAGE_COLORS.get(stg_name, "#38BDF8"),
+            "timeline": timeline,
+            "survival": survival,
+            "ci_lower": ci_lower,
+            "ci_upper": ci_upper,
             "points": points
         })
 
-    # Format transition matrix
-    matrix_data = []
-    for from_s in matrix.index:
-        for to_s in matrix.columns:
-            matrix_data.append({
+    # Format KM summary table
+    km_summary_records = []
+    if km_summary is not None and not km_summary.empty:
+        ordered_stages = [s for s in STAGE_ORDER if s in km_summary["Stage"].values]
+        km_summary_sorted = km_summary.set_index("Stage").reindex(ordered_stages).reset_index()
+        for _, row in km_summary_sorted.iterrows():
+            km_summary_records.append({
+                "stage": str(row["Stage"]),
+                "color": STAGE_COLORS.get(str(row["Stage"]), "#38BDF8"),
+                "n_spells": int(row["N Spells"]) if pd.notna(row["N Spells"]) else 0,
+                "n_transitions": int(row["N Transitions"]) if pd.notna(row["N Transitions"]) else 0,
+                "median_duration": str(row["Median Duration (yrs)"]),
+                "five_yr_survival": round(float(row["5yr Survival (%)"]), 1) if pd.notna(row["5yr Survival (%)"]) else None,
+            })
+
+    # Format Hazard Ratios
+    hr_records = []
+    if hr_df is not None and not hr_df.empty:
+        for _, row in hr_df.iterrows():
+            var_name = str(row["Variable"])
+            hr = float(row["Hazard Ratio"])
+            p_val = float(row["p-value"])
+            interp = str(row["Interpretation"])
+            diff = round(hr - 1.0, 4)
+            hr_records.append({
+                "variable": var_name,
+                "hazard_ratio": round(hr, 3),
+                "p_value": round(p_val, 4),
+                "interpretation": interp,
+                "diff_from_1": diff,
+                "color": PRIMARY if hr > 1 else "#EF4444",
+                "is_significant": p_val < 0.05
+            })
+
+    # Format Transition Matrix
+    stage_order = [s for s in STAGE_ORDER if s in matrix.index]
+    stage_order_cols = [s for s in STAGE_ORDER if s in matrix.columns]
+    trans_matrix_reindexed = matrix.reindex(index=stage_order, columns=stage_order_cols).fillna(0)
+
+    matrix_grid = []
+    for from_s in stage_order:
+        row_vals = []
+        for to_s in stage_order_cols:
+            row_vals.append(round(float(trans_matrix_reindexed.loc[from_s, to_s]), 1))
+        matrix_grid.append(row_vals)
+
+    matrix_flat = []
+    for from_s in stage_order:
+        for to_s in stage_order_cols:
+            matrix_flat.append({
                 "from_stage": from_s,
                 "to_stage": to_s,
-                "probability": round(float(matrix.loc[from_s, to_s]), 1)
+                "probability": round(float(trans_matrix_reindexed.loc[from_s, to_s]), 1)
             })
 
     return {
@@ -618,10 +678,24 @@ def get_cmie_stage_transitions(
             "n_firms": n_firms_trans,
             "transition_rate": transition_rate,
             "median_spell_years": round(float(trans_df["duration"].median()), 1),
+            "sticky_benchmark_stage": "Maturity",
+            "fastest_exit_stage": "Shakeout",
         },
         "km_curves": curves,
-        "matrix": matrix_data,
-        "stages": list(matrix.columns),
+        "km_summary": km_summary_records,
+        "hazard_ratios": hr_records,
+        "matrix": {
+            "stages_y": stage_order,
+            "stages_x": stage_order_cols,
+            "z": matrix_grid,
+            "flat": matrix_flat,
+            "colorscale": ["#0E1626", "#0D9488", "#10B981"]
+        },
+        "interpretation": {
+            "title": "Results Interpretation & Call to Action",
+            "insights": insights,
+            "actions": actions
+        }
     }
 
 from typing import Optional

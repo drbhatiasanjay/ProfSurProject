@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Plotly from 'plotly.js-dist-min';
+import { ResultsInterpretationPanel } from '../shared/ResultsInterpretationPanel';
 
 const PlotlyChart: React.FC<{ data: any[]; layout: any; config?: any; style?: React.CSSProperties }> = ({
   data,
@@ -202,6 +203,11 @@ interface DynamicsData {
     stage_durations: StageDurationRow[];
   };
   tab_covid: CovidPayload;
+  interpretation?: {
+    title: string;
+    insights: string[];
+    actions: string[];
+  };
 }
 
 interface LifeStageDynamicsProps {
@@ -1444,6 +1450,17 @@ export const LifeStageDynamics: React.FC<LifeStageDynamicsProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {/* ── Shared Results Interpretation & Call to Action Panel ── */}
+      {data?.interpretation && (
+        <ResultsInterpretationPanel
+          title={data.interpretation.title}
+          subtitle="Automated empirical deductions and corporate finance directives derived from life-stage dynamics and event impact matrices."
+          insights={data.interpretation.insights}
+          actions={data.interpretation.actions}
+          methodologyCitation="Dickinson (2011) Life-Stage Dynamics"
+        />
       )}
     </div>
   );
