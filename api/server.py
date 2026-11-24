@@ -215,6 +215,8 @@ def get_cmie_panels():
         ]
     }
 
+from api.dashboard_service import get_dashboard_payload
+
 @app.get("/api/cmie/dashboard-charts")
 def get_cmie_dashboard_charts(
     panel: str = Query("bf2001_25_sept26", description="Active panel identifier"),
@@ -222,169 +224,24 @@ def get_cmie_dashboard_charts(
     year_max: int = Query(2025, description="Maximum fiscal year"),
 ):
     """
-    Returns authentic empirical aggregations from capital_structure.db:
-    1. Overall Yearly Mean & Median Leverage time series (exact orientation)
-    2. Dickinson Life-Cycle Stage breakdown
-    3. Book Leverage Distribution frequency histogram
-    4. Macroeconomic event overlays (2008 GFC, 2016 IBC, 2020 COVID)
+    Returns authentic empirical aggregations and deep econometrics from capital_structure.db:
+    1. 8 Bento Grid KPI Capsules with sparklines & YoY deltas
+    2. Overall Yearly Mean & Median Leverage time series with event bands
+    3. Figure 5.1: Stage-wise Capital Structure Profile (Leverage, Log Size, Profitability, Dividend)
+    4. Figure 5.2: Year-wise Capital Structure Trends (4-row bar charts across all years)
+    5. Figure 8.3: Leverage vs Profitability & Tangibility (Decline & Decay OLS scatter + regression lines)
+    6. Table 5.9: Pairwise Significance Matrix (Tukey's HSD post-hoc test & significant pair callouts)
+    7. Determinant Decomposition Heatmap (Profitability, Tangibility, Tax Shield, Size, Cash)
+    8. Macro Context: Interest Rates & BSE Market P/E Ratio vs Leverage with GFC, IBC, COVID shading
+    9. Event x Stage Interaction: Differential Leverage Shifts during GFC, IBC, COVID
+    10. Lifecycle Distribution (Donut) & Top 10 Most Leveraged Companies
+    11. Contextual Insight Boxes for every chart + Master Results Interpretation & Call to Action
     """
-    ft = _db.filters_to_tuple({
-        "panel_mode": _normalize_panel(panel),
-        "year_range": (year_min, year_max),
-        "industry_groups": [],
-        "company_codes": [],
-        "life_stages": [],
-        "ownerships": []
-    })
-    
     try:
-        df = _db.get_active_financials(ft)
+        norm_panel = _normalize_panel(panel)
+        return get_dashboard_payload(panel=norm_panel, year_min=year_min, year_max=year_max)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")
-
-    if df.empty:
-        return {"empty": True}
-
-    # 1. Yearly Mean & Median Leverage (Exact orientation: Year on X, Leverage % on Y)
-    yearly = df.groupby("year")["leverage"].agg(["mean", "median", "count"]).reset_index()
-    yearly_data = []
-    for _, row in yearly.iterrows():
-        yearly_data.append({
-            "year": int(row["year"]),
-            "mean_leverage": round(float(row["mean"]), 2),
-            "median_leverage": round(float(row["median"]), 2),
-            "n_firms": int(row["count"]),
-        })
-
-    # 2. Dickinson Life-Cycle Stage Breakdown
-    stage_counts = df["life_stage"].value_counts()
-    total_obs = len(df)
-    stage_colors = {
-        "Maturity": "#10B981",
-        "Growth": "#06B6D4",
-        "Shakeout": "#F59E0B",
-        "Shakeout1": "#F59E0B",
-        "Shakeout2": "#F59E0B",
-        "Shakeout3": "#F59E0B",
-        "Startup": "#6366F1",
-        "Introduction": "#6366F1",
-        "Decline": "#F43F5E",
-        "Decay": "#F43F5E",
-    }
-    
-    # Aggregate into canonical 5 Dickinson stages
-    canonical_map = {
-        "Maturity": "Mature Stage (+, -, -)",
-        "Growth": "Growth Stage (+, -, +)",
-        "Shakeout1": "Shake-out Stage",
-        "Shakeout2": "Shake-out Stage",
-        "Shakeout3": "Shake-out Stage",
-        "Startup": "Introduction Stage (-, -, +)",
-        "Decline": "Decline Stage (-, +, +/-)",
-        "Decay": "Decline Stage (-, +, +/-)",
-    }
-    
-    aggregated_stages = {}
-    for stage, count in stage_counts.items():
-        c_name = canonical_map.get(stage, stage)
-        aggregated_stages[c_name] = aggregated_stages.get(c_name, 0) + int(count)
-
-    life_stages = []
-    for s_name, count in sorted(aggregated_stages.items(), key=lambda x: -x[1]):
-        color = "#10B981" if "Mature" in s_name else "#06B6D4" if "Growth" in s_name else "#F59E0B" if "Shake" in s_name else "#6366F1" if "Intro" in s_name else "#F43F5E"
-        life_stages.append({
-            "stage": s_name,
-            "count": count,
-            "pct": round((count / total_obs) * 100, 1),
-            "color": color
-        })
-
-    # 3. Leverage Distribution Histogram Bins
-    bins = [0, 10, 20, 30, 40, 50, 60, 70, 100]
-    labels = ["0–10%", "10–20%", "20–30%", "30–40%", "40–50%", "50–60%", "60–70%", "70%+"]
-    hist_series = df["leverage"].dropna()
-    cut_res = pd.cut(hist_series, bins=bins, labels=labels, right=False)
-    hist_counts = cut_res.value_counts().sort_index()
-
-    leverage_histogram = []
-    for b_label, count in hist_counts.items():
-        leverage_histogram.append({
-            "bin": str(b_label),
-            "count": int(count),
-            "pct": round((int(count) / total_obs) * 100, 1)
-        })
-
-    # 4. Figure 5.2 — Longitudinal Macro Trends (Leverage, Profitability, Tangibility, Dividend)
-    macro_cols = ["leverage", "profitability", "tangibility", "dividend"]
-    available_macro = [c for c in macro_cols if c in df.columns]
-    yearly_macro = (
-        df.groupby("year")[available_macro]
-        .mean()
-        .reset_index()
-        .sort_values("year")
-    )
-    yearly_macro_trends = []
-    for _, r in yearly_macro.iterrows():
-        yearly_macro_trends.append({
-            "year": int(r["year"]),
-            "leverage": round(float(r["leverage"]), 2) if "leverage" in r and pd.notna(r["leverage"]) else 0.0,
-            "profitability": round(float(r["profitability"]), 4) if "profitability" in r and pd.notna(r["profitability"]) else 0.0,
-            "tangibility": round(float(r["tangibility"]), 4) if "tangibility" in r and pd.notna(r["tangibility"]) else 0.0,
-            "dividend": round(float(r["dividend"]), 2) if "dividend" in r and pd.notna(r["dividend"]) else 0.0,
-        })
-
-    # 5. Figure 5.1 — Stage-wise Capital Structure Profile (Leverage, Log Size, Profitability, Dividend)
-    df_copy = df.copy()
-    if "firm_size" in df_copy.columns:
-        lsm = df_copy["firm_size"].notna() & (df_copy["firm_size"] > 0)
-        df_copy.loc[lsm, "log_size"] = np.log(df_copy.loc[lsm, "firm_size"])
-    else:
-        df_copy["log_size"] = np.nan
-
-    stage_order_ref = ["Introduction", "Growth", "Mature", "Maturity", "Shakeout", "Shakeout1", "Shakeout2", "Decline"]
-    present_stages = [s for s in stage_order_ref if s in df_copy["life_stage"].unique()]
-    if not present_stages:
-        present_stages = list(df_copy["life_stage"].dropna().unique())
-
-    stage_profile_data = []
-    if "life_stage" in df_copy.columns:
-        stage_grp = df_copy.groupby("life_stage")[["leverage", "log_size", "profitability", "dividend"]].mean()
-        for stg in present_stages:
-            if stg in stage_grp.index:
-                row_stg = stage_grp.loc[stg]
-                stage_profile_data.append({
-                    "stage": stg,
-                    "leverage": round(float(row_stg["leverage"]), 2) if pd.notna(row_stg.get("leverage")) else 0.0,
-                    "log_size": round(float(row_stg["log_size"]), 2) if pd.notna(row_stg.get("log_size")) else 0.0,
-                    "profitability": round(float(row_stg["profitability"]), 4) if pd.notna(row_stg.get("profitability")) else 0.0,
-                    "dividend": round(float(row_stg["dividend"]), 2) if pd.notna(row_stg.get("dividend")) else 0.0,
-                })
-
-    # 6. Macro KPIs
-    return {
-        "kpis": {
-            "total_firms": 8677,
-            "active_sample_firms": int(df["company_code"].nunique()),
-            "total_observations": total_obs,
-            "mean_leverage": round(float(df["leverage"].mean()), 1),
-            "median_leverage": round(float(df["leverage"].median()), 1),
-            "std_leverage": round(float(df["leverage"].std()), 1),
-            "avg_profitability": round(float(df["profitability"].mean()), 1),
-            "avg_tangibility": round(float(df["tangibility"].mean()), 1),
-            "dominant_stage": "Mature Stage (+, -, -)",
-            "dominant_stage_pct": round(float((aggregated_stages.get("Mature Stage (+, -, -)", 0) / total_obs) * 100), 1),
-        },
-        "overall_yearly": yearly_data,
-        "yearly_macro_trends": yearly_macro_trends,
-        "stage_profile": stage_profile_data,
-        "life_stages": life_stages,
-        "leverage_histogram": leverage_histogram,
-        "event_bands": [
-            {"year": 2008, "name": "Global Financial Crisis (GFC)"},
-            {"year": 2016, "name": "IBC & Demonetisation"},
-            {"year": 2020, "name": "COVID-19 Shock"}
-        ]
-    }
+        raise HTTPException(status_code=500, detail=f"Dashboard calculation error: {str(e)}")
 
 import graph_builder as _gb
 import models.survival as _survival
