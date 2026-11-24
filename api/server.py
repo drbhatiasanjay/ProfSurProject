@@ -182,6 +182,23 @@ def api_auth_register(payload: RegisterRequest):
 # ── CMIE Public Universe Core Econometric Data Endpoints ───────────────────────
 import db as _db
 import pandas as pd
+import numpy as np
+
+def _normalize_panel(panel: str) -> str:
+    if not panel:
+        return "bf2001_25_sept26"
+    p = str(panel).lower().strip()
+    if "bf2001" in p or "sept26" in p:
+        return "bf2001_25_sept26"
+    if "run3" in p or "april26" in p:
+        return "run3"
+    if "thesis" in p:
+        return "thesis"
+    if "us_av" in p or "s&p" in p:
+        return "us_av_2024"
+    if "latest" in p:
+        return "latest"
+    return "bf2001_25_sept26"
 
 @app.get("/api/cmie/panels")
 def get_cmie_panels():
@@ -212,7 +229,7 @@ def get_cmie_dashboard_charts(
     4. Macroeconomic event overlays (2008 GFC, 2016 IBC, 2020 COVID)
     """
     ft = _db.filters_to_tuple({
-        "panel_mode": panel,
+        "panel_mode": _normalize_panel(panel),
         "year_range": (year_min, year_max),
         "industry_groups": [],
         "company_codes": [],
@@ -384,7 +401,7 @@ def get_cmie_econometrics_models(
     Hausman specification test, and Dickinson Stage ANOVA) using models/econometric.py.
     """
     ft = _db.filters_to_tuple({
-        "panel_mode": panel,
+        "panel_mode": _normalize_panel(panel),
         "year_range": (year_min, year_max),
         "industry_groups": [],
         "company_codes": [],
@@ -553,7 +570,7 @@ def get_cmie_stage_transitions(
     Returns Markov survival curves (Kaplan-Meier), spell statistics, and transition rates.
     """
     ft = _db.filters_to_tuple({
-        "panel_mode": panel,
+        "panel_mode": _normalize_panel(panel),
         "year_range": (year_min, year_max),
         "industry_groups": [],
         "company_codes": [],
@@ -654,7 +671,7 @@ def get_cmie_data_explorer(
     Paginated, searchable, filterable Data Explorer table endpoint over the CMIE panel.
     """
     ft = _db.filters_to_tuple({
-        "panel_mode": panel,
+        "panel_mode": _normalize_panel(panel),
         "year_range": (year_min, year_max),
         "industry_groups": [],
         "company_codes": [],
@@ -750,7 +767,7 @@ def get_cmie_peer_benchmarks(
     Returns company longitudinal trends vs industry averages, life-stage boxplots, and radar multi-determinant profile.
     """
     ft = _db.filters_to_tuple({
-        "panel_mode": panel,
+        "panel_mode": _normalize_panel(panel),
         "year_range": (year_min, year_max),
         "industry_groups": [],
         "company_codes": [],

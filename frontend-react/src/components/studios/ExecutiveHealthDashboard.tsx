@@ -88,7 +88,9 @@ export const ExecutiveHealthDashboard: React.FC<ExecutiveHealthDashboardProps> =
     setLoading(true);
     setError(null);
 
-    const panelId = activePanel.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const panelId = activePanel.toLowerCase().includes('bf2001') || activePanel.toLowerCase().includes('sept26')
+      ? 'bf2001_25_sept26'
+      : activePanel.toLowerCase().replace(/[^a-z0-9]/g, '_');
     const url = `http://localhost:8000/api/cmie/dashboard-charts?panel=${encodeURIComponent(
       panelId
     )}&year_min=${yearMin}&year_max=${yearMax}`;
