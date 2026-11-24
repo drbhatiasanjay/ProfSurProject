@@ -11,6 +11,13 @@ export interface CollapsibleInsightBoxProps {
   className?: string;
 }
 
+function formatMarkdown(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em class="text-slate-200 italic">$1</em>');
+}
+
 export const CollapsibleInsightBox: React.FC<CollapsibleInsightBoxProps> = ({
   title,
   findings = [],
@@ -69,7 +76,7 @@ export const CollapsibleInsightBox: React.FC<CollapsibleInsightBoxProps> = ({
               </div>
               <ul className="space-y-1.5 pl-5 list-disc text-slate-300">
                 {findings.map((finding, idx) => (
-                  <li key={idx} dangerouslySetInnerHTML={{ __html: finding }} />
+                  <li key={idx} dangerouslySetInnerHTML={{ __html: formatMarkdown(finding) }} />
                 ))}
               </ul>
             </div>
@@ -86,7 +93,7 @@ export const CollapsibleInsightBox: React.FC<CollapsibleInsightBoxProps> = ({
                 {actions.map((act, idx) => (
                   <li key={idx} className="flex items-start gap-1.5">
                     <span className="text-emerald-400">🎯</span>
-                    <span dangerouslySetInnerHTML={{ __html: act }} />
+                    <span dangerouslySetInnerHTML={{ __html: formatMarkdown(act) }} />
                   </li>
                 ))}
               </ul>

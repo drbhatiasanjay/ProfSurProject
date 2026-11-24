@@ -676,147 +676,27 @@ def get_cmie_data_explorer(
 
 @app.get("/api/cmie/peer-benchmarks")
 def get_cmie_peer_benchmarks(
-    company_code: int = Query(..., description="Target company code e.g. 248093 for Tata Motors"),
+    company_code: Optional[int] = Query(None, description="Target company code e.g. 36277 for 3M India Ltd., 248093 for Tata Motors"),
     panel: str = Query("bf2001_25_sept26", description="Active panel identifier"),
     year_min: int = Query(2001, description="Minimum fiscal year"),
     year_max: int = Query(2025, description="Maximum fiscal year"),
 ):
     """
     Returns company longitudinal trends vs industry averages, life-stage boxplots, and radar multi-determinant profile.
+    Ported with 100% fidelity from pages/2_peer_benchmarks.py via api.peer_service.
     """
-    ft = _db.filters_to_tuple({
-        "panel_mode": _normalize_panel(panel),
-        "year_range": (year_min, year_max),
-        "industry_groups": [],
-        "company_codes": [],
-        "life_stages": [],
-        "ownerships": []
-    })
-
+    from api.peer_service import compute_peer_benchmarks
     try:
-        companies_df = _db.get_companies()
-        matched = companies_df[companies_df["company_code"] == company_code]
-        if matched.empty:
-            raise HTTPException(status_code=404, detail="Company code not found in directory.")
-        company_row = matched.iloc[0]
-        company_name = str(company_row["company_name"])
-        industry = str(company_row["industry_group"])
-        nse_symbol = str(company_row.get("nse_symbol", ""))
-
-        full_df = _db.get_active_financials(ft)
-        company_df = _db.get_company_detail(company_code)
-    except HTTPException:
-        raise
+        norm_panel = _normalize_panel(panel)
+        return compute_peer_benchmarks(
+            company_code=company_code,
+            panel_mode=norm_panel,
+            year_range=(year_min, year_max),
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")
-
-    if company_df.empty:
-        raise HTTPException(status_code=404, detail="No historical financials found for this company.")
-
-    dominant_stage = company_df["life_stage"].mode().iloc[0] if not company_df["life_stage"].mode().empty else "N/A"
-
-    # Filter industry peers
-    industry_df = full_df[full_df["industry_group"] == industry]
-
-    # 1. Company yearly series
-    c_yearly = company_df.sort_values("year")
-    company_series = []
-    for _, r in c_yearly.iterrows():
-        company_series.append({
-            "year": int(r["year"]),
-            "leverage": round(float(r["leverage"]), 2) if pd.notna(r.get("leverage")) else None,
-            "profitability": round(float(r["profitability"]), 2) if pd.notna(r.get("profitability")) else None,
-            "tangibility": round(float(r["tangibility"]), 2) if pd.notna(r.get("tangibility")) else None,
-            "life_stage": str(r.get("life_stage", "")),
-        })
-
-    # 2. Industry yearly series
-    ind_yearly = industry_df.groupby("year").agg({
-        "leverage": "mean",
-        "profitability": "mean",
-        "tangibility": "mean",
-        "company_code": "nunique"
-    }).reset_index()
-    industry_series = []
-    for _, r in ind_yearly.iterrows():
-        industry_series.append({
-            "year": int(r["year"]),
-            "industry_leverage": round(float(r["leverage"]), 2) if pd.notna(r.get("leverage")) else None,
-            "industry_profitability": round(float(r["profitability"]), 2) if pd.notna(r.get("profitability")) else None,
-            "industry_tangibility": round(float(r["tangibility"]), 2) if pd.notna(r.get("tangibility")) else None,
-            "n_peers": int(r["company_code"]),
-        })
-
-    # 3. Life stage box plots data (min, q1, median, q3, max, comp_avg)
-    stage_box_data = []
-    canonical_stages = ["Mature", "Growth", "Shake-out", "Intro", "Decline"]
-    for stg in canonical_stages:
-        stg_df = full_df[full_df["life_stage"].str.contains(stg, case=False, na=False)]
-        stg_lev = stg_df["leverage"].dropna()
-        if not stg_lev.empty:
-            q1 = float(stg_lev.quantile(0.25))
-            med = float(stg_lev.median())
-            q3 = float(stg_lev.quantile(0.75))
-            iqr = q3 - q1
-            stage_box_data.append({
-                "stage": stg,
-                "count": len(stg_lev),
-                "min": round(max(0.0, float(stg_lev.min())), 1),
-                "q1": round(q1, 1),
-                "median": round(med, 1),
-                "q3": round(q3, 1),
-                "max": round(min(100.0, float(stg_lev.max())), 1),
-                "mean": round(float(stg_lev.mean()), 1),
-            })
-
-    # 4. Multi-determinant radar profile (0–100 normalized)
-    radar_metrics = ["profitability", "tangibility", "tax", "firm_size", "tax_shield", "cash_holdings"]
-    radar_labels = ["Profitability", "Tangibility", "Tax Rate", "Firm Size", "Tax Shield", "Cash Holdings"]
-    radar_data = []
-
-    for key, label in zip(radar_metrics, radar_labels):
-        full_col = full_df[key].dropna() if key in full_df.columns else pd.Series(dtype=float)
-        comp_val = company_df[key].dropna().mean() if key in company_df.columns and not company_df[key].dropna().empty else 0.0
-        ind_val = industry_df[key].dropna().mean() if key in industry_df.columns and not industry_df[key].dropna().empty else 0.0
-
-        if not full_col.empty and full_col.max() > full_col.min():
-            c_norm = round(float((comp_val - full_col.min()) / (full_col.max() - full_col.min()) * 100), 1)
-            i_norm = round(float((ind_val - full_col.min()) / (full_col.max() - full_col.min()) * 100), 1)
-        else:
-            c_norm = 50.0
-            i_norm = 50.0
-
-        radar_data.append({
-            "metric": label,
-            "company_raw": round(float(comp_val), 2),
-            "industry_raw": round(float(ind_val), 2),
-            "company_normalized": max(5.0, min(100.0, c_norm)),
-            "industry_normalized": max(5.0, min(100.0, i_norm)),
-        })
-
-    return {
-        "company_info": {
-            "company_code": company_code,
-            "company_name": company_name,
-            "nse_symbol": nse_symbol,
-            "industry_group": industry,
-            "dominant_stage": dominant_stage,
-            "avg_leverage": round(float(company_df["leverage"].dropna().mean()), 2) if not company_df["leverage"].dropna().empty else 0.0,
-            "avg_profitability": round(float(company_df["profitability"].dropna().mean()), 2) if not company_df["profitability"].dropna().empty else 0.0,
-            "avg_tangibility": round(float(company_df["tangibility"].dropna().mean()), 2) if not company_df["tangibility"].dropna().empty else 0.0,
-            "current_borrowings": round(float(company_df.sort_values("year").iloc[-1].get("borrowings", 0)), 1),
-            "n_years": len(company_series),
-        },
-        "company_series": company_series,
-        "industry_series": industry_series,
-        "stage_box_data": stage_box_data,
-        "radar_data": radar_data,
-        "event_bands": [
-            {"year": 2008, "name": "Global Financial Crisis (GFC)"},
-            {"year": 2016, "name": "IBC & Demonetisation"},
-            {"year": 2020, "name": "COVID-19 Shock"}
-        ]
-    }
+        raise HTTPException(status_code=500, detail=f"Peer benchmarks calculation error: {str(e)}")
 
 
 
