@@ -484,81 +484,68 @@ def get_cmie_econometrics_models(
         }
     }
 
+import api.stage_dynamics_service as _stage_svc
+
+class ProfilerRequest(BaseModel):
+    cond1_stage: str = "(any)"
+    cond1_year: int = 2015
+    cond2_from: str = "(any)"
+    cond2_to: str = "(any)"
+    cond2_yr_min: int = 2001
+    cond2_yr_max: int = 2025
+    cond3_event: str = "(any)"
+    cond4_metric: str = "(none)"
+    cond4_op: str = ">"
+    cond4_val: float = 0.0
+
 @app.get("/api/cmie/stage-dynamics")
 def get_cmie_stage_dynamics(
     panel: str = Query("bf2001_25_sept26", description="Active panel identifier"),
+    event_compare: str = Query("None", description="Compare with event: None, GFC, IBC, COVID"),
     year_min: int = Query(2001, description="Minimum fiscal year"),
     year_max: int = Query(2025, description="Maximum fiscal year"),
+    target_stage: str = Query("Decline", description="Target stage for pathway analysis"),
+    seq_length: int = Query(2, description="Sequence length"),
+    min_freq: int = Query(5, description="Minimum sequence frequency"),
 ):
     """
-    Returns empirical transition probability matrix, stickiness rates, stage metric matrix,
-    and macroeconomic event impact matrices across Dickinson stages.
+    Returns empirical transition probability matrix, event impact matrices, stage pathways,
+    COVID cohorts, and stage metrics across Dickinson stages.
     """
     try:
-        fin_df = _db.get_graph_financials()
-        own_df = _db.get_graph_ownership()
-        G = _gb.build_knowledge_graph(fin_df, own_df)
-        t_mat, t_cnt = _gb.compute_transition_matrix(G)
-        stickiness_map = _gb.compute_stickiness(G)
-        m_mat = _gb.compute_stage_metric_matrix(G)
+        norm_panel = _normalize_panel(panel)
+        return _stage_svc.get_stage_dynamics_payload(
+            panel=norm_panel,
+            event_compare=event_compare,
+            year_min=year_min,
+            year_max=year_max,
+            target_stage=target_stage,
+            seq_length=seq_length,
+            min_freq=min_freq,
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Graph builder error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Stage dynamics error: {str(e)}")
 
-    stages = list(t_mat.columns)
-    matrix_rows = []
-    for from_stg in t_mat.index:
-        row_vals = {}
-        for to_stg in t_mat.columns:
-            val = t_mat.loc[from_stg, to_stg]
-            row_vals[to_stg] = round(float(val), 1) if pd.notna(val) else 0.0
-        matrix_rows.append({
-            "from_stage": from_stg,
-            "probabilities": row_vals
-        })
-
-    stickiness_list = []
-    for stg, val in stickiness_map.items():
-        stickiness_list.append({
-            "stage": stg,
-            "stickiness_pct": round(float(val), 1)
-        })
-
-    metric_rows = []
-    for stg in m_mat.index:
-        r = m_mat.loc[stg]
-        metric_rows.append({
-            "stage": stg,
-            "leverage": round(float(r.get("Leverage", 0)), 1),
-            "profitability": round(float(r.get("Profitability", 0)), 2),
-            "tangibility": round(float(r.get("Tangibility", 0)), 2),
-            "tax": round(float(r.get("Tax", 0)), 1),
-            "firm_size": round(float(r.get("Firm Size", 0)), 0),
-            "borrowings": round(float(r.get("Borrowings", 0)), 0),
-        })
-
-    return {
-        "stages": stages,
-        "transition_matrix": matrix_rows,
-        "stickiness": stickiness_list,
-        "stage_metrics": metric_rows,
-        "event_impact": [
-            {
-                "event": "2008 Global Financial Crisis (GFC)",
-                "impact": "Accelerated Shake-out transitions (+18.4 pp) and compressed external debt availability.",
-                "status": "High Volatility"
-            },
-            {
-                "event": "2016 Insolvency & Bankruptcy Code (IBC)",
-                "impact": "Heightened creditor enforcement; forced high-leverage firms into rapid restructuring or decline.",
-                "status": "Structural Shift"
-            },
-            {
-                "event": "2020 COVID-19 Pandemic Shock",
-                "impact": "Sharp contraction in operating cash flows; increased survival stickiness in Mature cash cows.",
-                "status": "Liquidity Shock"
-            }
-        ]
-    }
+@app.post("/api/cmie/stage-dynamics/profiler")
+def post_cmie_stage_dynamics_profiler(payload: ProfilerRequest):
+    """
+    Executes multi-hop condition chain query across company nodes in the knowledge graph.
+    """
+    try:
+        return _stage_svc.run_company_profiler(
+            cond1_stage=payload.cond1_stage,
+            cond1_year=payload.cond1_year,
+            cond2_from=payload.cond2_from,
+            cond2_to=payload.cond2_to,
+            cond2_yr_min=payload.cond2_yr_min,
+            cond2_yr_max=payload.cond2_yr_max,
+            cond3_event=payload.cond3_event,
+            cond4_metric=payload.cond4_metric,
+            cond4_op=payload.cond4_op,
+            cond4_val=payload.cond4_val,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Profiler query error: {str(e)}")
 
 @app.get("/api/cmie/stage-transitions")
 def get_cmie_stage_transitions(
